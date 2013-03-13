@@ -1,0 +1,307 @@
+package s2
+
+import (
+	"bytes"
+	"math"
+	"strconv"
+
+	"code.google.com/p/gos2/r3"
+)
+
+// CellID uniquely identifies a cell in the S2 cell decomposition.
+// The most significant 3 bits encode the face number (0-5). The
+// remaining 61 bits encode the position of the center of this cell
+// along the Hilbert curve on that face. The zero value and the value
+// (1<<64)-1 are invalid cell IDs. The first compares less than any
+// valid cell ID, the second as greater than any valid cell ID.
+type CellID uint64
+
+// TODO(dsymonds): Some of these constants should probably be exported.
+const (
+	faceBits = 3
+	numFaces = 6
+	maxLevel = 30
+	posBits  = 2*maxLevel + 1
+	maxSize  = 1 << maxLevel
+)
+
+// CellIDFromFacePosLevel returns a cell given its face in the range
+// [0,5], the 61-bit Hilbert curve position pos within that face, and
+// the level in the range [0,maxLevel]. The position in the cell ID
+// will be truncated to correspond to the Hilbert curve position at
+// the center of the returned cell.
+func CellIDFromFacePosLevel(face int, pos uint64, level int) CellID {
+	return CellID(uint64(face)<<posBits + pos | 1).Parent(level)
+}
+
+// CellIDFromLatLng returns the leaf cell containing ll.
+func CellIDFromLatLng(ll LatLng) CellID {
+	return cellIDFromPoint(PointFromLatLng(ll))
+}
+
+// IsValid reports whether ci represents a valid cell.
+func (ci CellID) IsValid() bool {
+	return ci.Face() < numFaces && (ci.lsb()&0x1555555555555555 != 0)
+}
+
+// Face returns the cube face for this cell ID, in the range [0,5].
+func (ci CellID) Face() int { return int(uint64(ci) >> posBits) }
+
+// Pos returns the position along the Hilbert curve of this cell ID, in the range [0,2^posBits-1].
+func (ci CellID) Pos() uint64 { return uint64(ci) & (^uint64(0) >> faceBits) }
+
+// Level returns the subdivision level of this cell ID, in the range [0, maxLevel].
+func (ci CellID) Level() int {
+	// Fast path for leaf cells.
+	if ci.IsLeaf() {
+		return maxLevel
+	}
+	x := uint32(ci)
+	level := -1
+	if x != 0 {
+		level += 16
+	} else {
+		x = uint32(uint64(ci) >> 32)
+	}
+	// Only need to look at even-numbered bits for valid cell IDs.
+	x &= -x // remove all but the LSB.
+	if x&0x00005555 != 0 {
+		level += 8
+	}
+	if x&0x00550055 != 0 {
+		level += 4
+	}
+	if x&0x05050505 != 0 {
+		level += 2
+	}
+	if x&0x11111111 != 0 {
+		level += 1
+	}
+	return level
+}
+
+// IsLeaf returns whether this cell ID is at the deepest level;
+// that is, the level at which the cells are smallest.
+func (ci CellID) IsLeaf() bool { return uint64(ci)&1 != 0 }
+
+// ChildPosition returns the child position (0..3) of this cell's
+// ancestor at the given level, relative to its parent.  The argument
+// should be in the range 1..kMaxLevel.  For example,
+// ChildPosition(1) returns the position of this cell's level-1
+// ancestor within its top-level face cell.
+func (ci CellID) ChildPosition(level int) int {
+	return int(uint64(ci)>>uint64(2*(maxLevel-level)+1)) & 3
+}
+
+func lsbForLevel(level int) uint64 { return 1 << uint64(2*(maxLevel-level)) }
+
+// Parent returns the cell at the given level, which must be no greater than the current level.
+func (ci CellID) Parent(level int) CellID {
+	lsb := lsbForLevel(level)
+	return CellID((uint64(ci) & -lsb) | lsb)
+}
+
+// immediateParent is cheaper than Parent, but assumes !ci.isFace().
+func (ci CellID) immediateParent() CellID {
+	nlsb := CellID(ci.lsb() << 2)
+	return (ci & -nlsb) | nlsb
+}
+
+// isFace returns whether this is a top-level (face) cell.
+func (ci CellID) isFace() bool { return uint64(ci)&(lsbForLevel(0)-1) == 0 }
+
+// lsb returns the least significant bit that is set.
+func (ci CellID) lsb() uint64 { return uint64(ci) & -uint64(ci) }
+
+// children returns the four immediate children of this cell.
+// If ci is a leaf cell, it returns four identical cells that are not the children.
+func (ci CellID) children() [4]CellID {
+	var ch [4]CellID
+	lsb := CellID(ci.lsb())
+	ch[0] = ci - lsb + lsb>>2
+	lsb >>= 1
+	ch[1] = ch[0] + lsb
+	ch[2] = ch[1] + lsb
+	ch[3] = ch[2] + lsb
+	return ch
+}
+
+// RangeMin returns the minimum CellID that is contained within this cell.
+func (ci CellID) RangeMin() CellID { return CellID(uint64(ci) - (ci.lsb() - 1)) }
+
+// RangeMax returns the maximum CellID that is contained within this cell.
+func (ci CellID) RangeMax() CellID { return CellID(uint64(ci) + (ci.lsb() - 1)) }
+
+// Contains returns true iff the CellID contains oci.
+func (ci CellID) Contains(oci CellID) bool {
+	return uint64(ci.RangeMin()) <= uint64(oci) && uint64(oci) <= uint64(ci.RangeMax())
+}
+
+// Intersects returns true iff the CellID intersects oci.
+func (ci CellID) Intersects(oci CellID) bool {
+	return uint64(oci.RangeMin()) <= uint64(ci.RangeMax()) && uint64(oci.RangeMax()) >= uint64(ci.RangeMin())
+}
+
+// String returns the string representation of the cell ID in the form "1/3210".
+func (ci CellID) String() string {
+	if !ci.IsValid() {
+		return "Invalid: " + strconv.FormatInt(int64(ci), 16)
+	}
+	var b bytes.Buffer
+	b.WriteByte("012345"[ci.Face()]) // values > 5 will have been picked off by !IsValid above
+	b.WriteByte('/')
+	for level := 1; level <= ci.Level(); level++ {
+		b.WriteByte("0123"[ci.ChildPosition(level)])
+	}
+	return b.String()
+}
+
+// Point returns the center of the s2 cell on the sphere as a Point.
+func (ci CellID) Point() Point { return Point{ci.rawPoint().Normalize()} }
+
+// LatLng returns the center of the s2 cell on the sphere as a LatLng.
+func (ci CellID) LatLng() LatLng { return LatLngFromPoint(Point{ci.rawPoint()}) }
+
+// TODO: the methods below are not exported yet.  Settle on the entire API design
+// before doing this.  Do we want to mirror the C++ one as closely as possible?
+
+// rawPoint returns an unnormalized r3 vector from the origin through the center
+// of the s2 cell on the sphere.
+func (ci CellID) rawPoint() r3.Vector {
+	face, si, ti := ci.faceSiTi()
+	return faceUVToXYZ(face, stToUV((0.5/maxSize)*float64(si)), stToUV((0.5/maxSize)*float64(ti)))
+
+}
+
+// faceSiTi returns the Face/Si/Ti coordinates of the center of the cell.
+func (ci CellID) faceSiTi() (face, si, ti int) {
+	face, i, j, _ := ci.faceIJOrientation()
+	delta := 0
+	if ci.IsLeaf() {
+		delta = 1
+	} else {
+		if (i^(int(ci)>>2))&1 != 0 {
+			delta = 2
+		}
+	}
+	return face, 2*i + delta, 2*j + delta
+}
+
+// faceIJOrientation uses the global lookupIJ table to unfiddle the bits of ci.
+func (ci CellID) faceIJOrientation() (f, i, j, bits int) {
+	f = ci.Face()
+	bits = f & swapMask
+	nbits := maxLevel - 7*lookupBits // first iteration
+
+	for k := 7; k >= 0; k-- {
+		bits += (int(uint64(ci)>>uint64(k*2*lookupBits+1)) & ((1 << uint((2 * nbits))) - 1)) << 2
+		bits = lookupIJ[bits]
+		i += (bits >> (lookupBits + 2)) << uint(k*lookupBits)
+		j += ((bits >> 2) & ((1 << lookupBits) - 1)) << uint(k*lookupBits)
+		bits &= (swapMask | invertMask)
+		nbits = lookupBits // following iterations
+	}
+
+	if ci.lsb()&0x1111111111111110 != 0 {
+		bits ^= swapMask
+	}
+
+	return
+}
+
+// cellIDFromFaceIJ returns a leaf cell given its cube face (range 0..5) and IJ coordinates.
+func cellIDFromFaceIJ(f, i, j int) CellID {
+	// Note that this value gets shifted one bit to the left at the end
+	// of the function.
+	n := f << (posBits - 1)
+	// Alternating faces have opposite Hilbert curve orientations; this
+	// is necessary in order for all faces to have a right-handed
+	// coordinate system.
+	bits := f & swapMask
+	// Each iteration maps 4 bits of "i" and "j" into 8 bits of the Hilbert
+	// curve position.  The lookup table transforms a 10-bit key of the form
+	// "iiiijjjjoo" to a 10-bit value of the form "ppppppppoo", where the
+	// letters [ijpo] denote bits of "i", "j", Hilbert curve position, and
+	// Hilbert curve orientation respectively.
+	for k := 7; k >= 0; k-- {
+		mask := (1 << lookupBits) - 1
+		bits += int((i>>uint(k*lookupBits))&mask) << (lookupBits + 2)
+		bits += int((j>>uint(k*lookupBits))&mask) << 2
+		bits = lookupPos[bits]
+		n |= (bits >> 2) << (uint(k) * 2 * lookupBits)
+		bits &= (swapMask | invertMask)
+	}
+	return CellID(n*2 + 1)
+}
+
+// clamp returns number closest to x within the range min..max.
+func clamp(x, min, max int) int {
+	if x < min {
+		return min
+	}
+	if x > max {
+		return max
+	}
+	return x
+}
+
+// stToIJ converts value in ST coordinates to a value in IJ coordinates.
+func stToIJ(s float64) int {
+	return clamp(int(math.Floor(maxSize*s)), 0, maxSize-1)
+}
+
+// cellIDFromPoint returns the leaf cell containing point p.
+func cellIDFromPoint(p Point) CellID {
+	f, u, v := xyzToFaceUV(r3.Vector{p.X, p.Y, p.Z})
+	i := stToIJ(uvToST(u))
+	j := stToIJ(uvToST(v))
+	return cellIDFromFaceIJ(f, i, j)
+}
+
+// Constants related to the bit mangling in the Cell ID.
+const (
+	lookupBits = 4
+	swapMask   = 0x01
+	invertMask = 0x02
+)
+
+var (
+	posToIJ = [4][4]int{
+		{0, 1, 3, 2}, // canonical order:    (0,0), (0,1), (1,1), (1,0)
+		{0, 2, 3, 1}, // axes swapped:       (0,0), (1,0), (1,1), (0,1)
+		{3, 2, 0, 1}, // bits inverted:      (1,1), (1,0), (0,0), (0,1)
+		{3, 1, 0, 2}, // swapped & inverted: (1,1), (0,1), (0,0), (1,0)
+	}
+	posToOrientation = [4]int{swapMask, 0, 0, invertMask | swapMask}
+	lookupIJ         [1 << (2*lookupBits + 2)]int
+	lookupPos        [1 << (2*lookupBits + 2)]int
+)
+
+func init() {
+	initLookupCell(0, 0, 0, 0, 0, 0)
+	initLookupCell(0, 0, 0, swapMask, 0, swapMask)
+	initLookupCell(0, 0, 0, invertMask, 0, invertMask)
+	initLookupCell(0, 0, 0, swapMask|invertMask, 0, swapMask|invertMask)
+}
+
+// initLookupCell initializes the lookupIJ table at init time.
+func initLookupCell(level, i, j, origOrientation, pos, orientation int) {
+	if level == lookupBits {
+		ij := (i << lookupBits) + j
+		lookupPos[(ij<<2)+origOrientation] = (pos << 2) + orientation
+		lookupIJ[(pos<<2)+origOrientation] = (ij << 2) + orientation
+		return
+	}
+
+	level++
+	i <<= 1
+	j <<= 1
+	pos <<= 2
+	r := posToIJ[orientation]
+	initLookupCell(level, i+(r[0]>>1), j+(r[0]&1), origOrientation, pos, orientation^posToOrientation[0])
+	initLookupCell(level, i+(r[1]>>1), j+(r[1]&1), origOrientation, pos+1, orientation^posToOrientation[1])
+	initLookupCell(level, i+(r[2]>>1), j+(r[2]&1), origOrientation, pos+2, orientation^posToOrientation[2])
+	initLookupCell(level, i+(r[3]>>1), j+(r[3]&1), origOrientation, pos+3, orientation^posToOrientation[3])
+}
+
+// BUG(dsymonds): The major differences from the C++ version is that barely anything is implemented.
