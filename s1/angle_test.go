@@ -81,7 +81,7 @@ func TestNormalizeCorrectlyCanonicalizesAngles(t *testing.T) {
 	}
 }
 
-func TestString(t *testing.T) {
+func TestAngleString(t *testing.T) {
 	if s, exp := (180 * Degree).String(), "180.0000000"; s != exp {
 		t.Errorf("(180°).String() = %q, want %q", s, exp)
 	}

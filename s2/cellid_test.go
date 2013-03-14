@@ -77,7 +77,7 @@ func TestContainment(t *testing.T) {
 	// TODO(dsymonds): Test Contains, Intersects better, such as with adjacent cells.
 }
 
-func TestString(t *testing.T) {
+func TestCellIDString(t *testing.T) {
 	ci := CellID(0xbb04000000000000)
 	if s, exp := ci.String(), "5/31200"; s != exp {
 		t.Errorf("ci.String() = %q, want %q", s, exp)

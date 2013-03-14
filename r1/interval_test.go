@@ -102,7 +102,7 @@ func TestExpanded(t *testing.T) {
 	}
 }
 
-func TestString(t *testing.T) {
+func TestIntervalString(t *testing.T) {
 	i := Interval{2, 4.5}
 	if s, exp := i.String(), "[2.0000000, 4.5000000]"; s != exp {
 		t.Errorf("i.String() = %q, want %q", s, exp)

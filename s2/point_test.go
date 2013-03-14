@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-func float64Eq(x, y float64) bool { return math.Abs(x-y) < 1e-14 }
-
 func TestOriginPoint(t *testing.T) {
 	if math.Abs(OriginPoint().Norm()-1) > 1e-16 {
 		t.Errorf("Origin point norm = %v, want 1", OriginPoint().Norm())
@@ -94,7 +92,7 @@ func TestCCW(t *testing.T) {
 	}
 }
 
-func TestDistance(t *testing.T) {
+func TestPointDistance(t *testing.T) {
 	tests := []struct {
 		x1, y1, z1 float64
 		x2, y2, z2 float64

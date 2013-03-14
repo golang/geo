@@ -7,7 +7,7 @@ import (
 
 func float64Eq(x, y float64) bool { return math.Abs(x-y) < 1e-14 }
 
-func TestString(t *testing.T) {
+func TestLatLngString(t *testing.T) {
 	const expected string = "[1.4142136, -2.2360680]"
 	s := LatLngFromDegrees(math.Sqrt2, -math.Sqrt(5)).String()
 	if s != expected {
@@ -53,7 +53,7 @@ func TestLatLngPointConversion(t *testing.T) {
 	}
 }
 
-func TestDistance(t *testing.T) {
+func TestLatLngDistance(t *testing.T) {
 	// Based on C++ S2LatLng::TestDistance.
 	tests := []struct {
 		lat1, lng1, lat2, lng2 float64

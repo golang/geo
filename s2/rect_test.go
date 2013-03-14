@@ -25,7 +25,7 @@ func TestArea(t *testing.T) {
 	}
 }
 
-func TestString(t *testing.T) {
+func TestRectString(t *testing.T) {
 	const want = "[Lo[-90.0000000, -180.0000000], Hi[90.0000000, 180.0000000]]"
 	if s := FullRect().String(); s != want {
 		t.Errorf("FullRect().String() = %q, want %q", s, want)

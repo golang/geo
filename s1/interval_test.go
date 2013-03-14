@@ -358,7 +358,7 @@ func TestExpanded(t *testing.T) {
 	}
 }
 
-func TestString(t *testing.T) {
+func TestIntervalString(t *testing.T) {
 	if s, exp := pi.String(), "[3.1415927, 3.1415927]"; s != exp {
 		t.Errorf("pi.String() = %q, want %q", s, exp)
 	}
