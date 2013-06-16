@@ -25,7 +25,7 @@ func TestParentChildRelationships(t *testing.T) {
 		t.Errorf("CellID %v should not be a leaf", ci)
 	}
 
-	if kid0 := ci.children()[0].Pos(); kid0 != 0x12345640 {
+	if kid0 := ci.Children()[0].Pos(); kid0 != 0x12345640 {
 		t.Errorf("first child is 0x%X, want 0x12345640", kid0)
 	}
 	if parent := ci.immediateParent().Pos(); parent != 0x12345400 {

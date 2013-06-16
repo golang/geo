@@ -113,9 +113,9 @@ func (ci CellID) isFace() bool { return uint64(ci)&(lsbForLevel(0)-1) == 0 }
 // lsb returns the least significant bit that is set.
 func (ci CellID) lsb() uint64 { return uint64(ci) & -uint64(ci) }
 
-// children returns the four immediate children of this cell.
+// Children returns the four immediate children of this cell.
 // If ci is a leaf cell, it returns four identical cells that are not the children.
-func (ci CellID) children() [4]CellID {
+func (ci CellID) Children() [4]CellID {
 	var ch [4]CellID
 	lsb := CellID(ci.lsb())
 	ch[0] = ci - lsb + lsb>>2
