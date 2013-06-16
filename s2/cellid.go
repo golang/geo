@@ -126,6 +126,25 @@ func (ci CellID) Children() [4]CellID {
 	return ch
 }
 
+func sizeIJ(level int) int {
+	return 1 << uint(maxLevel-level)
+}
+
+// EdgeNeighbors returns the four cells that are adjacent across the cell's four edges.
+// Edges 0, 1, 2, 3 are in the down, right, up, left directions in the face space.
+// All neighbors are guaranteed to be distinct.
+func (ci CellID) EdgeNeighbors() [4]CellID {
+	level := ci.Level()
+	size := sizeIJ(level)
+	f, i, j, _ := ci.faceIJOrientation()
+	return [4]CellID{
+		cellIDFromFaceIJWrap(f, i, j-size).Parent(level),
+		cellIDFromFaceIJWrap(f, i+size, j).Parent(level),
+		cellIDFromFaceIJWrap(f, i, j+size).Parent(level),
+		cellIDFromFaceIJWrap(f, i-size, j).Parent(level),
+	}
+}
+
 // RangeMin returns the minimum CellID that is contained within this cell.
 func (ci CellID) RangeMin() CellID { return CellID(uint64(ci) - (ci.lsb() - 1)) }
 
@@ -232,6 +251,37 @@ func cellIDFromFaceIJ(f, i, j int) CellID {
 		bits &= (swapMask | invertMask)
 	}
 	return CellID(n*2 + 1)
+}
+
+func cellIDFromFaceIJWrap(f, i, j int) CellID {
+	// Convert i and j to the coordinates of a leaf cell just beyond the
+	// boundary of this face.  This prevents 32-bit overflow in the case
+	// of finding the neighbors of a face cell.
+	i = clamp(i, -1, maxSize)
+	j = clamp(j, -1, maxSize)
+
+	// We want to wrap these coordinates onto the appropriate adjacent face.
+	// The easiest way to do this is to convert the (i,j) coordinates to (x,y,z)
+	// (which yields a point outside the normal face boundary), and then call
+	// xyzToFaceUV to project back onto the correct face.
+	//
+	// The code below converts (i,j) to (si,ti), and then (si,ti) to (u,v) using
+	// the linear projection (u=2*s-1 and v=2*t-1).  (The code further below
+	// converts back using the inverse projection, s=0.5*(u+1) and t=0.5*(v+1).
+	// Any projection would work here, so we use the simplest.)  We also clamp
+	// the (u,v) coordinates so that the point is barely outside the
+	// [-1,1]x[-1,1] face rectangle, since otherwise the reprojection step
+	// (which divides by the new z coordinate) might change the other
+	// coordinates enough so that we end up in the wrong leaf cell.
+	const scale = 1.0 / maxSize
+	limit := math.Nextafter(1, 2)
+	u := math.Max(-limit, math.Min(limit, scale*float64((i<<1)+1-maxSize)))
+	v := math.Max(-limit, math.Min(limit, scale*float64((j<<1)+1-maxSize)))
+
+	// Find the leaf cell coordinates on the adjacent face, and convert
+	// them to a cell id at the appropriate level.
+	f, u, v = xyzToFaceUV(faceUVToXYZ(f, u, v))
+	return cellIDFromFaceIJ(f, stToIJ(0.5*(u+1)), stToIJ(0.5*(v+1)))
 }
 
 // clamp returns number closest to x within the range min..max.

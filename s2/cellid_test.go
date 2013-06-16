@@ -118,3 +118,36 @@ func TestLatLng(t *testing.T) {
 		}
 	}
 }
+
+func TestEdgeNeighbors(t *testing.T) {
+	// Check the edge neighbors of face 1.
+	faces := []int{5, 3, 2, 0}
+	for i, nbr := range cellIDFromFaceIJ(1, 0, 0).Parent(0).EdgeNeighbors() {
+		if !nbr.isFace() {
+			t.Errorf("CellID(%d) is not a face", nbr)
+		}
+		if got, want := nbr.Face(), faces[i]; got != want {
+			t.Errorf("CellID(%d).Face() = %d, want %d", nbr, got, want)
+		}
+	}
+	// Check the edge neighbors of the corner cells at all levels.  This case is
+	// trickier because it requires projecting onto adjacent faces.
+	const maxIJ = maxSize - 1
+	for level := 1; level <= maxLevel; level++ {
+		id := cellIDFromFaceIJ(1, 0, 0).Parent(level)
+		// These neighbors were determined manually using the face and axis
+		// relationships.
+		levelSizeIJ := sizeIJ(level)
+		want := []CellID{
+			cellIDFromFaceIJ(5, maxIJ, maxIJ).Parent(level),
+			cellIDFromFaceIJ(1, levelSizeIJ, 0).Parent(level),
+			cellIDFromFaceIJ(1, 0, levelSizeIJ).Parent(level),
+			cellIDFromFaceIJ(0, maxIJ, 0).Parent(level),
+		}
+		for i, nbr := range id.EdgeNeighbors() {
+			if nbr != want[i] {
+				t.Errorf("CellID(%d).EdgeNeighbors()[%d] = %v, want %v", id, i, nbr, want[i])
+			}
+		}
+	}
+}
