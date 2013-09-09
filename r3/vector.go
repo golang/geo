@@ -21,7 +21,7 @@ func (v Vector) ApproxEqual(ov Vector) bool {
 func (v Vector) String() string { return fmt.Sprintf("(%v, %v, %v)", v.X, v.Y, v.Z) }
 
 // Norm returns the vector's norm.
-func (v Vector) Norm() float64 { return math.Sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z) }
+func (v Vector) Norm() float64 { return math.Sqrt(v.Dot(v)) }
 
 // Normalize returns a unit vector in the same direction as v.
 func (v Vector) Normalize() Vector {
@@ -54,6 +54,9 @@ func (v Vector) Cross(ov Vector) Vector {
 		v.X*ov.Y - v.Y*ov.X,
 	}
 }
+
+// Distance returns the Euclidean distance between v and ov.
+func (v Vector) Distance(ov Vector) float64 { return v.Sub(ov).Norm() }
 
 // Angle returns the angle between v and ov.
 func (v Vector) Angle(ov Vector) s1.Angle {

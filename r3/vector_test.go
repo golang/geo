@@ -115,6 +115,29 @@ func TestSub(t *testing.T) {
 	}
 }
 
+func TestDistance(t *testing.T) {
+	tests := []struct {
+		v1, v2 Vector
+		want   float64
+	}{
+		{Vector{1, 0, 0}, Vector{1, 0, 0}, 0},
+		{Vector{1, 0, 0}, Vector{0, 1, 0}, 1.41421356237310},
+		{Vector{1, 0, 0}, Vector{0, 1, 1}, 1.73205080756888},
+		{Vector{1, 1, 1}, Vector{-1, -1, -1}, 3.46410161513775},
+		{Vector{1, 2, 2}, Vector{-0.3, 0.4, -1.2}, 3.80657326213486},
+	}
+	for _, test := range tests {
+		v1 := Vector{test.v1.X, test.v1.Y, test.v1.Z}
+		v2 := Vector{test.v2.X, test.v2.Y, test.v2.Z}
+		if got, want := v1.Distance(v2), test.want; !float64Eq(got, want) {
+			t.Errorf("%v.Distance(%v) = %v, want %v", v1, v2, got, want)
+		}
+		if got, want := v2.Distance(v1), test.want; !float64Eq(got, want) {
+			t.Errorf("%v.Distance(%v) = %v, want %v", v2, v1, got, want)
+		}
+	}
+}
+
 func TestMul(t *testing.T) {
 	tests := []struct {
 		v    Vector
