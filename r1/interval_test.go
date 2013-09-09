@@ -84,6 +84,24 @@ func TestIntersection(t *testing.T) {
 	}
 }
 
+func TestAddPoint(t *testing.T) {
+	tests := []struct {
+		interval Interval
+		point    float64
+		want     Interval
+	}{
+		{empty, 5, Interval{5, 5}},
+		{Interval{5, 5}, -1, Interval{-1, 5}},
+		{Interval{-1, 5}, 0, Interval{-1, 5}},
+		{Interval{-1, 5}, 6, Interval{-1, 6}},
+	}
+	for _, test := range tests {
+		if got := test.interval.AddPoint(test.point); !got.Equal(test.want) {
+			t.Errorf("%v.AddPoint(%v) = %v, want equal to %v", test.interval, test.point, got, test.want)
+		}
+	}
+}
+
 func TestExpanded(t *testing.T) {
 	tests := []struct {
 		interval Interval

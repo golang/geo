@@ -328,6 +328,37 @@ func TestIntervalOperations(t *testing.T) {
 	}
 }
 
+func TestAddPoint(t *testing.T) {
+	tests := []struct {
+		interval Interval
+		points   []float64
+		want     Interval
+	}{
+		{empty, []float64{0}, zero},
+		{empty, []float64{math.Pi}, pi},
+		{empty, []float64{-math.Pi}, mipi},
+		{empty, []float64{math.Pi, -math.Pi}, pi},
+		{empty, []float64{-math.Pi, math.Pi}, mipi},
+		{empty, []float64{mid12.Lo, mid12.Hi}, mid12},
+		{empty, []float64{mid23.Lo, mid23.Hi}, mid23},
+
+		{quad1, []float64{-0.9 * math.Pi, -math.Pi / 2}, quad123},
+		{full, []float64{0}, full},
+		{full, []float64{math.Pi}, full},
+		{full, []float64{-math.Pi}, full},
+	}
+	for _, test := range tests {
+		got := test.interval
+		for _, point := range test.points {
+			got = got.AddPoint(point)
+		}
+		want := test.want
+		if math.Abs(got.Lo-want.Lo) > 1e-15 || math.Abs(got.Hi-want.Hi) > 1e-15 {
+			t.Errorf("%v.AddPoint(%v) = %v, want %v", test.interval, test.points, got, want)
+		}
+	}
+}
+
 func TestExpanded(t *testing.T) {
 	tests := []struct {
 		interval Interval

@@ -80,6 +80,20 @@ func (i Interval) Intersection(j Interval) Interval {
 	}
 }
 
+// AddPoint returns the interval expanded so that it contains the given point.
+func (i Interval) AddPoint(p float64) Interval {
+	if i.IsEmpty() {
+		return Interval{p, p}
+	}
+	if p < i.Lo {
+		return Interval{p, i.Hi}
+	}
+	if p > i.Hi {
+		return Interval{i.Lo, p}
+	}
+	return i
+}
+
 // Expanded returns an interval that has been expanded on each side by margin.
 // If margin is negative, then the function shrinks the interval on
 // each side by margin instead. The resulting interval may be empty. Any

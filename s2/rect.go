@@ -92,6 +92,17 @@ func (r Rect) Area() float64 {
 	return r.Lng.Length() * capDiff
 }
 
+// AddPoint increases the size of the rectangle to include the given point.
+func (r Rect) AddPoint(ll LatLng) Rect {
+	if !ll.IsValid() {
+		return r
+	}
+	return Rect{
+		Lat: r.Lat.AddPoint(ll.Lat.Radians()),
+		Lng: r.Lng.AddPoint(ll.Lng.Radians()),
+	}
+}
+
 // expanded returns a rectangle that contains all points whose latitude distance from
 // this rectangle is at most margin.Lat, and whose longitude distance from
 // this rectangle is at most margin.Lng. In particular, latitudes are

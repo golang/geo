@@ -95,6 +95,40 @@ func TestRectFromCenterSize(t *testing.T) {
 	}
 }
 
+func TestAddPoint(t *testing.T) {
+	tests := []struct {
+		input Rect
+		point LatLng
+		want  Rect
+	}{
+		{
+			Rect{r1.EmptyInterval(), s1.EmptyInterval()},
+			LatLngFromDegrees(0, 0),
+			rectFromDegrees(0, 0, 0, 0),
+		},
+		{
+			rectFromDegrees(0, 0, 0, 0),
+			LatLng{0 * s1.Radian, (-math.Pi / 2) * s1.Radian},
+			rectFromDegrees(0, -90, 0, 0),
+		},
+		{
+			rectFromDegrees(0, -90, 0, 0),
+			LatLng{(math.Pi / 4) * s1.Radian, (-math.Pi) * s1.Radian},
+			rectFromDegrees(0, -180, 45, 0),
+		},
+		{
+			rectFromDegrees(0, -180, 45, 0),
+			LatLng{(math.Pi / 2) * s1.Radian, 0 * s1.Radian},
+			rectFromDegrees(0, -180, 90, 0),
+		},
+	}
+	for _, test := range tests {
+		if got, want := test.input.AddPoint(test.point), test.want; !rectApproxEqual(got, want) {
+			t.Errorf("%v.AddPoint(%v) was %v, want %v", test.input, test.point, got, want)
+		}
+	}
+}
+
 func TestExpanded(t *testing.T) {
 	empty := Rect{FullRect().Lat, s1.EmptyInterval()}
 	tests := []struct {
