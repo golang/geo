@@ -232,7 +232,7 @@ func (ci CellID) faceIJOrientation() (f, i, j, bits int) {
 func cellIDFromFaceIJ(f, i, j int) CellID {
 	// Note that this value gets shifted one bit to the left at the end
 	// of the function.
-	n := f << (posBits - 1)
+	n := uint64(f) << (posBits - 1)
 	// Alternating faces have opposite Hilbert curve orientations; this
 	// is necessary in order for all faces to have a right-handed
 	// coordinate system.
@@ -247,7 +247,7 @@ func cellIDFromFaceIJ(f, i, j int) CellID {
 		bits += int((i>>uint(k*lookupBits))&mask) << (lookupBits + 2)
 		bits += int((j>>uint(k*lookupBits))&mask) << 2
 		bits = lookupPos[bits]
-		n |= (bits >> 2) << (uint(k) * 2 * lookupBits)
+		n |= uint64(bits>>2) << (uint(k) * 2 * lookupBits)
 		bits &= (swapMask | invertMask)
 	}
 	return CellID(n*2 + 1)
