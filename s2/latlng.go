@@ -12,6 +12,7 @@ type LatLng struct {
 	Lat, Lng s1.Angle
 }
 
+// LatLngFromDegrees returns a LatLng for the coordinates given in degrees.
 func LatLngFromDegrees(lat, lng float64) LatLng {
 	return LatLng{s1.Angle(lat) * s1.Degree, s1.Angle(lng) * s1.Degree}
 }
