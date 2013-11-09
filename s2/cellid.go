@@ -2,8 +2,10 @@ package s2
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 	"strconv"
+	"strings"
 
 	"code.google.com/p/gos2/r3"
 )
@@ -37,6 +39,32 @@ func CellIDFromFacePosLevel(face int, pos uint64, level int) CellID {
 // CellIDFromLatLng returns the leaf cell containing ll.
 func CellIDFromLatLng(ll LatLng) CellID {
 	return cellIDFromPoint(PointFromLatLng(ll))
+}
+
+// CellIDFromToken returns a cell given a hex-encoded string of its uint64 ID.
+func CellIDFromToken(s string) CellID {
+	if len(s) > 16 {
+		return CellID(0)
+	}
+	n, err := strconv.ParseUint(s, 16, 64)
+	if err != nil {
+		return CellID(0)
+	}
+	// Equivalent to right-padding string with zeros to 16 characters.
+	if len(s) < 16 {
+		n = n << (4 * uint(16-len(s)))
+	}
+	return CellID(n)
+}
+
+// ToToken returns a hex-encoded string of the uint64 cell id, with leading
+// zeros included but trailing zeros stripped.
+func (ci CellID) ToToken() string {
+	s := strings.TrimRight(fmt.Sprintf("%016x", uint64(ci)), "0")
+	if len(s) == 0 {
+		return "X"
+	}
+	return s
 }
 
 // IsValid reports whether ci represents a valid cell.

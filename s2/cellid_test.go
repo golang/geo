@@ -151,3 +151,77 @@ func TestEdgeNeighbors(t *testing.T) {
 		}
 	}
 }
+
+func TestCellIDTokensNominal(t *testing.T) {
+	tests := []struct {
+		token string
+		id    CellID
+	}{
+		{"1", 0x1000000000000000},
+		{"3", 0x3000000000000000},
+		{"14", 0x1400000000000000},
+		{"41", 0x4100000000000000},
+		{"094", 0x0940000000000000},
+		{"537", 0x5370000000000000},
+		{"3fec", 0x3fec000000000000},
+		{"72f3", 0x72f3000000000000},
+		{"52b8c", 0x52b8c00000000000},
+		{"990ed", 0x990ed00000000000},
+		{"4476dc", 0x4476dc0000000000},
+		{"2a724f", 0x2a724f0000000000},
+		{"7d4afc4", 0x7d4afc4000000000},
+		{"b675785", 0xb675785000000000},
+		{"40cd6124", 0x40cd612400000000},
+		{"3ba32f81", 0x3ba32f8100000000},
+		{"08f569b5c", 0x08f569b5c0000000},
+		{"385327157", 0x3853271570000000},
+		{"166c4d1954", 0x166c4d1954000000},
+		{"96f48d8c39", 0x96f48d8c39000000},
+		{"0bca3c7f74c", 0x0bca3c7f74c00000},
+		{"1ae3619d12f", 0x1ae3619d12f00000},
+		{"07a77802a3fc", 0x07a77802a3fc0000},
+		{"4e7887ec1801", 0x4e7887ec18010000},
+		{"4adad7ae74124", 0x4adad7ae74124000},
+		{"90aba04afe0c5", 0x90aba04afe0c5000},
+		{"8ffc3f02af305c", 0x8ffc3f02af305c00},
+		{"6fa47550938183", 0x6fa4755093818300},
+		{"aa80a565df5e7fc", 0xaa80a565df5e7fc0},
+		{"01614b5e968e121", 0x01614b5e968e1210},
+		{"aa05238e7bd3ee7c", 0xaa05238e7bd3ee7c},
+		{"48a23db9c2963e5b", 0x48a23db9c2963e5b},
+	}
+	for _, test := range tests {
+		ci := CellIDFromToken(test.token)
+		if ci != test.id {
+			t.Errorf("CellIDFromToken(%q) = %x, want %x", test.token, uint64(ci), uint64(test.id))
+		}
+
+		token := ci.ToToken()
+		if token != test.token {
+			t.Errorf("ci.ToToken = %q, want %q", token, test.token)
+		}
+	}
+}
+
+func TestCellIDFromTokensErrorCases(t *testing.T) {
+	noneToken := CellID(0).ToToken()
+	if noneToken != "X" {
+		t.Errorf("CellID(0).Token() = %q, want X", noneToken)
+	}
+	noneID := CellIDFromToken(noneToken)
+	if noneID != CellID(0) {
+		t.Errorf("CellIDFromToken(%q) = %x, want 0", noneToken, uint64(noneID))
+	}
+	tests := []string{
+		"876b e99",
+		"876bee99\n",
+		"876[ee99",
+		" 876bee99",
+	}
+	for _, test := range tests {
+		ci := CellIDFromToken(test)
+		if uint64(ci) != 0 {
+			t.Errorf("CellIDFromToken(%q) = %x, want 0", test, uint64(ci))
+		}
+	}
+}
