@@ -94,6 +94,12 @@ func (i Interval) AddPoint(p float64) Interval {
 	return i
 }
 
+// ClampPoint returns the closest point in the interval to the given point "p".
+// The interval must be non-empty.
+func (i Interval) ClampPoint(p float64) float64 {
+	return math.Max(i.Lo, math.Min(i.Hi, p))
+}
+
 // Expanded returns an interval that has been expanded on each side by margin.
 // If margin is negative, then the function shrinks the interval on
 // each side by margin instead. The resulting interval may be empty. Any
@@ -105,8 +111,38 @@ func (i Interval) Expanded(margin float64) Interval {
 	return Interval{i.Lo - margin, i.Hi + margin}
 }
 
+// Union returns the smallest interval that contains this interval and the given interval.
+func (i Interval) Union(other Interval) Interval {
+	if i.IsEmpty() {
+		return other
+	}
+	if other.IsEmpty() {
+		return i
+	}
+	return Interval{math.Min(i.Lo, other.Lo), math.Max(i.Hi, other.Hi)}
+}
+
 func (i Interval) String() string { return fmt.Sprintf("[%.7f, %.7f]", i.Lo, i.Hi) }
 
+// epsilon is a small number that represents a reasonable level of noise between two
+// values that can be considered to be equal.
+const epsilon = 1e-14
+
+// ApproxEqual reports whether the interval can be transformed into the
+// given interval by moving each endpoint a small distance.
+// The empty interval is considered to be positioned arbitrarily on the
+// real line, so any interval with a small enough length will match
+// the empty interval.
+func (i Interval) ApproxEqual(other Interval) bool {
+	if i.IsEmpty() {
+		return other.Length() <= 2*epsilon
+	}
+	if other.IsEmpty() {
+		return i.Length() <= 2*epsilon
+	}
+	return math.Abs(other.Lo-i.Lo) <= epsilon &&
+		math.Abs(other.Hi-i.Hi) <= epsilon
+}
+
 // BUG(dsymonds): The major differences from the C++ version are:
-//   - Union, ApproxEquals
 //   - a few other miscellaneous operations

@@ -84,6 +84,27 @@ func TestIntersection(t *testing.T) {
 	}
 }
 
+func TestUnion(t *testing.T) {
+	tests := []struct {
+		x, y Interval
+		want Interval
+	}{
+		{Interval{99, 100}, empty, Interval{99, 100}},
+		{empty, Interval{99, 100}, Interval{99, 100}},
+		{Interval{5, 3}, Interval{0, -2}, empty},
+		{Interval{0, -2}, Interval{5, 3}, empty},
+		{unit, unit, unit},
+		{unit, negunit, Interval{-1, 1}},
+		{negunit, unit, Interval{-1, 1}},
+		{half, unit, unit},
+	}
+	for _, test := range tests {
+		if got := test.x.Union(test.y); !got.Equal(test.want) {
+			t.Errorf("%v.Union(%v) = %v, want equal to %v", test.x, test.y, got, test.want)
+		}
+	}
+}
+
 func TestAddPoint(t *testing.T) {
 	tests := []struct {
 		interval Interval
@@ -98,6 +119,23 @@ func TestAddPoint(t *testing.T) {
 	for _, test := range tests {
 		if got := test.interval.AddPoint(test.point); !got.Equal(test.want) {
 			t.Errorf("%v.AddPoint(%v) = %v, want equal to %v", test.interval, test.point, got, test.want)
+		}
+	}
+}
+
+func TestClampPoint(t *testing.T) {
+	tests := []struct {
+		interval Interval
+		clamp    float64
+		want     float64
+	}{
+		{Interval{0.1, 0.4}, 0.3, 0.3},
+		{Interval{0.1, 0.4}, -7.0, 0.1},
+		{Interval{0.1, 0.4}, 0.6, 0.4},
+	}
+	for _, test := range tests {
+		if got := test.interval.ClampPoint(test.clamp); got != test.want {
+			t.Errorf("%v.ClampPoint(%v) = %v, want equal to %v", test.interval, test.clamp, got, test.want)
 		}
 	}
 }
@@ -124,5 +162,46 @@ func TestIntervalString(t *testing.T) {
 	i := Interval{2, 4.5}
 	if s, exp := i.String(), "[2.0000000, 4.5000000]"; s != exp {
 		t.Errorf("i.String() = %q, want %q", s, exp)
+	}
+}
+
+func TestApproxEqual(t *testing.T) {
+	tests := []struct {
+		interval Interval
+		other    Interval
+		want     bool
+	}{
+		// Empty intervals.
+		{EmptyInterval(), EmptyInterval(), true},
+		{Interval{0, 0}, EmptyInterval(), true},
+		{EmptyInterval(), Interval{0, 0}, true},
+		{Interval{1, 1}, EmptyInterval(), true},
+		{EmptyInterval(), Interval{1, 1}, true},
+		{EmptyInterval(), Interval{0, 1}, false},
+		{EmptyInterval(), Interval{1, 1 + 2*epsilon}, true},
+
+		// Singleton intervals.
+		{Interval{1, 1}, Interval{1, 1}, true},
+		{Interval{1, 1}, Interval{1 - epsilon, 1 - epsilon}, true},
+		{Interval{1, 1}, Interval{1 + epsilon, 1 + epsilon}, true},
+		{Interval{1, 1}, Interval{1 - 3*epsilon, 1}, false},
+		{Interval{1, 1}, Interval{1, 1 + 3*epsilon}, false},
+		{Interval{1, 1}, Interval{1 - epsilon, 1 + epsilon}, true},
+		{Interval{0, 0}, Interval{1, 1}, false},
+
+		// Other intervals.
+		{Interval{1 - epsilon, 2 + epsilon}, Interval{1, 2}, false},
+		{Interval{1 + epsilon, 2 - epsilon}, Interval{1, 2}, true},
+		{Interval{1 - 3*epsilon, 2 + epsilon}, Interval{1, 2}, false},
+		{Interval{1 + 3*epsilon, 2 - epsilon}, Interval{1, 2}, false},
+		{Interval{1 - epsilon, 2 + 3*epsilon}, Interval{1, 2}, false},
+		{Interval{1 + epsilon, 2 - 3*epsilon}, Interval{1, 2}, false},
+	}
+
+	for _, test := range tests {
+		if got := test.interval.ApproxEqual(test.other); got != test.want {
+			t.Errorf("%v.ApproxEqual(%v) = %v, want %v",
+				test.interval, test.other, got, test.want)
+		}
 	}
 }
