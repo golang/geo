@@ -23,6 +23,9 @@ func (v Vector) String() string { return fmt.Sprintf("(%v, %v, %v)", v.X, v.Y, v
 // Norm returns the vector's norm.
 func (v Vector) Norm() float64 { return math.Sqrt(v.Dot(v)) }
 
+// Norm2 returns the square of the norm.
+func (v Vector) Norm2() float64 { return v.Dot(v) }
+
 // Normalize returns a unit vector in the same direction as v.
 func (v Vector) Normalize() Vector {
 	if v == (Vector{0, 0, 0}) {

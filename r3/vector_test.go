@@ -24,6 +24,25 @@ func TestNorm(t *testing.T) {
 	}
 }
 
+func TestNorm2(t *testing.T) {
+	tests := []struct {
+		v    Vector
+		want float64
+	}{
+		{Vector{0, 0, 0}, 0},
+		{Vector{0, 1, 0}, 1},
+		{Vector{1, 1, 1}, 3},
+		{Vector{1, 2, 3}, 14},
+		{Vector{3, -4, 12}, 169},
+		{Vector{1, 1e-16, 1e-32}, 1},
+	}
+	for _, test := range tests {
+		if !float64Eq(test.v.Norm2(), test.want) {
+			t.Errorf("%v.Norm2() = %v, want %v", test.v, test.v.Norm2(), test.want)
+		}
+	}
+}
+
 func TestNormalize(t *testing.T) {
 	vectors := []Vector{
 		{1, 0, 0},
