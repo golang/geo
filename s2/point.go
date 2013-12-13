@@ -91,6 +91,12 @@ func (a Point) Distance(b Point) s1.Angle {
 	return a.Vector.Angle(b.Vector)
 }
 
+// ApproxEqual reports if the two points are similar enough to be equal.
+func (p Point) ApproxEqual(other Point) bool {
+	const epsilon = 1e-14
+	return p.Vector.Angle(other.Vector) <= epsilon
+}
+
 // TODO(dnadasi):
 //   - Other CCW methods
 //   - Area methods
