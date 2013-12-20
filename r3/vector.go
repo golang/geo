@@ -14,7 +14,7 @@ type Vector struct {
 
 // ApproxEqual reports whether v and ov are equal within a small epsilon.
 func (v Vector) ApproxEqual(ov Vector) bool {
-	const epsilon = 1.0e-14
+	const epsilon = 1e-14
 	return math.Abs(v.X-ov.X) < epsilon && math.Abs(v.Y-ov.Y) < epsilon && math.Abs(v.Z-ov.Z) < epsilon
 }
 
@@ -32,6 +32,12 @@ func (v Vector) Normalize() Vector {
 		return v
 	}
 	return v.Mul(1 / v.Norm())
+}
+
+// IsUnit returns whether this vector is of approximately unit length.
+func (v Vector) IsUnit() bool {
+	const epsilon = 5e-14
+	return math.Abs(v.Norm2()-1) <= epsilon
 }
 
 // Abs returns the vector with nonnegative components.

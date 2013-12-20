@@ -63,6 +63,25 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
+func TestIsUnit(t *testing.T) {
+	const epsilon = 1e-14
+	tests := []struct {
+		v    Vector
+		want bool
+	}{
+		{Vector{0, 0, 0}, false},
+		{Vector{0, 1, 0}, true},
+		{Vector{1 + 2*epsilon, 0, 0}, true},
+		{Vector{1 * (1 + epsilon), 0, 0}, true},
+		{Vector{1, 1, 1}, false},
+		{Vector{1, 1e-16, 1e-32}, true},
+	}
+	for _, test := range tests {
+		if got := test.v.IsUnit(); got != test.want {
+			t.Errorf("%v.IsUnit() = %v, want %v", test.v, got, test.want)
+		}
+	}
+}
 func TestDot(t *testing.T) {
 	tests := []struct {
 		v1, v2 Vector
