@@ -6,6 +6,21 @@ import (
 	"code.google.com/p/gos2/r3"
 )
 
+const (
+	// maxSiTi is the maximum value of an si- or ti-coordinate.
+	// It is one shift more than maxSize.
+	maxSiTi = maxSize << 1
+)
+
+// siTiToST converts an si- or ti-value to the corresponding s- or t-value.
+// Value is capped at 1.0 because there is no DCHECK in Go.
+func siTiToST(si uint64) float64 {
+	if si > maxSiTi {
+		return 1.0
+	}
+	return float64(si / maxSiTi)
+}
+
 // stToUV converts an s or t value to the corresponding u or v value.
 // This is a non-linear transformation from [-1,1] to [-1,1] that
 // attempts to make the cell sizes more uniform.
@@ -87,8 +102,48 @@ func faceUVToXYZ(face int, u, v float64) r3.Vector {
 		return r3.Vector{-1, -v, -u}
 	case 4:
 		return r3.Vector{v, -1, -u}
-	case 5:
+	default:
 		return r3.Vector{v, u, -1}
 	}
-	return r3.Vector{0, 0, 0}
+}
+
+// uNorm returns the right-handed normal (not necessarily unit length) for an
+// edge in the direction of the positive v-axis at the given u-value on
+// the given face.  (This vector is perpendicular to the plane through
+// the sphere origin that contains the given edge.)
+func uNorm(face int, u float64) r3.Vector {
+	switch face {
+	case 0:
+		return r3.Vector{u, -1, 0}
+	case 1:
+		return r3.Vector{1, u, 0}
+	case 2:
+		return r3.Vector{1, 0, u}
+	case 3:
+		return r3.Vector{-u, 0, 1}
+	case 4:
+		return r3.Vector{0, -u, 1}
+	default:
+		return r3.Vector{0, -1, -u}
+	}
+}
+
+// vNorm returns the right-handed normal (not necessarily unit length) for an
+// edge in the direction of the positive u-axis at the given v-value on
+// the given face.
+func vNorm(face int, v float64) r3.Vector {
+	switch face {
+	case 0:
+		return r3.Vector{-v, 0, 1}
+	case 1:
+		return r3.Vector{0, -v, 1}
+	case 2:
+		return r3.Vector{0, -1, -v}
+	case 3:
+		return r3.Vector{v, -1, 0}
+	case 4:
+		return r3.Vector{1, v, 0}
+	default:
+		return r3.Vector{1, 0, v}
+	}
 }
