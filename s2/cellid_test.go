@@ -25,6 +25,12 @@ func TestParentChildRelationships(t *testing.T) {
 		t.Errorf("CellID %v should not be a leaf", ci)
 	}
 
+	if kid2 := ci.ChildBeginAtLevel(ci.Level() + 2).Pos(); kid2 != 0x12345610 {
+		t.Errorf("child two levels down is 0x%X, want 0x12345610", kid2)
+	}
+	if kid0 := ci.ChildBegin().Pos(); kid0 != 0x12345640 {
+		t.Errorf("first child is 0x%X, want 0x12345640", kid0)
+	}
 	if kid0 := ci.Children()[0].Pos(); kid0 != 0x12345640 {
 		t.Errorf("first child is 0x%X, want 0x12345640", kid0)
 	}
@@ -33,6 +39,22 @@ func TestParentChildRelationships(t *testing.T) {
 	}
 	if parent := ci.Parent(ci.Level() - 2).Pos(); parent != 0x12345000 {
 		t.Errorf("ci.Parent(l-2).Pos() = 0x%X, want 0x12345000", parent)
+	}
+
+	if uint64(ci.ChildBegin()) >= uint64(ci) {
+		t.Errorf("ci.ChildBegin() is 0x%X, want < 0x%X", ci.ChildBegin(), ci)
+	}
+	if uint64(ci.ChildEnd()) <= uint64(ci) {
+		t.Errorf("ci.ChildEnd() is 0x%X, want > 0x%X", ci.ChildEnd(), ci)
+	}
+	if ci.ChildEnd() != ci.ChildBegin().Next().Next().Next().Next() {
+		t.Errorf("ci.ChildEnd() is 0x%X, want 0x%X", ci.ChildEnd(), ci.ChildBegin().Next().Next().Next().Next())
+	}
+	if ci.RangeMin() != ci.ChildBeginAtLevel(maxLevel) {
+		t.Errorf("ci.RangeMin() is 0x%X, want 0x%X", ci.RangeMin(), ci.ChildBeginAtLevel(maxLevel))
+	}
+	if ci.RangeMax().Next() != ci.ChildEndAtLevel(maxLevel) {
+		t.Errorf("ci.RangeMax().Next() is 0x%X, want 0x%X", ci.RangeMax().Next(), ci.ChildEndAtLevel(maxLevel))
 	}
 }
 

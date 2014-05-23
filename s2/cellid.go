@@ -209,6 +209,43 @@ func (ci CellID) Point() Point { return Point{ci.rawPoint().Normalize()} }
 // LatLng returns the center of the s2 cell on the sphere as a LatLng.
 func (ci CellID) LatLng() LatLng { return LatLngFromPoint(Point{ci.rawPoint()}) }
 
+// ChildBegin returns the first child in a traversal of the children of this cell, in Hilbert curve order.
+//
+//    for ci := c.ChildBegin(); ci != c.ChildEnd(); ci = ci.Next() {
+//        ...
+//    }
+func (ci CellID) ChildBegin() CellID {
+	ol := ci.lsb()
+	return CellID(uint64(ci) - ol + ol>>2)
+}
+
+// ChildBeginAtLevel returns the first cell in a traversal of children a given level deeper than this cell, in
+// Hilbert curve order. The given level must be no smaller than the cell's level.
+func (ci CellID) ChildBeginAtLevel(level int) CellID {
+	return CellID(uint64(ci) - ci.lsb() + lsbForLevel(level))
+}
+
+// ChildEnd returns the first cell after a traversal of the children of this cell in Hilbert curve order.
+// The returned cell may be invalid.
+func (ci CellID) ChildEnd() CellID {
+	ol := ci.lsb()
+	return CellID(uint64(ci) + ol + ol>>2)
+}
+
+// ChildEndAtLevel returns the first cell after the last child in a traversal of children a given level deeper
+// than this cell, in Hilbert curve order.
+// The given level must be no smaller than the cell's level.
+// The returned cell may be invalid.
+func (ci CellID) ChildEndAtLevel(level int) CellID {
+	return CellID(uint64(ci) + ci.lsb() + lsbForLevel(level))
+}
+
+// Next returns the next cell along the Hilbert curve.
+// This is expected to be used with ChildStart and ChildEnd.
+func (ci CellID) Next() CellID {
+	return CellID(uint64(ci) + ci.lsb()<<1)
+}
+
 // TODO: the methods below are not exported yet.  Settle on the entire API design
 // before doing this.  Do we want to mirror the C++ one as closely as possible?
 
