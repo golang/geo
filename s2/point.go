@@ -1,6 +1,8 @@
 package s2
 
 import (
+	"math"
+
 	"code.google.com/p/gos2/r3"
 	"code.google.com/p/gos2/s1"
 )
@@ -87,14 +89,72 @@ func CCW(a, b, c Point) bool {
 }
 
 // Distance returns the angle between two points.
-func (a Point) Distance(b Point) s1.Angle {
-	return a.Vector.Angle(b.Vector)
+func (p Point) Distance(b Point) s1.Angle {
+	return p.Vector.Angle(b.Vector)
 }
 
 // ApproxEqual reports if the two points are similar enough to be equal.
 func (p Point) ApproxEqual(other Point) bool {
 	const epsilon = 1e-14
 	return p.Vector.Angle(other.Vector) <= epsilon
+}
+
+// PointArea returns the area on the unit sphere for the triangle defined by the
+// given points.
+//
+// This method is based on l'Huilier's theorem,
+//
+//   tan(E/4) = sqrt(tan(s/2) tan((s-a)/2) tan((s-b)/2) tan((s-c)/2))
+//
+// where E is the spherical excess of the triangle (i.e. its area),
+//       a, b, c are the side lengths, and
+//       s is the semiperimeter (a + b + c) / 2.
+//
+// The only significant source of error using l'Huilier's method is the
+// cancellation error of the terms (s-a), (s-b), (s-c). This leads to a
+// *relative* error of about 1e-16 * s / min(s-a, s-b, s-c). This compares
+// to a relative error of about 1e-15 / E using Girard's formula, where E is
+// the true area of the triangle. Girard's formula can be even worse than
+// this for very small triangles, e.g. a triangle with a true area of 1e-30
+// might evaluate to 1e-5.
+//
+// So, we prefer l'Huilier's formula unless dmin < s * (0.1 * E), where
+// dmin = min(s-a, s-b, s-c). This basically includes all triangles
+// except for extremely long and skinny ones.
+//
+// Since we don't know E, we would like a conservative upper bound on
+// the triangle area in terms of s and dmin. It's possible to show that
+// E <= k1 * s * sqrt(s * dmin), where k1 = 2*sqrt(3)/Pi (about 1).
+// Using this, it's easy to show that we should always use l'Huilier's
+// method if dmin >= k2 * s^5, where k2 is about 1e-2. Furthermore,
+// if dmin < k2 * s^5, the triangle area is at most k3 * s^4, where
+// k3 is about 0.1. Since the best case error using Girard's formula
+// is about 1e-15, this means that we shouldn't even consider it unless
+// s >= 3e-4 or so.
+func PointArea(a, b, c Point) float64 {
+	sa := float64(b.Angle(c.Vector))
+	sb := float64(c.Angle(a.Vector))
+	sc := float64(a.Angle(b.Vector))
+	s := 0.5 * (sa + sb + sc)
+	if s >= 3e-4 {
+		// Consider whether Girard's formula might be more accurate.
+		dmin := s - math.Max(sa, math.Max(sb, sc))
+		if dmin < 1e-2*s*s*s*s*s {
+			// This triangle is skinny enough to use Girard's formula.
+			ab := a.PointCross(b)
+			bc := b.PointCross(c)
+			ac := a.PointCross(c)
+			area := math.Max(0.0, float64(ab.Angle(ac.Vector)-ab.Angle(bc.Vector)+bc.Angle(ac.Vector)))
+
+			if dmin < s*0.1*area {
+				return area
+			}
+		}
+	}
+
+	// Use l'Huilier's formula.
+	return 4 * math.Atan(math.Sqrt(math.Max(0.0, math.Tan(0.5*s)*math.Tan(0.5*(s-sa))*
+		math.Tan(0.5*(s-sb))*math.Tan(0.5*(s-sc)))))
 }
 
 // TODO(dnadasi):

@@ -5,6 +5,11 @@ import (
 	"testing"
 )
 
+// float64Near reports if the two values are within the given epsilon.
+func float64Near(x, y, ε float64) bool {
+	return math.Abs(x-y) <= ε
+}
+
 func TestOriginPoint(t *testing.T) {
 	if math.Abs(OriginPoint().Norm()-1) > 1e-16 {
 		t.Errorf("Origin point norm = %v, want 1", OriginPoint().Norm())
@@ -47,8 +52,8 @@ func TestCCW(t *testing.T) {
 		{1, 1, 0, 0, 1, 1, 1, 0, 1, true},
 		{-3, -1, 4, 2, -1, -3, 1, -2, 0, true},
 
-		// All degenerate cases of CCW().  Let M_1, M_2, ... be the sequence of
-		// submatrices whose determinant sign is tested by that function.  Then the
+		// All degenerate cases of CCW(). Let M_1, M_2, ... be the sequence of
+		// submatrices whose determinant sign is tested by that function. Then the
 		// i-th test below is a 3x3 matrix M (with rows A, B, C) such that:
 		//
 		//    det(M) = 0
@@ -142,5 +147,91 @@ func TestApproxEqual(t *testing.T) {
 		if got := p1.ApproxEqual(p2); got != test.want {
 			t.Errorf("%v.ApproxEqual(%v), got %v want %v", p1, p2, got, test.want)
 		}
+	}
+}
+
+var (
+	pz   = PointFromCoords(0, 0, 1)
+	p000 = PointFromCoords(1, 0, 0)
+	p045 = PointFromCoords(1, 1, 0)
+	p090 = PointFromCoords(0, 1, 0)
+	p180 = PointFromCoords(-1, 0, 0)
+	// Degenerate triangles.
+	pr = PointFromCoords(0.257, -0.5723, 0.112)
+	pq = PointFromCoords(-0.747, 0.401, 0.2235)
+
+	// For testing the Girard area fall through case.
+	g1 = PointFromCoords(1, 1, 1)
+	g2 = Point{g1.Add(pr.Mul(1e-15)).Normalize()}
+	g3 = Point{g1.Add(pq.Mul(1e-15)).Normalize()}
+)
+
+func TestPointArea(t *testing.T) {
+	epsilon := 1e-10
+	tests := []struct {
+		a, b, c  Point
+		want     float64
+		nearness float64
+	}{
+		{p000, p090, pz, math.Pi / 2.0, 0},
+		// This test case should give 0 as the epsilon, but either Go or C++'s value for Pi,
+		// or the accuracy of the multiplications along the way, cause a difference ~15 decimal
+		// places into the result, so it is not quite a difference of 0.
+		{p045, pz, p180, 3.0 * math.Pi / 4.0, 1e-14},
+		// Make sure that Area has good *relative* accuracy even for very small areas.
+		{PointFromCoords(epsilon, 0, 1), PointFromCoords(0, epsilon, 1), pz, 0.5 * epsilon * epsilon, 1e-14},
+		// Make sure that it can handle degenerate triangles.
+		{pr, pr, pr, 0.0, 0},
+		{pr, pq, pr, 0.0, 1e-15},
+		{p000, p045, p090, 0.0, 0},
+		// Try a very long and skinny triangle.
+		{p000, PointFromCoords(1, 1, epsilon), p090, 5.8578643762690495119753e-11, 1e-9},
+		// TODO(roberts):
+		// C++ includes a 10,000 loop of perterbations to test out the Girard area
+		// computation is less than some noise threshold.
+		// Do we need that many? Will one or two suffice?
+		{g1, g2, g3, 0.0, 1e-15},
+	}
+	for _, test := range tests {
+		if got := PointArea(test.a, test.b, test.c); !float64Near(got, test.want, test.nearness) {
+			t.Errorf("PointArea(%v, %v, %v), got %v want %v", test.a, test.b, test.c, got, test.want)
+		}
+	}
+}
+
+func TestPointAreaQuarterHemisphere(t *testing.T) {
+	epsilon := 1e-14
+	tests := []struct {
+		a, b, c, d, e Point
+		want          float64
+	}{
+		// Triangles with near-180 degree edges that sum to a quarter-sphere.
+		{PointFromCoords(1, 0.1*epsilon, epsilon), p000, p045, p180, pz, math.Pi},
+		// Four other triangles that sum to a quarter-sphere.
+		{PointFromCoords(1, 1, epsilon), p000, p045, p180, pz, math.Pi},
+		// TODO(roberts):
+		// C++ Includes a loop of 100 perturbations on a hemisphere for more tests.
+	}
+	for _, test := range tests {
+		area := PointArea(test.a, test.b, test.c) +
+			PointArea(test.a, test.c, test.d) +
+			PointArea(test.a, test.d, test.e) +
+			PointArea(test.a, test.e, test.b)
+
+		if !float64Eq(area, test.want) {
+			t.Errorf("Adding up 4 quarter hemispheres with PointArea(), got %v want %v", area, test.want)
+		}
+	}
+}
+
+func BenchmarkPointArea(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		PointArea(p000, p090, pz)
+	}
+}
+
+func BenchmarkPointAreaGirardCase(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		PointArea(g1, g2, g3)
 	}
 }
