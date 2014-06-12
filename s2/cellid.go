@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"code.google.com/p/gos2/r1"
+	"code.google.com/p/gos2/r2"
 	"code.google.com/p/gos2/r3"
 )
 
@@ -34,6 +36,11 @@ const (
 // the center of the returned cell.
 func CellIDFromFacePosLevel(face int, pos uint64, level int) CellID {
 	return CellID(uint64(face)<<posBits + pos | 1).Parent(level)
+}
+
+// CellIDFromFace returns the cell corresponding to a given S2 cube face.
+func CellIDFromFace(face int) CellID {
+	return CellID((uint64(face) << posBits) + lsbForLevel(0))
 }
 
 // CellIDFromLatLng returns the leaf cell containing ll.
@@ -121,6 +128,7 @@ func (ci CellID) ChildPosition(level int) int {
 	return int(uint64(ci)>>uint64(2*(maxLevel-level)+1)) & 3
 }
 
+// lsbForLevel returns the lowest-numbered bit that is on for cells at the given level.
 func lsbForLevel(level int) uint64 { return 1 << uint64(2*(maxLevel-level)) }
 
 // Parent returns the cell at the given level, which must be no greater than the current level.
@@ -360,6 +368,14 @@ func clamp(x, min, max int) int {
 	return x
 }
 
+// ijToSTMin converts the i- or j-index of a leaf cell to the minimum corresponding
+// s- or t-value contained by that cell. The argument must be in the range
+// [0..2**30], i.e. up to one position beyond the normal range of valid leaf
+// cell indices.
+func ijToSTMin(i int) float64 {
+	return float64(i) / float64(maxSize)
+}
+
 // stToIJ converts value in ST coordinates to a value in IJ coordinates.
 func stToIJ(s float64) int {
 	return clamp(int(math.Floor(maxSize*s)), 0, maxSize-1)
@@ -371,6 +387,25 @@ func cellIDFromPoint(p Point) CellID {
 	i := stToIJ(uvToST(u))
 	j := stToIJ(uvToST(v))
 	return cellIDFromFaceIJ(f, i, j)
+}
+
+// ijLevelToBoundUV returns the bounds in (u,v)-space for the cell at the given
+// level containing the leaf cell with the given (i,j)-coordinates.
+func ijLevelToBoundUV(i, j, level int) r2.Rect {
+	cellSize := sizeIJ(level)
+	xLo := i & -cellSize
+	yLo := j & -cellSize
+
+	return r2.Rect{
+		X: r1.Interval{
+			Lo: stToUV(ijToSTMin(xLo)),
+			Hi: stToUV(ijToSTMin(xLo + cellSize)),
+		},
+		Y: r1.Interval{
+			Lo: stToUV(ijToSTMin(yLo)),
+			Hi: stToUV(ijToSTMin(yLo + cellSize)),
+		},
+	}
 }
 
 // Constants related to the bit mangling in the Cell ID.

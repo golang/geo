@@ -3,8 +3,19 @@ package s2
 import (
 	"testing"
 
+	"code.google.com/p/gos2/r2"
 	"code.google.com/p/gos2/s1"
 )
+
+func TestCellIDFromFace(t *testing.T) {
+	for face := 0; face < 6; face++ {
+		fpl := CellIDFromFacePosLevel(face, 0, 0)
+		f := CellIDFromFace(face)
+		if fpl != f {
+			t.Errorf("CellIDFromFacePosLevel(%d, 0, 0) != CellIDFromFace(%d), got %v wanted %v", face, face, f, fpl)
+		}
+	}
+}
 
 func TestParentChildRelationships(t *testing.T) {
 	ci := CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)
@@ -244,6 +255,114 @@ func TestCellIDFromTokensErrorCases(t *testing.T) {
 		ci := CellIDFromToken(test)
 		if uint64(ci) != 0 {
 			t.Errorf("CellIDFromToken(%q) = %x, want 0", test, uint64(ci))
+		}
+	}
+}
+
+func TestIJLevelToBoundUV(t *testing.T) {
+	maxIJ := 1<<maxLevel - 1
+
+	tests := []struct {
+		i     int
+		j     int
+		level int
+		want  r2.Rect
+	}{
+		// The i/j space is [0, 2^30 - 1) which maps to [-1, 1] for the
+		// x/y axes of the face surface. Results are scaled by the size of a cell
+		// at the given level. At level 0, everything is one cell of the full size
+		// of the space.  At maxLevel, the bounding rect is almost floating point
+		// noise.
+
+		// What should be out of bounds values, but passes the C++ code as well.
+		{
+			-1, -1, 0,
+			r2.RectFromPoints(r2.Point{-5, -5}, r2.Point{-1, -1}),
+		},
+		{
+			-1 * maxIJ, -1 * maxIJ, 0,
+			r2.RectFromPoints(r2.Point{-5, -5}, r2.Point{-1, -1}),
+		},
+		{
+			-1, -1, maxLevel,
+			r2.RectFromPoints(r2.Point{-1.0000000024835267, -1.0000000024835267},
+				r2.Point{-1, -1}),
+		},
+		{
+			0, 0, maxLevel + 1,
+			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{-1, -1}),
+		},
+
+		// Minimum i,j at different levels
+		{
+			0, 0, 0,
+			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1}),
+		},
+		{
+			0, 0, maxLevel / 2,
+			r2.RectFromPoints(r2.Point{-1, -1},
+				r2.Point{-0.999918621033430099, -0.999918621033430099}),
+		},
+		{
+			0, 0, maxLevel,
+			r2.RectFromPoints(r2.Point{-1, -1},
+				r2.Point{-0.999999997516473060, -0.999999997516473060}),
+		},
+
+		// Just a hair off the outer bounds at different levels.
+		{
+			1, 1, 0,
+			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1}),
+		},
+		{
+			1, 1, maxLevel / 2,
+			r2.RectFromPoints(r2.Point{-1, -1},
+				r2.Point{-0.999918621033430099, -0.999918621033430099}),
+		},
+		{
+			1, 1, maxLevel,
+			r2.RectFromPoints(r2.Point{-0.9999999975164731, -0.9999999975164731},
+				r2.Point{-0.9999999950329462, -0.9999999950329462}),
+		},
+
+		// Center point of the i,j space at different levels.
+		{
+			maxIJ / 2, maxIJ / 2, 0,
+			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1})},
+		{
+			maxIJ / 2, maxIJ / 2, maxLevel / 2,
+			r2.RectFromPoints(r2.Point{-0.000040691345930099, -0.000040691345930099},
+				r2.Point{0, 0})},
+		{
+			maxIJ / 2, maxIJ / 2, maxLevel,
+			r2.RectFromPoints(r2.Point{-0.000000001241763433, -0.000000001241763433},
+				r2.Point{0, 0})},
+
+		// Maximum i, j at different levels.
+		{
+			maxIJ, maxIJ, 0,
+			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1}),
+		},
+		{
+			maxIJ, maxIJ, maxLevel / 2,
+			r2.RectFromPoints(r2.Point{0.999918621033430099, 0.999918621033430099},
+				r2.Point{1, 1}),
+		},
+		{
+			maxIJ, maxIJ, maxLevel,
+			r2.RectFromPoints(r2.Point{0.999999997516473060, 0.999999997516473060},
+				r2.Point{1, 1}),
+		},
+	}
+
+	for _, test := range tests {
+		uv := ijLevelToBoundUV(test.i, test.j, test.level)
+		if !float64Eq(uv.X.Lo, test.want.X.Lo) ||
+			!float64Eq(uv.X.Hi, test.want.X.Hi) ||
+			!float64Eq(uv.Y.Lo, test.want.Y.Lo) ||
+			!float64Eq(uv.Y.Hi, test.want.Y.Hi) {
+			t.Errorf("ijLevelToBoundUV(%d, %d, %d), got %v, want %v",
+				test.i, test.j, test.level, uv, test.want)
 		}
 	}
 }

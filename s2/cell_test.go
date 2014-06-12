@@ -1,0 +1,71 @@
+package s2
+
+import (
+	"testing"
+	"unsafe"
+)
+
+// maxCellSize is the upper bounds on the number of bytes we want the Cell object to ever be.
+const maxCellSize = 48
+
+func TestCellObjectSize(t *testing.T) {
+	if sz := unsafe.Sizeof(Cell{}); sz > maxCellSize {
+		t.Errorf("Cell struct too big: %d bytes > %d bytes", sz, maxCellSize)
+	}
+}
+
+func TestCellFaces(t *testing.T) {
+	edgeCounts := make(map[Point]int)
+	vertexCounts := make(map[Point]int)
+
+	for face := 0; face < 6; face++ {
+		id := CellIDFromFace(face)
+		cell := CellFromCellID(id)
+
+		if cell.id != id {
+			t.Errorf("cell.id != id; %v != %v", cell.id, id)
+		}
+
+		if cell.face != int8(face) {
+			t.Errorf("cell.face != face: %v != %v", cell.face, face)
+		}
+
+		if cell.level != 0 {
+			t.Errorf("cell.level != 0: %v != 0", cell.level)
+		}
+
+		// Top-level faces have alternating orientations to get RHS coordinates.
+		if cell.orientation != int8(face&swapMask) {
+			t.Errorf("cell.orientation != orientation: %v != %v", cell.orientation, face&swapMask)
+		}
+
+		if cell.IsLeaf() {
+			t.Errorf("cell should not be a leaf: IsLeaf = %v", cell.IsLeaf())
+		}
+		for k := 0; k < 4; k++ {
+			edgeCounts[cell.Edge(k)]++
+			vertexCounts[cell.Vertex(k)]++
+			if d := cell.Vertex(k).Dot(cell.Edge(k).Vector); !float64Eq(0.0, d) {
+				t.Errorf("dot product of vertex and edge failed, got %v, want 0", d)
+			}
+			if d := cell.Vertex((k + 1) & 3).Dot(cell.Edge(k).Vector); !float64Eq(0.0, d) {
+				t.Errorf("dot product for edge and next vertex failed, got %v, want 0", d)
+			}
+			if d := cell.Vertex(k).Vector.Cross(cell.Vertex((k + 1) & 3).Vector).Normalize().Dot(cell.Edge(k).Vector); !float64Eq(1.0, d) {
+				t.Errorf("dot product of cross product for vertices failed, got %v, want 1.0", d)
+			}
+		}
+	}
+
+	// Check that edges have multiplicity 2 and vertices have multiplicity 3.
+	for k, v := range edgeCounts {
+		if v != 2 {
+			t.Errorf("edge %v counts wrong, got %d, want 2", k, v)
+		}
+	}
+	for k, v := range vertexCounts {
+		if v != 3 {
+			t.Errorf("vertex %v counts wrong, got %d, want 3", k, v)
+		}
+	}
+}
