@@ -7,6 +7,43 @@ import (
 	"code.google.com/p/gos2/s1"
 )
 
+// Direction is an indication of the ordering of a set of points
+type Direction int
+
+// These are the three options for the direction of a set of points.
+const (
+	Clockwise        Direction = -1
+	Indeterminate              = 0
+	CounterClockwise           = 1
+)
+
+// maxDeterminantError is the maximum error in computing (AxB).C where all vectors
+// are unit length. Using standard inequalities, it can be shown that
+//
+//  fl(AxB) = AxB + D where |D| <= (|AxB| + (2/sqrt(3))*|A|*|B|) * e
+//
+// where "fl()" denotes a calculation done in floating-point arithmetic,
+// |x| denotes either absolute value or the L2-norm as appropriate, and
+// e is a reasonably small value near the noise level of floating point
+// number accuracy. Similarly,
+//
+//  fl(B.C) = B.C + d where |d| <= (|B.C| + 2*|B|*|C|) * e .
+//
+// Applying these bounds to the unit-length vectors A,B,C and neglecting
+// relative error (which does not affect the sign of the result), we get
+//
+//  fl((AxB).C) = (AxB).C + d where |d| <= (3 + 2/sqrt(3)) * e
+const maxDeterminantError = 4.6125e-16
+
+// detErrorMultiplier is the factor to scale the magnitudes by when checking
+// for the sign of set of points with certainty. Using a similar technique to
+// the one used for maxDeterminantError, the error is at most:
+//
+//   |d| <= (3 + 6/sqrt(3)) * |A-C| * |B-C| * e
+//
+// If the determinant magnitude is larger than this value then we know its sign with certainty.
+const detErrorMultiplier = 7.1767e-16
+
 // Point represents a point on the unit sphere as a normalized 3D vector.
 //
 // Points are guaranteed to be close to normal in the sense that the norm of any points will be very close to 1.
@@ -18,7 +55,11 @@ type Point struct {
 
 // PointFromCoords creates a new normalized point from coordinates.
 //
-// This always returns a valid point. If the given coordinates can not be normalized the origin point will be returned.
+// This always returns a valid point. If the given coordinates can not be normalized
+// the origin point will be returned.
+//
+// This behavior is different from the C++ construction of a S2Point from coordinates
+// (i.e. S2Point(x, y, z)) in that in C++ they do not Normalize.
 func PointFromCoords(x, y, z float64) Point {
 	if x == 0 && y == 0 && z == 0 {
 		return OriginPoint()
@@ -86,6 +127,120 @@ func CCW(a, b, c Point) bool {
 	//     (1) x ⨯ y == -(y ⨯ x)
 	//     (2) -x · y == -(x · y)
 	return c.Cross(a.Vector).Dot(b.Vector) > 0
+}
+
+// RobustSign returns a Direction representing the ordering of the points.
+// CounterClockwise is returned if the points are in counter-clockwise order,
+// Clockwise for clockwise, and Indeterminate if any two points are the same (collinear),
+// or the sign could not completely be determined.
+//
+// This function has additional logic to make sure that the above properties hold even
+// when the three points are coplanar, and to deal with the limitations of
+// floating-point arithmetic.
+//
+// RobustSign satisfies the following conditions:
+//
+//  (1) RobustSign(a,b,c) == 0 if and only if a == b, b == c, or c == a
+//  (2) RobustSign(b,c,a) == RobustSign(a,b,c) for all a,b,c
+//  (3) RobustSign(c,b,a) == -RobustSign(a,b,c) for all a,b,c
+//
+// In other words:
+//
+//  (1) The result is zero if and only if two points are the same.
+//  (2) Rotating the order of the arguments does not affect the result.
+//  (3) Exchanging any two arguments inverts the result.
+//
+// On the other hand, note that it is not true in general that
+// RobustSign(-a,b,c) == -RobustSign(a,b,c), or any similar identities
+// involving antipodal points.
+//
+// C++ Equivalent: RobustCCW()
+func RobustSign(a, b, c Point) Direction {
+	// This method combines the computations from the C++ methods
+	// RobustCCW, TriageCCW, ExpensiveCCW, and StableCCW.
+	// TODO: Split these extra functions out when the need arises.
+
+	// Start with TriageCCW
+	det := c.Cross(a.Vector).Dot(b.Vector)
+	if det > maxDeterminantError {
+		return CounterClockwise
+	}
+	if det < -maxDeterminantError {
+		return Clockwise
+	}
+
+	// ExpensiveCCW
+	if a == b || b == c || c == a {
+		return Indeterminate
+	}
+
+	// StableCCW
+	ab := a.Sub(b.Vector)
+	ab2 := ab.Norm2()
+	bc := b.Sub(c.Vector)
+	bc2 := bc.Norm2()
+	ca := c.Sub(a.Vector)
+	ca2 := ca.Norm2()
+
+	// The two shortest edges, pointing away from their common point.
+	var e1, e2, op r3.Vector
+
+	if ab2 >= bc2 && ab2 >= ca2 {
+		// AB is the longest edge.
+		e1, e2, op = ca, bc, c.Vector
+	} else if bc2 >= ca2 {
+		// BC is the longest edge.
+		e1, e2, op = ab, ca, a.Vector
+	} else {
+		// CA is the longest edge.
+		e1, e2, op = bc, ab, b.Vector
+	}
+
+	det = e1.Cross(e2).Dot(op)
+	maxErr := detErrorMultiplier * math.Sqrt(e1.Norm2()*e2.Norm2())
+
+	// If the determinant isn't zero, we know definitively the point ordering.
+	if det > maxErr {
+		return CounterClockwise
+	}
+	if det < -maxErr {
+		return Clockwise
+	}
+
+	// In the C++ version, the final computation is performed using OpenSSL's
+	// Bignum exact precision math library. The existence of an equivalent
+	// library in Go is indeterminate. In C++, using the exact precision library
+	// to solve this stage is ~300x slower than the above checks.
+	// TODO(roberts): Select and incorporate an appropriate Go exact precision
+	// floating point library for the remaining calculations.
+	return Indeterminate
+}
+
+// OrderedCCW returns true if the edges OA, OB, and OC are encountered in that
+// order while sweeping CCW around the point O.
+//
+// You can think of this as testing whether A <= B <= C with respect to the
+// CCW ordering around O that starts at A, or equivalently, whether B is
+// contained in the range of angles (inclusive) that starts at A and extends
+// CCW to C. Properties:
+//
+//  (1) If OrderedCCW(a,b,c,o) && OrderedCCW(b,a,c,o), then a == b
+//  (2) If OrderedCCW(a,b,c,o) && OrderedCCW(a,c,b,o), then b == c
+//  (3) If OrderedCCW(a,b,c,o) && OrderedCCW(c,b,a,o), then a == b == c
+//  (4) If a == b or b == c, then OrderedCCW(a,b,c,o) is true
+//  (5) Otherwise if a == c, then OrderedCCW(a,b,c,o) is false
+func OrderedCCW(a, b, c, o Point) bool {
+	sum := 0
+	if RobustSign(b, o, a) != Clockwise {
+		sum++
+	}
+	if RobustSign(c, o, b) != Clockwise {
+		sum++
+	}
+	if RobustSign(a, o, c) == CounterClockwise {
+		sum++
+	}
+	return sum >= 2
 }
 
 // Distance returns the angle between two points.
@@ -159,5 +314,5 @@ func PointArea(a, b, c Point) float64 {
 
 // TODO(dnadasi):
 //   - Other CCW methods
-//   - Area methods
+//   - Maybe more Area methods?
 //   - Centroid methods

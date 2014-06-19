@@ -3,9 +3,10 @@ package s2
 import (
 	"math"
 	"testing"
+
+	"code.google.com/p/gos2/r3"
 )
 
-// float64Near reports if the two values are within the given epsilon.
 func float64Near(x, y, ε float64) bool {
 	return math.Abs(x-y) <= ε
 }
@@ -93,6 +94,131 @@ func TestCCW(t *testing.T) {
 			if result == test.want {
 				t.Errorf("CCW(%v, %v, %v) = %v, want %v", p3, p2, p1, result, !test.want)
 			}
+		}
+	}
+}
+
+// Points used in the various RobustSign tests.
+var (
+	x = Point{r3.Vector{1, 0, 0}}
+	y = Point{r3.Vector{0, 1, 0}}
+	z = Point{r3.Vector{0, 0, 1}}
+
+	poA = Point{r3.Vector{0.72571927877036835, 0.46058825605889098, 0.51106749730504852}}
+	poB = Point{r3.Vector{0.7257192746638208, 0.46058826573818168, 0.51106749441312738}}
+	poC = Point{r3.Vector{0.72571927671709457, 0.46058826089853633, 0.51106749585908795}}
+
+	x1 = Point{r3.Vector{0.99999999999999989, 1.4901161193847655e-08, 0}}
+	x2 = Point{r3.Vector{1, 1.4901161193847656e-08, 0}}
+	x3 = Point{r3.Vector{1, 1, 1}.Normalize()}
+	x4 = Point{x3.Mul(0.99999999999999989)}
+
+	y0 = Point{r3.Vector{1, 1, 0}}
+	y1 = Point{y0.Normalize()}
+	y2 = Point{y1.Normalize()}
+)
+
+func TestRobustCCWEqualities(t *testing.T) {
+	tests := []struct {
+		p1, p2 Point
+		want   bool
+	}{
+		{Point{poC.Sub(poA.Vector)}, Point{poB.Sub(poC.Vector)}, true},
+		{x1, Point{x1.Normalize()}, true},
+		{x2, Point{x2.Normalize()}, true},
+		{x3, Point{x3.Normalize()}, true},
+		{x4, Point{x4.Normalize()}, true},
+		{x3, x4, false},
+		{y1, y2, false},
+		{y2, Point{y2.Normalize()}, true},
+	}
+	for _, test := range tests {
+		if got := test.p1.Vector == test.p2.Vector; got != test.want {
+			t.Errorf("Testing equality for RobustSign. %v = %v, got %v want %v", test.p1, test.p2, got, test.want)
+		}
+	}
+}
+
+func TestRobustSign(t *testing.T) {
+	tests := []struct {
+		p1, p2, p3 Point
+		want       Direction
+	}{
+		// Simple collinear points test cases.
+		// a == b != c
+		{x, x, z, Indeterminate},
+		// a != b == c
+		{x, y, y, Indeterminate},
+		// c == a != b
+		{z, x, z, Indeterminate},
+		// CCW
+		{x, y, z, CounterClockwise},
+		// CW
+		{z, y, x, Clockwise},
+
+		// Edge cases:
+		// The following points happen to be *exactly collinear* along a line that it
+		// approximate tangent to the surface of the unit sphere.  In fact, C is the
+		// exact midpoint of the line segment AB.  All of these points are close
+		// enough to unit length to satisfy S2::IsUnitLength().
+		{
+			// Until we get ExactCCW, this will only return Indeterminate.
+			// It should be Clockwise.
+			poA, poB, poC, Indeterminate,
+		},
+
+		// The points "x1" and "x2" are exactly proportional, i.e. they both lie
+		// on a common line through the origin.  Both points are considered to be
+		// normalized, and in fact they both satisfy (x == x.Normalize()).
+		// Therefore the triangle (x1, x2, -x1) consists of three distinct points
+		// that all lie on a common line through the origin.
+		{
+			// Until we get ExactCCW, this will only return Indeterminate.
+			// It should be CounterClockwise.
+			x1, x2, Point{x1.Mul(-1.0)}, Indeterminate,
+		},
+
+		// Here are two more points that are distinct, exactly proportional, and
+		// that satisfy (x == x.Normalize()).
+		{
+			// Until we get ExactCCW, this will only return Indeterminate.
+			// It should be Clockwise.
+			x3, x4, Point{x3.Mul(-1.0)}, Indeterminate,
+		},
+
+		// The following points demonstrate that Normalize() is not idempotent,
+		// i.e. y0.Normalize() != y0.Normalize().Normalize().  Both points satisfy
+		// S2::IsNormalized(), though, and the two points are exactly proportional.
+		{
+			// Until we get ExactCCW, this will only return Indeterminate.
+			// It should be CounterClockwise.
+			y1, y2, Point{y1.Mul(-1.0)}, Indeterminate,
+		},
+	}
+
+	for _, test := range tests {
+		result := RobustSign(test.p1, test.p2, test.p3)
+		if result != test.want {
+			t.Errorf("RobustSign(%v, %v, %v) got %v, want %v",
+				test.p1, test.p2, test.p3, result, test.want)
+		}
+		// Test RobustSign(b,c,a) == RobustSign(a,b,c) for all a,b,c
+		rotated := RobustSign(test.p2, test.p3, test.p1)
+		if rotated != result {
+			t.Errorf("RobustSign(%v, %v, %v) vs Rotated RobustSign(%v, %v, %v) got %v, want %v",
+				test.p1, test.p2, test.p3, test.p2, test.p3, test.p1, rotated, result)
+		}
+		// Test RobustSign(c,b,a) == -RobustSign(a,b,c) for all a,b,c
+		want := Clockwise
+		if result == Clockwise {
+			want = CounterClockwise
+		} else if result == Indeterminate {
+			want = Indeterminate
+		}
+		reversed := RobustSign(test.p3, test.p2, test.p1)
+		if reversed != want {
+			t.Errorf("RobustSign(%v, %v, %v) vs Reversed RobustSign(%v, %v, %v) got %v, want %v",
+				test.p1, test.p2, test.p3, test.p3, test.p2, test.p1, reversed, -1*result)
 		}
 	}
 }
@@ -233,5 +359,34 @@ func BenchmarkPointArea(b *testing.B) {
 func BenchmarkPointAreaGirardCase(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		PointArea(g1, g2, g3)
+	}
+}
+
+func BenchmarkCCW(b *testing.B) {
+	p1 := PointFromCoords(-3, -1, 4)
+	p2 := PointFromCoords(2, -1, -3)
+	p3 := PointFromCoords(1, -2, 0)
+	for i := 0; i < b.N; i++ {
+		CCW(p1, p2, p3)
+	}
+}
+
+// BenchmarkRobustSignSimple runs the benchmark for points that satisfy the first
+// checks in RobustSign to compare the performance to that of CCW().
+func BenchmarkRobustSignSimple(b *testing.B) {
+	p1 := PointFromCoords(-3, -1, 4)
+	p2 := PointFromCoords(2, -1, -3)
+	p3 := PointFromCoords(1, -2, 0)
+	for i := 0; i < b.N; i++ {
+		RobustSign(p1, p2, p3)
+	}
+}
+
+// BenchmarkRobustSignNearCollinear runs the benchmark for points that are almost but not
+// quite collinear, so the tests have to use most of the calculations of RobustSign
+// before getting to an answer.
+func BenchmarkRobustSignNearCollinear(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		RobustSign(poA, poB, poC)
 	}
 }
