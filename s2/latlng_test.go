@@ -44,7 +44,7 @@ func TestLatLngPointConversion(t *testing.T) {
 		ll = LatLngFromPoint(p)
 		// We need to be careful here, since if the latitude is +/- 90, any longitude
 		// is now a valid conversion.
-		isPolar := (test.lat != 90 || test.lat != -90)
+		isPolar := (test.lat == 90 || test.lat == -90)
 		if !float64Eq(ll.Lat.Degrees(), test.lat) ||
 			(!isPolar && (!float64Eq(ll.Lng.Degrees(), test.lng))) {
 			t.Errorf("Converting ll %v,%v to point (%v) and back gave %v.",
