@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"code.google.com/p/gos2/r1"
 	"code.google.com/p/gos2/s1"
 )
 
@@ -70,7 +71,7 @@ func CapFromCenterHeight(center Point, height float64) Cap {
 // cap (because the sphere has unit radius). A negative area yields an empty cap;
 // an area of 4*π or more yields a full cap.
 func CapFromCenterArea(center Point, area float64) Cap {
-	return CapFromCenterHeight(center, area/(2.0*math.Pi))
+	return CapFromCenterHeight(center, area/(math.Pi*2.0))
 }
 
 // EmptyCap returns a cap that contains no points.
@@ -173,6 +174,55 @@ func (c Cap) CapBound() Cap {
 	return c
 }
 
+// RectBound returns a bounding latitude-longitude rectangle.
+// The bounds are not guaranteed to be tight.
+func (c Cap) RectBound() Rect {
+	if c.IsEmpty() {
+		return EmptyRect()
+	}
+
+	capAngle := c.Radius().Radians()
+	allLongitudes := false
+	lat := r1.Interval{
+		Lo: latitude(c.center).Radians() - capAngle,
+		Hi: latitude(c.center).Radians() + capAngle,
+	}
+	lng := s1.FullInterval()
+
+	// Check whether cap includes the south pole.
+	if lat.Lo <= -math.Pi/2 {
+		lat.Lo = -math.Pi / 2
+		allLongitudes = true
+	}
+
+	// Check whether cap includes the north pole.
+	if lat.Hi >= math.Pi/2 {
+		lat.Hi = math.Pi / 2
+		allLongitudes = true
+	}
+
+	if !allLongitudes {
+		// Compute the range of longitudes covered by the cap. We use the law
+		// of sines for spherical triangles. Consider the triangle ABC where
+		// A is the north pole, B is the center of the cap, and C is the point
+		// of tangency between the cap boundary and a line of longitude. Then
+		// C is a right angle, and letting a,b,c denote the sides opposite A,B,C,
+		// we have sin(a)/sin(A) = sin(c)/sin(C), or sin(A) = sin(a)/sin(c).
+		// Here "a" is the cap angle, and "c" is the colatitude (90 degrees
+		// minus the latitude). This formula also works for negative latitudes.
+		//
+		// The formula for sin(a) follows from the relationship h = 1 - cos(a).
+		sinA := math.Sqrt(c.height * (2 - c.height))
+		sinC := math.Cos(latitude(c.center).Radians())
+		if sinA <= sinC {
+			angleA := math.Asin(sinA / sinC)
+			lng.Lo = math.Remainder(longitude(c.center).Radians()-angleA, math.Pi*2)
+			lng.Hi = math.Remainder(longitude(c.center).Radians()+angleA, math.Pi*2)
+		}
+	}
+	return Rect{lat, lng}
+}
+
 // ApproxEqual reports if this caps' center and height are within
 // a reasonable epsilon from the other cap.
 func (c Cap) ApproxEqual(other Cap) bool {
@@ -215,5 +265,5 @@ func radiusToHeight(r s1.Angle) float64 {
 }
 
 // TODO(roberts): Differences from C++
-// AddPoint, AddCap, RectBounds, S2Cell variations of the above
+// AddPoint, AddCap, S2Cell variations of the above
 // -- others

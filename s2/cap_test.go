@@ -254,3 +254,79 @@ func TestRadiusToHeight(t *testing.T) {
 		}
 	}
 }
+
+func TestCapGetRectBounds(t *testing.T) {
+	const epsilon = 1e-13
+	var tests = []struct {
+		desc     string
+		have     Cap
+		latLoDeg float64
+		latHiDeg float64
+		lngLoDeg float64
+		lngHiDeg float64
+		isFull   bool
+	}{
+		{
+			"Cap that includes South Pole.",
+			CapFromCenterAngle(PointFromLatLng(LatLngFromDegrees(-45, 57)), s1.Degree*50),
+			-90, 5, -180, 180, true,
+		},
+		{
+			"Cap that is tangent to the North Pole.",
+			CapFromCenterAngle(PointFromCoords(1, 0, 1), s1.Radian*(math.Pi/4.0+1e-16)),
+			0, 90, -180, 180, true,
+		},
+		{
+			"Cap that at 45 degree center that goes from equator to the pole.",
+			CapFromCenterAngle(PointFromCoords(1, 0, 1), s1.Degree*(45+5e-15)),
+			0, 90, -180, 180, true,
+		},
+		{
+			"The eastern hemisphere.",
+			CapFromCenterAngle(PointFromCoords(0, 1, 0), s1.Radian*(math.Pi/2+2e-16)),
+			-90, 90, -180, 180, true,
+		},
+		{
+			"A cap centered on the equator.",
+			CapFromCenterAngle(PointFromLatLng(LatLngFromDegrees(0, 50)), s1.Degree*20),
+			-20, 20, 30, 70, false,
+		},
+		{
+			"A cap centered on the North Pole.",
+			CapFromCenterAngle(PointFromLatLng(LatLngFromDegrees(90, 123)), s1.Degree*10),
+			80, 90, -180, 180, true,
+		},
+	}
+
+	for _, test := range tests {
+		r := test.have.RectBound()
+		if !float64Near(s1.Angle(r.Lat.Lo).Degrees(), test.latLoDeg, epsilon) {
+			t.Errorf("%s: %v.RectBound(), Lat.Lo not close enough, got %0.20f, want %0.20f",
+				test.desc, test.have, s1.Angle(r.Lat.Lo).Degrees(), test.latLoDeg)
+		}
+		if !float64Near(s1.Angle(r.Lat.Hi).Degrees(), test.latHiDeg, epsilon) {
+			t.Errorf("%s: %v.RectBound(), Lat.Hi not close enough, got %0.20f, want %0.20f",
+				test.desc, test.have, s1.Angle(r.Lat.Hi).Degrees(), test.latHiDeg)
+		}
+		if !float64Near(s1.Angle(r.Lng.Lo).Degrees(), test.lngLoDeg, epsilon) {
+			t.Errorf("%s: %v.RectBound(), Lng.Lo not close enough, got %0.20f, want %0.20f",
+				test.desc, test.have, s1.Angle(r.Lng.Lo).Degrees(), test.lngLoDeg)
+		}
+		if !float64Near(s1.Angle(r.Lng.Hi).Degrees(), test.lngHiDeg, epsilon) {
+			t.Errorf("%s: %v.RectBound(), Lng.Hi not close enough, got %0.20f, want %0.20f",
+				test.desc, test.have, s1.Angle(r.Lng.Hi).Degrees(), test.lngHiDeg)
+		}
+		if got := r.Lng.IsFull(); got != test.isFull {
+			t.Errorf("%s: RectBound(%v).isFull() = %t, want %t", test.desc, test.have, got, test.isFull)
+		}
+	}
+
+	// Empty and full caps.
+	if !EmptyCap().RectBound().IsEmpty() {
+		t.Errorf("RectBound() on EmptyCap should be empty.")
+	}
+
+	if !FullCap().RectBound().IsFull() {
+		t.Errorf("RectBound() on FullCap should be full.")
+	}
+}
