@@ -19,6 +19,9 @@ var (
 	validRectLngRange = s1.FullInterval()
 )
 
+// EmptyRect returns the empty rectangle.
+func EmptyRect() Rect { return Rect{r1.EmptyInterval(), s1.EmptyInterval()} }
+
 // FullRect returns the full rectangle.
 func FullRect() Rect { return Rect{validRectLatRange, validRectLngRange} }
 

@@ -8,6 +8,34 @@ import (
 	"code.google.com/p/gos2/s1"
 )
 
+func TestEmptyAndFullRects(t *testing.T) {
+	tests := []struct {
+		rect  Rect
+		valid bool
+		empty bool
+		full  bool
+		point bool
+	}{
+		{EmptyRect(), true, true, false, false},
+		{FullRect(), true, false, true, false},
+	}
+
+	for _, test := range tests {
+		if got := test.rect.IsValid(); got != test.valid {
+			t.Errorf("%v.IsValid() = %v, want %v", test.rect, got, test.valid)
+		}
+		if got := test.rect.IsEmpty(); got != test.empty {
+			t.Errorf("%v.IsEmpty() = %v, want %v", test.rect, got, test.empty)
+		}
+		if got := test.rect.IsFull(); got != test.full {
+			t.Errorf("%v.IsFull() = %v, want %v", test.rect, got, test.full)
+		}
+		if got := test.rect.IsPoint(); got != test.point {
+			t.Errorf("%v.IsPoint() = %v, want %v", test.rect, got, test.point)
+		}
+	}
+}
+
 func TestArea(t *testing.T) {
 	tests := []struct {
 		rect Rect
