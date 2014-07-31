@@ -107,6 +107,27 @@ func faceUVToXYZ(face int, u, v float64) r3.Vector {
 	}
 }
 
+// faceXYZtoUVW transforms the given point P to the (u,v,w) coordinate frame of the given
+// face where the w-axis represents the face normal.
+func faceXYZtoUVW(face int, p Point) Point {
+	// The result coordinates are simply the dot products of P with the (u,v,w)
+	// axes for the given face (see faceUVWAxes).
+	switch face {
+	case 0:
+		return Point{r3.Vector{p.Y, p.Z, p.X}}
+	case 1:
+		return Point{r3.Vector{-p.X, p.Z, p.Y}}
+	case 2:
+		return Point{r3.Vector{-p.X, -p.Y, p.Z}}
+	case 3:
+		return Point{r3.Vector{-p.Z, -p.Y, -p.X}}
+	case 4:
+		return Point{r3.Vector{-p.Z, p.X, -p.Y}}
+	default:
+		return Point{r3.Vector{p.Y, p.X, -p.Z}}
+	}
+}
+
 // uNorm returns the right-handed normal (not necessarily unit length) for an
 // edge in the direction of the positive v-axis at the given u-value on
 // the given face.  (This vector is perpendicular to the plane through
@@ -146,4 +167,34 @@ func vNorm(face int, v float64) r3.Vector {
 	default:
 		return r3.Vector{1, 0, v}
 	}
+}
+
+// faceUVWAxes are the U, V, and W axes for each face.
+var faceUVWAxes = [6][3]Point{
+	{Point{r3.Vector{0, 1, 0}}, Point{r3.Vector{0, 0, 1}}, Point{r3.Vector{1, 0, 0}}},
+	{Point{r3.Vector{-1, 0, 0}}, Point{r3.Vector{0, 0, 1}}, Point{r3.Vector{0, 1, 0}}},
+	{Point{r3.Vector{-1, 0, 0}}, Point{r3.Vector{0, -1, 0}}, Point{r3.Vector{0, 0, 1}}},
+	{Point{r3.Vector{0, 0, -1}}, Point{r3.Vector{0, -1, 0}}, Point{r3.Vector{-1, 0, 0}}},
+	{Point{r3.Vector{0, 0, -1}}, Point{r3.Vector{1, 0, 0}}, Point{r3.Vector{0, -1, 0}}},
+	{Point{r3.Vector{0, 1, 0}}, Point{r3.Vector{1, 0, 0}}, Point{r3.Vector{0, 0, -1}}},
+}
+
+// uvwAxis returns the given axis of the given face.
+func uvwAxis(face, axis int) Point {
+	return faceUVWAxes[face][axis]
+}
+
+// uAxis returns the u-axis for the given face.
+func uAxis(face int) Point {
+	return uvwAxis(face, 0)
+}
+
+// vAxis returns the v-axis for the given face.
+func vAxis(face int) Point {
+	return uvwAxis(face, 1)
+}
+
+// Return the unit-length normal for the given face.
+func unitNorm(face int) Point {
+	return uvwAxis(face, 2)
 }
