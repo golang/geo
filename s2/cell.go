@@ -68,5 +68,11 @@ func (c Cell) Edge(k int) Point {
 	}
 }
 
+// ExactArea return the area of this cell as accurately as possible.
+func (c Cell) ExactArea() float64 {
+	v0, v1, v2, v3 := c.Vertex(0), c.Vertex(1), c.Vertex(2), c.Vertex(3)
+	return PointArea(v0, v1, v2) + PointArea(v0, v2, v3)
+}
+
 // TODO(roberts, or $SOMEONE): Differences from C++, almost everything else still.
 // Implement the accessor methods on the internal fields.

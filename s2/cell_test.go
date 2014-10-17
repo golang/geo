@@ -1,6 +1,7 @@
 package s2
 
 import (
+	"math"
 	"testing"
 	"unsafe"
 )
@@ -67,5 +68,30 @@ func TestCellFaces(t *testing.T) {
 		if v != 3 {
 			t.Errorf("vertex %v counts wrong, got %d, want 3", k, v)
 		}
+	}
+}
+
+func TestExactArea(t *testing.T) {
+	// Test 1. Check the area of a top level cell.
+	const level1Cell = CellID(0x1000000000000000)
+	const wantArea = 4 * math.Pi / 6
+	if area := CellFromCellID(level1Cell).ExactArea(); !float64Eq(area, wantArea) {
+		t.Fatalf("Area of a top-level cell %v = %f, want %f", level1Cell, area, wantArea)
+	}
+
+	// Test 2. Iterate inwards from this cell, checking at every level that
+	// the sum of the areas of the children is equal to the area of the parent.
+	childIndex := 1
+	for cell := CellID(0x1000000000000000); cell.Level() < 21; cell = cell.Children()[childIndex] {
+		childrenArea := 0.0
+		for _, child := range cell.Children() {
+			childrenArea += CellFromCellID(child).ExactArea()
+		}
+		if area := CellFromCellID(cell).ExactArea(); !float64Eq(childrenArea, area) {
+			t.Fatalf("Areas of children of a level-%d cell %v don't add up to parent's area. "+
+				"This cell: %e, sum of children: %e",
+				cell.Level(), cell, area, childrenArea)
+		}
+		childIndex = (childIndex + 1) % 4
 	}
 }
