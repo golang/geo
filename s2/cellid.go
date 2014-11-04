@@ -181,6 +181,44 @@ func (ci CellID) EdgeNeighbors() [4]CellID {
 	}
 }
 
+// VertexNeighbors returns the neighboring cellIDs with vertex closest to this cell at the given level.
+// (Normally there are four neighbors, but the closest vertex may only have three neighbors if it is one of
+// the 8 cube vertices.)
+func (ci CellID) VertexNeighbors(level int) []CellID {
+	halfSize := sizeIJ(level + 1)
+	size := halfSize << 1
+	f, i, j, _ := ci.faceIJOrientation()
+
+	var isame, jsame bool
+	var ioffset, joffset int
+	if i&halfSize != 0 {
+		ioffset = size
+		isame = (i + size) < maxSize
+	} else {
+		ioffset = -size
+		isame = (i - size) >= 0
+	}
+	if j&halfSize != 0 {
+		joffset = size
+		jsame = (j + size) < maxSize
+	} else {
+		joffset = -size
+		jsame = (j - size) >= 0
+	}
+
+	results := []CellID{
+		ci.Parent(level),
+		cellIDFromFaceIJSame(f, i+ioffset, j, isame).Parent(level),
+		cellIDFromFaceIJSame(f, i, j+joffset, jsame).Parent(level),
+	}
+
+	if isame || jsame {
+		results = append(results, cellIDFromFaceIJSame(f, i+ioffset, j+joffset, isame && jsame).Parent(level))
+	}
+
+	return results
+}
+
 // RangeMin returns the minimum CellID that is contained within this cell.
 func (ci CellID) RangeMin() CellID { return CellID(uint64(ci) - (ci.lsb() - 1)) }
 
@@ -355,6 +393,13 @@ func cellIDFromFaceIJWrap(f, i, j int) CellID {
 	// them to a cell id at the appropriate level.
 	f, u, v = xyzToFaceUV(faceUVToXYZ(f, u, v))
 	return cellIDFromFaceIJ(f, stToIJ(0.5*(u+1)), stToIJ(0.5*(v+1)))
+}
+
+func cellIDFromFaceIJSame(f, i, j int, sameFace bool) CellID {
+	if sameFace {
+		return cellIDFromFaceIJ(f, i, j)
+	}
+	return cellIDFromFaceIJWrap(f, i, j)
 }
 
 // clamp returns number closest to x within the range min..max.
