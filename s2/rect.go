@@ -95,6 +95,14 @@ func (r Rect) Area() float64 {
 	return r.Lng.Length() * capDiff
 }
 
+// ContainsLatLng reports whether the given LatLng is within the Rect.
+func (r Rect) ContainsLatLng(ll LatLng) bool {
+	if !ll.IsValid() {
+		return false
+	}
+	return r.Lat.Contains(ll.Lat.Radians()) && r.Lng.Contains(ll.Lng.Radians())
+}
+
 // AddPoint increases the size of the rectangle to include the given point.
 func (r Rect) AddPoint(ll LatLng) Rect {
 	if !ll.IsValid() {

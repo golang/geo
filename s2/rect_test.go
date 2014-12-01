@@ -157,6 +157,40 @@ func TestAddPoint(t *testing.T) {
 	}
 }
 
+func TestContainsLatLng(t *testing.T) {
+	tests := []struct {
+		input Rect
+		ll    LatLng
+		want  bool
+	}{
+		{
+			rectFromDegrees(0, -180, 90, 0),
+			LatLngFromDegrees(30, -45),
+			true,
+		},
+		{
+			rectFromDegrees(0, -180, 90, 0),
+			LatLngFromDegrees(30, 45),
+			false,
+		},
+		{
+			rectFromDegrees(0, -180, 90, 0),
+			LatLngFromDegrees(0, -180),
+			true,
+		},
+		{
+			rectFromDegrees(0, -180, 90, 0),
+			LatLngFromDegrees(90, 0),
+			true,
+		},
+	}
+	for _, test := range tests {
+		if got, want := test.input.ContainsLatLng(test.ll), test.want; got != want {
+			t.Errorf("%v.ContainsLatLng(%v) was %v, want %v", test.input, test.ll, got, want)
+		}
+	}
+}
+
 func TestExpanded(t *testing.T) {
 	empty := Rect{FullRect().Lat, s1.EmptyInterval()}
 	tests := []struct {
