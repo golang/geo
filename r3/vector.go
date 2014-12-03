@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"code.google.com/p/gos2/s1"
+	"github.com/golang/geo/s1"
 )
 
 // Vector represents a point in ℝ³.

@@ -4,8 +4,8 @@ import (
 	"sort"
 	"testing"
 
-	"code.google.com/p/gos2/r2"
-	"code.google.com/p/gos2/s1"
+	"github.com/golang/geo/r2"
+	"github.com/golang/geo/s1"
 )
 
 func TestCellIDFromFace(t *testing.T) {

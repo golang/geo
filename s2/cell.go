@@ -1,7 +1,7 @@
 package s2
 
 import (
-	"code.google.com/p/gos2/r2"
+	"github.com/golang/geo/r2"
 )
 
 // Cell is an S2 region object that represents a cell. Unlike CellIDs,

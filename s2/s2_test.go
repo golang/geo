@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"code.google.com/p/gos2/s1"
+	"github.com/golang/geo/s1"
 )
 
 func float64Eq(x, y float64) bool { return math.Abs(x-y) < 1e-14 }

@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"code.google.com/p/gos2/s1"
+	"github.com/golang/geo/s1"
 )
 
 const (

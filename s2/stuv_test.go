@@ -3,7 +3,7 @@ package s2
 import (
 	"testing"
 
-	"code.google.com/p/gos2/r3"
+	"github.com/golang/geo/r3"
 )
 
 func TestSTUV(t *testing.T) {

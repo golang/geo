@@ -3,7 +3,7 @@ package r2
 import (
 	"fmt"
 
-	"code.google.com/p/gos2/r1"
+	"github.com/golang/geo/r1"
 )
 
 // Point represents a point in ℝ².
