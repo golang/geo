@@ -308,6 +308,11 @@ func (ci CellID) Next() CellID {
 	return CellID(uint64(ci) + ci.lsb()<<1)
 }
 
+// Prev returns the previous cell along the Hilbert curve.
+func (ci CellID) Prev() CellID {
+	return CellID(uint64(ci) - ci.lsb()<<1)
+}
+
 // TODO: the methods below are not exported yet.  Settle on the entire API design
 // before doing this.  Do we want to mirror the C++ one as closely as possible?
 

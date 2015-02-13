@@ -86,6 +86,19 @@ func (cu *CellUnion) Normalize() {
 	*cu = output
 }
 
+// Intersects reports whether this cell union intersects the given cell ID.
+//
+// This method assumes that the CellUnion has been normalized.
+func (cu *CellUnion) Intersects(id CellID) bool {
+	// Find index of array item that occurs directly after our probe cell:
+	i := sort.Search(len(*cu), func(i int) bool { return id < (*cu)[i] })
+
+	if i != len(*cu) && (*cu)[i].RangeMin() <= id.RangeMax() {
+		return true
+	}
+	return i != 0 && (*cu)[i-1].RangeMax() >= id.RangeMin()
+}
+
 type byID []CellID
 
 func (cu byID) Len() int           { return len(cu) }
