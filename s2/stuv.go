@@ -123,6 +123,40 @@ func faceUVToXYZ(face int, u, v float64) r3.Vector {
 	}
 }
 
+// faceXYZToUV returns the u and v values (which may lie outside the range
+// [-1, 1]) if the dot product of the point p with the given face normal is positive.
+func faceXYZToUV(face int, p Point) (u, v float64, ok bool) {
+	switch face {
+	case 0:
+		if p.X <= 0 {
+			return 0, 0, false
+		}
+	case 1:
+		if p.Y <= 0 {
+			return 0, 0, false
+		}
+	case 2:
+		if p.Z <= 0 {
+			return 0, 0, false
+		}
+	case 3:
+		if p.X >= 0 {
+			return 0, 0, false
+		}
+	case 4:
+		if p.Y >= 0 {
+			return 0, 0, false
+		}
+	default:
+		if p.Z >= 0 {
+			return 0, 0, false
+		}
+	}
+
+	u, v = validFaceXYZToUV(face, p.Vector)
+	return u, v, true
+}
+
 // faceXYZtoUVW transforms the given point P to the (u,v,w) coordinate frame of the given
 // face where the w-axis represents the face normal.
 func faceXYZtoUVW(face int, p Point) Point {

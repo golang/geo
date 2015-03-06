@@ -43,7 +43,40 @@ func TestUVNorms(t *testing.T) {
 			}
 		}
 	}
+}
 
+func TestFaceXYZToUV(t *testing.T) {
+	var (
+		point    = Point{r3.Vector{1.1, 1.2, 1.3}}
+		pointNeg = Point{r3.Vector{-1.1, -1.2, -1.3}}
+	)
+
+	tests := []struct {
+		face  int
+		point Point
+		u     float64
+		v     float64
+		ok    bool
+	}{
+		{0, point, 1.09090909090909, 1.18181818181818, true},
+		{0, pointNeg, 0, 0, false},
+		{1, point, -0.916666666666666, 1.08333333333333, true},
+		{1, pointNeg, 0, 0, false},
+		{2, point, -0.846153846153846, -0.923076923076923, true},
+		{2, pointNeg, 0, 0, false},
+		{3, point, 0, 0, false},
+		{3, pointNeg, 1.18181818181818, 1.09090909090909, true},
+		{4, point, 0, 0, false},
+		{4, pointNeg, 1.08333333333333, -0.91666666666666, true},
+		{5, point, 0, 0, false},
+		{5, pointNeg, -0.923076923076923, -0.846153846153846, true},
+	}
+
+	for _, test := range tests {
+		if u, v, ok := faceXYZToUV(test.face, test.point); !float64Eq(u, test.u) || !float64Eq(v, test.v) || ok != test.ok {
+			t.Errorf("faceXYZToUV(%d, %v) = %f, %f, %t, want %f, %f, %t", test.face, test.point, u, v, ok, test.u, test.v, test.ok)
+		}
+	}
 }
 
 func TestFaceXYZtoUVW(t *testing.T) {
