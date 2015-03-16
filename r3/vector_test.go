@@ -239,6 +239,8 @@ func TestOrtho(t *testing.T) {
 		{1, 1, 0},
 		{1, 2, 3},
 		{1, -2, -5},
+		{0.012, 0.0053, 0.00457},
+		{-0.012, -1, -0.00457},
 	}
 	for _, v := range vectors {
 		if !float64Eq(v.Dot(v.Ortho()), 0) {

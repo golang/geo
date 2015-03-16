@@ -90,4 +90,14 @@ func (v Vector) Angle(ov Vector) s1.Angle {
 
 // Ortho returns a unit vector that is orthogonal to v.
 // Ortho(-v) = -Ortho(v) for all v.
-func (v Vector) Ortho() Vector { return v.Cross(Vector{0.012, 0.0053, 0.00457}).Normalize() }
+func (v Vector) Ortho() Vector {
+	ov := Vector{0.012, 0.0053, 0.00457}
+	// Grow a component other than the largest in v, to guarantee that they aren't
+	// parallel (which would make the cross product zero).
+	if math.Abs(v.X) > math.Abs(v.Y) {
+		ov.Y = 1
+	} else {
+		ov.X = 1
+	}
+	return v.Cross(ov).Normalize()
+}
