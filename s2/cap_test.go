@@ -346,3 +346,90 @@ func TestCapGetRectBounds(t *testing.T) {
 		t.Errorf("RectBound() on FullCap should be full.")
 	}
 }
+
+func TestCapAddPoint(t *testing.T) {
+	tests := []struct {
+		have Cap
+		p    Point
+		want Cap
+	}{
+		// Cap plus its center equals itself.
+		{xAxis, xAxisPt, xAxis},
+		{yAxis, yAxisPt, yAxis},
+
+		// Cap plus opposite point equals full.
+		{xAxis, PointFromCoords(-1, 0, 0), full},
+		{yAxis, PointFromCoords(0, -1, 0), full},
+
+		// Cap plus orthogonal axis equals half cap.
+		{xAxis, PointFromCoords(0, 0, 1), CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/2.0))},
+		{xAxis, PointFromCoords(0, 0, -1), CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/2.0))},
+
+		// The 45 degree angled hemisphere plus some points.
+		{
+			hemi,
+			PointFromCoords(0, 1, -1),
+			CapFromCenterAngle(Point{PointFromCoords(1, 0, 1).Normalize()},
+				s1.Angle(120.0)*s1.Degree),
+		},
+		{
+			hemi,
+			PointFromCoords(0, -1, -1),
+			CapFromCenterAngle(Point{PointFromCoords(1, 0, 1).Normalize()},
+				s1.Angle(120.0)*s1.Degree),
+		},
+		{
+			// This angle between this point and the center is acos(-sqrt(2/3))
+			hemi,
+			PointFromCoords(-1, -1, -1),
+			CapFromCenterAngle(Point{PointFromCoords(1, 0, 1).Normalize()},
+				s1.Angle(2.5261129449194)),
+		},
+		{hemi, PointFromCoords(0, 1, 1), hemi},
+		{hemi, PointFromCoords(1, 0, 0), hemi},
+	}
+
+	for _, test := range tests {
+		got := test.have.AddPoint(test.p)
+		if !got.ApproxEqual(test.want) {
+			t.Errorf("%v.AddPoint(%v) = %v, want %v", test.have, test.p, got, test.want)
+		}
+
+		if !got.ContainsPoint(test.p) {
+			t.Errorf("%v.AddPoint(%v) did not contain added point", test.have, test.p)
+		}
+	}
+}
+
+func TestCapAddCap(t *testing.T) {
+	tests := []struct {
+		have  Cap
+		other Cap
+		want  Cap
+	}{
+		// Identity cases.
+		{empty, empty, empty},
+		{full, full, full},
+
+		// Anything plus empty equals itself.
+		{full, empty, full},
+		{empty, full, full},
+		{xAxis, empty, xAxis},
+		{empty, xAxis, xAxis},
+		{yAxis, empty, yAxis},
+		{empty, yAxis, yAxis},
+
+		// Two halves make a whole.
+		{xAxis, xComp, full},
+
+		// Two zero-height orthogonal axis caps make a half-cap.
+		{xAxis, yAxis, CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/2.0))},
+	}
+
+	for _, test := range tests {
+		got := test.have.AddCap(test.other)
+		if !got.ApproxEqual(test.want) {
+			t.Errorf("%v.AddCap(%v) = %v, want %v", test.have, test.other, got, test.want)
+		}
+	}
+}

@@ -28,6 +28,8 @@ const (
 	emptyHeight = -1.0
 	zeroHeight  = 0.0
 	fullHeight  = 2.0
+
+	roundUp = 1.0 + 1.0/(1<<52)
 )
 
 var (
@@ -251,6 +253,36 @@ func (c Cap) ApproxEqual(other Cap) bool {
 		other.IsFull() && c.height >= 2-epsilon
 }
 
+// AddPoint increases the cap if necessary to include the given point. If this cap is empty,
+// then the center is set to the point with a zero height. p must be unit-length.
+func (c Cap) AddPoint(p Point) Cap {
+	if c.IsEmpty() {
+		return Cap{center: p}
+	}
+
+	// To make sure that the resulting cap actually includes this point,
+	// we need to round up the distance calculation.  That is, after
+	// calling cap.AddPoint(p), cap.Contains(p) should be true.
+	dist2 := c.center.Sub(p.Vector).Norm2()
+	c.height = math.Max(c.height, roundUp*0.5*dist2)
+	return c
+}
+
+// AddCap increases the cap height if necessary to include the other cap. If this cap is empty,
+// it is set to the other cap.
+func (c Cap) AddCap(other Cap) Cap {
+	if c.IsEmpty() {
+		return other
+	}
+	if other.IsEmpty() {
+		return c
+	}
+
+	radius := c.center.Angle(other.center.Vector) + other.Radius()
+	c.height = math.Max(c.height, roundUp*radiusToHeight(radius))
+	return c
+}
+
 // Expanded returns a new cap expanded by the given angle. If the cap is empty,
 // it returns an empty cap.
 func (c Cap) Expanded(distance s1.Angle) Cap {
@@ -281,5 +313,5 @@ func radiusToHeight(r s1.Angle) float64 {
 }
 
 // TODO(roberts): Differences from C++
-// AddPoint, AddCap, S2Cell variations of the above
-// -- others
+// Intersects(S2Cell), Contains(S2Cell), MayIntersect(S2Cell)
+// Centroid, Union
