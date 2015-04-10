@@ -53,6 +53,22 @@ func CellFromLatLng(ll LatLng) Cell {
 	return CellFromCellID(CellIDFromLatLng(ll))
 }
 
+func (c Cell) Id() CellID {
+	return c.id
+}
+
+func (c Cell) Face() int8 {
+	return c.face
+}
+
+func (c Cell) Level() int8 {
+	return c.level
+}
+
+func (c Cell) Orientation() int8 {
+	return c.orientation
+}
+
 // IsLeaf returns whether this Cell is a leaf or not.
 func (c Cell) IsLeaf() bool {
 	return c.level == maxLevel
