@@ -38,6 +38,8 @@ type CellID uint64
 
 // TODO(dsymonds): Some of these constants should probably be exported.
 const (
+	MAX_LEVEL = 30
+
 	faceBits = 3
 	numFaces = 6
 	maxLevel = 30
