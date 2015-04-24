@@ -7,7 +7,8 @@ import (
 func TestCovering(t *testing.T) {
 	coverer := NewRegionCoverer()
 	coverer.SetMaxCells(8)
-	cells := coverer.GetCovering(nil)
+	region := CellFromCellID(CellIDFromToken("80c297c53c"))
+	cells := coverer.GetCovering(region)
 	for _, cell := range *cells {
 		if cell.Level() != 1 {
 			t.Errorf("Level not as expected %s", cell.ToToken())

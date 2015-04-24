@@ -118,6 +118,11 @@ func (c Cap) IsFull() bool {
 	return c.height == fullHeight
 }
 
+// Center returns the cap's center or axis.
+func (c Cap) Center() Point {
+	return c.center
+}
+
 // Radius returns the cap's radius.
 func (c Cap) Radius() s1.Angle {
 	if c.IsEmpty() {

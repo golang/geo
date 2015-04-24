@@ -1,5 +1,9 @@
 package s2
 
+import (
+	"container/heap"
+)
+
 var (
 	DEFAULT_MAX_CELLS int = 8
 
@@ -27,7 +31,7 @@ type RegionCoverer struct {
 
 	result []CellID
 
-	candidateQueue []queueEntry
+	candidateQueue PriorityQueue
 }
 
 type candidate struct {
@@ -38,20 +42,66 @@ type candidate struct {
 }
 
 type queueEntry struct {
-	id        int
+	priority  int
 	candidate *candidate
+	// The index is needed by update and is maintained by the heap.Interface methods.
+	index int // The index of the item in the heap.
 }
 
 func newQueueEntry(id int, candidate *candidate) *queueEntry {
-	return &queueEntry{id, candidate}
+	return &queueEntry{priority: id, candidate: candidate}
+}
+
+// A PriorityQueue implements heap.Interface and holds Items.
+type PriorityQueue []*queueEntry
+
+func newPriorityQueue(space int) PriorityQueue {
+	return make([]*queueEntry, 0, space)
+}
+
+func (pq PriorityQueue) Len() int { return len(pq) }
+
+func (pq PriorityQueue) Less(i, j int) bool {
+	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
+	return pq[i].priority > pq[j].priority
+}
+
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+	pq[i].index = i
+	pq[j].index = j
+}
+
+func (pq *PriorityQueue) Push(x interface{}) {
+	n := len(*pq)
+	item := x.(*queueEntry)
+	item.index = n
+	*pq = append(*pq, item)
+}
+
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	item := old[n-1]
+	item.index = -1 // for safety
+	*pq = old[0 : n-1]
+	return item
+}
+
+// update modifies the priority and value of an Item in the queue.
+func (pq *PriorityQueue) update(item *queueEntry, candidate *candidate, priority int) {
+	item.candidate = candidate
+	item.priority = priority
+	heap.Fix(pq, item.index)
 }
 
 func NewRegionCoverer() *RegionCoverer {
 	return &RegionCoverer{
-		minLevel: 0,
-		maxLevel: MAX_LEVEL,
-		levelMod: 1,
-		maxCells: DEFAULT_MAX_CELLS,
+		minLevel:       0,
+		maxLevel:       MAX_LEVEL,
+		levelMod:       1,
+		maxCells:       DEFAULT_MAX_CELLS,
+		candidateQueue: newPriorityQueue(10),
 	}
 }
 
@@ -94,7 +144,7 @@ func (rc *RegionCoverer) GetCovering(region Region) *CellUnion {
 }
 
 func (rc *RegionCoverer) GetCoveringInternal(region Region) {
-	if len(rc.result) > 0 || len(rc.candidateQueue) > 0 {
+	if len(rc.result) > 0 || rc.candidateQueue.Len() > 0 {
 		panic("Preconditions not met")
 	}
 
@@ -103,7 +153,7 @@ func (rc *RegionCoverer) GetCoveringInternal(region Region) {
 
 	rc.getInitialCandidates()
 	for len(rc.candidateQueue) > 0 && (!rc.interiorCovering || len(rc.result) < rc.maxCells) {
-		candidate := rc.candidateQueue[0].candidate // TODO: rc.candidateQueue.poll().candidate
+		candidate := rc.candidateQueue.Pop().(*queueEntry).candidate
 		sz := len(rc.result) + candidate.numChildren
 		if rc.interiorCovering {
 			sz = sz + len(rc.candidateQueue)
@@ -127,11 +177,35 @@ func (rc *RegionCoverer) GetCoveringInternal(region Region) {
 }
 
 func (rc *RegionCoverer) getInitialCandidates() {
-	// TODO
-	rc.result = []CellID{
-		0x9000000000000000,
+	// Optimization: if at least 4 cells are desired (the normal case),
+	// start with a 4-cell covering of the region's bounding cap. This
+	// lets us skip quite a few levels of refinement when the region to
+	// be covered is relatively small.
+	if rc.maxCells >= 4 {
+		// Find the maximum level such that the bounding cap contains at most one
+		// cell vertex at that level.
+		cap := rc.region.CapBound()
+		level := min(S2_PROJECTION.MIN_WIDTH().getMaxLevel(2*cap.Radius().Radians()), min(rc.maxLevel, MAX_LEVEL-1))
+		if rc.levelMod > 1 && level > rc.minLevel {
+			level -= (level - rc.minLevel) % rc.levelMod
+		}
+		// We don't bother trying to optimize the level == 0 case, since more than
+		// four face cells may be required.
+		if level > 0 {
+			// Find the leaf cell containing the cap axis, and determine which
+			// subcell of the parent cell contains it.
+			id := CellIDFromPoint(cap.Center())
+			base := id.VertexNeighbors(level)
+			for i := 0; i < len(base); i++ {
+				rc.addCandidate(rc.newCandidate(CellFromCellID(base[i])))
+			}
+			return
+		}
 	}
-
+	// Default: start with all six cube faces.
+	for face := 0; face < 6; face++ {
+		rc.addCandidate(rc.newCandidate(FACE_CELLS[face]))
+	}
 }
 
 func (rc *RegionCoverer) addCandidate(candidate *candidate) {
@@ -167,8 +241,8 @@ func (rc *RegionCoverer) addCandidate(candidate *candidate) {
 		// at the same level, we prefer the cells with the smallest number of
 		// intersecting children. Finally, we prefer cells that have the smallest
 		// number of children that cannot be refined any further.
-		// priority := -((((int(candidate.cell.Level()) << rc.maxChildrenShift()) + candidate.numChildren) << rc.maxChildrenShift()) + numTerminals)
-		// TODO: candidateQueue.add(new QueueEntry(priority, candidate));
+		priority := -((((int(candidate.cell.Level()) << rc.maxChildrenShift()) + candidate.numChildren) << rc.maxChildrenShift()) + numTerminals)
+		rc.candidateQueue.Push(newQueueEntry(priority, candidate))
 	}
 }
 

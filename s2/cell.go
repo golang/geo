@@ -45,7 +45,7 @@ func CellFromCellID(id CellID) Cell {
 
 // CellFromPoint constructs a cell for the given Point.
 func CellFromPoint(p Point) Cell {
-	return CellFromCellID(cellIDFromPoint(p))
+	return CellFromCellID(CellIDFromPoint(p))
 }
 
 // CellFromLatLng constructs a cell for the given LatLng.
@@ -106,5 +106,40 @@ func (c Cell) ExactArea() float64 {
 	return PointArea(v0, v1, v2) + PointArea(v0, v2, v3)
 }
 
-// TODO(roberts, or $SOMEONE): Differences from C++, almost everything else still.
-// Implement the accessor methods on the internal fields.
+// CapBound returns a bounding spherical cap. This is not guaranteed to be exact.
+func (c Cell) CapBound() Cap {
+	// Use the cell center in (u,v)-space as the cap axis. This vector is
+	// very close to GetCenter() and faster to compute. Neither one of these
+	// vectors yields the bounding cap with minimal surface area, but they
+	// are both pretty close.
+	//
+	// It's possible to show that the two vertices that are furthest from
+	// the (u,v)-origin never determine the maximum cap size (this is a
+	// possible future optimization).
+	u := c.uv.Center().X
+	v := c.uv.Center().Y
+	cap := CapFromCenterHeight(Point{faceUVToXYZ(int(c.face), u, v).Normalize()}, 0)
+	for k := 0; k < 4; k++ {
+		cap = cap.AddPoint(c.Vertex(k))
+	}
+	return cap
+}
+
+// RectBound returns a bounding latitude-longitude rectangle that contains
+// the region. The bounds are not guaranteed to be tight.
+func (c Cell) RectBound() Rect {
+	return EmptyRect()
+}
+
+// ContainsCell reports whether the region completely contains the given region.
+// It returns false if containment could not be determined.
+func (c Cell) ContainsCell(other Cell) bool {
+	return c.Id().Contains(other.Id())
+}
+
+// IntersectsCell reports whether the region intersects the given cell or
+// if intersection could not be determined. It returns false if the region
+// does not intersect.
+func (c Cell) IntersectsCell(other Cell) bool {
+	return c.Id().Intersects(other.Id())
+}

@@ -63,7 +63,7 @@ func CellIDFromFace(face int) CellID {
 
 // CellIDFromLatLng returns the leaf cell containing ll.
 func CellIDFromLatLng(ll LatLng) CellID {
-	return cellIDFromPoint(PointFromLatLng(ll))
+	return CellIDFromPoint(PointFromLatLng(ll))
 }
 
 // CellIDFromToken returns a cell given a hex-encoded string of its uint64 ID.
@@ -449,8 +449,8 @@ func stToIJ(s float64) int {
 	return clamp(int(math.Floor(maxSize*s)), 0, maxSize-1)
 }
 
-// cellIDFromPoint returns the leaf cell containing point p.
-func cellIDFromPoint(p Point) CellID {
+// CellIDFromPoint returns the leaf cell containing point p.
+func CellIDFromPoint(p Point) CellID {
 	f, u, v := xyzToFaceUV(r3.Vector{p.X, p.Y, p.Z})
 	i := stToIJ(uvToST(u))
 	j := stToIJ(uvToST(v))

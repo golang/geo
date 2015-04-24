@@ -25,20 +25,6 @@ import "sort"
 // nor the four sibling CellIDs that are children of a single higher level CellID.
 type CellUnion []CellID
 
-func min(a, b int) int {
-	if a > b {
-		return b
-	}
-	return a
-}
-
-func max(a, b int) int {
-	if a < b {
-		return b
-	}
-	return a
-}
-
 func (cu *CellUnion) DeNormalize(minLevel, levelMod int, output *CellUnion) {
 	*output = make([]CellID, len(*cu))
 	for _, ci := range *cu {
