@@ -25,7 +25,16 @@ import "sort"
 // nor the four sibling CellIDs that are children of a single higher level CellID.
 type CellUnion []CellID
 
-func (cu *CellUnion) DeNormalize(minLevel, levelMod int, output *CellUnion) {
+func CellUnionFromArrayAndSwap(ids *[]CellID) *CellUnion {
+	union := &CellUnion{}
+	*union = append(*union, *ids...)
+	union.Normalize()
+	*ids = []CellID{}
+	return union
+}
+
+
+func (cu *CellUnion) DeNormalize(minLevel, levelMod int, output *[]CellID) {
 	*output = make([]CellID, len(*cu))
 	for _, ci := range *cu {
 		level := ci.Level()
