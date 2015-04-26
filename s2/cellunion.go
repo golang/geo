@@ -33,9 +33,8 @@ func CellUnionFromArrayAndSwap(ids *[]CellID) *CellUnion {
 	return union
 }
 
-
 func (cu *CellUnion) DeNormalize(minLevel, levelMod int, output *[]CellID) {
-	*output = make([]CellID, len(*cu))
+	*output = make([]CellID, 0, len(*cu))
 	for _, ci := range *cu {
 		level := ci.Level()
 		newLevel := max(minLevel, level)

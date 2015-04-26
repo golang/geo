@@ -88,15 +88,19 @@ func (c Cell) Vertex(k int) Point {
 // Edge returns the inward-facing normal of the great circle passing through
 // the CCW ordered edge from vertex k to vertex k+1 (mod 4).
 func (c Cell) Edge(k int) Point {
+	return Point{c.EdgeRaw(k).Normalize()}
+}
+
+func (c Cell) EdgeRaw(k int) Point {
 	switch k {
 	case 0:
-		return Point{vNorm(int(c.face), c.uv.Y.Lo).Normalize()} // Bottom
+		return Point{vNorm(int(c.face), c.uv.Y.Lo)} // Bottom
 	case 1:
-		return Point{uNorm(int(c.face), c.uv.X.Hi).Normalize()} // Right
+		return Point{uNorm(int(c.face), c.uv.X.Hi)} // Right
 	case 2:
-		return Point{vNorm(int(c.face), c.uv.Y.Hi).Mul(-1.0).Normalize()} // Top
+		return Point{vNorm(int(c.face), c.uv.Y.Hi).Mul(-1.0)} // Top
 	default:
-		return Point{uNorm(int(c.face), c.uv.X.Lo).Mul(-1.0).Normalize()} // Left
+		return Point{uNorm(int(c.face), c.uv.X.Lo).Mul(-1.0)} // Left
 	}
 }
 
@@ -125,9 +129,21 @@ func (c Cell) CapBound() Cap {
 	return cap
 }
 
+func (c Cell) ContainsPoint(point Point) bool {
+	// We can't just call XYZtoFaceUV, because for points that lie on the
+	// boundary between two faces (i.e. u or v is +1/-1) we need to return
+	// true for both adjacent cells.
+	u, v, ok := faceXYZToUV(int(c.face), point)
+	if !ok {
+		return false
+	}
+	return u >= c.uv.X.Lo && u <= c.uv.X.Hi && v >= c.uv.Y.Lo && v <= c.uv.Y.Hi
+}
+
 // RectBound returns a bounding latitude-longitude rectangle that contains
 // the region. The bounds are not guaranteed to be tight.
 func (c Cell) RectBound() Rect {
+	// TODO: Implement
 	return EmptyRect()
 }
 
