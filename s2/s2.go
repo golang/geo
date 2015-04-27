@@ -59,7 +59,10 @@ func (m Metric) GetValue(level int) float64 {
  * always a valid level.
  */
 func (m Metric) getClosestLevel(value float64) int {
-	return m.getMinLevel(math.Sqrt2 * value)
+	if m.dim == 1 {
+		return m.getMinLevel(math.Sqrt2 * value)
+	}
+	return m.getMinLevel(2 * value)
 }
 
 /**
