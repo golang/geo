@@ -401,5 +401,4 @@ func (c Cap) intersects(cell Cell, vertices []Point) bool {
 }
 
 // TODO(roberts): Differences from C++
-// Intersects(S2Cell), Contains(S2Cell), MayIntersect(S2Cell)
 // Centroid, Union

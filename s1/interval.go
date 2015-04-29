@@ -47,6 +47,24 @@ func IntervalFromEndpoints(lo, hi float64) Interval {
 	return i
 }
 
+// Convenience method to construct the minimal interval containing the two
+// given points. This is equivalent to starting with an empty interval and
+// calling AddPoint() twice, but it is more efficient.
+func IntervalFromPointPair(p1, p2 float64) Interval {
+	// assert (Math.abs(p1) <= S2.M_PI && Math.abs(p2) <= S2.M_PI);
+	if p1 == -math.Pi {
+		p1 = math.Pi
+	}
+	if p2 == -math.Pi {
+		p2 = math.Pi
+	}
+	if positiveDistance(p1, p2) <= math.Pi {
+		return Interval{p1, p2}
+	} else {
+		return Interval{p2, p1}
+	}
+}
+
 // EmptyInterval returns an empty interval.
 func EmptyInterval() Interval { return Interval{math.Pi, -math.Pi} }
 

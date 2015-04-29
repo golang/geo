@@ -24,7 +24,12 @@ func TestCovering(t *testing.T) {
 	coverer := NewRegionCoverer()
 	coverer.SetMaxCells(8)
 	region1 := CellFromCellID(CellIDFromToken("80c297c574"))
+	rect1 := region1.RectBound()
+	fmt.Printf("%s\n", rect1.String())
+
 	region := region1.CapBound()
+	rect := region.RectBound()
+	fmt.Printf("%s\n", rect.String())
 
 	fmt.Printf("%s\n", region.String())
 

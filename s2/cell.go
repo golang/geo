@@ -17,7 +17,11 @@ limitations under the License.
 package s2
 
 import (
+	"math"
+
+	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r2"
+	"github.com/golang/geo/s1"
 )
 
 // Cell is an S2 region object that represents a cell. Unlike CellIDs,
@@ -140,11 +144,79 @@ func (c Cell) ContainsPoint(point Point) bool {
 	return u >= c.uv.X.Lo && u <= c.uv.X.Hi && v >= c.uv.Y.Lo && v <= c.uv.Y.Hi
 }
 
+// We grow the bounds slightly to make sure that the bounding rectangle
+// also contains the normalized versions of the vertices. Note that the
+// maximum result magnitude is Pi, with a floating-point exponent of 1.
+// Therefore adding or subtracting 2**-51 will always change the result.
+var MAX_ERROR float64 = 1.0 / (1 << 51)
+
+// The 4 cells around the equator extend to +/-45 degrees latitude at the
+// midpoints of their top and bottom edges. The two cells covering the
+// poles extend down to +/-35.26 degrees at their vertices.
+// adding kMaxError (as opposed to the C version) because of asin and atan2
+// roundoff errors
+var POLE_MIN_LAT float64 = math.Asin(math.Sqrt(1.0/3.0)) - MAX_ERROR // 35.26 degrees
+
 // RectBound returns a bounding latitude-longitude rectangle that contains
 // the region. The bounds are not guaranteed to be tight.
 func (c Cell) RectBound() Rect {
-	// TODO: Implement
-	return EmptyRect()
+	if c.level > 0 {
+		// Except for cells at level 0, the latitude and longitude extremes are
+		// attained at the vertices. Furthermore, the latitude range is
+		// determined by one pair of diagonally opposite vertices and the
+		// longitude range is determined by the other pair.
+		//
+		// We first determine which corner (i,j) of the cell has the largest
+		// absolute latitude. To maximize latitude, we want to find the point in
+		// the cell that has the largest absolute z-coordinate and the smallest
+		// absolute x- and y-coordinates. To do this we look at each coordinate
+		// (u and v), and determine whether we want to minimize or maximize that
+		// coordinate based on the axis direction and the cell's (u,v) quadrant.
+		u := c.uv.X.Lo + c.uv.X.Hi
+		v := c.uv.Y.Lo + c.uv.Y.Hi
+		var i, j int
+		if uAxis(int(c.face)).Z == 0 {
+			if u < 0 {
+				i = 1
+			}
+		} else {
+			if u > 0 {
+				i = 1
+			}
+		}
+		if vAxis(int(c.face)).Z == 0 {
+			if v < 0 {
+				j = 1
+			}
+		} else {
+			if v > 0 {
+				j = 1
+			}
+		}
+
+		lat := r1.IntervalFromPointPair(c.latitude(i, j), c.latitude(1-i, 1-j))
+		lat = lat.Expanded(MAX_ERROR).Intersection(validRectLatRange)
+		if lat.Lo == validRectLatRange.Lo || lat.Hi == validRectLatRange.Hi {
+			return Rect{lat, s1.FullInterval()}
+		}
+		lng := s1.IntervalFromPointPair(c.longitude(i, 1-j), c.longitude(1-i, j))
+		return Rect{lat, lng.Expanded(MAX_ERROR)}
+	}
+
+	switch c.face {
+	case 0:
+		return Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{-math.Pi / 4, math.Pi / 4}}
+	case 1:
+		return Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{math.Pi / 4, 3 * math.Pi / 4}}
+	case 2:
+		return Rect{r1.Interval{POLE_MIN_LAT, math.Pi / 2}, s1.Interval{-math.Pi, math.Pi}}
+	case 3:
+		return Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{3 * math.Pi / 4, -3 * math.Pi / 4}}
+	case 4:
+		return Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{-3 * math.Pi / 4, -math.Pi / 4}}
+	default:
+		return Rect{r1.Interval{-math.Pi / 2, -POLE_MIN_LAT}, s1.Interval{-math.Pi, math.Pi}}
+	}
 }
 
 // ContainsCell reports whether the region completely contains the given region.
@@ -158,4 +230,30 @@ func (c Cell) ContainsCell(other Cell) bool {
 // does not intersect.
 func (c Cell) IntersectsCell(other Cell) bool {
 	return c.Id().Intersects(other.Id())
+}
+
+func (c Cell) latitude(i, j int) float64 {
+	u := c.uv.X.Lo
+	if i == 1 {
+		u = c.uv.X.Hi
+	}
+	v := c.uv.Y.Lo
+	if j == 1 {
+		v = c.uv.Y.Hi
+	}
+	p := Point{faceUVToXYZ(int(c.face), u, v)}
+	return math.Atan2(p.Z, math.Sqrt(p.X*p.X+p.Y*p.Y))
+}
+
+func (c Cell) longitude(i, j int) float64 {
+	u := c.uv.X.Lo
+	if i == 1 {
+		u = c.uv.X.Hi
+	}
+	v := c.uv.Y.Lo
+	if j == 1 {
+		v = c.uv.Y.Hi
+	}
+	p := Point{faceUVToXYZ(int(c.face), u, v)}
+	return math.Atan2(p.Y, p.X)
 }
