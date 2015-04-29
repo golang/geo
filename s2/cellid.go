@@ -267,6 +267,10 @@ func (ci CellID) String() string {
 	return b.String()
 }
 
+func (ci CellID) ToString() string {
+	return fmt.Sprintf("(face=%d, pos=%x, level=%d))", ci.Face(), ci.Pos(), ci.Level())
+}
+
 // Point returns the center of the s2 cell on the sphere as a Point.
 func (ci CellID) Point() Point { return Point{ci.rawPoint().Normalize()} }
 

@@ -59,6 +59,9 @@ func (v Vector) IsUnit() bool {
 // Abs returns the vector with nonnegative components.
 func (v Vector) Abs() Vector { return Vector{math.Abs(v.X), math.Abs(v.Y), math.Abs(v.Z)} }
 
+// Neg returns the negated vector
+func (v Vector) Neg() Vector { return Vector{-v.X, -v.Y, -v.Z} }
+
 // Add returns the standard vector sum of v and ov.
 func (v Vector) Add(ov Vector) Vector { return Vector{v.X + ov.X, v.Y + ov.Y, v.Z + ov.Z} }
 

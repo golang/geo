@@ -98,9 +98,9 @@ func (c Cell) EdgeRaw(k int) Point {
 	case 1:
 		return Point{uNorm(int(c.face), c.uv.X.Hi)} // Right
 	case 2:
-		return Point{vNorm(int(c.face), c.uv.Y.Hi).Mul(-1.0)} // Top
+		return Point{vNorm(int(c.face), c.uv.Y.Hi).Neg()} // Top
 	default:
-		return Point{uNorm(int(c.face), c.uv.X.Lo).Mul(-1.0)} // Left
+		return Point{uNorm(int(c.face), c.uv.X.Lo).Neg()} // Left
 	}
 }
 

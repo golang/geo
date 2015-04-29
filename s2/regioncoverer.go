@@ -48,22 +48,24 @@ type queueEntry struct {
 	index int // The index of the item in the heap.
 }
 
-func newQueueEntry(id int, candidate *candidate) *queueEntry {
-	return &queueEntry{priority: id, candidate: candidate}
+func newQueueEntry(id int, candidate_ *candidate) *queueEntry {
+	return &queueEntry{priority: id, candidate: candidate_}
 }
 
 // A PriorityQueue implements heap.Interface and holds Items.
 type PriorityQueue []*queueEntry
 
 func newPriorityQueue(space int) PriorityQueue {
-	return make([]*queueEntry, 0, space)
+	pq := PriorityQueue(make([]*queueEntry, 0, space))
+	heap.Init(&pq)
+	return pq
 }
 
 func (pq PriorityQueue) Len() int { return len(pq) }
 
 func (pq PriorityQueue) Less(i, j int) bool {
 	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
-	return pq[i].priority < pq[j].priority
+	return pq[i].priority > pq[j].priority
 }
 
 func (pq PriorityQueue) Swap(i, j int) {
@@ -182,7 +184,7 @@ func (rc *RegionCoverer) GetCoveringInternal(region Region) {
 
 	rc.getInitialCandidates()
 	for rc.candidateQueue.Len() > 0 && (!rc.interiorCovering || len(rc.result) < rc.maxCells) {
-		candidate := rc.candidateQueue.Pop().(*queueEntry).candidate
+		candidate := heap.Pop(&rc.candidateQueue).(*queueEntry).candidate
 		sz := len(rc.result) + candidate.numChildren
 		if !rc.interiorCovering {
 			sz = sz + rc.candidateQueue.Len()
@@ -237,32 +239,32 @@ func (rc *RegionCoverer) getInitialCandidates() {
 	}
 }
 
-func (rc *RegionCoverer) addCandidate(candidate *candidate) {
-	if candidate == nil {
+func (rc *RegionCoverer) addCandidate(candidate_ *candidate) {
+	if candidate_ == nil {
 		return
 	}
 
-	if candidate.isTerminal {
-		rc.result = append(rc.result, candidate.cell.Id())
+	if candidate_.isTerminal {
+		rc.result = append(rc.result, candidate_.cell.Id())
 		return
 	}
 
 	numLevels := rc.levelMod
-	if int(candidate.cell.Level()) < rc.minLevel {
+	if int(candidate_.cell.Level()) < rc.minLevel {
 		numLevels = 1
 	}
-	numTerminals := rc.expandChildren(candidate, candidate.cell, numLevels)
+	numTerminals := rc.expandChildren(candidate_, candidate_.cell, numLevels)
 
-	if candidate.numChildren == 0 {
+	if candidate_.numChildren == 0 {
 		// do nothing
 	} else if !rc.interiorCovering && numTerminals == 1<<rc.maxChildrenShift() &&
-		int(candidate.cell.Level()) >= rc.minLevel {
+		int(candidate_.cell.Level()) >= rc.minLevel {
 		// Optimization: add the parent cell rather than all of its children.
 		// We can't do this for interior coverings, since the children just
 		// intersect the region, but may not be contained by it - we need to
 		// subdivide them further.
-		candidate.isTerminal = true
-		rc.addCandidate(candidate)
+		candidate_.isTerminal = true
+		rc.addCandidate(candidate_)
 	} else {
 		// We negate the priority so that smaller absolute priorities are returned
 		// first. The heuristic is designed to refine the largest cells first,
@@ -270,8 +272,8 @@ func (rc *RegionCoverer) addCandidate(candidate *candidate) {
 		// at the same level, we prefer the cells with the smallest number of
 		// intersecting children. Finally, we prefer cells that have the smallest
 		// number of children that cannot be refined any further.
-		priority := -((((int(candidate.cell.Level()) << rc.maxChildrenShift()) + candidate.numChildren) << rc.maxChildrenShift()) + numTerminals)
-		rc.candidateQueue.Push(newQueueEntry(priority, candidate))
+		priority := -((((int(candidate_.cell.Level()) << rc.maxChildrenShift()) + candidate_.numChildren) << rc.maxChildrenShift()) + numTerminals)
+		heap.Push(&rc.candidateQueue, newQueueEntry(priority, candidate_))
 	}
 }
 
