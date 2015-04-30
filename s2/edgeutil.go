@@ -1,7 +1,6 @@
 package s2
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/golang/geo/r1"
@@ -29,7 +28,7 @@ func NewEdgeCrosser(a, b, c Point) EdgeCrosser {
 	return ec
 }
 
-func (ec EdgeCrosser) RestartAt(c Point) {
+func (ec *EdgeCrosser) RestartAt(c Point) {
 	ec.c = c
 	ec.acb = -int(RobustSign(ec.a, ec.b, c))
 }
@@ -42,7 +41,7 @@ func (ec EdgeCrosser) RestartAt(c Point) {
  * degenerate. As a side effect, it saves vertex D to be used as the next
  * vertex C.
  */
-func (ec EdgeCrosser) RobustCrossing(d Point) int {
+func (ec *EdgeCrosser) RobustCrossing(d Point) int {
 	// For there to be an edge crossing, the triangles ACB, CBD, BDA, DAC must
 	// all be oriented the same way (CW or CCW). We keep the orientation
 	// of ACB as part of our state. When each new point D arrives, we
@@ -76,7 +75,7 @@ func (ec EdgeCrosser) RobustCrossing(d Point) int {
 /**
  * This function handles the "slow path" of robustCrossing().
  */
-func (ec EdgeCrosser) robustCrossingInternal(d Point) int {
+func (ec *EdgeCrosser) robustCrossingInternal(d Point) int {
 	// ACB and BDA have the appropriate orientations, so now we check the
 	// triangles CBD and DAC.
 	cbd := -int(RobustSign(ec.c, d, ec.b))
@@ -102,13 +101,11 @@ func NewRectBounder() RectBounder {
 	return RectBounder{bound: EmptyRect()}
 }
 
-func (rb RectBounder) AddPoint(b Point) {
+func (rb *RectBounder) AddPoint(b Point) {
 	bLatLng := LatLngFromPoint(b)
 
 	if rb.bound.IsEmpty() {
-		fmt.Printf("AddPoint %s\n", rb.bound.String())
 		rb.bound = rb.bound.AddPoint(bLatLng)
-		fmt.Printf("AddPoint %s\n", rb.bound.String())
 	} else {
 		// We can't just call bound.addPoint(bLatLng) here, since we need to
 		// ensure that all the longitudes between "a" and "b" are included.

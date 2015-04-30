@@ -58,11 +58,11 @@ func TestCoveringPolyline(t *testing.T) {
 	// region = region.AddPoint(LatLngFromDegrees(34.0906409358360560, -118.3911871165037200))
 
 	polyline := PolylineFromPoints(points)
-	region := polyline.RectBound()
-	fmt.Printf("%s\n", region.String())
+	// region := polyline.RectBound()
+	// fmt.Printf("%s\n", region.String())
 
 	cells := []CellID{}
-	coverer.GetCovering(region, &cells)
+	coverer.GetCovering(polyline, &cells)
 	for i, cell := range cells {
 		t.Errorf("cell %d: %x - %s", i, uint64(cell), cell.ToToken())
 	}

@@ -81,8 +81,7 @@ func (p Polyline) CapBound() Cap {
 // the region. The bounds are not guaranteed to be tight.
 func (p Polyline) RectBound() Rect {
 	rb := NewRectBounder()
-	for i := 0; i < p.NumVertices()-1; i++ {
-		fmt.Printf("polyline Rectbound %d\n", i)
+	for i := 0; i < p.NumVertices(); i++ {
 		rb.AddPoint(p.Vertex(i))
 	}
 	return rb.GetBound()
