@@ -40,3 +40,30 @@ func TestCovering(t *testing.T) {
 		t.Errorf("cell %d: %x - %s", i, uint64(cell), cell.ToToken())
 	}
 }
+
+func TestCoveringPolyline(t *testing.T) {
+	coverer := NewRegionCoverer()
+	coverer.SetMaxCells(8)
+
+	points := []Point{
+		PointFromLatLng(LatLngFromDegrees(34.0909533022671600, -118.3914214745164100)),
+		PointFromLatLng(LatLngFromDegrees(34.0906409358360560, -118.3911871165037200)),
+	}
+
+	for _, point := range points {
+		fmt.Printf("point: %v\n", point.String())
+	}
+
+	// region := RectFromLatLng(LatLngFromDegrees(34.0909533022671600, -118.3914214745164100))
+	// region = region.AddPoint(LatLngFromDegrees(34.0906409358360560, -118.3911871165037200))
+
+	polyline := PolylineFromPoints(points)
+	region := polyline.RectBound()
+	fmt.Printf("%s\n", region.String())
+
+	cells := []CellID{}
+	coverer.GetCovering(region, &cells)
+	for i, cell := range cells {
+		t.Errorf("cell %d: %x - %s", i, uint64(cell), cell.ToToken())
+	}
+}

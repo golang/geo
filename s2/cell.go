@@ -242,7 +242,7 @@ func (c Cell) latitude(i, j int) float64 {
 		v = c.uv.Y.Hi
 	}
 	p := Point{faceUVToXYZ(int(c.face), u, v)}
-	return math.Atan2(p.Z, math.Sqrt(p.X*p.X+p.Y*p.Y))
+	return latitude(p).Radians()
 }
 
 func (c Cell) longitude(i, j int) float64 {
@@ -255,5 +255,5 @@ func (c Cell) longitude(i, j int) float64 {
 		v = c.uv.Y.Hi
 	}
 	p := Point{faceUVToXYZ(int(c.face), u, v)}
-	return math.Atan2(p.Y, p.X)
+	return longitude(p).Radians()
 }

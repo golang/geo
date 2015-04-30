@@ -49,6 +49,21 @@ func RectFromLatLng(p LatLng) Rect {
 	}
 }
 
+/**
+ * Convenience method to construct the minimal bounding rectangle containing
+ * the two given points. This is equivalent to starting with an empty
+ * rectangle and calling AddPoint() twice. Note that it is different than the
+ * S2LatLngRect(lo, hi) constructor, where the first point is always used as
+ * the lower-left corner of the resulting rectangle.
+ */
+func RectFromLatLngPair(p1, p2 LatLng) Rect {
+	// assert (p1.isValid() && p2.isValid());
+	return Rect{
+		Lat: r1.IntervalFromPointPair(p1.Lat.Radians(), p2.Lat.Radians()),
+		Lng: s1.IntervalFromPointPair(p1.Lng.Radians(), p2.Lng.Radians()),
+	}
+}
+
 // RectFromCenterSize constructs a rectangle with the given size and center.
 // center needs to be normalized, but size does not. The latitude
 // interval of the result is clamped to [-90,90] degrees, and the longitude
@@ -58,7 +73,7 @@ func RectFromLatLng(p LatLng) Rect {
 // Examples of clamping (in degrees):
 //   center=(80,170),  size=(40,60)   -> lat=[60,90],   lng=[140,-160]
 //   center=(10,40),   size=(210,400) -> lat=[-90,90],  lng=[-180,180]
-//   center=(-90,180), size=(20,50)   -> lat=[-90,-80], lng=[155,-155]
+//   center=(-90,180), size=(20,50)   -> lat=[-90,-80], lng=[1
 func RectFromCenterSize(center, size LatLng) Rect {
 	half := LatLng{size.Lat / 2, size.Lng / 2}
 	return RectFromLatLng(center).expanded(half)
@@ -92,6 +107,23 @@ func (r Rect) Hi() LatLng {
 	return LatLng{s1.Angle(r.Lat.Hi) * s1.Radian, s1.Angle(r.Lng.Hi) * s1.Radian}
 }
 
+// Return the k-th vertex of the rectangle (k = 0,1,2,3) in CCW order.
+func (r Rect) Vertex(k int) LatLng {
+	// Return the points in CCW order (SW, SE, NE, NW).
+	switch k {
+	case 0:
+		return LatLng{s1.Angle(r.Lat.Lo), s1.Angle(r.Lng.Lo)}
+	case 1:
+		return LatLng{s1.Angle(r.Lat.Lo), s1.Angle(r.Lng.Hi)}
+	case 2:
+		return LatLng{s1.Angle(r.Lat.Hi), s1.Angle(r.Lng.Hi)}
+	case 3:
+		return LatLng{s1.Angle(r.Lat.Hi), s1.Angle(r.Lng.Lo)}
+	default:
+		panic("Invalid vertex index.")
+	}
+}
+
 // Center returns the center of the rectangle.
 func (r Rect) Center() LatLng {
 	return LatLng{s1.Angle(r.Lat.Center()) * s1.Radian, s1.Angle(r.Lng.Center()) * s1.Radian}
@@ -117,6 +149,16 @@ func (r Rect) ContainsLatLng(ll LatLng) bool {
 		return false
 	}
 	return r.Lat.Contains(ll.Lat.Radians()) && r.Lng.Contains(ll.Lng.Radians())
+}
+
+// Return true if and only if the rectangle contains the given other rectangle.
+func (r Rect) ContainsRect(other Rect) bool {
+	return r.Lat.ContainsInterval(other.Lat) && r.Lng.ContainsInterval(other.Lng)
+}
+
+// Return true if this rectangle and the given other rectangle have any points in common.
+func (r Rect) IntersectsRect(other Rect) bool {
+	return r.Lat.Intersects(other.Lat) && r.Lng.Intersects(other.Lng)
 }
 
 // AddPoint increases the size of the rectangle to include the given point.
@@ -151,7 +193,80 @@ func (r Rect) expanded(margin LatLng) Rect {
 	}
 }
 
+// Return the smallest rectangle containing the union of this rectangle and the given rectangle.
+func (r Rect) Union(other Rect) Rect {
+	return Rect{
+		Lat: r.Lat.Union(other.Lat),
+		Lng: r.Lng.Union(other.Lng),
+	}
+}
+
 func (r Rect) String() string { return fmt.Sprintf("[Lo%v, Hi%v]", r.Lo(), r.Hi()) }
+
+// CapBound returns a bounding spherical cap. This is not guaranteed to be exact.
+func (r Rect) CapBound() Cap {
+	// We consider two possible bounding caps, one whose axis passes
+	// through the center of the lat-long rectangle and one whose axis
+	// is the north or south pole. We return the smaller of the two caps.
+
+	if r.IsEmpty() {
+		return EmptyCap()
+	}
+
+	var poleZ, poleAngle float64
+	if r.Lat.Lo+r.Lat.Hi < 0 {
+		// South pole axis yields smaller cap.
+		poleZ = -1
+		poleAngle = math.Pi/2 + r.Lat.Hi
+	} else {
+		poleZ = 1
+		poleAngle = math.Pi/2 - r.Lat.Lo
+	}
+
+	poleCap := CapFromCenterAngle(PointFromCoords(0, 0, poleZ), s1.Angle(poleAngle))
+
+	// For bounding rectangles that span 180 degrees or less in longitude, the
+	// maximum cap size is achieved at one of the rectangle vertices. For
+	// rectangles that are larger than 180 degrees, we punt and always return a
+	// bounding cap centered at one of the two poles.
+	lngSpan := r.Lng.Hi - r.Lng.Lo
+	if math.Remainder(lngSpan, 2*math.Pi) >= 0 {
+		if lngSpan < 2*math.Pi {
+			midCap := CapFromCenterAngle(PointFromLatLng(r.Center()), s1.Angle(0))
+			for k := 0; k < 4; k++ {
+				midCap = midCap.AddPoint(PointFromLatLng(r.Vertex(k)))
+			}
+			if midCap.height < poleCap.height {
+				return midCap
+			}
+		}
+	}
+	return poleCap
+}
+
+// RectBound returns a bounding latitude-longitude rectangle that contains
+// the region. The bounds are not guaranteed to be tight.
+func (r Rect) RectBound() Rect {
+	return r
+}
+
+func (r Rect) ContainsCell(c Cell) bool {
+	// A latitude-longitude rectangle contains a cell if and only if it contains
+	// the cell's bounding rectangle. (This is an exact test.)
+	return r.ContainsRect(c.RectBound())
+}
+
+/**
+ * This test is cheap but is NOT exact. Use Intersects() if you want a more
+ * accurate and more expensive test. Note that when this method is used by an
+ * S2RegionCoverer, the accuracy isn't all that important since if a cell may
+ * intersect the region then it is subdivided, and the accuracy of this method
+ * goes up as the cells get smaller.
+ */
+func (r Rect) IntersectsCell(c Cell) bool {
+	// This test is cheap but is NOT exact (see s2latlngrect.h).
+	return r.IntersectsRect(c.RectBound())
+}
 
 // BUG(dsymonds): The major differences from the C++ version are:
 //   - almost everything

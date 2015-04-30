@@ -83,6 +83,14 @@ func PointFromCoords(x, y, z float64) Point {
 	return Point{r3.Vector{x, y, z}.Normalize()}
 }
 
+// PointFromLatLng returns an Point for the given LatLng.
+func PointFromLatLng(ll LatLng) Point {
+	phi := ll.Lat.Radians()
+	theta := ll.Lng.Radians()
+	cosphi := math.Cos(phi)
+	return PointFromCoords(math.Cos(theta)*cosphi, math.Sin(theta)*cosphi, math.Sin(phi))
+}
+
 // OriginPoint returns a unique "origin" on the sphere for operations that need a fixed
 // reference point. In particular, this is the "point at infinity" used for
 // point-in-polygon testing (by counting the number of edge crossings).
