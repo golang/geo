@@ -43,7 +43,7 @@ func TestCovering(t *testing.T) {
 
 func TestCoveringPolyline(t *testing.T) {
 	coverer := NewRegionCoverer()
-	coverer.SetMaxCells(8)
+	coverer.SetMaxCells(4)
 
 	points := []Point{
 		PointFromLatLng(LatLngFromDegrees(34.0909533022671600, -118.3914214745164100)),

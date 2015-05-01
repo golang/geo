@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/golang/geo/r3"
@@ -276,6 +277,45 @@ func (p Point) Distance(b Point) s1.Angle {
 func (p Point) ApproxEqual(other Point) bool {
 	const epsilon = 1e-14
 	return p.Vector.Angle(other.Vector) <= epsilon
+}
+
+func (p Point) Equals(other Point) bool {
+	return p.X == other.X && p.Y == other.Y && p.Z == other.Z
+}
+
+func (p Point) LessThan(vb Point) bool {
+	if p.X < vb.X {
+		return true
+	}
+	if vb.X < p.X {
+		return false
+	}
+	if p.Y < vb.Y {
+		return true
+	}
+	if vb.Y < p.Y {
+		return false
+	}
+	if p.Z < vb.Z {
+		return true
+	}
+	return false
+}
+
+func (p Point) CompareTo(other Point) int {
+	if p.LessThan(other) {
+		return -1
+	} else {
+		if p.Equals(other) {
+			return 0
+		}
+		return 1
+	}
+}
+
+func (p Point) DegreesString() string {
+	latLng := LatLngFromPoint(p)
+	return fmt.Sprintf("(%f, %f)", latLng.Lat.Degrees(), latLng.Lng.Degrees())
 }
 
 // PointArea returns the area on the unit sphere for the triangle defined by the

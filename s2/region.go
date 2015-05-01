@@ -46,4 +46,5 @@ var (
 	// _ Region = CellUnion(nil)
 	_ Region = Rect{}
 	_ Region = Polyline{}
+	_ Region = &Loop{}
 )
