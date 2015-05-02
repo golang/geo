@@ -4,6 +4,8 @@ import (
 	"math"
 )
 
+const EPSILON float64 = 1e-14
+
 // Number of bits in the mantissa of a double.
 const EXPONENT_SHIFT uint = 52
 
@@ -30,6 +32,49 @@ func exp(v float64) int {
 	}
 	bits := math.Float64bits(v)
 	return (int)((EXPONENT_MASK&bits)>>EXPONENT_SHIFT) - 1022
+}
+
+/**
+ * Return the angle at the vertex B in the triangle ABC. The return value is
+ * always in the range [0, Pi]. The points do not need to be normalized.
+ * Ensures that Angle(a,b,c) == Angle(c,b,a) for all a,b,c.
+ *
+ *  The angle is undefined if A or C is diametrically opposite from B, and
+ * becomes numerically unstable as the length of edge AB or BC approaches 180
+ * degrees.
+ */
+func angle(a, b, c Point) float64 {
+	return a.Cross(b.Vector).Angle(c.Cross(b.Vector)).Radians()
+}
+
+func approxEqualsNumber(a, b, maxError float64) bool {
+	return math.Abs(a-b) <= maxError
+}
+
+/**
+ * Return true if the points A, B, C are strictly counterclockwise. Return
+ * false if the points are clockwise or colinear (i.e. if they are all
+ * contained on some great circle).
+ *
+ *  Due to numerical errors, situations may arise that are mathematically
+ * impossible, e.g. ABC may be considered strictly CCW while BCA is not.
+ * However, the implementation guarantees the following:
+ *
+ *  If SimpleCCW(a,b,c), then !SimpleCCW(c,b,a) for all a,b,c.
+ *
+ * In other words, ABC and CBA are guaranteed not to be both CCW
+ */
+func simpleCCW(a, b, c Point) bool {
+	// We compute the signed volume of the parallelepiped ABC. The usual
+	// formula for this is (AxB).C, but we compute it here using (CxA).B
+	// in order to ensure that ABC and CBA are not both CCW. This follows
+	// from the following identities (which are true numerically, not just
+	// mathematically):
+	//
+	// (1) x.CrossProd(y) == -(y.CrossProd(x))
+	// (2) (-x).DotProd(y) == -(x.DotProd(y))
+
+	return c.Cross(a.Vector).Dot(b.Vector) > 0
 }
 
 // Defines an area or a length cell metric.

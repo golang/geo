@@ -69,7 +69,10 @@ func (v Vector) Add(ov Vector) Vector { return Vector{v.X + ov.X, v.Y + ov.Y, v.
 func (v Vector) Sub(ov Vector) Vector { return Vector{v.X - ov.X, v.Y - ov.Y, v.Z - ov.Z} }
 
 // Mul returns the standard scalar product of v and m.
-func (v Vector) Mul(m float64) Vector { return Vector{m * v.X, m * v.Y, m * v.Z} }
+func (v Vector) Mul(m float64) Vector { return Vector{v.X * m, v.Y * m, v.Z * m} }
+
+// Mul returns the standard scalar product of v and m.
+func (v Vector) Div(m float64) Vector { return Vector{v.X / m, v.Y / m, v.Z / m} }
 
 // Dot returns the standard dot product of v and ov.
 func (v Vector) Dot(ov Vector) float64 { return v.X*ov.X + v.Y*ov.Y + v.Z*ov.Z }

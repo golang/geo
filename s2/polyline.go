@@ -51,7 +51,7 @@ func (p Polyline) IsValid() bool {
 	}
 	// Adjacent vertices must not be identical or antipodal.
 	for i := 0; i < n; i++ {
-		if p.Vertices[i-1].ApproxEqual(p.Vertices[i]) || p.Vertices[i-1].ApproxEqual(Point{p.Vertices[i].Neg()}) {
+		if p.Vertices[i-1].ApproxEquals(p.Vertices[i], EPSILON) || p.Vertices[i-1].ApproxEquals(Point{p.Vertices[i].Neg()}, EPSILON) {
 			fmt.Printf("Vertices %d and %d are identical or antipodal", (i - 1), i)
 			return false
 		}

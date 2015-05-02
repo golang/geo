@@ -249,13 +249,12 @@ func (c Cap) RectBound() Rect {
 // ApproxEqual reports if this caps' center and height are within
 // a reasonable epsilon from the other cap.
 func (c Cap) ApproxEqual(other Cap) bool {
-	const epsilon = 1e-14
-	return c.center.ApproxEqual(other.center) &&
-		math.Abs(c.height-other.height) <= epsilon ||
-		c.IsEmpty() && other.height <= epsilon ||
-		other.IsEmpty() && c.height <= epsilon ||
-		c.IsFull() && other.height >= 2-epsilon ||
-		other.IsFull() && c.height >= 2-epsilon
+	return c.center.ApproxEquals(other.center, EPSILON) &&
+		math.Abs(c.height-other.height) <= EPSILON ||
+		c.IsEmpty() && other.height <= EPSILON ||
+		other.IsEmpty() && c.height <= EPSILON ||
+		c.IsFull() && other.height >= 2-EPSILON ||
+		other.IsFull() && c.height >= 2-EPSILON
 }
 
 // AddPoint increases the cap if necessary to include the given point. If this cap is empty,

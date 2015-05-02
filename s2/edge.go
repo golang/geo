@@ -21,5 +21,5 @@ func (e Edge) String() string {
 }
 
 func (e Edge) Equals(other Edge) bool {
-	return e.start.ApproxEqual(other.start) && e.end.ApproxEqual(other.end)
+	return e.start.ApproxEquals(other.start, EPSILON) && e.end.ApproxEquals(other.end, EPSILON)
 }

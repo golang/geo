@@ -45,6 +45,10 @@ func (ll LatLng) IsValid() bool {
 
 func (ll LatLng) String() string { return fmt.Sprintf("[%v, %v]", ll.Lat, ll.Lng) }
 
+func (ll LatLng) StringDegrees() string {
+	return fmt.Sprintf("[%f, %f]", ll.Lat.Degrees(), ll.Lng.Degrees())
+}
+
 // Distance returns the angle between two LatLngs.
 func (ll LatLng) Distance(ll2 LatLng) s1.Angle {
 	// Haversine formula, as used in C++ S2LatLng::GetDistance.

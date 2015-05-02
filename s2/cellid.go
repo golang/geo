@@ -47,6 +47,11 @@ const (
 	maxSize  = 1 << maxLevel
 )
 
+func CellIDNone() CellID           { return CellID(0) }
+func CellIDSentinel() CellID       { return CellID(^uint64(0)) }
+func CellIDBegin(level int) CellID { return CellIDFromFacePosLevel(0, 0, 0).ChildBeginAtLevel(level) }
+func CellIDEnd(level int) CellID   { return CellIDFromFacePosLevel(5, 0, 0).ChildBeginAtLevel(level) }
+
 // CellIDFromFacePosLevel returns a cell given its face in the range
 // [0,5], the 61-bit Hilbert curve position pos within that face, and
 // the level in the range [0,maxLevel]. The position in the cell ID

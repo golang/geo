@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/golang/geo/r1"
+	"github.com/golang/geo/s1"
 )
 
 type EdgeCrosser struct {
@@ -350,4 +351,64 @@ func (w WedgeContainsOrCrosses) Test(a0, ab1, a2, b0, b2 Point) int {
 		return 0 // Case 2,3
 	}
 	return -1 // Case 4.
+}
+
+/**
+ * Given a point X and an edge AB, return the distance ratio AX / (AX + BX).
+ * If X happens to be on the line segment AB, this is the fraction "t" such
+ * that X == Interpolate(A, B, t). Requires that A and B are distinct.
+ */
+func getDistanceFraction(x, a0, a1 Point) float64 {
+	if a0.Equals(a1) {
+		panic("a0 and a1 are equal")
+	}
+	d0 := x.Distance(a0).Radians()
+	d1 := x.Distance(a1).Radians()
+	return d0 / (d0 + d1)
+}
+
+/**
+ * Return the minimum distance from X to any point on the edge AB. The result
+ * is very accurate for small distances but may have some numerical error if
+ * the distance is large (approximately Pi/2 or greater). The case A == B is
+ * handled correctly. Note: x, a and b must be of unit length. Throws
+ * IllegalArgumentException if this is not the case.
+ */
+func getDistance(x, a, b Point) s1.Angle {
+	return getDistanceWithCross(x, a, b, a.PointCross(b))
+}
+
+/**
+ * A slightly more efficient version of getDistance() where the cross product
+ * of the two endpoints has been precomputed. The cross product does not need
+ * to be normalized, but should be computed using S2.robustCrossProd() for the
+ * most accurate results.
+ */
+func getDistanceWithCross(x, a, b, aCrossB Point) s1.Angle {
+	if !x.IsUnit() || !a.IsUnit() || !b.IsUnit() {
+		panic("x, a and b need to be unit length")
+	}
+
+	// There are three cases. If X is located in the spherical wedge defined by
+	// A, B, and the axis A x B, then the closest point is on the segment AB.
+	// Otherwise the closest point is either A or B; the dividing line between
+	// these two cases is the great circle passing through (A x B) and the
+	// midpoint of AB.
+
+	if simpleCCW(aCrossB, a, x) && simpleCCW(x, b, aCrossB) {
+		// The closest point to X lies on the segment AB. We compute the distance
+		// to the corresponding great circle. The result is accurate for small
+		// distances but not necessarily for large distances (approaching Pi/2).
+
+		sinDist := math.Abs(x.Dot(aCrossB.Vector)) / aCrossB.Norm()
+		return s1.Angle(math.Asin(math.Min(1.0, sinDist)))
+	}
+
+	// Otherwise, the closest point is either A or B. The cheapest method is
+	// just to compute the minimum of the two linear (as opposed to spherical)
+	// distances and convert the result to an angle. Again, this method is
+	// accurate for small but not large distances (approaching Pi).
+
+	linearDist2 := math.Min(x.Sub(a.Vector).Norm2(), x.Sub(b.Vector).Norm2())
+	return s1.Angle(2 * math.Asin(math.Min(1.0, 0.5*math.Sqrt(linearDist2))))
 }
