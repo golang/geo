@@ -28,6 +28,37 @@ type Vector struct {
 	X, Y, Z float64
 }
 
+func (v Vector) GetAxis(axis int) float64 {
+	switch axis {
+	case 0:
+		return v.X
+	case 1:
+		return v.Y
+	case 2:
+		return v.Z
+	default:
+		return v.GetAxis((axis + 3) % 3)
+	}
+}
+
+/** Return the index of the largest component fabs */
+func (v Vector) LargestAbsComponent() int {
+	temp := v.Abs()
+	if temp.X > temp.Y {
+		if temp.X > temp.Z {
+			return 0
+		} else {
+			return 2
+		}
+	} else {
+		if temp.Y > temp.Z {
+			return 1
+		} else {
+			return 2
+		}
+	}
+}
+
 // ApproxEqual reports whether v and ov are equal within a small epsilon.
 func (v Vector) ApproxEqual(ov Vector) bool {
 	const epsilon = 1e-14

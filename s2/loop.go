@@ -203,11 +203,101 @@ func (l *Loop) Invert() {
 }
 
 /**
+ * Helper method to get area and optionally centroid.
+ */
+func (l *Loop) getAreaCentroid(doCentroid bool) AreaCentroid {
+	var centroid *Point
+	// Don't crash even if loop is not well-defined.
+	if l.NumVertices() < 3 {
+		return NewAreaCentroid(0, nil)
+	}
+
+	// The triangle area calculation becomes numerically unstable as the length
+	// of any edge approaches 180 degrees. However, a loop may contain vertices
+	// that are 180 degrees apart and still be valid, e.g. a loop that defines
+	// the northern hemisphere using four points. We handle this case by using
+	// triangles centered around an origin that is slightly displaced from the
+	// first vertex. The amount of displacement is enough to get plenty of
+	// accuracy for antipodal points, but small enough so that we still get
+	// accurate areas for very tiny triangles.
+	//
+	// Of course, if the loop contains a point that is exactly antipodal from
+	// our slightly displaced vertex, the area will still be unstable, but we
+	// expect this case to be very unlikely (i.e. a polygon with two vertices on
+	// opposite sides of the Earth with one of them displaced by about 2mm in
+	// exactly the right direction). Note that the approximate point resolution
+	// using the E7 or S2CellId representation is only about 1cm.
+
+	origin := l.Vertex(0)
+	axis := (origin.LargestAbsComponent() + 1) % 3
+	slightlyDisplaced := origin.GetAxis(axis) + math.E*1e-10
+	switch axis {
+	case 0:
+		origin = PointFromCoords(slightlyDisplaced, origin.Y, origin.Z)
+	case 1:
+		origin = PointFromCoords(origin.X, slightlyDisplaced, origin.Z)
+	case 2:
+		origin = PointFromCoords(origin.X, origin.Y, slightlyDisplaced)
+	}
+	origin = Point{origin.Normalize()}
+
+	var areaSum float64 = 0
+	centroidSum := PointFromCoords(0, 0, 0)
+	for i := 1; i <= l.NumVertices(); i++ {
+		areaSum += SignedArea(origin, l.Vertex(i-1), l.Vertex(i))
+		if doCentroid {
+			// The true centroid is already premultiplied by the triangle area.
+			trueCentroid := TrueCentroid(origin, l.Vertex(i-1), l.Vertex(i))
+			centroidSum = Point{centroidSum.Add(trueCentroid.Vector)}
+		}
+	}
+	// The calculated area at this point should be between -4*Pi and 4*Pi,
+	// although it may be slightly larger or smaller than this due to
+	// numerical errors.
+	// assert (Math.abs(areaSum) <= 4 * S2.M_PI + 1e-12);
+
+	if areaSum < 0 {
+		// If the area is negative, we have computed the area to the right of the
+		// loop. The area to the left is 4*Pi - (-area). Amazingly, the centroid
+		// does not need to be changed, since it is the negative of the integral
+		// of position over the region to the right of the loop. This is the same
+		// as the integral of position over the region to the left of the loop,
+		// since the integral of position over the entire sphere is (0, 0, 0).
+		areaSum += 4 * math.Pi
+	}
+	// The loop's sign() does not affect the return result and should be taken
+	// into account by the caller.
+	if doCentroid {
+		centroid = &centroidSum
+	}
+	return NewAreaCentroid(areaSum, centroid)
+}
+
+/**
+ * Return the area of the loop interior, i.e. the region on the left side of
+ * the loop. The return value is between 0 and 4*Pi and the true centroid of
+ * the loop multiplied by the area of the loop (see S2.java for details on
+ * centroids). Note that the centroid may not be contained by the loop.
+ */
+func (l *Loop) GetAreaAndCentroid() AreaCentroid {
+	return l.getAreaCentroid(true)
+}
+
+/**
  * Return the area of the polygon interior, i.e. the region on the left side
  * of an odd number of loops. The return value is between 0 and 4*Pi.
  */
 func (l *Loop) GetArea() float64 {
-	return 1 //l.GetAreaCentroid(false).getArea()
+	return l.getAreaCentroid(false).GetArea()
+}
+
+/**
+ * Return the true centroid of the polygon multiplied by the area of the
+ * polygon (see {@link S2} for details on centroids). Note that the centroid
+ * may not be contained by the polygon.
+ */
+func (l *Loop) GetCentroid() Point {
+	return l.getAreaCentroid(true).GetCentroid()
 }
 
 func (l *Loop) ContainsLoop(b *Loop) bool {
@@ -457,17 +547,16 @@ func (l *Loop) ContainsPoint(p Point) bool {
 			inside = inside != crosser.EdgeOrVertexCrossing(l.Vertex(i))
 		}
 	} else {
-		panic("TODO")
-		// DataEdgeIterator it = getEdgeIterator(numVertices)
-		// int previousIndex = -2
-		// for (it.getCandidates(origin, p); it.hasNext(); it.next()) {
-		//   int ai = it.index()
-		//   if (previousIndex != ai - 1) {
-		//     crosser.restartAt(vertices[ai])
-		//   }
-		//   previousIndex = ai
-		//   inside ^= crosser.EdgeOrVertexCrossing(vertex(ai + 1))
-		// }
+		it := l.getEdgeIterator(l.NumVertices())
+		previousIndex := -2
+		for it.GetCandidates(origin, p); it.HasNext(); it.Next() {
+			ai := it.Index()
+			if previousIndex != ai-1 {
+				crosser.RestartAt(l.Vertex(ai))
+			}
+			previousIndex = ai
+			inside = inside != crosser.EdgeOrVertexCrossing(l.Vertex(ai+1))
+		}
 	}
 
 	return inside
@@ -697,35 +786,39 @@ func (l *Loop) findVertex(p Point) int {
  * intersections and no shared vertices.
  */
 func (l *Loop) checkEdgeCrossings(b *Loop, relation WedgeRelation) int {
-	// DataEdgeIterator it = getEdgeIterator(b.numVertices);
+	it := l.getEdgeIterator(b.NumVertices())
 	result := 1
 	// since 'this' usually has many more vertices than 'b', use the index on
 	// 'this' and loop over 'b'
-	// for (int j = 0; j < b.numVertices(); ++j) {
-	//   S2EdgeUtil.EdgeCrosser crosser =
-	//     new S2EdgeUtil.EdgeCrosser(b.vertex(j), b.vertex(j + 1), vertex(0));
-	//   int previousIndex = -2;
-	//   for (it.getCandidates(b.vertex(j), b.vertex(j + 1)); it.hasNext(); it.next()) {
-	//     int i = it.index();
-	//     if (previousIndex != i - 1) {
-	//       crosser.restartAt(vertex(i));
-	//     }
-	//     previousIndex = i;
-	//     int crossing = crosser.robustCrossing(vertex(i + 1));
-	//     if (crossing < 0) {
-	//       continue;
-	//     }
-	//     if (crossing > 0) {
-	//       return -1; // There is a proper edge crossing.
-	//     }
-	//     if (vertex(i + 1).equals(b.vertex(j + 1))) {
-	//       result = Math.min(result, relation.test(
-	//           vertex(i), vertex(i + 1), vertex(i + 2), b.vertex(j), b.vertex(j + 2)));
-	//       if (result < 0) {
-	//         return result;
-	//       }
-	//     }
-	//   }
-	// }
+	for j := 0; j < b.NumVertices(); j++ {
+		crosser := NewEdgeCrosser(b.Vertex(j), b.Vertex(j+1), l.Vertex(0))
+		previousIndex := -2
+		for it.GetCandidates(b.Vertex(j), b.Vertex(j+1)); it.HasNext(); it.Next() {
+			i := it.Index()
+			if previousIndex != i-1 {
+				crosser.RestartAt(l.Vertex(i))
+			}
+			previousIndex = i
+			crossing := crosser.RobustCrossing(l.Vertex(i + 1))
+			if crossing < 0 {
+				continue
+			}
+			if crossing > 0 {
+				return -1 // There is a proper edge crossing.
+			}
+			if l.Vertex(i + 1).Equals(b.Vertex(j + 1)) {
+				result = min(result, relation.Test(
+					l.Vertex(i),
+					l.Vertex(i+1),
+					l.Vertex(i+2),
+					b.Vertex(j),
+					b.Vertex(j+2),
+				))
+				if result < 0 {
+					return result
+				}
+			}
+		}
+	}
 	return result
 }

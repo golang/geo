@@ -241,33 +241,6 @@ func RobustSign(a, b, c Point) Direction {
 	return Indeterminate
 }
 
-// OrderedCCW returns true if the edges OA, OB, and OC are encountered in that
-// order while sweeping CCW around the point O.
-//
-// You can think of this as testing whether A <= B <= C with respect to the
-// CCW ordering around O that starts at A, or equivalently, whether B is
-// contained in the range of angles (inclusive) that starts at A and extends
-// CCW to C. Properties:
-//
-//  (1) If OrderedCCW(a,b,c,o) && OrderedCCW(b,a,c,o), then a == b
-//  (2) If OrderedCCW(a,b,c,o) && OrderedCCW(a,c,b,o), then b == c
-//  (3) If OrderedCCW(a,b,c,o) && OrderedCCW(c,b,a,o), then a == b == c
-//  (4) If a == b or b == c, then OrderedCCW(a,b,c,o) is true
-//  (5) Otherwise if a == c, then OrderedCCW(a,b,c,o) is false
-func OrderedCCW(a, b, c, o Point) bool {
-	sum := 0
-	if RobustSign(b, o, a) != Clockwise {
-		sum++
-	}
-	if RobustSign(c, o, b) != Clockwise {
-		sum++
-	}
-	if RobustSign(a, o, c) == CounterClockwise {
-		sum++
-	}
-	return sum >= 2
-}
-
 // Distance returns the angle between two points.
 func (p Point) Distance(b Point) s1.Angle {
 	return p.Vector.Angle(b.Vector)
