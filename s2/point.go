@@ -84,6 +84,10 @@ func PointFromCoords(x, y, z float64) Point {
 	return Point{r3.Vector{x, y, z}.Normalize()}
 }
 
+func PointFromCoordsRaw(x, y, z float64) Point {
+	return Point{r3.Vector{x, y, z}}
+}
+
 // PointFromLatLng returns an Point for the given LatLng.
 func PointFromLatLng(ll LatLng) Point {
 	phi := ll.Lat.Radians()

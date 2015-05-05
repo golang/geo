@@ -233,16 +233,16 @@ func (l *Loop) getAreaCentroid(doCentroid bool) AreaCentroid {
 	slightlyDisplaced := origin.GetAxis(axis) + math.E*1e-10
 	switch axis {
 	case 0:
-		origin = PointFromCoords(slightlyDisplaced, origin.Y, origin.Z)
+		origin = PointFromCoordsRaw(slightlyDisplaced, origin.Y, origin.Z)
 	case 1:
-		origin = PointFromCoords(origin.X, slightlyDisplaced, origin.Z)
+		origin = PointFromCoordsRaw(origin.X, slightlyDisplaced, origin.Z)
 	case 2:
-		origin = PointFromCoords(origin.X, origin.Y, slightlyDisplaced)
+		origin = PointFromCoordsRaw(origin.X, origin.Y, slightlyDisplaced)
 	}
 	origin = Point{origin.Normalize()}
 
 	var areaSum float64 = 0
-	centroidSum := PointFromCoords(0, 0, 0)
+	centroidSum := PointFromCoordsRaw(0, 0, 0)
 	for i := 1; i <= l.NumVertices(); i++ {
 		areaSum += SignedArea(origin, l.Vertex(i-1), l.Vertex(i))
 		if doCentroid {
@@ -537,7 +537,7 @@ func (l *Loop) ContainsPoint(p Point) bool {
 	}
 
 	inside := l.originInside
-	origin := PointFromCoords(0, 1, 0)
+	origin := PointFromCoordsRaw(0, 1, 0)
 	crosser := NewEdgeCrosser(origin, p, l.Vertex(l.NumVertices()-1))
 
 	// The s2edgeindex library is not optimized yet for long edges,
@@ -608,7 +608,7 @@ func (l *Loop) IsValid() bool {
 	// All vertices must be unit length.
 	for i := 0; i < l.NumVertices(); i++ {
 		if !l.Vertex(i).IsUnit() {
-			fmt.Printf("Vertex %d is not unit length", i)
+			fmt.Printf("Vertex %d is not unit length\n", i)
 			return false
 		}
 	}
@@ -617,7 +617,7 @@ func (l *Loop) IsValid() bool {
 	vmap := make(map[Point]int)
 	for i := 0; i < l.NumVertices(); i++ {
 		if previousVertexIndex, ok := vmap[l.Vertex(i)]; ok {
-			fmt.Printf("Duplicate vertices: %d and %d", previousVertexIndex, i)
+			fmt.Printf("Duplicate vertices: %d and %d\n", previousVertexIndex, i)
 			return false
 		}
 		vmap[l.Vertex(i)] = i
@@ -667,8 +667,8 @@ func (l *Loop) IsValid() bool {
 				crosses = crosser.RobustCrossing(l.Vertex(b2)) > 0
 				previousIndex = b2
 				if crosses {
-					fmt.Printf("Edges %d and %d cross", a1, b1)
-					fmt.Printf("Edge locations in degrees: %s-%s and %s-%s",
+					fmt.Printf("Edges %d and %d cross\n", a1, b1)
+					fmt.Printf("Edge locations in degrees: %s-%s and %s-%s\n",
 						LatLngFromPoint(l.Vertex(a1)).StringDegrees(),
 						LatLngFromPoint(l.Vertex(a2)).StringDegrees(),
 						LatLngFromPoint(l.Vertex(b1)).StringDegrees(),
@@ -743,14 +743,14 @@ func (l *Loop) initBound() {
 	// Note that we need to initialize bound with a temporary value since
 	// contains() does a bounding rectangle check before doing anything else.
 	l.bound = FullRect()
-	if l.ContainsPoint(PointFromCoords(0, 0, 1)) {
+	if l.ContainsPoint(PointFromCoordsRaw(0, 0, 1)) {
 		b = Rect{r1.IntervalFromPointPair(b.Lat.Lo, math.Pi/2), s1.FullInterval()}
 	}
 	// If a loop contains the south pole, then either it wraps entirely
 	// around the sphere (full longitude range), or it also contains the
 	// north pole in which case b.lng().isFull() due to the test above.
 
-	if b.Lng.IsFull() && l.ContainsPoint(PointFromCoords(0, 0, -1)) {
+	if b.Lng.IsFull() && l.ContainsPoint(PointFromCoordsRaw(0, 0, -1)) {
 		b = Rect{r1.IntervalFromPointPair(-math.Pi/2, b.Lat.Hi), b.Lng}
 	}
 	l.bound = b

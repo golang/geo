@@ -9,8 +9,9 @@ import (
 
 type EdgeCrosser struct {
 	// The fields below are all constant.
-	a Point
-	b Point
+	a       Point
+	b       Point
+	aCrossB Point
 
 	// The fields below are updated for each vertex in the chain.
 
@@ -22,8 +23,9 @@ type EdgeCrosser struct {
 
 func NewEdgeCrosser(a, b, c Point) *EdgeCrosser {
 	ec := &EdgeCrosser{
-		a: a,
-		b: b,
+		a:       a,
+		b:       b,
+		aCrossB: Point{a.Cross(b.Vector)},
 	}
 	ec.RestartAt(c)
 	return ec
@@ -31,7 +33,7 @@ func NewEdgeCrosser(a, b, c Point) *EdgeCrosser {
 
 func (ec *EdgeCrosser) RestartAt(c Point) {
 	ec.c = c
-	ec.acb = -int(RobustSign(ec.a, ec.b, c))
+	ec.acb = -int(RobustCCWWithCross(ec.a, ec.b, ec.c, ec.aCrossB))
 }
 
 /**
@@ -52,7 +54,7 @@ func (ec *EdgeCrosser) RobustCrossing(d Point) int {
 
 	// Recall that robustCCW is invariant with respect to rotating its
 	// arguments, i.e. ABC has the same orientation as BDA.
-	bda := int(RobustSign(ec.a, ec.b, d))
+	bda := int(RobustCCWWithCross(ec.a, ec.b, d, ec.aCrossB))
 	var result int
 
 	if bda == -ec.acb && bda != 0 {
@@ -81,7 +83,7 @@ func (ec *EdgeCrosser) RobustCrossing(d Point) int {
  */
 func (ec *EdgeCrosser) EdgeOrVertexCrossing(d Point) bool {
 	// We need to copy c since it is clobbered by robustCrossing().
-	c2 := Point{ec.c.Vector}
+	c2 := PointFromCoordsRaw(ec.c.X, ec.c.Y, ec.c.Z)
 
 	crossing := ec.RobustCrossing(d)
 	if crossing < 0 {
@@ -100,12 +102,13 @@ func (ec *EdgeCrosser) EdgeOrVertexCrossing(d Point) bool {
 func (ec *EdgeCrosser) robustCrossingInternal(d Point) int {
 	// ACB and BDA have the appropriate orientations, so now we check the
 	// triangles CBD and DAC.
-	cbd := -int(RobustSign(ec.c, d, ec.b))
+	cCrossD := Point{ec.c.Cross(d.Vector)}
+	cbd := -int(RobustCCWWithCross(ec.c, d, ec.b, cCrossD))
 	if cbd != ec.acb {
 		return -1
 	}
 
-	dac := int(RobustSign(ec.c, d, ec.a))
+	dac := int(RobustCCWWithCross(ec.c, d, ec.a, cCrossD))
 	if dac == ec.acb {
 		return 1
 	} else {
