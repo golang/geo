@@ -206,10 +206,10 @@ func (l *Loop) Invert() {
  * Helper method to get area and optionally centroid.
  */
 func (l *Loop) getAreaCentroid(doCentroid bool) AreaCentroid {
-	var centroid *Point
+	var centroid *Point = nil
 	// Don't crash even if loop is not well-defined.
 	if l.NumVertices() < 3 {
-		return NewAreaCentroid(0, nil)
+		return NewAreaCentroid(0, centroid)
 	}
 
 	// The triangle area calculation becomes numerically unstable as the length
@@ -268,7 +268,7 @@ func (l *Loop) getAreaCentroid(doCentroid bool) AreaCentroid {
 	// The loop's sign() does not affect the return result and should be taken
 	// into account by the caller.
 	if doCentroid {
-		centroid = &centroidSum
+		centroid = &Point{centroidSum.Vector}
 	}
 	return NewAreaCentroid(areaSum, centroid)
 }

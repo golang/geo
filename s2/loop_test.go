@@ -1,8 +1,12 @@
 package s2
 
 import (
-	// "runtime/debug"
+	"math"
+	"math/rand"
 	"testing"
+
+	"github.com/golang/geo/r1"
+	"github.com/golang/geo/s1"
 )
 
 var (
@@ -70,6 +74,189 @@ func makeLoop(s string) *Loop {
 	points := parsePoints(s)
 	return LoopFromPoints(points)
 }
+
+func TestLoopBounds(t *testing.T) {
+	if !(candyCane.RectBound().Lng.IsFull()) {
+		t.Fatal("ttttt")
+	}
+	if !(s1.Angle(candyCane.RectBound().Lat.Lo).Degrees() < -20) {
+		t.Fatal("")
+	}
+	if !(s1.Angle(candyCane.RectBound().Lat.Hi).Degrees() > 10) {
+		t.Fatal("")
+	}
+	if !(smallNeCw.RectBound().IsFull()) {
+		t.Fatal("")
+	}
+	if arctic80.RectBound() != RectFromLatLngLoHi(LatLngFromDegrees(80, -180), LatLngFromDegrees(90, 180)) {
+		t.Fatal("")
+	}
+	if antarctic80.RectBound() != RectFromLatLngLoHi(LatLngFromDegrees(-90, -180), LatLngFromDegrees(-80, 180)) {
+		t.Fatal("")
+	}
+
+	arctic80.Invert()
+	// The highest latitude of each edge is attained at its midpoint.
+	mid := Point{arctic80.Vertex(0).Add(arctic80.Vertex(1).Vector).Mul(0.5)}
+	if math.Abs(s1.Angle(arctic80.RectBound().Lat.Hi).Radians()-LatLngFromPoint(mid).Lat.Radians()) > epsilon {
+		t.Fatal("")
+	}
+	arctic80.Invert()
+
+	if !(southHemi.RectBound().Lng.IsFull()) {
+		t.Fatal("")
+	}
+	if !(southHemi.RectBound().Lat == r1.IntervalFromPointPair(-math.Pi/2, 0)) {
+		t.Fatal("")
+	}
+}
+
+func TestLoopAreaCentroid(t *testing.T) {
+	if !(northHemi.GetArea() == 2*math.Pi) {
+		t.Fatal("")
+	}
+	if !(eastHemi.GetArea() == 2*math.Pi) {
+		t.Fatal("")
+	}
+
+	// Construct spherical caps of random height, and approximate their boundary
+	// with closely spaces vertices. Then check that the area and centroid are
+	// correct.
+
+	for i := 0; i < 100; i++ {
+		// Choose a coordinate frame for the spherical cap.
+		x := randomPoint()
+		y := x.Cross(randomPoint().Vector).Normalize()
+		z := x.Cross(y).Normalize()
+
+		// Given two points at latitude phi and whose longitudes differ by dtheta,
+		// the geodesic between the two points has a maximum latitude of
+		// atan(tan(phi) / cos(dtheta/2)). This can be derived by positioning
+		// the two points at (-dtheta/2, phi) and (dtheta/2, phi).
+		//
+		// We want to position the vertices close enough together so that their
+		// maximum distance from the boundary of the spherical cap is kMaxDist.
+		// Thus we want fabs(atan(tan(phi) / cos(dtheta/2)) - phi) <= kMaxDist.
+		kMaxDist := 1e-6
+		height := 2 * rand.Float64()
+		phi := math.Asin(1 - height)
+		maxDtheta := 2 * math.Acos(math.Tan(math.Abs(phi))/math.Tan(math.Abs(phi)+kMaxDist))
+		maxDtheta = math.Min(math.Pi, maxDtheta) // At least 3 vertices.
+
+		vertices := []Point{}
+		for theta := 0.0; theta < 2*math.Pi; theta += rand.Float64() * maxDtheta {
+
+			xCosThetaCosPhi := x.Mul((math.Cos(theta) * math.Cos(phi)))
+			ySinThetaCosPhi := y.Mul((math.Sin(theta) * math.Cos(phi)))
+			zSinPhi := z.Mul(math.Sin(phi))
+
+			sum := Point{xCosThetaCosPhi.Add(ySinThetaCosPhi.Add(zSinPhi))}
+
+			vertices = append(vertices, sum)
+		}
+
+		loop := LoopFromPoints(vertices)
+		areaCentroid := loop.GetAreaAndCentroid()
+
+		area := loop.GetArea()
+		centroid := loop.GetCentroid()
+		expectedArea := 2 * math.Pi * height
+		if areaCentroid.GetArea() != area {
+			t.Fatal("")
+		}
+		if !centroid.Equals(areaCentroid.GetCentroid()) {
+			t.Fatal("")
+		}
+		if !(math.Abs(area-expectedArea) <= 2*math.Pi*kMaxDist) {
+			t.Fatal("")
+		}
+
+		// high probability
+		if !(math.Abs(area-expectedArea) >= 0.01*kMaxDist) {
+			t.Fatal("")
+		}
+
+		expectedCentroid := z.Mul(expectedArea * (1 - 0.5*height))
+
+		if !(centroid.Sub(expectedCentroid).Norm() <= 2*kMaxDist) {
+			t.Fatal("")
+		}
+	}
+}
+
+func rotate(loop *Loop) *Loop {
+	vertices := make([]Point, 0, loop.NumVertices())
+	vertices = append(vertices, loop.vertices[1:loop.NumVertices()]...)
+	vertices = append(vertices, loop.vertices[0])
+	return LoopFromPoints(vertices)
+}
+
+func TestLoopContains(t *testing.T) {
+	if !(candyCane.ContainsPoint(PointFromLatLng(LatLngFromDegrees(5, 71)))) {
+		t.FailNow()
+	}
+	for i := 0; i < 4; i++ {
+		if !(northHemi.ContainsPoint(PointFromCoordsRaw(0, 0, 1))) {
+			t.FailNow()
+		}
+		if !(!northHemi.ContainsPoint(PointFromCoordsRaw(0, 0, -1))) {
+			t.FailNow()
+		}
+		if !(!southHemi.ContainsPoint(PointFromCoordsRaw(0, 0, 1))) {
+			t.FailNow()
+		}
+		if !(southHemi.ContainsPoint(PointFromCoordsRaw(0, 0, -1))) {
+			t.FailNow()
+		}
+		if !(!westHemi.ContainsPoint(PointFromCoordsRaw(0, 1, 0))) {
+			t.FailNow()
+		}
+		if !(westHemi.ContainsPoint(PointFromCoordsRaw(0, -1, 0))) {
+			t.FailNow()
+		}
+		if !(eastHemi.ContainsPoint(PointFromCoordsRaw(0, 1, 0))) {
+			t.FailNow()
+		}
+		if !(!eastHemi.ContainsPoint(PointFromCoordsRaw(0, -1, 0))) {
+			t.FailNow()
+		}
+		northHemi = rotate(northHemi)
+		southHemi = rotate(southHemi)
+		eastHemi = rotate(eastHemi)
+		westHemi = rotate(westHemi)
+	}
+
+	// This code checks each cell vertex is contained by exactly one of
+	// the adjacent cells.
+	for level := 0; level < 3; level++ {
+		loops := []*Loop{}
+		loopVertices := []Point{}
+		points := make(map[Point]bool)
+
+		for id := CellIDBegin(level); id != CellIDEnd(level); id = id.Next() {
+			cell := CellFromCellID(id)
+			points[cell.Id().Point()] = true
+			for k := 0; k < 4; k++ {
+				loopVertices = append(loopVertices, cell.Vertex(k))
+				points[cell.Vertex(k)] = true
+			}
+			loops = append(loops, LoopFromPoints(loopVertices))
+			loopVertices = []Point{}
+		}
+		for point := range points {
+			count := 0
+			for _, loop := range loops {
+				if loop.ContainsPoint(point) {
+					count++
+				}
+			}
+			if count != 1 {
+				t.Fatalf("Failed at level %d with count %d, loops:%d, points:%d", level, count, len(loops), len(points))
+			}
+		}
+	}
+}
+
 func testLoopRelation(t *testing.T, a, b *Loop, containsOrCrosses int, intersects, nestable bool) {
 	if a.ContainsLoop(b) != (containsOrCrosses == 1) {
 		if containsOrCrosses == 1 {
@@ -192,13 +379,103 @@ func TestLoopRoundingError(t *testing.T) {
 }
 
 func TestLoopIsValid(t *testing.T) {
-	// if !loopA.IsValid() {
-	// 	t.Errorf("loopA should be valid")
-	// }
-	// if !loopB.IsValid() {
-	// 	t.Errorf("loopB should be valid")
-	// }
-	// if bowtie.IsValid() {
-	// 	t.Errorf("bowtie should not be valid")
-	// }
+	if !loopA.IsValid() {
+		t.Errorf("loopA should be valid")
+	}
+	if !loopB.IsValid() {
+		t.Errorf("loopB should be valid")
+	}
+	if bowtie.IsValid() {
+		t.Errorf("bowtie should not be valid")
+	}
+}
+
+/**
+ * Tests {@link S2Loop#compareTo(S2Loop)}.
+ */
+func TestLoopComparisons(t *testing.T) {
+	abc := makeLoop("0:1, 0:2, 1:2")
+	abcd := makeLoop("0:1, 0:2, 1:2, 1:1")
+	abcde := makeLoop("0:1, 0:2, 1:2, 1:1, 1:0")
+	if !(abc.CompareTo(abcd) < 0) {
+		t.FailNow()
+	}
+	if !(abc.CompareTo(abcde) < 0) {
+		t.FailNow()
+	}
+	if !(abcd.CompareTo(abcde) < 0) {
+		t.FailNow()
+	}
+	if !(abcd.CompareTo(abc) > 0) {
+		t.FailNow()
+	}
+	if !(abcde.CompareTo(abc) > 0) {
+		t.FailNow()
+	}
+	if !(abcde.CompareTo(abcd) > 0) {
+		t.FailNow()
+	}
+
+	bcda := makeLoop("0:2, 1:2, 1:1, 0:1")
+	if 0 != abcd.CompareTo(bcda) {
+		t.FailNow()
+	}
+	if 0 != bcda.CompareTo(abcd) {
+		t.FailNow()
+	}
+
+	wxyz := makeLoop("10:11, 10:12, 11:12, 11:11")
+	if !(abcd.CompareTo(wxyz) > 0) {
+		t.FailNow()
+	}
+	if !(wxyz.CompareTo(abcd) < 0) {
+		t.FailNow()
+	}
+}
+func TestLoopGetDistance(t *testing.T) {
+	// Error margin since we're doing numerical computations
+	epsilon := 1e-15
+
+	// A square with (lat,lng) vertices (0,1), (1,1), (1,2) and (0,2)
+	// Tests the case where the shortest distance is along a normal to an edge,
+	// onto a vertex
+	s1 := makeLoop("0:1, 1:1, 1:2, 0:2")
+
+	// A square with (lat,lng) vertices (-1,1), (1,1), (1,2) and (-1,2)
+	// Tests the case where the shortest distance is along a normal to an edge,
+	// not onto a vertex
+	s2 := makeLoop("-1:1, 1:1, 1:2, -1:2")
+
+	// A diamond with (lat,lng) vertices (1,0), (2,1), (3,0) and (2,-1)
+	// Test the case where the shortest distance is NOT along a normal to an
+	// edge
+	s3 := makeLoop("1:0, 2:1, 3:0, 2:-1")
+
+	// All the vertices should be distance 0
+	for i := 0; i < s1.NumVertices(); i++ {
+		if math.Abs(s1.GetDistance(s1.Vertex(i)).Radians()) > epsilon {
+			t.FailNow()
+		}
+	}
+
+	// A point on one of the edges should be distance 0
+	if math.Abs(s1.GetDistance(PointFromLatLng(LatLngFromDegrees(0.5, 1))).Radians()) > epsilon {
+		t.FailNow()
+	}
+
+	// In all three cases, the closest point to the origin is (0,1), which is at
+	// a distance of 1 degree.
+	// Note: all of these are intentionally distances measured along the
+	// equator, since that makes the math significantly simpler. Otherwise, the
+	// distance wouldn't actually be 1 degree.
+	origin := PointFromLatLng(LatLngFromDegrees(0, 0))
+	if math.Abs(1-s1.GetDistance(origin).Degrees()) > epsilon {
+		t.FailNow()
+	}
+	if math.Abs(1-s2.GetDistance(origin).Degrees()) > epsilon {
+		t.FailNow()
+	}
+	if math.Abs(1-s3.GetDistance(origin).Degrees()) > epsilon {
+		t.FailNow()
+	}
 }

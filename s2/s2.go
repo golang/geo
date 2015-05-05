@@ -184,7 +184,7 @@ func SignedArea(a, b, c Point) float64 {
  * intuitive "center" (see example above).
  */
 func PlanarCentroid(a, b, c Point) Point {
-	return PointFromCoords((a.X+b.X+c.X)/3.0, (a.Y+b.Y+c.Y)/3.0, (a.Z+b.Z+c.Z)/3.0)
+	return PointFromCoordsRaw((a.X+b.X+c.X)/3.0, (a.Y+b.Y+c.Y)/3.0, (a.Z+b.Z+c.Z)/3.0)
 }
 
 /**
@@ -203,25 +203,25 @@ func TrueCentroid(a, b, c Point) Point {
 	sina := b.Cross(c.Vector).Norm()
 	sinb := c.Cross(a.Vector).Norm()
 	sinc := a.Cross(b.Vector).Norm()
-	ra := math.Asin(sina) / sina
-	rb := math.Asin(sinb) / sinb
-	rc := math.Asin(sinc) / sinc
-	if sina == 0 {
-		ra = 1
+	var ra float64 = 1
+	var rb float64 = 1
+	var rc float64 = 1
+	if sina != 0 {
+		ra = math.Asin(sina) / sina
 	}
-	if sinb == 0 {
-		rb = 1
+	if sinb != 0 {
+		rb = math.Asin(sinb) / sinb
 	}
-	if sinc == 0 {
-		rc = 1
+	if sinc != 0 {
+		rc = math.Asin(sinc) / sinc
 	}
 
 	// Now compute a point M such that M.X = rX * det(ABC) / 2 for X in A,B,C.
-	x := PointFromCoords(a.X, b.X, c.X)
-	y := PointFromCoords(a.Y, b.Y, c.Y)
-	z := PointFromCoords(a.Z, b.Z, c.Z)
-	r := PointFromCoords(ra, rb, rc)
-	return PointFromCoords(
+	x := PointFromCoordsRaw(a.X, b.X, c.X)
+	y := PointFromCoordsRaw(a.Y, b.Y, c.Y)
+	z := PointFromCoordsRaw(a.Z, b.Z, c.Z)
+	r := PointFromCoordsRaw(ra, rb, rc)
+	return PointFromCoordsRaw(
 		0.5*y.Cross(z.Vector).Dot(r.Vector),
 		0.5*z.Cross(x.Vector).Dot(r.Vector),
 		0.5*x.Cross(y.Vector).Dot(r.Vector),

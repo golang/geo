@@ -49,6 +49,14 @@ func RectFromLatLng(p LatLng) Rect {
 	}
 }
 
+func RectFromLatLngLoHi(lo, hi LatLng) Rect {
+	// assert (p1.isValid() && p2.isValid());
+	return Rect{
+		Lat: r1.IntervalFromPointPair(lo.Lat.Radians(), hi.Lat.Radians()),
+		Lng: s1.IntervalFromEndpoints(lo.Lng.Radians(), hi.Lng.Radians()),
+	}
+}
+
 /**
  * Convenience method to construct the minimal bounding rectangle containing
  * the two given points. This is equivalent to starting with an empty
@@ -56,7 +64,7 @@ func RectFromLatLng(p LatLng) Rect {
  * S2LatLngRect(lo, hi) constructor, where the first point is always used as
  * the lower-left corner of the resulting rectangle.
  */
-func RectFromLatLngPair(p1, p2 LatLng) Rect {
+func RectFromLatLngPointPair(p1, p2 LatLng) Rect {
 	// assert (p1.isValid() && p2.isValid());
 	return Rect{
 		Lat: r1.IntervalFromPointPair(p1.Lat.Radians(), p2.Lat.Radians()),
@@ -223,7 +231,7 @@ func (r Rect) CapBound() Cap {
 		poleAngle = math.Pi/2 - r.Lat.Lo
 	}
 
-	poleCap := CapFromCenterAngle(PointFromCoords(0, 0, poleZ), s1.Angle(poleAngle))
+	poleCap := CapFromCenterAngle(PointFromCoordsRaw(0, 0, poleZ), s1.Angle(poleAngle))
 
 	// For bounding rectangles that span 180 degrees or less in longitude, the
 	// maximum cap size is achieved at one of the rectangle vertices. For

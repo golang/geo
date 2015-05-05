@@ -134,7 +134,7 @@ func (rb *RectBounder) AddPoint(b Point) {
 	} else {
 		// We can't just call bound.addPoint(bLatLng) here, since we need to
 		// ensure that all the longitudes between "a" and "b" are included.
-		rb.bound = rb.bound.Union(RectFromLatLngPair(rb.aLatLng, bLatLng))
+		rb.bound = rb.bound.Union(RectFromLatLngPointPair(rb.aLatLng, bLatLng))
 
 		// Check whether the min/max latitude occurs in the edge interior.
 		// We find the normal to the plane containing AB, and then a vector
@@ -142,7 +142,7 @@ func (rb *RectBounder) AddPoint(b Point) {
 		// RobustCrossProd to ensure that the edge normal is accurate even
 		// when the two points are very close together.
 		aCrossB := rb.a.PointCross(b)
-		dir := aCrossB.Cross(PointFromCoords(0, 0, 1).Vector)
+		dir := aCrossB.Cross(PointFromCoordsRaw(0, 0, 1).Vector)
 		da := dir.Dot(rb.a.Vector)
 		db := dir.Dot(b.Vector)
 
