@@ -33,11 +33,6 @@ func LatLngFromDegrees(lat, lng float64) LatLng {
 	return LatLng{s1.Angle(lat) * s1.Degree, s1.Angle(lng) * s1.Degree}
 }
 
-// LatLngFromPoint returns an LatLng for a given Point.
-func LatLngFromPoint(p Point) LatLng {
-	return LatLng{latitude(p), longitude(p)}
-}
-
 // IsValid returns true iff the LatLng is normalized, with Lat ∈ [-π/2,π/2] and Lng ∈ [-π,π].
 func (ll LatLng) IsValid() bool {
 	return math.Abs(ll.Lat.Radians()) <= math.Pi/2 && math.Abs(ll.Lng.Radians()) <= math.Pi
@@ -60,12 +55,20 @@ func (ll LatLng) Distance(ll2 LatLng) s1.Angle {
 	return s1.Angle(2 * math.Atan2(math.Sqrt(x), math.Sqrt(math.Max(0, 1-x))))
 }
 
+// NOTE(mikeperrow): The C++ implementation publicly exposes latitude/longitude
+// functions. Let's see if that's really necessary before exposing the same functionality.
+
 func latitude(p Point) s1.Angle {
 	return s1.Angle(math.Atan2(p.Z, math.Sqrt(p.X*p.X+p.Y*p.Y)))
 }
 
 func longitude(p Point) s1.Angle {
 	return s1.Angle(math.Atan2(p.Y, p.X))
+}
+
+// LatLngFromPoint returns an LatLng for a given Point.
+func LatLngFromPoint(p Point) LatLng {
+	return LatLng{latitude(p), longitude(p)}
 }
 
 // BUG(dsymonds): The major differences from the C++ version are:
