@@ -1,69 +1,92 @@
 package s2
 
 import (
-	"container/heap"
-	"fmt"
 	"testing"
 )
 
-func TestPriorityQueue(t *testing.T) {
-	pq := newPriorityQueue(4)
-	heap.Init(&pq)
-	for i := -4; i < 0; i++ {
-		heap.Push(&pq, newQueueEntry(i, nil))
+func TestCoveringCap(t *testing.T) {
+	expectedResultsFromJavaLibrary := []string{
+		"80c297c50b",
+		"80c297c50d",
+		"80c297c512aaaaab",
+		"80c297c57",
+		"80c297c582aaaaab",
+		"80c297c59d",
+		"80c297c59f",
+		"80c297c5a1",
 	}
-	for i := -1; i >= -4; i-- {
-		entry := heap.Pop(&pq).(*queueEntry)
-		if entry.priority != i {
-			t.Errorf("expected %d, got %d", i, entry.priority)
+	coverer := NewRegionCoverer()
+	coverer.SetMaxCells(8)
+	cell := CellFromCellID(CellIDFromToken("80c297c574"))
+	cap := cell.CapBound()
+
+	cells := []CellID{}
+	coverer.GetCovering(cap, &cells)
+	for i, cell := range cells {
+		if cell.ToToken() != expectedResultsFromJavaLibrary[i] {
+			t.Fatal("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
 		}
 	}
 }
 
-func TestCovering(t *testing.T) {
-	coverer := NewRegionCoverer()
-	coverer.SetMaxCells(8)
-	region1 := CellFromCellID(CellIDFromToken("80c297c574"))
-	rect1 := region1.RectBound()
-	fmt.Printf("%s\n", rect1.String())
-
-	region := region1.CapBound()
-	rect := region.RectBound()
-	fmt.Printf("%s\n", rect.String())
-
-	fmt.Printf("%s\n", region.String())
-
-	cells := []CellID{}
-	// cells := coverer.GetCoveringAsUnion(region)
-	coverer.GetCovering(region, &cells)
-	for i, cell := range cells {
-		t.Errorf("cell %d: %x - %s", i, uint64(cell), cell.ToToken())
-	}
-}
-
 func TestCoveringPolyline(t *testing.T) {
-	coverer := NewRegionCoverer()
-	coverer.SetMaxCells(4)
+	expectedResultsFromJavaLibrary := []string{
+		"80c2bea0418c",
+		"80c2bea04194",
+		"80c2bea041c4",
+		"80c2bea041eb",
+		"80c2bea0423",
+		"80c2bea0434",
+		"80c2bea043b",
+		"80c2bea043caac",
+	}
 
 	points := []Point{
 		PointFromLatLng(LatLngFromDegrees(34.0909533022671600, -118.3914214745164100)),
 		PointFromLatLng(LatLngFromDegrees(34.0906409358360560, -118.3911871165037200)),
 	}
-
-	for _, point := range points {
-		fmt.Printf("point: %v\n", point.String())
-	}
-
-	// region := RectFromLatLng(LatLngFromDegrees(34.0909533022671600, -118.3914214745164100))
-	// region = region.AddPoint(LatLngFromDegrees(34.0906409358360560, -118.3911871165037200))
-
 	polyline := PolylineFromPoints(points)
-	// region := polyline.RectBound()
-	// fmt.Printf("%s\n", region.String())
+
+	coverer := NewRegionCoverer()
+	coverer.SetMaxCells(8)
 
 	cells := []CellID{}
 	coverer.GetCovering(polyline, &cells)
 	for i, cell := range cells {
-		t.Errorf("cell %d: %x - %s", i, uint64(cell), cell.ToToken())
+		if cell.ToToken() != expectedResultsFromJavaLibrary[i] {
+			t.Fatal("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
+		}
+	}
+}
+
+func TestCoveringLoop(t *testing.T) {
+	expectedResultsFromJavaLibrary := []string{
+		"80c2c7b46204",
+		"80c2c7b4620c",
+		"80c2c7b4899",
+		"80c2c7b489c4",
+		"80c2c7b489dc",
+		"80c2c7b489f",
+		"80c2c7b48a04",
+		"80c2c7b48a1d",
+	}
+	vertices := []Point{
+		PointFromLatLng(LatLngFromDegrees(34.0487325747361496, -118.2554703578353070)),
+		PointFromLatLng(LatLngFromDegrees(34.0486331233724258, -118.2555538415908671)),
+		PointFromLatLng(LatLngFromDegrees(34.0486803488948837, -118.2556309551000595)),
+		PointFromLatLng(LatLngFromDegrees(34.0487739664704705, -118.2555437833070613)),
+	}
+	loop := LoopFromPoints(vertices)
+	loop.Normalize()
+
+	coverer := NewRegionCoverer()
+	coverer.SetMaxCells(8)
+
+	cells := []CellID{}
+	coverer.GetCovering(loop, &cells)
+	for i, cell := range cells {
+		if cell.ToToken() != expectedResultsFromJavaLibrary[i] {
+			t.Fatal("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
+		}
 	}
 }

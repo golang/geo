@@ -1,9 +1,5 @@
 package s2
 
-import (
-	"container/heap"
-)
-
 var (
 	DEFAULT_MAX_CELLS int = 8
 
@@ -44,8 +40,6 @@ type candidate struct {
 type queueEntry struct {
 	priority  int
 	candidate *candidate
-	// The index is needed by update and is maintained by the heap.Interface methods.
-	index int // The index of the item in the heap.
 }
 
 func newQueueEntry(id int, candidate_ *candidate) *queueEntry {
@@ -57,44 +51,71 @@ type PriorityQueue []*queueEntry
 
 func newPriorityQueue(space int) PriorityQueue {
 	pq := PriorityQueue(make([]*queueEntry, 0, space))
-	heap.Init(&pq)
 	return pq
 }
 
 func (pq PriorityQueue) Len() int { return len(pq) }
 
-func (pq PriorityQueue) Less(i, j int) bool {
-	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
-	return pq[i].priority >= pq[j].priority
+func (pq PriorityQueue) compare(i, j int) int {
+	if pq[i].priority < pq[j].priority {
+		return 1
+	}
+	if pq[i].priority > pq[j].priority {
+		return -1
+	}
+	return 0
 }
 
-func (pq PriorityQueue) Swap(i, j int) {
+func (pq PriorityQueue) swap(i, j int) {
 	pq[i], pq[j] = pq[j], pq[i]
-	pq[i].index = i
-	pq[j].index = j
 }
 
 func (pq *PriorityQueue) Push(x interface{}) {
-	n := len(*pq)
 	item := x.(*queueEntry)
-	item.index = n
 	*pq = append(*pq, item)
+
+	pq.up(pq.Len() - 1)
 }
 
 func (pq *PriorityQueue) Pop() interface{} {
+	n := pq.Len() - 1
+	pq.swap(0, n)
+	pq.down(0, n)
+
 	old := *pq
-	n := len(old)
+	n = len(old)
 	item := old[n-1]
-	item.index = -1 // for safety
 	*pq = old[0 : n-1]
 	return item
 }
 
-// update modifies the priority and value of an Item in the queue.
-func (pq *PriorityQueue) update(item *queueEntry, candidate *candidate, priority int) {
-	item.candidate = candidate
-	item.priority = priority
-	heap.Fix(pq, item.index)
+func (pq *PriorityQueue) up(j int) {
+	for {
+		i := (j - 1) / 2 // parent
+		if i == j || pq.compare(j, i) >= 0 {
+			break
+		}
+		pq.swap(i, j)
+		j = i
+	}
+}
+
+func (pq *PriorityQueue) down(i, n int) {
+	for {
+		j1 := 2*i + 1
+		if j1 >= n || j1 < 0 { // j1 < 0 after int overflow
+			break
+		}
+		j := j1 // left child
+		if j2 := j1 + 1; j2 < n && pq.compare(j1, j2) > 0 {
+			j = j2 // = 2*i + 2  // right child
+		}
+		if pq.compare(i, j) <= 0 {
+			break
+		}
+		pq.swap(i, j)
+		i = j
+	}
 }
 
 func NewRegionCoverer() *RegionCoverer {
@@ -184,7 +205,8 @@ func (rc *RegionCoverer) GetCoveringInternal(region Region) {
 
 	rc.getInitialCandidates()
 	for rc.candidateQueue.Len() > 0 && (!rc.interiorCovering || len(rc.result) < rc.maxCells) {
-		candidate := heap.Pop(&rc.candidateQueue).(*queueEntry).candidate
+		qEntry := rc.candidateQueue.Pop().(*queueEntry)
+		candidate := qEntry.candidate
 		sz := len(rc.result) + candidate.numChildren
 		if !rc.interiorCovering {
 			sz = sz + rc.candidateQueue.Len()
@@ -273,7 +295,7 @@ func (rc *RegionCoverer) addCandidate(candidate_ *candidate) {
 		// intersecting children. Finally, we prefer cells that have the smallest
 		// number of children that cannot be refined any further.
 		priority := -((((int(candidate_.cell.Level()) << rc.maxChildrenShift()) + candidate_.numChildren) << rc.maxChildrenShift()) + numTerminals)
-		heap.Push(&rc.candidateQueue, newQueueEntry(priority, candidate_))
+		rc.candidateQueue.Push(newQueueEntry(priority, candidate_))
 	}
 }
 
