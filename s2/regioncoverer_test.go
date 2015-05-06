@@ -24,7 +24,7 @@ func TestCoveringCap(t *testing.T) {
 	coverer.GetCovering(cap, &cells)
 	for i, cell := range cells {
 		if cell.ToToken() != expectedResultsFromJavaLibrary[i] {
-			t.Fatal("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
+			t.Fatalf("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
 		}
 	}
 }
@@ -54,7 +54,7 @@ func TestCoveringPolyline(t *testing.T) {
 	coverer.GetCovering(polyline, &cells)
 	for i, cell := range cells {
 		if cell.ToToken() != expectedResultsFromJavaLibrary[i] {
-			t.Fatal("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
+			t.Fatalf("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
 		}
 	}
 }
@@ -86,7 +86,7 @@ func TestCoveringLoop(t *testing.T) {
 	coverer.GetCovering(loop, &cells)
 	for i, cell := range cells {
 		if cell.ToToken() != expectedResultsFromJavaLibrary[i] {
-			t.Fatal("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
+			t.Fatalf("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
 		}
 	}
 }
