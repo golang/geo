@@ -98,7 +98,7 @@ func TestLoopBounds(t *testing.T) {
 	arctic80.Invert()
 	// The highest latitude of each edge is attained at its midpoint.
 	mid := Point{arctic80.Vertex(0).Add(arctic80.Vertex(1).Vector).Mul(0.5)}
-	if math.Abs(s1.Angle(arctic80.RectBound().Lat.Hi).Radians()-LatLngFromPoint(mid).Lat.Radians()) > epsilon {
+	if math.Abs(s1.Angle(arctic80.RectBound().Lat.Hi).Radians()-LatLngFromPoint(mid).Lat.Radians()) > EPSILON {
 		t.Fatal("")
 	}
 	arctic80.Invert()

@@ -81,7 +81,7 @@ func RectFromLatLngPointPair(p1, p2 LatLng) Rect {
 // Examples of clamping (in degrees):
 //   center=(80,170),  size=(40,60)   -> lat=[60,90],   lng=[140,-160]
 //   center=(10,40),   size=(210,400) -> lat=[-90,90],  lng=[-180,180]
-//   center=(-90,180), size=(20,50)   -> lat=[-90,-80], lng=[1
+//   center=(-90,180), size=(20,50)   -> lat=[-90,-80], lng=[155,-155]
 func RectFromCenterSize(center, size LatLng) Rect {
 	half := LatLng{size.Lat / 2, size.Lng / 2}
 	return RectFromLatLng(center).expanded(half)

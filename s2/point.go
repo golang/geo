@@ -252,7 +252,7 @@ func (p Point) Distance(b Point) s1.Angle {
 
 // ApproxEqual reports if the two points are similar enough to be equal.
 func (p Point) ApproxEquals(other Point, maxError float64) bool {
-	return p.Vector.Angle(other.Vector) <= epsilon
+	return p.Vector.Angle(other.Vector).Radians() <= maxError
 }
 
 func (p Point) Equals(other Point) bool {
