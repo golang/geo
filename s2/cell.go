@@ -108,6 +108,22 @@ func (c Cell) EdgeRaw(k int) Point {
 	}
 }
 
+/**
+ * Return the average area for cells at the given level.
+ */
+func AverageArea(level int) float64 {
+	return S2_PROJECTION.AVG_AREA().GetValue(level)
+}
+
+/**
+ * Return the average area of cells at this level. This is accurate to within
+ * a factor of 1.7 (for S2_QUADRATIC_PROJECTION) and is extremely cheap to
+ * compute.
+ */
+func (c Cell) AverageArea() float64 {
+	return AverageArea(int(c.level))
+}
+
 // ExactArea return the area of this cell as accurately as possible.
 func (c Cell) ExactArea() float64 {
 	v0, v1, v2, v3 := c.Vertex(0), c.Vertex(1), c.Vertex(2), c.Vertex(3)

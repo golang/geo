@@ -1,6 +1,8 @@
 package s2
 
 import (
+	"math"
+	"math/rand"
 	"testing"
 )
 
@@ -88,5 +90,109 @@ func TestCoveringLoop(t *testing.T) {
 		if cell.ToToken() != expectedResultsFromJavaLibrary[i] {
 			t.Fatalf("TestCoveringLoop result %d got %s expected %s", i, cell.ToToken(), expectedResultsFromJavaLibrary[i])
 		}
+	}
+}
+
+func random(n int32) int32 {
+	if n == 0 {
+		return 0
+	}
+	return rand.Int31n(n)
+}
+
+/**
+ * Checks that "covering" completely covers the given region. If "check_tight"
+ * is true, also checks that it does not contain any cells that do not
+ * intersect the given region. ("id" is only used internally.)
+ */
+func checkCoveringRegion(region Region, covering CellUnion, checkTight bool, id CellID) {
+	if !id.IsValid() {
+		for face := 0; face < 6; face++ {
+			checkCoveringRegion(region, covering, checkTight, CellIDFromFacePosLevel(face, 0, 0))
+		}
+		return
+	}
+
+	if !region.IntersectsCell(CellFromCellID(id)) {
+		// If region does not intersect id, then neither should the covering.
+		if checkTight {
+			if !(!covering.Intersects(id)) {
+				panic("")
+			}
+		}
+
+	} else if !covering.Contains(id) {
+		// The region may intersect id, but we can't assert that the covering
+		// intersects id because we may discover that the region does not actually
+		// intersect upon further subdivision. (MayIntersect is not exact.)
+		if region.ContainsCell(CellFromCellID(id)) {
+			panic("")
+		}
+		if id.IsLeaf() {
+			panic("")
+		}
+		end := id.ChildEnd()
+		for child := id.ChildBegin(); child != end; child = child.Next() {
+			checkCoveringRegion(region, covering, checkTight, child)
+		}
+	}
+}
+
+func checkCovering(coverer *RegionCoverer, region Region, covering []CellID, interior bool) {
+	// Keep track of how many cells have the same coverer.min_level() ancestor.
+	minLevelCells := make(map[CellID]int)
+	for i := 0; i < len(covering); i++ {
+		level := covering[i].Level()
+		if !(level >= coverer.MinLevel()) {
+			panic("")
+		}
+		if !(level <= coverer.MaxLevel()) {
+			panic("")
+		}
+		if (level-coverer.MinLevel())%coverer.LevelMod() != 0 {
+			panic("")
+		}
+
+		key := covering[i].Parent(coverer.MinLevel())
+		if i, ok := minLevelCells[key]; !ok {
+			minLevelCells[key] = 1
+		} else {
+			minLevelCells[key] = i + 1
+		}
+	}
+	if len(covering) > coverer.MaxCells() {
+		// If the covering has more than the requested number of cells, then check
+		// that the cell count cannot be reduced by using the parent of some cell.
+		for _, i := range minLevelCells {
+			if i != 1 {
+				panic("")
+			}
+		}
+	}
+
+	if interior {
+		for i := 0; i < len(covering); i++ {
+			if !(region.ContainsCell(CellFromCellID(covering[i]))) {
+				panic("")
+			}
+		}
+	} else {
+		cellUnion := CellUnionFromCellIDs(covering)
+		checkCoveringRegion(region, *cellUnion, true, CellIDNone())
+	}
+}
+
+func TestSimpleCoverings(t *testing.T) {
+	coverer := NewRegionCoverer()
+	coverer.SetMaxCells(math.MaxInt32)
+	for i := 0; i < 1000; i++ {
+		level := int(random(MAX_LEVEL + 1))
+		coverer.SetMinLevel(level)
+		coverer.SetMaxLevel(level)
+		maxArea := math.Min(4*math.Pi, 1000*AverageArea(level))
+		cap := randomCap(0.1*AverageArea(MAX_LEVEL), maxArea)
+		covering := []CellID{}
+		GetSimpleCovering(cap, cap.Center(), level, &covering)
+		checkCovering(coverer, cap, covering, false)
 	}
 }

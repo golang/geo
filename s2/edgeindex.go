@@ -347,8 +347,8 @@ func (e *EdgeIndex) getEdges(cell1, cell2 uint64) []int {
 	// not valid edge indices, we will always get -N-1, so we immediately
 	// convert to N.
 	return []int{
-		-1 - e.binarySearch(cell1, -(int(^uint(0)>>1)-1)),
-		-1 - e.binarySearch(cell2, int(^uint(0)>>1)),
+		-1 - e.binarySearch(cell1, math.MinInt32),
+		-1 - e.binarySearch(cell2, math.MaxInt32),
 	}
 }
 

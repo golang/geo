@@ -76,6 +76,14 @@ func randomPoint() Point {
 		randomUniformDouble(-1, 1), randomUniformDouble(-1, 1)).Normalize()}
 }
 
+func randomCap(minArea, maxArea float64) Cap {
+	capArea := maxArea * math.Pow(minArea/maxArea, rand.Float64())
+	if capArea < minArea || capArea > maxArea {
+		panic(fmt.Sprintf("should not happen %f %f %f %f\n", capArea, minArea, capArea, maxArea))
+	}
+	return CapFromCenterArea(randomPoint(), capArea)
+}
+
 // parsePoint returns an Point from the latitude-longitude coordinate in degrees
 // in the given string, or the origin if the string was invalid.
 // e.g., "-20:150"

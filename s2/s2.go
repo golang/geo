@@ -518,7 +518,7 @@ func (m Metric) Deriv() float64 { return m.deriv }
 
 // Return the value of a metric for cells at the given level.
 func (m Metric) GetValue(level int) float64 {
-	return math.Pow(m.deriv, float64(int(m.dim)*(1-level)))
+	return m.deriv * math.Pow(2, float64(int(m.dim)*(1-level)))
 }
 
 /**

@@ -221,8 +221,8 @@ func (rc *RegionCoverer) GetInteriorCoveringAsUnion(region Region) *CellUnion {
  * Given a connected region and a starting point, return a set of cells at the
  * given level that cover the region.
  */
-func (rc *RegionCoverer) GetSimpleCovering(region Region, start Point, level int, output *[]CellID) {
-	rc.floodFill(region, CellFromPoint(start).Id().Parent(level), output)
+func GetSimpleCovering(region Region, start Point, level int, output *[]CellID) {
+	floodFill(region, CellFromPoint(start).Id().Parent(level), output)
 }
 
 /** Generates a covering and stores it in result. */
@@ -393,7 +393,7 @@ func (rc *RegionCoverer) newCandidate(cell Cell) *candidate {
  * edge-connected cells at the same level that intersect "region". The output
  * cells are returned in arbitrary order.
  */
-func (rc *RegionCoverer) floodFill(region Region, start CellID, output *[]CellID) {
+func floodFill(region Region, start CellID, output *[]CellID) {
 	all := make(map[CellID]bool)
 	frontier := []CellID{}
 	*output = []CellID{}
