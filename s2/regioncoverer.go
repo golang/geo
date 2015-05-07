@@ -180,6 +180,18 @@ func (rc *RegionCoverer) GetCovering(region Region, covering *[]CellID) {
 }
 
 /**
+ * Computes a list of cell ids that is contained within the given region and
+ * satisfies the various restrictions specified above.
+ *
+ * @param region The region to fill
+ * @param interior The list filled in by this method
+ */
+func (rc *RegionCoverer) GetInteriorCovering(region Region, interior *[]CellID) {
+	tmp := rc.GetInteriorCoveringAsUnion(region)
+	tmp.DeNormalize(rc.minLevel, rc.levelMod, interior)
+}
+
+/**
  * Return a normalized cell union that covers the given region and satisfies
  * the restrictions *EXCEPT* for min_level() and level_mod(). These criteria
  * cannot be satisfied using a cell union because cell unions are
@@ -192,6 +204,25 @@ func (rc *RegionCoverer) GetCoveringAsUnion(region Region) *CellUnion {
 	rc.GetCoveringInternal(region)
 	union := CellUnionFromArrayAndSwap(&rc.result)
 	return union
+}
+
+/**
+ * Return a normalized cell union that is contained within the given region
+ * and satisfies the restrictions *EXCEPT* for min_level() and level_mod().
+ */
+func (rc *RegionCoverer) GetInteriorCoveringAsUnion(region Region) *CellUnion {
+	rc.interiorCovering = true
+	rc.GetCoveringInternal(region)
+	union := CellUnionFromArrayAndSwap(&rc.result)
+	return union
+}
+
+/**
+ * Given a connected region and a starting point, return a set of cells at the
+ * given level that cover the region.
+ */
+func (rc *RegionCoverer) GetSimpleCovering(region Region, start Point, level int, output *[]CellID) {
+	rc.floodFill(region, CellFromPoint(start).Id().Parent(level), output)
 }
 
 /** Generates a covering and stores it in result. */
@@ -355,4 +386,33 @@ func (rc *RegionCoverer) newCandidate(cell Cell) *candidate {
 	}
 	rc.candidatesCreatedCounter++
 	return candidate_
+}
+
+/**
+ * Given a region and a starting cell, return the set of all the
+ * edge-connected cells at the same level that intersect "region". The output
+ * cells are returned in arbitrary order.
+ */
+func (rc *RegionCoverer) floodFill(region Region, start CellID, output *[]CellID) {
+	all := make(map[CellID]bool)
+	frontier := []CellID{}
+	*output = []CellID{}
+	all[start] = true
+	frontier = append(frontier, start)
+	for len(frontier) > 0 {
+		id := frontier[len(frontier)-1]
+		frontier = frontier[0 : len(frontier)-1]
+		if !region.IntersectsCell(CellFromCellID(id)) {
+			continue
+		}
+		*output = append(*output, id)
+
+		neighbors := id.EdgeNeighbors()
+		for _, nbr := range neighbors {
+			if _, hasNbr := all[nbr]; !hasNbr {
+				frontier = append(frontier, nbr)
+				all[nbr] = true
+			}
+		}
+	}
 }
