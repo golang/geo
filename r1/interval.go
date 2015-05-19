@@ -34,6 +34,12 @@ func EmptyInterval() Interval { return Interval{1, 0} }
 // IntervalFromPoint returns an interval representing a single point.
 func IntervalFromPoint(p float64) Interval { return Interval{p, p} }
 
+// Convenience method to construct an interval from two points that are
+// already ordered from lo to hi
+func IntervalFromEndpoints(p1, p2 float64) Interval {
+	return Interval{p1, p2}
+}
+
 // Convenience method to construct the minimal interval containing the two
 // given points. This is equivalent to starting with an empty interval and
 // calling AddPoint() twice, but it is more efficient.

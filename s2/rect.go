@@ -52,7 +52,7 @@ func RectFromLatLng(p LatLng) Rect {
 func RectFromLatLngLoHi(lo, hi LatLng) Rect {
 	// assert (p1.isValid() && p2.isValid());
 	return Rect{
-		Lat: r1.IntervalFromPointPair(lo.Lat.Radians(), hi.Lat.Radians()),
+		Lat: r1.IntervalFromEndpoints(lo.Lat.Radians(), hi.Lat.Radians()),
 		Lng: s1.IntervalFromEndpoints(lo.Lng.Radians(), hi.Lng.Radians()),
 	}
 }
