@@ -19,7 +19,72 @@ package s2
 import (
 	"math"
 	"testing"
+
+	"github.com/golang/geo/s1"
 )
+
+func TestLatLngNormalized(t *testing.T) {
+	tests := []struct {
+		desc string
+		pos  LatLng
+		want LatLng
+	}{
+		{
+			desc: "Valid lat/lng",
+			pos:  LatLngFromDegrees(21.8275043, 151.1979675),
+			want: LatLngFromDegrees(21.8275043, 151.1979675),
+		},
+		{
+			desc: "Valid lat/lng in the West",
+			pos:  LatLngFromDegrees(21.8275043, -151.1979675),
+			want: LatLngFromDegrees(21.8275043, -151.1979675),
+		},
+		{
+			desc: "Beyond the North pole",
+			pos:  LatLngFromDegrees(95, 151.1979675),
+			want: LatLngFromDegrees(90, 151.1979675),
+		},
+		{
+			desc: "Beyond the South pole",
+			pos:  LatLngFromDegrees(-95, 151.1979675),
+			want: LatLngFromDegrees(-90, 151.1979675),
+		},
+		{
+			desc: "At the date line (from East)",
+			pos:  LatLngFromDegrees(21.8275043, 180),
+			want: LatLngFromDegrees(21.8275043, 180),
+		},
+		{
+			desc: "At the date line (from West)",
+			pos:  LatLngFromDegrees(21.8275043, -180),
+			want: LatLngFromDegrees(21.8275043, -180),
+		},
+		{
+			desc: "Across the date line going East",
+			pos:  LatLngFromDegrees(21.8275043, 181.0012),
+			want: LatLngFromDegrees(21.8275043, -178.9988),
+		},
+		{
+			desc: "Across the date line going West",
+			pos:  LatLngFromDegrees(21.8275043, -181.0012),
+			want: LatLngFromDegrees(21.8275043, 178.9988),
+		},
+		{
+			desc: "All wrong",
+			pos:  LatLngFromDegrees(256, 256),
+			want: LatLngFromDegrees(90, -104),
+		},
+	}
+
+	for _, test := range tests {
+		got := test.pos.Normalized()
+		if !got.IsValid() {
+			t.Errorf("%s: A LatLng should be valid after normalization but isn't: %v", test.desc, got)
+		} else if got.Distance(test.want) > 1e-13*s1.Degree {
+			t.Errorf("%s: %v.Normalized() = %v, want %v", test.desc, test.pos, got, test.want)
+		}
+	}
+}
 
 func TestLatLngString(t *testing.T) {
 	const expected string = "[1.4142136, -2.2360680]"

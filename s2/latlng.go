@@ -23,6 +23,11 @@ import (
 	"github.com/golang/geo/s1"
 )
 
+const (
+	northPoleLat = s1.Angle(math.Pi/2) * s1.Radian
+	southPoleLat = -northPoleLat
+)
+
 // LatLng represents a point on the unit sphere as a pair of angles.
 type LatLng struct {
 	Lat, Lng s1.Angle
@@ -36,6 +41,19 @@ func LatLngFromDegrees(lat, lng float64) LatLng {
 // IsValid returns true iff the LatLng is normalized, with Lat ∈ [-π/2,π/2] and Lng ∈ [-π,π].
 func (ll LatLng) IsValid() bool {
 	return math.Abs(ll.Lat.Radians()) <= math.Pi/2 && math.Abs(ll.Lng.Radians()) <= math.Pi
+}
+
+// Normalized returns the normalized version of the LatLng,
+// with Lat clamped to [-π/2,π/2] and Lng wrapped in [-π,π].
+func (ll LatLng) Normalized() LatLng {
+	lat := ll.Lat
+	if lat > northPoleLat {
+		lat = northPoleLat
+	} else if lat < southPoleLat {
+		lat = southPoleLat
+	}
+	lng := s1.Angle(math.Remainder(ll.Lng.Radians(), 2*math.Pi)) * s1.Radian
+	return LatLng{lat, lng}
 }
 
 func (ll LatLng) String() string { return fmt.Sprintf("[%v, %v]", ll.Lat, ll.Lng) }
@@ -74,6 +92,3 @@ func PointFromLatLng(ll LatLng) Point {
 func LatLngFromPoint(p Point) LatLng {
 	return LatLng{latitude(p), longitude(p)}
 }
-
-// BUG(dsymonds): The major differences from the C++ version are:
-//   - normalization
