@@ -263,7 +263,7 @@ func TestPointDistance(t *testing.T) {
 	}
 }
 
-func TestApproxEqual(t *testing.T) {
+func TestApproxEquals(t *testing.T) {
 	epsilon := 1e-14
 	tests := []struct {
 		x1, y1, z1 float64
@@ -286,8 +286,8 @@ func TestApproxEqual(t *testing.T) {
 	for _, test := range tests {
 		p1 := PointFromCoords(test.x1, test.y1, test.z1)
 		p2 := PointFromCoords(test.x2, test.y2, test.z2)
-		if got := p1.ApproxEqual(p2); got != test.want {
-			t.Errorf("%v.ApproxEqual(%v), got %v want %v", p1, p2, got, test.want)
+		if got := p1.ApproxEquals(p2, EPSILON); got != test.want {
+			t.Errorf("%v.ApproxEquals(%v), got %v want %v", p1, p2, got, test.want)
 		}
 	}
 }

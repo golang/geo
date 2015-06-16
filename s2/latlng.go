@@ -40,6 +40,10 @@ func (ll LatLng) IsValid() bool {
 
 func (ll LatLng) String() string { return fmt.Sprintf("[%v, %v]", ll.Lat, ll.Lng) }
 
+func (ll LatLng) StringDegrees() string {
+	return fmt.Sprintf("[%f, %f]", ll.Lat.Degrees(), ll.Lng.Degrees())
+}
+
 // Distance returns the angle between two LatLngs.
 func (ll LatLng) Distance(ll2 LatLng) s1.Angle {
 	// Haversine formula, as used in C++ S2LatLng::GetDistance.
@@ -48,26 +52,18 @@ func (ll LatLng) Distance(ll2 LatLng) s1.Angle {
 	dlat := math.Sin(0.5 * (lat2 - lat1))
 	dlng := math.Sin(0.5 * (lng2 - lng1))
 	x := dlat*dlat + dlng*dlng*math.Cos(lat1)*math.Cos(lat2)
-	return s1.Angle(2*math.Atan2(math.Sqrt(x), math.Sqrt(math.Max(0, 1-x)))) * s1.Radian
+	return s1.Angle(2 * math.Atan2(math.Sqrt(x), math.Sqrt(math.Max(0, 1-x))))
 }
 
 // NOTE(mikeperrow): The C++ implementation publicly exposes latitude/longitude
 // functions. Let's see if that's really necessary before exposing the same functionality.
 
 func latitude(p Point) s1.Angle {
-	return s1.Angle(math.Atan2(p.Z, math.Sqrt(p.X*p.X+p.Y*p.Y))) * s1.Radian
+	return s1.Angle(math.Atan2(p.Z, math.Sqrt(p.X*p.X+p.Y*p.Y)))
 }
 
 func longitude(p Point) s1.Angle {
-	return s1.Angle(math.Atan2(p.Y, p.X)) * s1.Radian
-}
-
-// PointFromLatLng returns an Point for the given LatLng.
-func PointFromLatLng(ll LatLng) Point {
-	phi := ll.Lat.Radians()
-	theta := ll.Lng.Radians()
-	cosphi := math.Cos(phi)
-	return PointFromCoords(math.Cos(theta)*cosphi, math.Sin(theta)*cosphi, math.Sin(phi))
+	return s1.Angle(math.Atan2(p.Y, p.X))
 }
 
 // LatLngFromPoint returns an LatLng for a given Point.

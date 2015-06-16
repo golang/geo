@@ -38,12 +38,19 @@ type CellID uint64
 
 // TODO(dsymonds): Some of these constants should probably be exported.
 const (
+	MAX_LEVEL = 30
+
 	faceBits = 3
 	numFaces = 6
 	maxLevel = 30
 	posBits  = 2*maxLevel + 1
 	maxSize  = 1 << maxLevel
 )
+
+func CellIDNone() CellID           { return CellID(0) }
+func CellIDSentinel() CellID       { return CellID(^uint64(0)) }
+func CellIDBegin(level int) CellID { return CellIDFromFacePosLevel(0, 0, 0).ChildBeginAtLevel(level) }
+func CellIDEnd(level int) CellID   { return CellIDFromFacePosLevel(5, 0, 0).ChildEndAtLevel(level) }
 
 // CellIDFromFacePosLevel returns a cell given its face in the range
 // [0,5], the 61-bit Hilbert curve position pos within that face, and
@@ -61,7 +68,7 @@ func CellIDFromFace(face int) CellID {
 
 // CellIDFromLatLng returns the leaf cell containing ll.
 func CellIDFromLatLng(ll LatLng) CellID {
-	return cellIDFromPoint(PointFromLatLng(ll))
+	return CellIDFromPoint(PointFromLatLng(ll))
 }
 
 // CellIDFromToken returns a cell given a hex-encoded string of its uint64 ID.
@@ -265,6 +272,10 @@ func (ci CellID) String() string {
 	return b.String()
 }
 
+func (ci CellID) ToString() string {
+	return fmt.Sprintf("(face=%d, pos=%x, level=%d))", ci.Face(), ci.Pos(), ci.Level())
+}
+
 // Point returns the center of the s2 cell on the sphere as a Point.
 func (ci CellID) Point() Point { return Point{ci.rawPoint().Normalize()} }
 
@@ -447,8 +458,8 @@ func stToIJ(s float64) int {
 	return clamp(int(math.Floor(maxSize*s)), 0, maxSize-1)
 }
 
-// cellIDFromPoint returns the leaf cell containing point p.
-func cellIDFromPoint(p Point) CellID {
+// CellIDFromPoint returns the leaf cell containing point p.
+func CellIDFromPoint(p Point) CellID {
 	f, u, v := xyzToFaceUV(r3.Vector{p.X, p.Y, p.Z})
 	i := stToIJ(uvToST(u))
 	j := stToIJ(uvToST(v))

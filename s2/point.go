@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/golang/geo/r3"
@@ -81,6 +82,18 @@ func PointFromCoords(x, y, z float64) Point {
 		return OriginPoint()
 	}
 	return Point{r3.Vector{x, y, z}.Normalize()}
+}
+
+func PointFromCoordsRaw(x, y, z float64) Point {
+	return Point{r3.Vector{x, y, z}}
+}
+
+// PointFromLatLng returns an Point for the given LatLng.
+func PointFromLatLng(ll LatLng) Point {
+	phi := ll.Lat.Radians()
+	theta := ll.Lng.Radians()
+	cosphi := math.Cos(phi)
+	return PointFromCoords(math.Cos(theta)*cosphi, math.Sin(theta)*cosphi, math.Sin(phi))
 }
 
 // OriginPoint returns a unique "origin" on the sphere for operations that need a fixed
@@ -232,42 +245,53 @@ func RobustSign(a, b, c Point) Direction {
 	return Indeterminate
 }
 
-// OrderedCCW returns true if the edges OA, OB, and OC are encountered in that
-// order while sweeping CCW around the point O.
-//
-// You can think of this as testing whether A <= B <= C with respect to the
-// CCW ordering around O that starts at A, or equivalently, whether B is
-// contained in the range of angles (inclusive) that starts at A and extends
-// CCW to C. Properties:
-//
-//  (1) If OrderedCCW(a,b,c,o) && OrderedCCW(b,a,c,o), then a == b
-//  (2) If OrderedCCW(a,b,c,o) && OrderedCCW(a,c,b,o), then b == c
-//  (3) If OrderedCCW(a,b,c,o) && OrderedCCW(c,b,a,o), then a == b == c
-//  (4) If a == b or b == c, then OrderedCCW(a,b,c,o) is true
-//  (5) Otherwise if a == c, then OrderedCCW(a,b,c,o) is false
-func OrderedCCW(a, b, c, o Point) bool {
-	sum := 0
-	if RobustSign(b, o, a) != Clockwise {
-		sum++
-	}
-	if RobustSign(c, o, b) != Clockwise {
-		sum++
-	}
-	if RobustSign(a, o, c) == CounterClockwise {
-		sum++
-	}
-	return sum >= 2
-}
-
 // Distance returns the angle between two points.
 func (p Point) Distance(b Point) s1.Angle {
 	return p.Vector.Angle(b.Vector)
 }
 
 // ApproxEqual reports if the two points are similar enough to be equal.
-func (p Point) ApproxEqual(other Point) bool {
-	const epsilon = 1e-14
-	return p.Vector.Angle(other.Vector) <= epsilon
+func (p Point) ApproxEquals(other Point, maxError float64) bool {
+	return p.Vector.Angle(other.Vector).Radians() <= maxError
+}
+
+func (p Point) Equals(other Point) bool {
+	return p.X == other.X && p.Y == other.Y && p.Z == other.Z
+}
+
+func (p Point) LessThan(vb Point) bool {
+	if p.X < vb.X {
+		return true
+	}
+	if vb.X < p.X {
+		return false
+	}
+	if p.Y < vb.Y {
+		return true
+	}
+	if vb.Y < p.Y {
+		return false
+	}
+	if p.Z < vb.Z {
+		return true
+	}
+	return false
+}
+
+func (p Point) CompareTo(other Point) int {
+	if p.LessThan(other) {
+		return -1
+	} else {
+		if p.Equals(other) {
+			return 0
+		}
+		return 1
+	}
+}
+
+func (p Point) DegreesString() string {
+	latLng := LatLngFromPoint(p)
+	return fmt.Sprintf("(%f, %f)", latLng.Lat.Degrees(), latLng.Lng.Degrees())
 }
 
 // PointArea returns the area on the unit sphere for the triangle defined by the

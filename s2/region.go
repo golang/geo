@@ -40,10 +40,11 @@ type Region interface {
 }
 
 // Enforce interface satisfaction for a few types once they satisfy the interface.
-/*
 var (
 	_ Region = Cap{}
-	_ Region = CellUnion(nil)
+	_ Region = Cell{}
+	// _ Region = CellUnion(nil)
 	_ Region = Rect{}
+	_ Region = Polyline{}
+	_ Region = &Loop{}
 )
-*/

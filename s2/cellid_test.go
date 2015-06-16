@@ -210,7 +210,7 @@ func (v byCellID) Less(i, j int) bool { return uint64(v[i]) < uint64(v[j]) }
 
 func TestVertexNeighbors(t *testing.T) {
 	// Check the vertex neighbors of the center of face 2 at level 5.
-	id := cellIDFromPoint(PointFromCoords(0, 0, 1))
+	id := CellIDFromPoint(PointFromCoords(0, 0, 1))
 	neighbors := id.VertexNeighbors(5)
 	sort.Sort(byCellID(neighbors))
 

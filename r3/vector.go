@@ -28,6 +28,37 @@ type Vector struct {
 	X, Y, Z float64
 }
 
+func (v Vector) GetAxis(axis int) float64 {
+	switch axis {
+	case 0:
+		return v.X
+	case 1:
+		return v.Y
+	case 2:
+		return v.Z
+	default:
+		return v.GetAxis((axis + 3) % 3)
+	}
+}
+
+/** Return the index of the largest component fabs */
+func (v Vector) LargestAbsComponent() int {
+	temp := v.Abs()
+	if temp.X > temp.Y {
+		if temp.X > temp.Z {
+			return 0
+		} else {
+			return 2
+		}
+	} else {
+		if temp.Y > temp.Z {
+			return 1
+		} else {
+			return 2
+		}
+	}
+}
+
 // ApproxEqual reports whether v and ov are equal within a small epsilon.
 func (v Vector) ApproxEqual(ov Vector) bool {
 	const epsilon = 1e-14
@@ -59,6 +90,9 @@ func (v Vector) IsUnit() bool {
 // Abs returns the vector with nonnegative components.
 func (v Vector) Abs() Vector { return Vector{math.Abs(v.X), math.Abs(v.Y), math.Abs(v.Z)} }
 
+// Neg returns the negated vector
+func (v Vector) Neg() Vector { return Vector{-v.X, -v.Y, -v.Z} }
+
 // Add returns the standard vector sum of v and ov.
 func (v Vector) Add(ov Vector) Vector { return Vector{v.X + ov.X, v.Y + ov.Y, v.Z + ov.Z} }
 
@@ -66,7 +100,10 @@ func (v Vector) Add(ov Vector) Vector { return Vector{v.X + ov.X, v.Y + ov.Y, v.
 func (v Vector) Sub(ov Vector) Vector { return Vector{v.X - ov.X, v.Y - ov.Y, v.Z - ov.Z} }
 
 // Mul returns the standard scalar product of v and m.
-func (v Vector) Mul(m float64) Vector { return Vector{m * v.X, m * v.Y, m * v.Z} }
+func (v Vector) Mul(m float64) Vector { return Vector{v.X * m, v.Y * m, v.Z * m} }
+
+// Mul returns the standard scalar product of v and m.
+func (v Vector) Div(m float64) Vector { return Vector{v.X / m, v.Y / m, v.Z / m} }
 
 // Dot returns the standard dot product of v and ov.
 func (v Vector) Dot(ov Vector) float64 { return v.X*ov.X + v.Y*ov.Y + v.Z*ov.Z }

@@ -25,6 +25,43 @@ import "sort"
 // nor the four sibling CellIDs that are children of a single higher level CellID.
 type CellUnion []CellID
 
+func CellUnionFromCellIDs(ids []CellID) *CellUnion {
+	union := &CellUnion{}
+	*union = append(*union, ids...)
+	union.Normalize()
+	return union
+}
+
+func CellUnionFromArrayAndSwap(ids *[]CellID) *CellUnion {
+	union := &CellUnion{}
+	*union = append(*union, *ids...)
+	union.Normalize()
+	*ids = []CellID{}
+	return union
+}
+
+func (cu *CellUnion) DeNormalize(minLevel, levelMod int, output *[]CellID) {
+	*output = make([]CellID, 0, len(*cu))
+	for _, ci := range *cu {
+		level := ci.Level()
+		newLevel := max(minLevel, level)
+		if levelMod > 1 {
+			// Round up so that (new_level - min_level) is a multiple of level_mod.
+			// (Note that S2CellId::kMaxLevel is a multiple of 1, 2, and 3.)
+			newLevel += (MAX_LEVEL - (newLevel - minLevel)) % levelMod
+			newLevel = min(MAX_LEVEL, newLevel)
+		}
+		if newLevel == level {
+			*output = append(*output, ci)
+		} else {
+			end := ci.ChildEndAtLevel(newLevel)
+			for id := ci.ChildBeginAtLevel(newLevel); id != end; id = id.Next() {
+				*output = append(*output, id)
+			}
+		}
+	}
+}
+
 // Normalize normalizes the CellUnion.
 func (cu *CellUnion) Normalize() {
 	sort.Sort(byID(*cu))
@@ -84,6 +121,29 @@ func (cu *CellUnion) Normalize() {
 		output = append(output, ci)
 	}
 	*cu = output
+}
+
+/**
+ * Return true if the cell union contains the given cell id. Containment is
+ * defined with respect to regions, e.g. a cell contains its 4 children. This
+ * is a fast operation (logarithmic in the size of the cell union).
+ */
+func (cu *CellUnion) Contains(id CellID) bool {
+	// This function requires that Normalize has been called first.
+	//
+	// This is an exact test. Each cell occupies a linear span of the S2
+	// space-filling curve, and the cell id is simply the position at the center
+	// of this span. The cell union ids are sorted in increasing order along
+	// the space-filling curve. So we simply find the pair of cell ids that
+	// surround the given cell id (using binary search). There is containment
+	// if and only if one of these two cell ids contains this cell.
+
+	i := sort.Search(len(*cu), func(i int) bool { return id < (*cu)[i] })
+
+	if i != len(*cu) && (*cu)[i].RangeMin() <= id {
+		return true
+	}
+	return i != 0 && (*cu)[i-1].RangeMax() >= id
 }
 
 // Intersects reports whether this cell union intersects the given cell ID.
