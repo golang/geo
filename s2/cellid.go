@@ -520,4 +520,36 @@ func initLookupCell(level, i, j, origOrientation, pos, orientation int) {
 	initLookupCell(level, i+(r[3]>>1), j+(r[3]&1), origOrientation, pos+3, orientation^posToOrientation[3])
 }
 
+// CommonAncestorLevel returns the level of the common ancestor of the two S2 CellIDs.
+func (ci CellID) CommonAncestorLevel(other CellID) (level int, ok bool) {
+	bits := uint64(ci ^ other)
+	if bits < ci.lsb() {
+		bits = ci.lsb()
+	}
+	if bits < other.lsb() {
+		bits = other.lsb()
+	}
+
+	msbPos := findMSBSetNonZero64(bits)
+	if msbPos > 60 {
+		return 0, false
+	}
+	return (60 - msbPos) >> 1, true
+}
+
+// findMSBSetNonZero64 returns the index (between 0 and 63) of the most
+// significant set bit.
+func findMSBSetNonZero64(bits uint64) int {
+	val := []uint64{0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000, 0xFFFFFFFF00000000}
+	shift := []uint64{1, 2, 4, 8, 16, 32}
+	var msbPos uint64
+	for i := 5; i >= 0; i-- {
+		if bits&val[i] != 0 {
+			bits >>= shift[i]
+			msbPos |= shift[i]
+		}
+	}
+	return int(msbPos)
+}
+
 // BUG(dsymonds): The major differences from the C++ version is that barely anything is implemented.

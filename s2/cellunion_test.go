@@ -333,3 +333,98 @@ func TestNormalizePseudoRandom(t *testing.T) {
 	}
 	t.Logf("avg in %.2f, avg out %.2f\n", (float64)(inSum)/(float64)(iters), (float64)(outSum)/(float64)(iters))
 }
+
+func TestDenormalize(t *testing.T) {
+	tests := []struct {
+		name string
+		minL int
+		lMod int
+		cu   *CellUnion
+		exp  *CellUnion
+	}{
+		{
+			"not expanded, level mod == 1",
+			10,
+			1,
+			&CellUnion{
+				CellIDFromFace(2).ChildBeginAtLevel(11),
+				CellIDFromFace(2).ChildBeginAtLevel(11),
+				CellIDFromFace(3).ChildBeginAtLevel(14),
+				CellIDFromFace(0).ChildBeginAtLevel(10),
+			},
+			&CellUnion{
+				CellIDFromFace(2).ChildBeginAtLevel(11),
+				CellIDFromFace(2).ChildBeginAtLevel(11),
+				CellIDFromFace(3).ChildBeginAtLevel(14),
+				CellIDFromFace(0).ChildBeginAtLevel(10),
+			},
+		},
+		{
+			"not expanded, level mod > 1",
+			10,
+			2,
+			&CellUnion{
+				CellIDFromFace(2).ChildBeginAtLevel(12),
+				CellIDFromFace(2).ChildBeginAtLevel(12),
+				CellIDFromFace(3).ChildBeginAtLevel(14),
+				CellIDFromFace(0).ChildBeginAtLevel(10),
+			},
+			&CellUnion{
+				CellIDFromFace(2).ChildBeginAtLevel(12),
+				CellIDFromFace(2).ChildBeginAtLevel(12),
+				CellIDFromFace(3).ChildBeginAtLevel(14),
+				CellIDFromFace(0).ChildBeginAtLevel(10),
+			},
+		},
+		{
+			"expended, (level - min_level) is not multiple of level mod",
+			10,
+			3,
+			&CellUnion{
+				CellIDFromFace(2).ChildBeginAtLevel(12),
+				CellIDFromFace(5).ChildBeginAtLevel(11),
+			},
+			&CellUnion{
+				CellIDFromFace(2).ChildBeginAtLevel(12).Children()[0],
+				CellIDFromFace(2).ChildBeginAtLevel(12).Children()[1],
+				CellIDFromFace(2).ChildBeginAtLevel(12).Children()[2],
+				CellIDFromFace(2).ChildBeginAtLevel(12).Children()[3],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[0].Children()[0],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[0].Children()[1],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[0].Children()[2],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[0].Children()[3],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[1].Children()[0],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[1].Children()[1],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[1].Children()[2],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[1].Children()[3],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[2].Children()[0],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[2].Children()[1],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[2].Children()[2],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[2].Children()[3],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[3].Children()[0],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[3].Children()[1],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[3].Children()[2],
+				CellIDFromFace(5).ChildBeginAtLevel(11).Children()[3].Children()[3],
+			},
+		},
+		{
+			"expended, level < min_level",
+			10,
+			3,
+			&CellUnion{
+				CellIDFromFace(2).ChildBeginAtLevel(9),
+			},
+			&CellUnion{
+				CellIDFromFace(2).ChildBeginAtLevel(9).Children()[0],
+				CellIDFromFace(2).ChildBeginAtLevel(9).Children()[1],
+				CellIDFromFace(2).ChildBeginAtLevel(9).Children()[2],
+				CellIDFromFace(2).ChildBeginAtLevel(9).Children()[3],
+			},
+		},
+	}
+	for _, test := range tests {
+		if test.cu.Denormalize(test.minL, test.lMod); !reflect.DeepEqual(test.cu, test.exp) {
+			t.Errorf("test: %s; got %v, want %v", test.name, test.cu, test.exp)
+		}
+	}
+}

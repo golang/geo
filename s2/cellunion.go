@@ -104,3 +104,34 @@ type byID []CellID
 func (cu byID) Len() int           { return len(cu) }
 func (cu byID) Less(i, j int) bool { return cu[i] < cu[j] }
 func (cu byID) Swap(i, j int)      { cu[i], cu[j] = cu[j], cu[i] }
+
+// Denormalize replaces this CellUnion with an expanded version of the
+// CellUnion where any cell whose level is less than minLevel or where
+// (level - minLevel) is not a multiple of levelMod is replaced by its
+// children, until either both of these conditions are satisfied or the
+// maximum level is reached.
+func (cu *CellUnion) Denormalize(minLevel, levelMod int) {
+	var denorm CellUnion
+	for _, id := range *cu {
+		level := id.Level()
+		newLevel := level
+		if newLevel < minLevel {
+			newLevel = minLevel
+		}
+		if levelMod > 1 {
+			newLevel += (maxLevel - (newLevel - minLevel)) % levelMod
+			if newLevel > maxLevel {
+				newLevel = maxLevel
+			}
+		}
+		if newLevel == level {
+			denorm = append(denorm, id)
+		} else {
+			end := id.ChildEndAtLevel(newLevel)
+			for ci := id.ChildBeginAtLevel(newLevel); ci != end; ci = ci.Next() {
+				denorm = append(denorm, ci)
+			}
+		}
+	}
+	*cu = denorm
+}

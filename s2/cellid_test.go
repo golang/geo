@@ -425,3 +425,90 @@ func TestIJLevelToBoundUV(t *testing.T) {
 		}
 	}
 }
+
+func TestCommonAncestorLevel(t *testing.T) {
+	tests := []struct {
+		ci     CellID
+		other  CellID
+		want   int
+		wantOk bool
+	}{
+		// Identical cell IDs.
+		{
+			CellIDFromFace(0),
+			CellIDFromFace(0),
+			0,
+			true,
+		},
+		{
+			CellIDFromFace(0).ChildBeginAtLevel(30),
+			CellIDFromFace(0).ChildBeginAtLevel(30),
+			30,
+			true,
+		},
+		// One cell is a descendant of the other.
+		{
+			CellIDFromFace(0).ChildBeginAtLevel(30),
+			CellIDFromFace(0),
+			0,
+			true,
+		},
+		{
+			CellIDFromFace(5),
+			CellIDFromFace(5).ChildEndAtLevel(30).Prev(),
+			0,
+			true,
+		},
+		// No common ancestors.
+		{
+			CellIDFromFace(0),
+			CellIDFromFace(5),
+			0,
+			false,
+		},
+		{
+			CellIDFromFace(2).ChildBeginAtLevel(30),
+			CellIDFromFace(3).ChildBeginAtLevel(20),
+			0,
+			false,
+		},
+		// Common ancestor distinct from both.
+		{
+			CellIDFromFace(5).ChildBeginAtLevel(9).Next().ChildBeginAtLevel(15),
+			CellIDFromFace(5).ChildBeginAtLevel(9).ChildBeginAtLevel(20),
+			8,
+			true,
+		},
+		{
+			CellIDFromFace(0).ChildBeginAtLevel(2).ChildBeginAtLevel(30),
+			CellIDFromFace(0).ChildBeginAtLevel(2).Next().ChildBeginAtLevel(5),
+			1,
+			true,
+		},
+	}
+	for _, test := range tests {
+		if got, ok := test.ci.CommonAncestorLevel(test.other); ok != test.wantOk || got != test.want {
+			t.Errorf("CellID(%v).VertexNeighbors(%v) = %d, %t; want %d, %t", test.ci, test.other, got, ok, test.want, test.wantOk)
+		}
+	}
+}
+
+func TestFindMSBSetNonZero64(t *testing.T) {
+	testOne := uint64(0x8000000000000000)
+	testAll := uint64(0xFFFFFFFFFFFFFFFF)
+	testSome := uint64(0xFEDCBA9876543210)
+	for i := 63; i >= 0; i-- {
+		if got := findMSBSetNonZero64(testOne); got != i {
+			t.Errorf("findMSBSetNonZero64(%x) = %d, want = %d", testOne, got, i)
+		}
+		if got := findMSBSetNonZero64(testAll); got != i {
+			t.Errorf("findMSBSetNonZero64(%x) = %d, want = %d", testAll, got, i)
+		}
+		if got := findMSBSetNonZero64(testSome); got != i {
+			t.Errorf("findMSBSetNonZero64(%x) = %d, want = %d", testSome, got, i)
+		}
+		testOne >>= 1
+		testAll >>= 1
+		testSome >>= 1
+	}
+}
