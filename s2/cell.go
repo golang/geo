@@ -17,7 +17,11 @@ limitations under the License.
 package s2
 
 import (
+	"math"
+
+	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r2"
+	"github.com/golang/geo/s1"
 )
 
 // Cell is an S2 region object that represents a cell. Unlike CellIDs,
@@ -88,6 +92,170 @@ func (c Cell) Edge(k int) Point {
 func (c Cell) ExactArea() float64 {
 	v0, v1, v2, v3 := c.Vertex(0), c.Vertex(1), c.Vertex(2), c.Vertex(3)
 	return PointArea(v0, v1, v2) + PointArea(v0, v2, v3)
+}
+
+// IntersectsCell reports whether the intersection of this cell and the other cell is not nil.
+func (c Cell) IntersectsCell(oc Cell) bool {
+	return c.id.Intersects(oc.id)
+}
+
+// ContainsCell reports whether this cell contains the other cell.
+func (c Cell) ContainsCell(oc Cell) bool {
+	return c.id.Contains(oc.id)
+}
+
+// latitude returns the latitude of the cell vertex given by (i,j), where "i" and "j" are either 0 or 1.
+func (c Cell) latitude(i, j int) float64 {
+	var u, v float64
+	switch {
+	case i == 0 && j == 0:
+		u = c.uv.X.Lo
+		v = c.uv.Y.Lo
+	case i == 0 && j == 1:
+		u = c.uv.X.Lo
+		v = c.uv.Y.Hi
+	case i == 1 && j == 0:
+		u = c.uv.X.Hi
+		v = c.uv.Y.Lo
+	case i == 1 && j == 1:
+		u = c.uv.X.Hi
+		v = c.uv.Y.Hi
+	default:
+		panic("i and/or j is out of bound")
+	}
+	return latitude(Point{faceUVToXYZ(int(c.face), u, v)}).Radians()
+}
+
+// longitude returns the longitude of the cell vertex given by (i,j), where "i" and "j" are either 0 or 1.
+func (c Cell) longitude(i, j int) float64 {
+	var u, v float64
+	switch {
+	case i == 0 && j == 0:
+		u = c.uv.X.Lo
+		v = c.uv.Y.Lo
+	case i == 0 && j == 1:
+		u = c.uv.X.Lo
+		v = c.uv.Y.Hi
+	case i == 1 && j == 0:
+		u = c.uv.X.Hi
+		v = c.uv.Y.Lo
+	case i == 1 && j == 1:
+		u = c.uv.X.Hi
+		v = c.uv.Y.Hi
+	default:
+		panic("i and/or j is out of bound")
+	}
+	return longitude(Point{faceUVToXYZ(int(c.face), u, v)}).Radians()
+}
+
+// TODO(akashagrawal): move these package private variables to a more appropriate location.
+var (
+	dblEpsilon = math.Nextafter(1, 2) - 1
+	poleMinLat = math.Asin(math.Sqrt(1/3)) - 0.5*dblEpsilon
+)
+
+// RectBound returns the bounding rectangle of this cell.
+func (c Cell) RectBound() Rect {
+	if c.level > 0 {
+		// Except for cells at level 0, the latitude and longitude extremes are
+		// attained at the vertices.  Furthermore, the latitude range is
+		// determined by one pair of diagonally opposite vertices and the
+		// longitude range is determined by the other pair.
+		//
+		// We first determine which corner (i,j) of the cell has the largest
+		// absolute latitude.  To maximize latitude, we want to find the point in
+		// the cell that has the largest absolute z-coordinate and the smallest
+		// absolute x- and y-coordinates.  To do this we look at each coordinate
+		// (u and v), and determine whether we want to minimize or maximize that
+		// coordinate based on the axis direction and the cell's (u,v) quadrant.
+		u := c.uv.X.Lo + c.uv.X.Hi
+		v := c.uv.Y.Lo + c.uv.Y.Hi
+		var i, j int
+		if uAxis(int(c.face)).Z == 0 {
+			if u < 0 {
+				i = 1
+			}
+		} else if u > 0 {
+			i = 1
+		}
+		if vAxis(int(c.face)).Z == 0 {
+			if v < 0 {
+				j = 1
+			}
+		} else if v > 0 {
+			j = 1
+		}
+		lat := r1.IntervalFromPoint(c.latitude(i, j)).AddPoint(c.latitude(1-i, 1-j))
+		lng := s1.IntervalFromEndpoints(c.longitude(i, 1-j), c.longitude(1-i, j))
+
+		// We grow the bounds slightly to make sure that the bounding rectangle
+		// contains LatLngFromPoint(P) for any point P inside the loop L defined by the
+		// four *normalized* vertices.  Note that normalization of a vector can
+		// change its direction by up to 0.5 * dblEpsilon radians, and it is not
+		// enough just to add Normalize calls to the code above because the
+		// latitude/longitude ranges are not necessarily determined by diagonally
+		// opposite vertex pairs after normalization.
+		//
+		// We would like to bound the amount by which the latitude/longitude of a
+		// contained point P can exceed the bounds computed above.  In the case of
+		// longitude, the normalization error can change the direction of rounding
+		// leading to a maximum difference in longitude of 2 * dblEpsilon.  In
+		// the case of latitude, the normalization error can shift the latitude by
+		// up to 0.5 * dblEpsilon and the other sources of error can cause the
+		// two latitudes to differ by up to another 1.5 * dblEpsilon, which also
+		// leads to a maximum difference of 2 * dblEpsilon.
+		return Rect{lat, lng}.expanded(LatLng{s1.Angle(2 * dblEpsilon), s1.Angle(2 * dblEpsilon)}).PolarClosure()
+	}
+
+	// The 4 cells around the equator extend to +/-45 degrees latitude at the
+	// midpoints of their top and bottom edges.  The two cells covering the
+	// poles extend down to +/-35.26 degrees at their vertices.  The maximum
+	// error in this calculation is 0.5 * dblEpsilon.
+	var bound Rect
+	switch c.face {
+	case 0:
+		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{-math.Pi / 4, math.Pi / 4}}
+	case 1:
+		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{math.Pi / 4, 3 * math.Pi / 4}}
+	case 2:
+		bound = Rect{r1.Interval{poleMinLat, math.Pi / 2}, s1.FullInterval()}
+	case 3:
+		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{3 * math.Pi / 4, -3 * math.Pi / 4}}
+	case 4:
+		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{-3 * math.Pi / 4, -math.Pi / 4}}
+	default:
+		bound = Rect{r1.Interval{-math.Pi / 2, -poleMinLat}, s1.FullInterval()}
+	}
+
+	// Finally, we expand the bound to account for the error when a point P is
+	// converted to an LatLng to test for containment. (The bound should be
+	// large enough so that it contains the computed LatLng of any contained
+	// point, not just the infinite-precision version.) We don't need to expand
+	// longitude because longitude is calculated via a single call to math.Atan2,
+	// which is guaranteed to be semi-monotonic.
+	return bound.expanded(LatLng{s1.Angle(dblEpsilon), s1.Angle(0)})
+}
+
+// CapBound returns the bounding cap of this cell.
+func (c Cell) CapBound() Cap {
+	// We use the cell center in (u,v)-space as the cap axis.  This vector is very close
+	// to GetCenter() and faster to compute.  Neither one of these vectors yields the
+	// bounding cap with minimal surface area, but they are both pretty close.
+	cap := CapFromPoint(Point{faceUVToXYZ(int(c.face), c.uv.Center().X, c.uv.Center().Y).Normalize()})
+	for k := 0; k < 4; k++ {
+		cap = cap.AddPoint(c.Vertex(k))
+	}
+	return cap
+}
+
+// ContainsPoint reports whether this cell contains the given point.
+func (c Cell) ContainsPoint(p Point) bool {
+	var uv r2.Point
+	var ok bool
+	if uv.X, uv.Y, ok = faceXYZToUV(int(c.face), p); !ok {
+		return false
+	}
+	return c.uv.ContainsPoint(uv)
 }
 
 // TODO(roberts, or $SOMEONE): Differences from C++, almost everything else still.

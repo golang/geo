@@ -111,3 +111,120 @@ func TestExactArea(t *testing.T) {
 		childIndex = (childIndex + 1) % 4
 	}
 }
+
+func TestIntersectsCell(t *testing.T) {
+	tests := []struct {
+		c    Cell
+		oc   Cell
+		want bool
+	}{
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			true,
+		},
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2).ChildBeginAtLevel(5)),
+			true,
+		},
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2).Next()),
+			false,
+		},
+	}
+	for _, test := range tests {
+		if got := test.c.IntersectsCell(test.oc); got != test.want {
+			t.Errorf("Cell(%v).IntersectsCell(%v) = %t; want %t", test.c, test.oc, got, test.want)
+		}
+	}
+}
+
+func TestContainsCell(t *testing.T) {
+	tests := []struct {
+		c    Cell
+		oc   Cell
+		want bool
+	}{
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			true,
+		},
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2).ChildBeginAtLevel(5)),
+			true,
+		},
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2).ChildBeginAtLevel(5)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			false,
+		},
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2).Next()),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			false,
+		},
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2).Next()),
+			false,
+		},
+	}
+	for _, test := range tests {
+		if got := test.c.ContainsCell(test.oc); got != test.want {
+			t.Errorf("Cell(%v).ContainsCell(%v) = %t; want %t", test.c, test.oc, got, test.want)
+		}
+	}
+}
+
+func TestRectBound(t *testing.T) {
+	c := CellFromCellID(CellIDFromFace(0))
+	rect := c.RectBound()
+	for i := 0; i < 4; i++ {
+		if !rect.ContainsLatLng(LatLngFromPoint(c.Vertex(i))) {
+			t.Errorf("%v should contain %v", rect, c.Vertex(i))
+		}
+	}
+}
+
+func TestCapBound(t *testing.T) {
+	c := CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(20))
+	s2Cap := c.CapBound()
+	for i := 0; i < 4; i++ {
+		if !s2Cap.ContainsPoint(c.Vertex(i)) {
+			t.Errorf("%v should contain %v", s2Cap, c.Vertex(i))
+		}
+	}
+}
+
+func TestContainsPoint(t *testing.T) {
+	tests := []struct {
+		c    Cell
+		p    Point
+		want bool
+	}{
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2).ChildBeginAtLevel(5)).Vertex(1),
+			true,
+		},
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2)).Vertex(1),
+			true,
+		},
+		{
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2).ChildBeginAtLevel(5)),
+			CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(2).Next().ChildBeginAtLevel(5)).Vertex(1),
+			false,
+		},
+	}
+	for _, test := range tests {
+		if got := test.c.ContainsPoint(test.p); got != test.want {
+			t.Errorf("Cell(%v).ContainsPoint(%v) = %t; want %t", test.c, test.p, got, test.want)
+		}
+	}
+}

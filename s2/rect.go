@@ -153,5 +153,15 @@ func (r Rect) expanded(margin LatLng) Rect {
 
 func (r Rect) String() string { return fmt.Sprintf("[Lo%v, Hi%v]", r.Lo(), r.Hi()) }
 
+// PolarClosure returns the rectangle unmodified if it does not include either pole.
+// If it includes either pole, PolarClosure returns an expansion of the rectangle along
+// the longitudinal range to include all possible representations of the contained poles.
+func (r Rect) PolarClosure() Rect {
+	if r.Lat.Lo == -math.Pi/2 || r.Lat.Hi == math.Pi/2 {
+		return Rect{r.Lat, s1.FullInterval()}
+	}
+	return r
+}
+
 // BUG(dsymonds): The major differences from the C++ version are:
 //   - almost everything

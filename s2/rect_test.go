@@ -241,3 +241,32 @@ func TestExpanded(t *testing.T) {
 		}
 	}
 }
+
+func TestPolarClosure(t *testing.T) {
+	tests := []struct {
+		r    Rect
+		want Rect
+	}{
+		{
+			rectFromDegrees(-89, 0, 89, 1),
+			rectFromDegrees(-89, 0, 89, 1),
+		},
+		{
+			rectFromDegrees(-90, -30, -45, 100),
+			rectFromDegrees(-90, -180, -45, 180),
+		},
+		{
+			rectFromDegrees(89, 145, 90, 146),
+			rectFromDegrees(89, -180, 90, 180),
+		},
+		{
+			rectFromDegrees(-90, -145, 90, -144),
+			FullRect(),
+		},
+	}
+	for _, test := range tests {
+		if got := test.r.PolarClosure(); !rectApproxEqual(got, test.want) {
+			t.Errorf("%v.PolarClosure() was %v, want %v", test.r, got, test.want)
+		}
+	}
+}
