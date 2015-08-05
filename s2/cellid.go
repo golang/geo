@@ -38,11 +38,12 @@ type CellID uint64
 
 // TODO(dsymonds): Some of these constants should probably be exported.
 const (
-	faceBits = 3
-	numFaces = 6
-	maxLevel = 30
-	posBits  = 2*maxLevel + 1
-	maxSize  = 1 << maxLevel
+	faceBits   = 3
+	numFaces   = 6
+	maxLevel   = 30
+	posBits    = 2*maxLevel + 1
+	maxSize    = 1 << maxLevel
+	wrapOffset = uint64(numFaces) << posBits
 )
 
 // CellIDFromFacePosLevel returns a cell given its face in the range
@@ -550,6 +551,32 @@ func findMSBSetNonZero64(bits uint64) int {
 		}
 	}
 	return int(msbPos)
+}
+
+// Advance advances or retreats the indicated number of steps along the
+// Hilbert curve at the current level, and returns the new position. The
+// position is never advanced past End() or before Begin().
+func (ci CellID) Advance(steps int64) CellID {
+	if steps == 0 {
+		return ci
+	}
+
+	// We clamp the number of steps if necessary to ensure that we do not
+	// advance past the End() or before the Begin() of this level. Note that
+	// minSteps and maxSteps always fit in a signed 64-bit integer.
+	stepShift := uint(2*(maxLevel-ci.Level()) + 1)
+	if steps < 0 {
+		minSteps := -int64(uint64(ci) >> stepShift)
+		if steps < minSteps {
+			steps = minSteps
+		}
+	} else {
+		maxSteps := int64((wrapOffset + ci.lsb() - uint64(ci)) >> stepShift)
+		if steps > maxSteps {
+			steps = maxSteps
+		}
+	}
+	return ci + CellID(steps)<<stepShift
 }
 
 // BUG(dsymonds): The major differences from the C++ version is that barely anything is implemented.

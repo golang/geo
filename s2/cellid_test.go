@@ -512,3 +512,53 @@ func TestFindMSBSetNonZero64(t *testing.T) {
 		testSome >>= 1
 	}
 }
+
+func TestAdvance(t *testing.T) {
+	tests := []struct {
+		ci    CellID
+		steps int64
+		want  CellID
+	}{
+		{
+			CellIDFromFace(0).ChildBeginAtLevel(0),
+			7,
+			CellIDFromFace(5).ChildEndAtLevel(0),
+		},
+		{
+			CellIDFromFace(0).ChildBeginAtLevel(0),
+			12,
+			CellIDFromFace(5).ChildEndAtLevel(0),
+		},
+		{
+			CellIDFromFace(5).ChildEndAtLevel(0),
+			-7,
+			CellIDFromFace(0).ChildBeginAtLevel(0),
+		},
+		{
+			CellIDFromFace(5).ChildEndAtLevel(0),
+			-12000000,
+			CellIDFromFace(0).ChildBeginAtLevel(0),
+		},
+		{
+			CellIDFromFace(0).ChildBeginAtLevel(5),
+			500,
+			CellIDFromFace(5).ChildEndAtLevel(5).Advance(500 - (6 << (2 * 5))),
+		},
+		{
+			CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4).ChildBeginAtLevel(maxLevel),
+			256,
+			CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4).Next().ChildBeginAtLevel(maxLevel),
+		},
+		{
+			CellIDFromFacePosLevel(1, 0, maxLevel),
+			4 << (2 * maxLevel),
+			CellIDFromFacePosLevel(5, 0, maxLevel),
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.ci.Advance(test.steps); got != test.want {
+			t.Errorf("CellID(%v).Advance(%d) = %v; want = %v", test.ci, test.steps, got, test.want)
+		}
+	}
+}

@@ -433,3 +433,137 @@ func TestCapAddCap(t *testing.T) {
 		}
 	}
 }
+
+const eps = 1e-15
+
+func TestCapContainsCell(t *testing.T) {
+	faceRadius := math.Atan(math.Sqrt2)
+	for face := 0; face < 6; face++ {
+		// The cell consisting of the entire face.
+		rootCell := CellFromCellID(CellIDFromFace(face))
+
+		// A leaf cell at the midpoint of the v=1 edge.
+		edgeCell := CellFromPoint(Point{faceUVToXYZ(face, 0, 1-eps)})
+
+		// A leaf cell at the u=1, v=1 corner
+		cornerCell := CellFromPoint(Point{faceUVToXYZ(face, 1-eps, 1-eps)})
+
+		// Quick check for full and empty caps.
+		if !full.ContainsCell(rootCell) {
+			t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", full, rootCell, false, true)
+		}
+
+		// Check intersections with the bounding caps of the leaf cells that are adjacent to
+		// cornerCell along the Hilbert curve.  Because this corner is at (u=1,v=1), the curve
+		// stays locally within the same cube face.
+		first := cornerCell.id.Advance(-3)
+		last := cornerCell.id.Advance(4)
+		for id := first; id < last; id = id.Next() {
+			c := CellFromCellID(id).CapBound()
+			if got, want := c.ContainsCell(cornerCell), id == cornerCell.id; got != want {
+				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", c, cornerCell, got, want)
+			}
+		}
+
+		for capFace := 0; capFace < 6; capFace++ {
+			// A cap that barely contains all of capFace.
+			center := unitNorm(capFace)
+			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+eps))
+			if got, want := covering.ContainsCell(rootCell), capFace == face; got != want {
+				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", covering, rootCell, got, want)
+			}
+			if got, want := covering.ContainsCell(edgeCell), center.Vector.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
+				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", covering, edgeCell, got, want)
+			}
+			if got, want := covering.ContainsCell(edgeCell), covering.IntersectsCell(edgeCell); got != want {
+				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", covering, edgeCell, got, want)
+			}
+			if got, want := covering.ContainsCell(cornerCell), capFace == face; got != want {
+				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", covering, cornerCell, got, want)
+			}
+
+			// A cap that barely intersects the edges of capFace.
+			bulging := CapFromCenterAngle(center, s1.Angle(math.Pi/4+eps))
+			if bulging.ContainsCell(rootCell) {
+				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", bulging, rootCell, true, false)
+			}
+			if got, want := bulging.ContainsCell(edgeCell), capFace == face; got != want {
+				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", bulging, edgeCell, got, want)
+			}
+			if bulging.ContainsCell(cornerCell) {
+				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", bulging, cornerCell, true, false)
+			}
+		}
+	}
+}
+
+func TestCapIntersectsCell(t *testing.T) {
+	faceRadius := math.Atan(math.Sqrt2)
+	for face := 0; face < 6; face++ {
+		// The cell consisting of the entire face.
+		rootCell := CellFromCellID(CellIDFromFace(face))
+
+		// A leaf cell at the midpoint of the v=1 edge.
+		edgeCell := CellFromPoint(Point{faceUVToXYZ(face, 0, 1-eps)})
+
+		// A leaf cell at the u=1, v=1 corner
+		cornerCell := CellFromPoint(Point{faceUVToXYZ(face, 1-eps, 1-eps)})
+
+		// Quick check for full and empty caps.
+		if empty.IntersectsCell(rootCell) {
+			t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", empty, rootCell, true, false)
+		}
+
+		// Check intersections with the bounding caps of the leaf cells that are adjacent to
+		// cornerCell along the Hilbert curve.  Because this corner is at (u=1,v=1), the curve
+		// stays locally within the same cube face.
+		first := cornerCell.id.Advance(-3)
+		last := cornerCell.id.Advance(4)
+		for id := first; id < last; id = id.Next() {
+			c := CellFromCellID(id).CapBound()
+			if got, want := c.IntersectsCell(cornerCell), id.immediateParent().Contains(cornerCell.id); got != want {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", c, cornerCell, got, want)
+			}
+		}
+
+		antiFace := (face + 3) % 6
+		for capFace := 0; capFace < 6; capFace++ {
+			// A cap that barely contains all of capFace.
+			center := unitNorm(capFace)
+			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+eps))
+			if got, want := covering.IntersectsCell(rootCell), capFace != antiFace; got != want {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", covering, rootCell, got, want)
+			}
+			if got, want := covering.IntersectsCell(edgeCell), covering.ContainsCell(edgeCell); got != want {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", covering, edgeCell, got, want)
+			}
+			if got, want := covering.IntersectsCell(cornerCell), center.Vector.Dot(cornerCell.id.Point().Vector) > 0; got != want {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", covering, cornerCell, got, want)
+			}
+
+			// A cap that barely intersects the edges of capFace.
+			bulging := CapFromCenterAngle(center, s1.Angle(math.Pi/4+eps))
+			if got, want := bulging.IntersectsCell(rootCell), capFace != antiFace; got != want {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", bulging, rootCell, got, want)
+			}
+			if got, want := bulging.IntersectsCell(edgeCell), center.Vector.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", bulging, edgeCell, got, want)
+			}
+			if bulging.IntersectsCell(cornerCell) {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", bulging, cornerCell, true, false)
+			}
+
+			// A singleton cap.
+			singleton := CapFromCenterAngle(center, 0)
+			if got, want := singleton.IntersectsCell(rootCell), capFace == face; got != want {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", singleton, rootCell, got, want)
+			}
+			if singleton.IntersectsCell(edgeCell) {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", singleton, edgeCell, true, false)
+			}
+			if singleton.IntersectsCell(cornerCell) {
+				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", singleton, cornerCell, true, false)
+			}
+		}
+	}
+}

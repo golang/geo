@@ -147,3 +147,17 @@ func parsePoints(s string) []Point {
 	}
 	return points
 }
+
+// skewedInt returns a number in the range [0,2^max_log-1] with bias towards smaller numbers.
+func skewedInt(maxLog int) int {
+	base := uint32(rand.Int31n(int32(maxLog + 1)))
+	return int(randomBits(31) & ((1 << base) - 1))
+}
+
+// randomCap returns a cap with a random axis such that the log of its area is
+// uniformly distributed between the logs of the two given values. The log of
+// the cap angle is also approximately uniformly distributed.
+func randomCap(minArea, maxArea float64) Cap {
+	capArea := maxArea * math.Pow(minArea/maxArea, randomFloat64())
+	return CapFromCenterArea(randomPoint(), capArea)
+}

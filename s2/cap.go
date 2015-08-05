@@ -312,6 +312,83 @@ func radiusToHeight(r s1.Angle) float64 {
 
 }
 
+// ContainsCell reports whether the cap contains the given cell.
+func (c Cap) ContainsCell(cell Cell) bool {
+	// If the cap does not contain all cell vertices, return false.
+	var vertices [4]Point
+	for k := 0; k < 4; k++ {
+		vertices[k] = cell.Vertex(k)
+		if !c.ContainsPoint(vertices[k]) {
+			return false
+		}
+	}
+	// Otherwise, return true if the complement of the cap does not intersect the cell.
+	return !c.Complement().intersects(cell, vertices)
+}
+
+// IntersectsCell reports whether the cap intersects the cell.
+func (c Cap) IntersectsCell(cell Cell) bool {
+	// If the cap contains any cell vertex, return true.
+	var vertices [4]Point
+	for k := 0; k < 4; k++ {
+		vertices[k] = cell.Vertex(k)
+		if c.ContainsPoint(vertices[k]) {
+			return true
+		}
+	}
+	return c.intersects(cell, vertices)
+}
+
+// intersects reports whether the cap intersects any point of the cell excluding
+// its vertices (which are assumed to already have been checked).
+func (c Cap) intersects(cell Cell, vertices [4]Point) bool {
+	// If the cap is a hemisphere or larger, the cell and the complement of the cap
+	// are both convex. Therefore since no vertex of the cell is contained, no other
+	// interior point of the cell is contained either.
+	if c.height >= 1 {
+		return false
+	}
+
+	// We need to check for empty caps due to the center check just below.
+	if c.IsEmpty() {
+		return false
+	}
+
+	// Optimization: return true if the cell contains the cap center. This allows half
+	// of the edge checks below to be skipped.
+	if cell.ContainsPoint(c.center) {
+		return true
+	}
+
+	// At this point we know that the cell does not contain the cap center, and the cap
+	// does not contain any cell vertex. The only way that they can intersect is if the
+	// cap intersects the interior of some edge.
+	sin2Angle := c.height * (2 - c.height)
+	for k := 0; k < 4; k++ {
+		edge := cell.Edge(k).Vector
+		dot := c.center.Vector.Dot(edge)
+		if dot > 0 {
+			// The center is in the interior half-space defined by the edge. We do not need
+			// to consider these edges, since if the cap intersects this edge then it also
+			// intersects the edge on the opposite side of the cell, because the center is
+			// not contained with the cell.
+			continue
+		}
+
+		// The Norm2() factor is necessary because "edge" is not normalized.
+		if dot*dot > sin2Angle*edge.Norm2() {
+			return false
+		}
+
+		// Otherwise, the great circle containing this edge intersects the interior of the cap. We just
+		// need to check whether the point of closest approach occurs between the two edge endpoints.
+		dir := edge.Cross(c.center.Vector)
+		if dir.Dot(vertices[k].Vector) < 0 && dir.Dot(vertices[(k+1)&3].Vector) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // TODO(roberts): Differences from C++
-// Intersects(S2Cell), Contains(S2Cell), MayIntersect(S2Cell)
 // Centroid, Union
