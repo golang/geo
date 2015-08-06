@@ -88,11 +88,6 @@ func (c Cell) Edge(k int) Point {
 	}
 }
 
-// averageArea return the average area for cells at the given level.
-func averageArea(level int) float64 {
-	return math.Ldexp(4*math.Pi/6, -2*level)
-}
-
 // ExactArea return the area of this cell as accurately as possible.
 func (c Cell) ExactArea() float64 {
 	v0, v1, v2, v3 := c.Vertex(0), c.Vertex(1), c.Vertex(2), c.Vertex(3)

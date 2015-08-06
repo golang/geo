@@ -37,11 +37,17 @@ var (
 	MaxWidthMetric = Metric{1, 1.704897179199218452}
 
 	MinAreaMetric = Metric{2, 8 * math.Sqrt2 / 9}
+	AvgAreaMetric = Metric{2, 4 * math.Pi / 6}
 	MaxAreaMetric = Metric{2, 2.635799256963161491}
 )
 
 // TODO: more metrics, as needed
 // TODO: port GetValue, GetClosestLevel
+
+// Value returns the value of the metric at the given level.
+func (m Metric) Value(level int) float64 {
+	return math.Ldexp(m.Deriv, -m.Dim*level)
+}
 
 // MinLevel returns the minimum level such that the metric is at most
 // the given value, or maxLevel (30) if there is no such level.
