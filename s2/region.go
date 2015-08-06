@@ -39,11 +39,10 @@ type Region interface {
 	IntersectsCell(c Cell) bool
 }
 
-// Enforce interface satisfaction for a few types once they satisfy the interface.
-/*
+// Enforce interface satisfaction.
 var (
+	_ Region = Cell{}
 	_ Region = Cap{}
-	_ Region = CellUnion(nil)
-	_ Region = Rect{}
+	// _ Region = CellUnion{}
+	// _ Region = Rect{}
 )
-*/
