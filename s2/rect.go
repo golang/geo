@@ -163,5 +163,10 @@ func (r Rect) PolarClosure() Rect {
 	return r
 }
 
+// RectBound returns itself.
+func (r Rect) RectBound() Rect {
+	return r
+}
+
 // BUG(dsymonds): The major differences from the C++ version are:
 //   - almost everything
