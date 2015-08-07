@@ -68,7 +68,7 @@ func TestParsePoint(t *testing.T) {
 		{"37.4210:-122.0866, 37.4231:-122.0819", PointFromCoords(-0.4218751185559026, -0.6728760966593905, 0.6076669670863027)},
 	}
 	for _, test := range tests {
-		if got := parsePoint(test.have); got != test.want {
+		if got := parsePoint(test.have); !got.ApproxEqual(test.want) {
 			t.Errorf("parsePoint(%s) = %v, want %v", test.have, got, test.want)
 		}
 	}
@@ -186,9 +186,10 @@ func TestParsePoints(t *testing.T) {
 
 	for _, test := range tests {
 		got := parsePoints(test.have)
-		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("parsePoints(%s), got %v, want %v",
-				test.have, got, test.want)
+		for i := range got { // assume we at least get the same number of points
+			if !got[i].ApproxEqual(test.want[i]) {
+				t.Errorf("parsePoints(%s): [%d]: got %v, want %v", test.have, i, got[i], test.want[i])
+			}
 		}
 	}
 }
