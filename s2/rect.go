@@ -168,5 +168,24 @@ func (r Rect) RectBound() Rect {
 	return r
 }
 
+// Contains reports whether this Rect contains the other Rect.
+func (r Rect) Contains(other Rect) bool {
+	return r.Lat.ContainsInterval(other.Lat) && r.Lng.ContainsInterval(other.Lng)
+}
+
+// ContainsCell reports whether the given point is contained by this Rect.
+func (r Rect) ContainsCell(c Cell) bool {
+	// A latitude-longitude rectangle contains a cell if and only if it contains
+	// the cell's bounding rectangle. This test is exact from a mathematical
+	// point of view, assuming that the bounds returned by Cell.RectBound()
+	// are tight. However, note that there can be a loss of precision when
+	// converting between representations -- for example, if an s2.Cell is
+	// converted to a polygon, the polygon's bounding rectangle may not contain
+	// the cell's bounding rectangle. This has some slightly unexpected side
+	// effects; for instance, if one creates an s2.Polygon from an s2.Cell, the
+	// polygon will contain the cell, but the polygon's bounding box will not.
+	return r.Contains(c.RectBound())
+}
+
 // BUG(dsymonds): The major differences from the C++ version are:
 //   - almost everything
