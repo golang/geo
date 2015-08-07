@@ -113,12 +113,14 @@ func parseLatLngs(s string) []LatLng {
 	pieces := strings.Split(s, ",")
 	var lls []LatLng
 	for _, piece := range pieces {
+		piece = strings.TrimSpace(piece)
+
 		// Skip empty strings.
-		if len(strings.TrimSpace(piece)) == 0 {
+		if piece == "" {
 			continue
 		}
 
-		p := strings.Split(strings.TrimSpace(piece), ":")
+		p := strings.Split(piece, ":")
 		if len(p) != 2 {
 			panic(fmt.Sprintf("invalid input string for parseLatLngs: %q", piece))
 		}
