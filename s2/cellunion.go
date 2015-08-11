@@ -99,6 +99,20 @@ func (cu *CellUnion) Intersects(id CellID) bool {
 	return i != 0 && (*cu)[i-1].RangeMax() >= id.RangeMin()
 }
 
+// ContainsCellID reports whether the cell union contains the given cell ID.
+// Containment is defined with respect to regions, e.g. a cell contains its 4 children.
+//
+// This method assumes that the CellUnion has been normalized.
+func (cu *CellUnion) ContainsCellID(id CellID) bool {
+	// Find index of array item that occurs directly after our probe cell:
+	i := sort.Search(len(*cu), func(i int) bool { return id < (*cu)[i] })
+
+	if i != len(*cu) && (*cu)[i].RangeMin() <= id {
+		return true
+	}
+	return i != 0 && (*cu)[i-1].RangeMax() >= id
+}
+
 type byID []CellID
 
 func (cu byID) Len() int           { return len(cu) }

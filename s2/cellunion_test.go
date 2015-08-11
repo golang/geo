@@ -51,20 +51,23 @@ func TestNormalization(t *testing.T) {
 	*/
 }
 
-func TestIntersects(t *testing.T) {
+func TestCellUnion(t *testing.T) {
 	tests := []struct {
-		cells    []CellID
-		overlaps []CellID
-		disjoint []CellID
+		cells     []CellID // A test CellUnion.
+		contained []CellID // List of cellIDs contained in the CellUnion.
+		overlaps  []CellID // List of CellIDs that intersects the CellUnion but not contained in it.
+		disjoint  []CellID // List of CellIDs that are disjoint from the CellUnion.
 	}{
 		{
-			// Singe cell around NYC, and some simple nearby probes
+			// Single cell around NYC, and some simple nearby probes
 			cells: []CellID{0x89c25c0000000000},
+			contained: []CellID{
+				CellID(0x89c25c0000000000).ChildBegin(),
+				CellID(0x89c25c0000000000).ChildBeginAtLevel(28),
+			},
 			overlaps: []CellID{
 				CellID(0x89c25c0000000000).immediateParent(),
 				CellIDFromFace(CellID(0x89c25c0000000000).Face()), // the whole face
-				CellID(0x89c25c0000000000).ChildBegin(),
-				CellID(0x89c25c0000000000).ChildBeginAtLevel(28),
 			},
 			disjoint: []CellID{
 				CellID(0x89c25c0000000000).Next(),                       // Cell next to this one at same level
@@ -87,16 +90,17 @@ func TestIntersects(t *testing.T) {
 				0x808f7d0000000000, // SFO
 				0x808f7f0000000000, // SFO
 			},
-			overlaps: []CellID{
+			contained: []CellID{
 				0x808f7ef300000000, // SFO
 				0x808f7e5cf0000000, // SFO
 				0x808587f000000000, // SFO
-				0x808c000000000000, // Big SFO
-
 				0x89c25ac000000000, // NYC
 				0x89c259a400000000, // NYC
 				0x89c258fa10000000, // NYC
 				0x89c258f174007000, // NYC
+			},
+			overlaps: []CellID{
+				0x808c000000000000, // Big SFO
 				0x89c4000000000000, // Big NYC
 			},
 			disjoint: []CellID{
@@ -130,7 +134,7 @@ func TestIntersects(t *testing.T) {
 				0x87fffffff9000000,
 				0x87ffffffff400000, // to a very small cell in Wisconsin
 			},
-			overlaps: []CellID{
+			contained: []CellID{
 				0x808f400000000000,
 				0x80eb118b00000000,
 				0x8136a7a11d000000,
@@ -138,6 +142,10 @@ func TestIntersects(t *testing.T) {
 				0x876c7c0000000000,
 				0x87f96d0000000000,
 				0x87ffffffff400000,
+			},
+			overlaps: []CellID{
+				CellID(0x8100000000000000).immediateParent(),
+				CellID(0x8740000000000000).immediateParent(),
 			},
 			disjoint: []CellID{
 				0x52aaaaaaab300000,
@@ -156,25 +164,43 @@ func TestIntersects(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		var union CellUnion = test.cells
+		union := CellUnion(test.cells)
 		union.Normalize()
 
-		// Ensure self-intersecting tests are always correct:
+		// Ensure self-containment tests are correct.
 		for _, id := range test.cells {
-			if union.Intersects(id) != true {
-				t.Errorf("CellUnion %v Should self-intersect %v but does not", union, id)
+			if !union.Intersects(id) {
+				t.Errorf("CellUnion %v should self-intersect %v but does not", union, id)
+			}
+			if !union.ContainsCellID(id) {
+				t.Errorf("CellUnion %v should self-contain %v but does not", union, id)
 			}
 		}
-		// Test for other intersections specified in test case.
+		// Test for containment specified in test case.
+		for _, id := range test.contained {
+			if !union.Intersects(id) {
+				t.Errorf("CellUnion %v should intersect %v but does not", union, id)
+			}
+			if !union.ContainsCellID(id) {
+				t.Errorf("CellUnion %v should contain %v but does not", union, id)
+			}
+		}
+		// Make sure the CellUnion intersect these cells but do not contain.
 		for _, id := range test.overlaps {
-			if union.Intersects(id) != true {
-				t.Errorf("CellUnion %v Should contain %v but does not", union, id)
+			if !union.Intersects(id) {
+				t.Errorf("CellUnion %v should intersect %v but does not", union, id)
+			}
+			if union.ContainsCellID(id) {
+				t.Errorf("CellUnion %v should not contain %v but does", union, id)
 			}
 		}
-		// Negative cases make sure we don't intersect these cells
+		// Negative cases make sure the CellUnion neither contain nor intersect these cells
 		for _, id := range test.disjoint {
-			if union.Intersects(id) != false {
-				t.Errorf("CellUnion %v Should NOT contain %v but does not", union, id)
+			if union.Intersects(id) {
+				t.Errorf("CellUnion %v should not intersect %v but does", union, id)
+			}
+			if union.ContainsCellID(id) {
+				t.Errorf("CellUnion %v should not contain %v but does", union, id)
 			}
 		}
 	}
