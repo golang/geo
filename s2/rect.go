@@ -163,6 +163,33 @@ func (r Rect) PolarClosure() Rect {
 	return r
 }
 
+// Union returns the smallest Rect containing the union of this rectangle and the given rectangle.
+func (r Rect) Union(other Rect) Rect {
+	return Rect{
+		Lat: r.Lat.Union(other.Lat),
+		Lng: r.Lng.Union(other.Lng),
+	}
+}
+
+// Intersection returns the smallest rectangle containing the intersection of
+// this rectangle and the given rectangle. Note that the region of intersection
+// may consist of two disjoint rectangles, in which case a single rectangle
+// spanning both of them is returned.
+func (r Rect) Intersection(other Rect) Rect {
+	lat := r.Lat.Intersection(other.Lat)
+	lng := r.Lng.Intersection(other.Lng)
+
+	if lat.IsEmpty() || lng.IsEmpty() {
+		return EmptyRect()
+	}
+	return Rect{lat, lng}
+}
+
+// Intersects reports whether this rectangle and the other have any points in common.
+func (r Rect) Intersects(other Rect) bool {
+	return r.Lat.Intersects(other.Lat) && r.Lng.Intersects(other.Lng)
+}
+
 // RectBound returns itself.
 func (r Rect) RectBound() Rect {
 	return r

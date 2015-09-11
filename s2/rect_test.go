@@ -271,8 +271,8 @@ func TestPolarClosure(t *testing.T) {
 	}
 }
 
-func TestRectContains(t *testing.T) {
-	// Rectangle "r1" covers one-quarter of the sphere.
+func TestRectIntervalOps(t *testing.T) {
+	// Rectangle that covers one-quarter of the sphere.
 	rect := rectFromDegrees(0, -180, 90, 0)
 
 	// Test operations where one rectangle consists of a single point.
@@ -281,27 +281,123 @@ func TestRectContains(t *testing.T) {
 	northPole := rectFromDegrees(90, 0, 90, 0)
 
 	tests := []struct {
-		r     Rect
-		other Rect
-		want  bool
+		rect         Rect
+		other        Rect
+		contains     bool
+		intersects   bool
+		union        Rect
+		intersection Rect
 	}{
-		{rect, rectMid, true},
-		{rect, rect180, true},
-		{rect, northPole, true},
-		{rect, rectFromDegrees(-10, -1, 1, 20), false},
-		{rect, rectFromDegrees(-10, -1, 0, 20), false},
-		{rect, rectFromDegrees(-10, 0, 1, 20), false},
-		{rectFromDegrees(-15, -160, -15, -150), rectFromDegrees(20, 145, 25, 155), false},
-		{rectFromDegrees(70, -10, 90, -140), rectFromDegrees(60, 175, 80, 5), false},
+		{
+			rect:         rect,
+			other:        rectMid,
+			contains:     true,
+			intersects:   true,
+			union:        rect,
+			intersection: rectMid,
+		},
+		{
+			rect:         rect,
+			other:        rect180,
+			contains:     true,
+			intersects:   true,
+			union:        rect,
+			intersection: rect180,
+		},
+		{
+			rect:         rect,
+			other:        northPole,
+			contains:     true,
+			intersects:   true,
+			union:        rect,
+			intersection: northPole,
+		},
+		{
+			rect:         rect,
+			other:        rectFromDegrees(-10, -1, 1, 20),
+			contains:     false,
+			intersects:   true,
+			union:        rectFromDegrees(-10, 180, 90, 20),
+			intersection: rectFromDegrees(0, -1, 1, 0),
+		},
+		{
+			rect:         rect,
+			other:        rectFromDegrees(-10, -1, 0, 20),
+			contains:     false,
+			intersects:   true,
+			union:        rectFromDegrees(-10, 180, 90, 20),
+			intersection: rectFromDegrees(0, -1, 0, 0),
+		},
+		{
+			rect:         rect,
+			other:        rectFromDegrees(-10, 0, 1, 20),
+			contains:     false,
+			intersects:   true,
+			union:        rectFromDegrees(-10, 180, 90, 20),
+			intersection: rectFromDegrees(0, 0, 1, 0),
+		},
+		{
+			rect:         rectFromDegrees(-15, -160, -15, -150),
+			other:        rectFromDegrees(20, 145, 25, 155),
+			contains:     false,
+			intersects:   false,
+			union:        rectFromDegrees(-15, 145, 25, -150),
+			intersection: EmptyRect(),
+		},
+		{
+			rect:         rectFromDegrees(70, -10, 90, -140),
+			other:        rectFromDegrees(60, 175, 80, 5),
+			contains:     false,
+			intersects:   true,
+			union:        rectFromDegrees(60, -180, 90, 180),
+			intersection: rectFromDegrees(70, 175, 80, 5),
+		},
 
 		// Check that the intersection of two rectangles that overlap in latitude
 		// but not longitude is valid, and vice versa.
-		{rectFromDegrees(12, 30, 60, 60), rectFromDegrees(0, 0, 30, 18), false},
-		{rectFromDegrees(0, 0, 18, 42), rectFromDegrees(30, 12, 42, 60), false},
+		{
+			rect:         rectFromDegrees(12, 30, 60, 60),
+			other:        rectFromDegrees(0, 0, 30, 18),
+			contains:     false,
+			intersects:   false,
+			union:        rectFromDegrees(0, 0, 60, 60),
+			intersection: EmptyRect(),
+		},
+		{
+			rect:         rectFromDegrees(0, 0, 18, 42),
+			other:        rectFromDegrees(30, 12, 42, 60),
+			contains:     false,
+			intersects:   false,
+			union:        rectFromDegrees(0, 0, 42, 60),
+			intersection: EmptyRect(),
+		},
 	}
 	for _, test := range tests {
-		if got := test.r.Contains(test.other); got != test.want {
-			t.Errorf("%v.Contains(%v) = %v, want %v", test.r, test.other, got, test.want)
+		if got := test.rect.Contains(test.other); got != test.contains {
+			t.Errorf("%v.Contains(%v) = %t, want %t", test.rect, test.other, got, test.contains)
+		}
+
+		if got := test.rect.Intersects(test.other); got != test.intersects {
+			t.Errorf("%v.Intersects(%v) = %t, want %t", test.rect, test.other, got, test.intersects)
+		}
+
+		if got := test.rect.Union(test.other) == test.rect; test.rect.Contains(test.other) != got {
+			t.Errorf("%v.Union(%v) == %v = %t, want %t",
+				test.rect, test.other, test.other, got, test.rect.Contains(test.other),
+			)
+		}
+
+		if got := test.rect.Intersection(test.other).IsEmpty(); test.rect.Intersects(test.other) == got {
+			t.Errorf("%v.Intersection(%v).IsEmpty() = %t, want %t",
+				test.rect, test.other, got, test.rect.Intersects(test.other))
+		}
+
+		if got := test.rect.Union(test.other); got != test.union {
+			t.Errorf("%v.Union(%v) = %v, want %v", test.rect, test.other, got, test.union)
+		}
+
+		if got := test.rect.Intersection(test.other); got != test.intersection {
+			t.Errorf("%v.Intersection(%v) = %v, want %v", test.rect, test.other, got, test.intersection)
 		}
 	}
 }
