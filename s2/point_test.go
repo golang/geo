@@ -23,10 +23,6 @@ import (
 	"github.com/golang/geo/r3"
 )
 
-func float64Near(x, y, ε float64) bool {
-	return math.Abs(x-y) <= ε
-}
-
 func TestOriginPoint(t *testing.T) {
 	if math.Abs(OriginPoint().Norm()-1) > 1e-16 {
 		t.Errorf("Origin point norm = %v, want 1", OriginPoint().Norm())
@@ -120,20 +116,36 @@ var (
 	y = Point{r3.Vector{0, 1, 0}}
 	z = Point{r3.Vector{0, 0, 1}}
 
+	// The following points happen to be *exactly collinear* along a line that it
+	// approximate tangent to the surface of the unit sphere.  In fact, C is the
+	// exact midpoint of the line segment AB.  All of these points are close
+	// enough to unit length to satisfy r3.Vector.IsUnit().
 	poA = Point{r3.Vector{0.72571927877036835, 0.46058825605889098, 0.51106749730504852}}
 	poB = Point{r3.Vector{0.7257192746638208, 0.46058826573818168, 0.51106749441312738}}
 	poC = Point{r3.Vector{0.72571927671709457, 0.46058826089853633, 0.51106749585908795}}
 
+	// The points "x1" and "x2" are exactly proportional, i.e. they both lie
+	// on a common line through the origin.  Both points are considered to be
+	// normalized, and in fact they both satisfy (x == x.Normalize()).
+	// Therefore the triangle (x1, x2, -x1) consists of three distinct points
+	// that all lie on a common line through the origin.
 	x1 = Point{r3.Vector{0.99999999999999989, 1.4901161193847655e-08, 0}}
 	x2 = Point{r3.Vector{1, 1.4901161193847656e-08, 0}}
+
+	// Here are two more points that are distinct, exactly proportional, and
+	// that satisfy (x == x.Normalize()).
 	x3 = Point{r3.Vector{1, 1, 1}.Normalize()}
 	x4 = Point{x3.Mul(0.99999999999999989)}
 
+	// The following three points demonstrate that Normalize() is not idempotent, i.e.
+	// y0.Normalize() != y0.Normalize().Normalize(). Both points are exactly proportional.
 	y0 = Point{r3.Vector{1, 1, 0}}
 	y1 = Point{y0.Normalize()}
 	y2 = Point{y1.Normalize()}
 )
 
+// TODO(roberts): This test is missing the actual RobustSign() parts of the checks from C++
+// test method RobustCCW::CollinearPoints.
 func TestRobustCCWEqualities(t *testing.T) {
 	tests := []struct {
 		p1, p2 Point
@@ -148,6 +160,7 @@ func TestRobustCCWEqualities(t *testing.T) {
 		{y1, y2, false},
 		{y2, Point{y2.Normalize()}, true},
 	}
+
 	for _, test := range tests {
 		if got := test.p1.Vector == test.p2.Vector; got != test.want {
 			t.Errorf("Testing equality for RobustSign. %v = %v, got %v want %v", test.p1, test.p2, got, test.want)

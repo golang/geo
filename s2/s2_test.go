@@ -26,7 +26,13 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-func float64Eq(x, y float64) bool { return math.Abs(x-y) < 1e-14 }
+// float64Eq reports whether the two values are within the default epsilon.
+func float64Eq(x, y float64) bool { return float64Near(x, y, 1e-14) }
+
+// float64Near reports whether the two values are within the given epsilon.
+func float64Near(x, y, ε float64) bool {
+	return math.Abs(x-y) <= ε
+}
 
 // TODO(roberts): Add in flag to allow specifying the random seed for repeatable tests.
 
@@ -52,7 +58,7 @@ func randomUint64() uint64 {
 	return uint64(rand.Int63() | (rand.Int63() << 63))
 }
 
-// Return a uniformly distributed 64-bit unsigned integer.
+// Return a uniformly distributed 32-bit unsigned integer.
 func randomUint32() uint32 {
 	return uint32(randomBits(32))
 }
