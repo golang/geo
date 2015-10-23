@@ -190,6 +190,40 @@ func TestRectBound(t *testing.T) {
 	}
 }
 
+func TestRectBoundAroundPoleMinLat(t *testing.T) {
+	tests := []struct {
+		cellID       CellID
+		latLng       LatLng
+		wantContains bool
+	}{
+		{
+			cellID:       CellIDFromFacePosLevel(2, 0, 0),
+			latLng:       LatLngFromDegrees(3, 0),
+			wantContains: false,
+		},
+		{
+			cellID:       CellIDFromFacePosLevel(2, 0, 0),
+			latLng:       LatLngFromDegrees(50, 0),
+			wantContains: true,
+		},
+		{
+			cellID:       CellIDFromFacePosLevel(5, 0, 0),
+			latLng:       LatLngFromDegrees(-3, 0),
+			wantContains: false,
+		},
+		{
+			cellID:       CellIDFromFacePosLevel(5, 0, 0),
+			latLng:       LatLngFromDegrees(-50, 0),
+			wantContains: true,
+		},
+	}
+	for _, test := range tests {
+		if got := CellFromCellID(test.cellID).RectBound().ContainsLatLng(test.latLng); got != test.wantContains {
+			t.Errorf("CellID(%v) contains %v: got %t, want %t", test.cellID, test.latLng, got, test.wantContains)
+		}
+	}
+}
+
 func TestCapBound(t *testing.T) {
 	c := CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(20))
 	s2Cap := c.CapBound()

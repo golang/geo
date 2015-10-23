@@ -151,7 +151,7 @@ func (c Cell) longitude(i, j int) float64 {
 // TODO(akashagrawal): move these package private variables to a more appropriate location.
 var (
 	dblEpsilon = math.Nextafter(1, 2) - 1
-	poleMinLat = math.Asin(math.Sqrt(1/3)) - 0.5*dblEpsilon
+	poleMinLat = math.Asin(math.Sqrt(1.0/3)) - 0.5*dblEpsilon
 )
 
 // RectBound returns the bounding rectangle of this cell.
