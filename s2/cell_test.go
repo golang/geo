@@ -181,11 +181,25 @@ func TestContainsCell(t *testing.T) {
 }
 
 func TestRectBound(t *testing.T) {
-	c := CellFromCellID(CellIDFromFace(0))
-	rect := c.RectBound()
-	for i := 0; i < 4; i++ {
-		if !rect.ContainsLatLng(LatLngFromPoint(c.Vertex(i))) {
-			t.Errorf("%v should contain %v", rect, c.Vertex(i))
+	tests := []struct {
+		lat float64
+		lng float64
+	}{
+		{50, 50},
+		{-50, 50},
+		{50, -50},
+		{-50, -50},
+		{0, 0},
+		{0, 180},
+		{0, -179},
+	}
+	for _, test := range tests {
+		c := CellFromLatLng(LatLngFromDegrees(test.lat, test.lng))
+		rect := c.RectBound()
+		for i := 0; i < 4; i++ {
+			if !rect.ContainsLatLng(LatLngFromPoint(c.Vertex(i))) {
+				t.Errorf("%v should contain %v", rect, c.Vertex(i))
+			}
 		}
 	}
 }

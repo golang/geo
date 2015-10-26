@@ -186,7 +186,7 @@ func (c Cell) RectBound() Rect {
 			j = 1
 		}
 		lat := r1.IntervalFromPoint(c.latitude(i, j)).AddPoint(c.latitude(1-i, 1-j))
-		lng := s1.IntervalFromEndpoints(c.longitude(i, 1-j), c.longitude(1-i, j))
+		lng := s1.EmptyInterval().AddPoint(c.longitude(i, 1-j)).AddPoint(c.longitude(1-i, j))
 
 		// We grow the bounds slightly to make sure that the bounding rectangle
 		// contains LatLngFromPoint(P) for any point P inside the loop L defined by the

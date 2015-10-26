@@ -439,7 +439,7 @@ func TestRectContainsCell(t *testing.T) {
 		{
 			rectFromDegrees(-45.1, -45.1, 0.1, 0.1),
 			CellFromCellID(CellIDFromFacePosLevel(0, 0, 1)),
-			false,
+			true,
 		},
 		{
 			rectFromDegrees(-45.1, -45.1, 0.1, 0.1),
