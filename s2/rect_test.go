@@ -208,7 +208,6 @@ func TestContainsLatLng(t *testing.T) {
 }
 
 func TestExpanded(t *testing.T) {
-	empty := Rect{FullRect().Lat, s1.EmptyInterval()}
 	tests := []struct {
 		input  Rect
 		margin LatLng
@@ -220,19 +219,98 @@ func TestExpanded(t *testing.T) {
 			rectFromDegrees(50, 120, 90, -160),
 		},
 		{
-			empty,
+			EmptyRect(),
 			LatLngFromDegrees(20, 30),
-			empty,
+			EmptyRect(),
 		},
 		{
 			FullRect(),
-			LatLngFromDegrees(20, 30),
+			LatLngFromDegrees(500, 500),
 			FullRect(),
 		},
 		{
 			rectFromDegrees(-90, 170, 10, 20),
 			LatLngFromDegrees(30, 80),
 			rectFromDegrees(-90, -180, 40, 180),
+		},
+
+		// Negative margins.
+		{
+			rectFromDegrees(10, -50, 60, 70),
+			LatLngFromDegrees(-10, -10),
+			rectFromDegrees(20, -40, 50, 60),
+		},
+		{
+			rectFromDegrees(-20, -180, 20, 180),
+			LatLngFromDegrees(-10, -10),
+			rectFromDegrees(-10, -180, 10, 180),
+		},
+		{
+			rectFromDegrees(-20, -180, 20, 180),
+			LatLngFromDegrees(-30, -30),
+			EmptyRect(),
+		},
+		{
+			rectFromDegrees(-90, 10, 90, 11),
+			LatLngFromDegrees(-10, -10),
+			EmptyRect(),
+		},
+		{
+			rectFromDegrees(-90, 10, 90, 100),
+			LatLngFromDegrees(-10, -10),
+			rectFromDegrees(-80, 20, 80, 90),
+		},
+		{
+			EmptyRect(),
+			LatLngFromDegrees(-50, -500),
+			EmptyRect(),
+		},
+		{
+			FullRect(),
+			LatLngFromDegrees(-50, -50),
+			rectFromDegrees(-40, -180, 40, 180),
+		},
+
+		// Mixed margins.
+		{
+			rectFromDegrees(10, -50, 60, 70),
+			LatLngFromDegrees(-10, 30),
+			rectFromDegrees(20, -80, 50, 100),
+		},
+		{
+			rectFromDegrees(-20, -180, 20, 180),
+			LatLngFromDegrees(10, -500),
+			rectFromDegrees(-30, -180, 30, 180),
+		},
+		{
+			rectFromDegrees(-90, -180, 80, 180),
+			LatLngFromDegrees(-30, 500),
+			rectFromDegrees(-60, -180, 50, 180),
+		},
+		{
+			rectFromDegrees(-80, -100, 80, 150),
+			LatLngFromDegrees(30, -50),
+			rectFromDegrees(-90, -50, 90, 100),
+		},
+		{
+			rectFromDegrees(0, -180, 50, 180),
+			LatLngFromDegrees(-30, 500),
+			EmptyRect(),
+		},
+		{
+			rectFromDegrees(-80, 10, 70, 20),
+			LatLngFromDegrees(30, -200),
+			EmptyRect(),
+		},
+		{
+			EmptyRect(),
+			LatLngFromDegrees(100, -100),
+			EmptyRect(),
+		},
+		{
+			FullRect(),
+			LatLngFromDegrees(100, -100),
+			FullRect(),
 		},
 	}
 	for _, test := range tests {

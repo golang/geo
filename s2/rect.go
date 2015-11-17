@@ -130,11 +130,20 @@ func (r Rect) AddPoint(ll LatLng) Rect {
 	}
 }
 
-// expanded returns a rectangle that contains all points whose latitude distance from
-// this rectangle is at most margin.Lat, and whose longitude distance from
-// this rectangle is at most margin.Lng. In particular, latitudes are
-// clamped while longitudes are wrapped. Any expansion of an empty rectangle
-// remains empty. Both components of margin must be non-negative.
+// expanded returns a rectangle that has been expanded by margin.Lat on each side
+// in the latitude direction, and by margin.Lng on each side in the longitude
+// direction. If either margin is negative, then it shrinks the rectangle on
+// the corresponding sides instead. The resulting rectangle may be empty.
+//
+// The latitude-longitude space has the topology of a cylinder. Longitudes
+// "wrap around" at +/-180 degrees, while latitudes are clamped to range [-90, 90].
+// This means that any expansion (positive or negative) of the full longitude range
+// remains full (since the "rectangle" is actually a continuous band around the
+// cylinder), while expansion of the full latitude range remains full only if the
+// margin is positive.
+//
+// If either the latitude or longitude interval becomes empty after
+// expansion by a negative margin, the result is empty.
 //
 // Note that if an expanded rectangle contains a pole, it may not contain
 // all possible lat/lng representations of that pole, e.g., both points [π/2,0]
@@ -142,12 +151,19 @@ func (r Rect) AddPoint(ll LatLng) Rect {
 // same Rect.
 //
 // If you are trying to grow a rectangle by a certain distance on the
-// sphere (e.g. 5km), refer to the ConvolveWithCap() C++ method implementation
+// sphere (e.g. 5km), refer to the ExpandedByDistance() C++ method implementation
 // instead.
 func (r Rect) expanded(margin LatLng) Rect {
+	lat := r.Lat.Expanded(margin.Lat.Radians())
+	lng := r.Lng.Expanded(margin.Lng.Radians())
+
+	if lat.IsEmpty() || lng.IsEmpty() {
+		return EmptyRect()
+	}
+
 	return Rect{
-		Lat: r.Lat.Expanded(margin.Lat.Radians()).Intersection(validRectLatRange),
-		Lng: r.Lng.Expanded(margin.Lng.Radians()),
+		Lat: lat.Intersection(validRectLatRange),
+		Lng: lng,
 	}
 }
 
