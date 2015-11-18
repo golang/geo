@@ -206,6 +206,40 @@ func (r Rect) Intersects(other Rect) bool {
 	return r.Lat.Intersects(other.Lat) && r.Lng.Intersects(other.Lng)
 }
 
+// CapBound returns a cap that countains Rect.
+func (r Rect) CapBound() Cap {
+	// We consider two possible bounding caps, one whose axis passes
+	// through the center of the lat-long rectangle and one whose axis
+	// is the north or south pole.  We return the smaller of the two caps.
+
+	if r.IsEmpty() {
+		return EmptyCap()
+	}
+
+	var poleZ, poleAngle float64
+	if r.Lat.Hi+r.Lat.Lo < 0 {
+		// South pole axis yields smaller cap.
+		poleZ = -1
+		poleAngle = math.Pi/2 + r.Lat.Hi
+	} else {
+		poleZ = 1
+		poleAngle = math.Pi/2 - r.Lat.Lo
+	}
+	poleCap := CapFromCenterAngle(PointFromCoords(0, 0, poleZ), s1.Angle(poleAngle)*s1.Radian)
+
+	// For bounding rectangles that span 180 degrees or less in longitude, the
+	// maximum cap size is achieved at one of the rectangle vertices.  For
+	// rectangles that are larger than 180 degrees, we punt and always return a
+	// bounding cap centered at one of the two poles.
+	if math.Remainder(r.Lng.Hi-r.Lng.Lo, 2*math.Pi) >= 0 && r.Lng.Hi-r.Lng.Lo < 2*math.Pi {
+		midCap := CapFromPoint(PointFromLatLng(r.Center())).AddPoint(PointFromLatLng(r.Lo())).AddPoint(PointFromLatLng(r.Hi()))
+		if midCap.Height() < poleCap.Height() {
+			return midCap
+		}
+	}
+	return poleCap
+}
+
 // RectBound returns itself.
 func (r Rect) RectBound() Rect {
 	return r

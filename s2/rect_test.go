@@ -349,6 +349,31 @@ func TestPolarClosure(t *testing.T) {
 	}
 }
 
+func TestRectCapBound(t *testing.T) {
+	tests := []struct {
+		r    Rect
+		want Cap
+	}{
+		{ // Bounding cap at center is smaller.
+			rectFromDegrees(-45, -45, 45, 45),
+			CapFromCenterHeight(PointFromCoords(1, 0, 0), 0.5),
+		},
+		{ // Bounding cap at north pole is smaller.
+			rectFromDegrees(88, -80, 89, 80),
+			CapFromCenterAngle(PointFromCoords(0, 0, 1), s1.Angle(2)*s1.Degree),
+		},
+		{ // Longitude span > 180 degrees.
+			rectFromDegrees(-30, -150, -10, 50),
+			CapFromCenterAngle(PointFromCoords(0, 0, -1), s1.Angle(80)*s1.Degree),
+		},
+	}
+	for _, test := range tests {
+		if got := test.r.CapBound(); !test.want.ApproxEqual(got) {
+			t.Errorf("%v.CapBound() was %v, want %v", test.r, got, test.want)
+		}
+	}
+}
+
 func TestRectIntervalOps(t *testing.T) {
 	// Rectangle that covers one-quarter of the sphere.
 	rect := rectFromDegrees(0, -180, 90, 0)
