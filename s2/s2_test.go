@@ -71,6 +71,13 @@ func randomFloat64() float64 {
 	return math.Ldexp(float64(randomBits(randomFloatBits)), -randomFloatBits)
 }
 
+// randomUniformInt returns a uniformly distributed integer in the range [0,n).
+// NOTE: This is replicated here to stay in sync with how the C++ code generates
+// uniform randoms. (instead of using Go's math/rand package directly).
+func randomUniformInt(n int) int {
+	return int(randomFloat64() * float64(n))
+}
+
 // randomUniformDouble returns a uniformly distributed value in the range [min, max).
 func randomUniformDouble(min, max float64) float64 {
 	return min + randomFloat64()*(max-min)
@@ -80,6 +87,22 @@ func randomUniformDouble(min, max float64) float64 {
 func randomPoint() Point {
 	return Point{PointFromCoords(randomUniformDouble(-1, 1),
 		randomUniformDouble(-1, 1), randomUniformDouble(-1, 1)).Normalize()}
+}
+
+// randomCellIDForLevel returns a random CellID at the given level.
+// The distribution is uniform over the space of cell ids, but only
+// approximately uniform over the surface of the sphere.
+func randomCellIDForLevel(level int) CellID {
+	face := randomUniformInt(numFaces)
+	pos := randomUint64() & uint64((1<<posBits)-1)
+	return CellIDFromFacePosLevel(face, pos, level)
+}
+
+// randomCellID returns a random CellID at a randomly chosen
+// level. The distribution is uniform over the space of cell ids,
+// but only approximately uniform over the surface of the sphere.
+func randomCellID() CellID {
+	return randomCellIDForLevel(randomUniformInt(maxLevel + 1))
 }
 
 // parsePoint returns an Point from the latitude-longitude coordinate in degrees
@@ -169,3 +192,13 @@ func randomCap(minArea, maxArea float64) Cap {
 	capArea := maxArea * math.Pow(minArea/maxArea, randomFloat64())
 	return CapFromCenterArea(randomPoint(), capArea)
 }
+
+// pointsApproxEquals reports whether the two points are within the given distance
+// of each other. This is the same as Point.ApproxEquals but permits specifying
+// the epsilon.
+func pointsApproxEquals(a, b Point, epsilon float64) bool {
+	return float64(a.Vector.Angle(b.Vector)) <= epsilon
+}
+
+// TODO:
+// Most of the other s2 testing methods.
