@@ -78,15 +78,15 @@ func randomUniformInt(n int) int {
 	return int(randomFloat64() * float64(n))
 }
 
-// randomUniformDouble returns a uniformly distributed value in the range [min, max).
-func randomUniformDouble(min, max float64) float64 {
+// randomUniformFloat64 returns a uniformly distributed value in the range [min, max).
+func randomUniformFloat64(min, max float64) float64 {
 	return min + randomFloat64()*(max-min)
 }
 
 // randomPoint returns a random unit-length vector.
 func randomPoint() Point {
-	return Point{PointFromCoords(randomUniformDouble(-1, 1),
-		randomUniformDouble(-1, 1), randomUniformDouble(-1, 1)).Normalize()}
+	return Point{PointFromCoords(randomUniformFloat64(-1, 1),
+		randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)).Normalize()}
 }
 
 // randomCellIDForLevel returns a random CellID at the given level.
