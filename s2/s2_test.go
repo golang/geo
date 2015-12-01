@@ -200,5 +200,19 @@ func pointsApproxEquals(a, b Point, epsilon float64) bool {
 	return float64(a.Vector.Angle(b.Vector)) <= epsilon
 }
 
+// samplePointFromRect returns a point chosen uniformly at random (with respect
+// to area on the sphere) from the given rectangle.
+func samplePointFromRect(rect Rect) Point {
+	// First choose a latitude uniformly with respect to area on the sphere.
+	sinLo := math.Sin(rect.Lat.Lo)
+	sinHi := math.Sin(rect.Lat.Hi)
+	lat := math.Asin(randomUniformFloat64(sinLo, sinHi))
+
+	// Now choose longitude uniformly within the given range.
+	lng := rect.Lng.Lo + randomFloat64()*rect.Lng.Length()
+
+	return PointFromLatLng(LatLng{s1.Angle(lat), s1.Angle(lng)}.Normalized())
+}
+
 // TODO:
 // Most of the other s2 testing methods.
