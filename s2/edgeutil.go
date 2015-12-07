@@ -22,6 +22,20 @@ import (
 	"github.com/golang/geo/s1"
 )
 
+var (
+	// edgeClipErrorUVCoord is the maximum error in a u- or v-coordinate
+	// compared to the exact result, assuming that the points A and B are in
+	// the rectangle [-1,1]x[1,1] or slightly outside it (by 1e-10 or less).
+	edgeClipErrorUVCoord = 2.25 * dblEpsilon
+
+	// faceClipErrorUVCoord is the maximum angle between a returned vertex
+	// and the nearest point on the exact edge AB expressed as the maximum error
+	// in an individual u- or v-coordinate. In other words, for each
+	// returned vertex there is a point on the exact edge AB whose u- and
+	// v-coordinates differ from the vertex by at most this amount.
+	faceClipErrorUVCoord = 9.0 * (1.0 / math.Sqrt2) * dblEpsilon
+)
+
 // SimpleCrossing reports whether edge AB crosses CD at a point that is interior
 // to both edges. Properties:
 //
