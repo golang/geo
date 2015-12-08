@@ -129,6 +129,8 @@ var (
 )
 
 func TestEmptyFullLoops(t *testing.T) {
+	emptyLoop := EmptyLoop()
+
 	if !emptyLoop.IsEmpty() {
 		t.Errorf("empty loop should be empty")
 	}
@@ -138,6 +140,8 @@ func TestEmptyFullLoops(t *testing.T) {
 	if !emptyLoop.isEmptyOrFull() {
 		t.Errorf("empty loop should pass IsEmptyOrFull")
 	}
+
+	fullLoop := FullLoop()
 
 	if fullLoop.IsEmpty() {
 		t.Errorf("full loop should not be empty")

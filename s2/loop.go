@@ -20,11 +20,6 @@ import (
 	"github.com/golang/geo/r3"
 )
 
-var (
-	emptyLoop = LoopFromPoints([]Point{Point{r3.Vector{X: 0, Y: 0, Z: 1}}})
-	fullLoop  = LoopFromPoints([]Point{Point{r3.Vector{X: 0, Y: 0, Z: -1}}})
-)
-
 // Loop represents a simple spherical polygon. It consists of a sequence
 // of vertices where the first vertex is implicitly connected to the
 // last. All loops are defined to have a CCW orientation, i.e. the interior of
@@ -70,14 +65,14 @@ func LoopFromPoints(pts []Point) *Loop {
 	return l
 }
 
-// EmptyLoop returns the special "empty" loop.
+// EmptyLoop returns a special "empty" loop.
 func EmptyLoop() *Loop {
-	return emptyLoop
+	return LoopFromPoints([]Point{Point{r3.Vector{X: 0, Y: 0, Z: 1}}})
 }
 
-// FullLoop returns the special "full" loop.
+// FullLoop returns a special "full" loop.
 func FullLoop() *Loop {
-	return fullLoop
+	return LoopFromPoints([]Point{Point{r3.Vector{X: 0, Y: 0, Z: -1}}})
 }
 
 // initOriginAndBound sets the origin containment for the given point and then calls
@@ -151,6 +146,11 @@ func (l Loop) isEmptyOrFull() bool {
 // the bound also contains it.
 func (l Loop) RectBound() Rect {
 	return l.bound
+}
+
+// Vertices returns the vertices in the loop.
+func (l Loop) Vertices() []Point {
+	return l.vertices
 }
 
 // BUG(): The major differences from the C++ version is pretty much everything.
