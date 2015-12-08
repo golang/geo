@@ -200,6 +200,22 @@ func pointsApproxEquals(a, b Point, epsilon float64) bool {
 	return float64(a.Vector.Angle(b.Vector)) <= epsilon
 }
 
+// matricesApproxEqual reports whether all cells in both matrices are equal within
+// the default floating point epsilon.
+func matricesApproxEqual(m1, m2 *matrix3x3) bool {
+	return float64Eq(m1[0][0], m2[0][0]) &&
+		float64Eq(m1[0][1], m2[0][1]) &&
+		float64Eq(m1[0][2], m2[0][2]) &&
+
+		float64Eq(m1[1][0], m2[1][0]) &&
+		float64Eq(m1[1][1], m2[1][1]) &&
+		float64Eq(m1[1][2], m2[1][2]) &&
+
+		float64Eq(m1[2][0], m2[2][0]) &&
+		float64Eq(m1[2][1], m2[2][1]) &&
+		float64Eq(m1[2][2], m2[2][2])
+}
+
 // samplePointFromRect returns a point chosen uniformly at random (with respect
 // to area on the sphere) from the given rectangle.
 func samplePointFromRect(rect Rect) Point {
