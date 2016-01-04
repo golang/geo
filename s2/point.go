@@ -121,7 +121,7 @@ func (p Point) PointCross(op Point) Point {
 	return Point{x.Normalize()}
 }
 
-// CCW returns true if the points A, B, C are strictly counterclockwise,
+// Sign returns true if the points A, B, C are strictly counterclockwise,
 // and returns false if the points are clockwise or collinear (i.e. if they are all
 // contained on some great circle).
 //
@@ -129,10 +129,9 @@ func (p Point) PointCross(op Point) Point {
 // impossible, e.g. ABC may be considered strictly CCW while BCA is not.
 // However, the implementation guarantees the following:
 //
-//   If CCW(a,b,c), then !CCW(c,b,a) for all a,b,c.
-func CCW(a, b, c Point) bool {
-	// NOTE(dnadasi): In the C++ API the equivalent method here was known as "SimpleCCW",
-	// but CCW seems like a fine name at least until the need for a RobustCCW is demonstrated.
+//   If Sign(a,b,c), then !Sign(c,b,a) for all a,b,c.
+func Sign(a, b, c Point) bool {
+	// NOTE(dnadasi): In the C++ API the equivalent method here was known as "SimpleSign".
 
 	// We compute the signed volume of the parallelepiped ABC. The usual
 	// formula for this is (A ⨯ B) · C, but we compute it here using (C ⨯ A) · B
@@ -169,14 +168,12 @@ func CCW(a, b, c Point) bool {
 // On the other hand, note that it is not true in general that
 // RobustSign(-a,b,c) == -RobustSign(a,b,c), or any similar identities
 // involving antipodal points.
-//
-// C++ Equivalent: RobustCCW()
 func RobustSign(a, b, c Point) Direction {
 	// This method combines the computations from the C++ methods
-	// RobustCCW, TriageCCW, ExpensiveCCW, and StableCCW.
+	// RobustSign, TriageSign, ExpensiveSign, and StableSign.
 	// TODO: Split these extra functions out when the need arises.
 
-	// Start with TriageCCW
+	// Start with TriageSign
 	det := c.Cross(a.Vector).Dot(b.Vector)
 	if det > maxDeterminantError {
 		return CounterClockwise
@@ -185,12 +182,12 @@ func RobustSign(a, b, c Point) Direction {
 		return Clockwise
 	}
 
-	// ExpensiveCCW
+	// ExpensiveSign
 	if a == b || b == c || c == a {
 		return Indeterminate
 	}
 
-	// StableCCW
+	// StableSign
 	ab := a.Sub(b.Vector)
 	ab2 := ab.Norm2()
 	bc := b.Sub(c.Vector)
@@ -329,6 +326,6 @@ func PointArea(a, b, c Point) float64 {
 }
 
 // TODO(dnadasi):
-//   - Other CCW methods
+//   - Other Sign methods
 //   - Maybe more Area methods?
 //   - Centroid methods

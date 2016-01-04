@@ -54,7 +54,7 @@ func TestPointCross(t *testing.T) {
 	}
 }
 
-func TestCCW(t *testing.T) {
+func TestSign(t *testing.T) {
 	tests := []struct {
 		p1x, p1y, p1z, p2x, p2y, p2z, p3x, p3y, p3z float64
 		want                                        bool
@@ -65,7 +65,7 @@ func TestCCW(t *testing.T) {
 		{1, 1, 0, 0, 1, 1, 1, 0, 1, true},
 		{-3, -1, 4, 2, -1, -3, 1, -2, 0, true},
 
-		// All degenerate cases of CCW(). Let M_1, M_2, ... be the sequence of
+		// All degenerate cases of Sign(). Let M_1, M_2, ... be the sequence of
 		// submatrices whose determinant sign is tested by that function. Then the
 		// i-th test below is a 3x3 matrix M (with rows A, B, C) such that:
 		//
@@ -96,15 +96,15 @@ func TestCCW(t *testing.T) {
 		p1 := PointFromCoords(test.p1x, test.p1y, test.p1z)
 		p2 := PointFromCoords(test.p2x, test.p2y, test.p2z)
 		p3 := PointFromCoords(test.p3x, test.p3y, test.p3z)
-		result := CCW(p1, p2, p3)
+		result := Sign(p1, p2, p3)
 		if result != test.want {
-			t.Errorf("CCW(%v, %v, %v) = %v, want %v", p1, p2, p3, result, test.want)
+			t.Errorf("Sign(%v, %v, %v) = %v, want %v", p1, p2, p3, result, test.want)
 		}
 		if test.want {
 			// For these cases we can test the reversibility condition
-			result = CCW(p3, p2, p1)
+			result = Sign(p3, p2, p1)
 			if result == test.want {
-				t.Errorf("CCW(%v, %v, %v) = %v, want %v", p3, p2, p1, result, !test.want)
+				t.Errorf("Sign(%v, %v, %v) = %v, want %v", p3, p2, p1, result, !test.want)
 			}
 		}
 	}
@@ -145,8 +145,8 @@ var (
 )
 
 // TODO(roberts): This test is missing the actual RobustSign() parts of the checks from C++
-// test method RobustCCW::CollinearPoints.
-func TestRobustCCWEqualities(t *testing.T) {
+// test method RobustSign::CollinearPoints.
+func TestRobustSignEqualities(t *testing.T) {
 	tests := []struct {
 		p1, p2 Point
 		want   bool
@@ -191,7 +191,7 @@ func TestRobustSign(t *testing.T) {
 		// exact midpoint of the line segment AB.  All of these points are close
 		// enough to unit length to satisfy S2::IsUnitLength().
 		{
-			// Until we get ExactCCW, this will only return Indeterminate.
+			// Until we get ExactSign, this will only return Indeterminate.
 			// It should be Clockwise.
 			poA, poB, poC, Indeterminate,
 		},
@@ -202,7 +202,7 @@ func TestRobustSign(t *testing.T) {
 		// Therefore the triangle (x1, x2, -x1) consists of three distinct points
 		// that all lie on a common line through the origin.
 		{
-			// Until we get ExactCCW, this will only return Indeterminate.
+			// Until we get ExactSign, this will only return Indeterminate.
 			// It should be CounterClockwise.
 			x1, x2, Point{x1.Mul(-1.0)}, Indeterminate,
 		},
@@ -210,7 +210,7 @@ func TestRobustSign(t *testing.T) {
 		// Here are two more points that are distinct, exactly proportional, and
 		// that satisfy (x == x.Normalize()).
 		{
-			// Until we get ExactCCW, this will only return Indeterminate.
+			// Until we get ExactSign, this will only return Indeterminate.
 			// It should be Clockwise.
 			x3, x4, Point{x3.Mul(-1.0)}, Indeterminate,
 		},
@@ -219,7 +219,7 @@ func TestRobustSign(t *testing.T) {
 		// i.e. y0.Normalize() != y0.Normalize().Normalize().  Both points satisfy
 		// S2::IsNormalized(), though, and the two points are exactly proportional.
 		{
-			// Until we get ExactCCW, this will only return Indeterminate.
+			// Until we get ExactSign, this will only return Indeterminate.
 			// It should be CounterClockwise.
 			y1, y2, Point{y1.Mul(-1.0)}, Indeterminate,
 		},
@@ -391,17 +391,17 @@ func BenchmarkPointAreaGirardCase(b *testing.B) {
 	}
 }
 
-func BenchmarkCCW(b *testing.B) {
+func BenchmarkSign(b *testing.B) {
 	p1 := PointFromCoords(-3, -1, 4)
 	p2 := PointFromCoords(2, -1, -3)
 	p3 := PointFromCoords(1, -2, 0)
 	for i := 0; i < b.N; i++ {
-		CCW(p1, p2, p3)
+		Sign(p1, p2, p3)
 	}
 }
 
 // BenchmarkRobustSignSimple runs the benchmark for points that satisfy the first
-// checks in RobustSign to compare the performance to that of CCW().
+// checks in RobustSign to compare the performance to that of Sign().
 func BenchmarkRobustSignSimple(b *testing.B) {
 	p1 := PointFromCoords(-3, -1, 4)
 	p2 := PointFromCoords(2, -1, -3)
