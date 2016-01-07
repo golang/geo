@@ -23,66 +23,164 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-func TestSimpleCrossing(t *testing.T) {
+func TestCrossings(t *testing.T) {
+	na1 := math.Nextafter(1, 0)
+	na2 := math.Nextafter(1, 2)
+
 	tests := []struct {
+		msg        string
 		a, b, c, d Point
-		want       bool
+		simple     bool
+		vertex     bool
 	}{
 		{
-			// Two regular edges that cross.
+			"two regular edges that cross",
 			PointFromCoords(1, 2, 1),
 			PointFromCoords(1, -3, 0.5),
 			PointFromCoords(1, -0.5, -3),
 			PointFromCoords(0.1, 0.5, 3),
 			true,
+			true,
 		},
 		{
-			// Two regular edges that cross antipodal points.
+			"two regular edges that cross antipodal points",
 			PointFromCoords(1, 2, 1),
 			PointFromCoords(1, -3, 0.5),
 			PointFromCoords(-1, 0.5, 3),
 			PointFromCoords(-0.1, -0.5, -3),
 			false,
+			true,
 		},
 		{
-			// Two edges on the same great circle.
+			"two edges on the same great circle",
 			PointFromCoords(0, 0, -1),
 			PointFromCoords(0, 1, 0),
 			PointFromCoords(0, 1, 1),
 			PointFromCoords(0, 0, 1),
 			false,
+			false,
 		},
 		{
-			// Two edges that cross where one vertex is the OriginPoint.
+			"two edges that cross where one vertex is the OriginPoint",
 			PointFromCoords(1, 0, 0),
 			OriginPoint(),
 			PointFromCoords(1, -0.1, 1),
 			PointFromCoords(1, 1, -0.1),
 			true,
+			true,
 		},
 		{
-			// Two edges that cross antipodal points.
+			"two edges that cross antipodal points",
 			PointFromCoords(1, 0, 0),
 			PointFromCoords(0, 1, 0),
 			PointFromCoords(0, 0, -1),
 			PointFromCoords(-1, -1, 1),
 			false,
+			true,
 		},
 		{
-			// Two edges that share an endpoint.  The Ortho() direction is (-4,0,2),
-			// and edge CD is further CCW around (2,3,4) than AB.
+			"two edges that share an endpoint",
+			// The Ortho() direction is (-4,0,2) and edge CD
+			// is further CCW around (2,3,4) than AB.
 			PointFromCoords(2, 3, 4),
 			PointFromCoords(-1, 2, 5),
 			PointFromCoords(7, -2, 3),
 			PointFromCoords(2, 3, 4),
 			false,
+			true,
+		},
+		{
+			"two edges that barely cross near the middle of one edge",
+			// The edge AB is approximately in the x=y plane, while CD is approximately
+			// perpendicular to it and ends exactly at the x=y plane.
+			PointFromCoords(1, 1, 1),
+			PointFromCoords(1, na1, -1),
+			PointFromCoords(11, -12, -1),
+			PointFromCoords(10, 10, 1),
+			true,
+			true,
+		},
+		{
+			"two edges that barely cross near the middle separated by a distance of about 1e-15",
+			PointFromCoords(1, 1, 1),
+			PointFromCoords(1, na2, -1),
+			PointFromCoords(1, -1, 0),
+			PointFromCoords(1, 1, 0),
+			false,
+			false,
+		},
+		{
+			"two edges that barely cross each other near the end of both edges",
+			// This example cannot be handled using regular double-precision
+			// arithmetic due to floating-point underflow.
+			// TODO(roberts): Determine if this case should be dropped from
+			// the simplecrossing tests.
+			PointFromCoords(0, 0, 1),
+			PointFromCoords(2, -1e-323, 1),
+			PointFromCoords(1, -1, 1),
+			PointFromCoords(1e-323, 0, 1),
+			false,
+			false,
+		},
+		{
+			"two edges that barely cross each other near the end separated by a distance of about 1e-640",
+			PointFromCoords(0, 0, 1),
+			PointFromCoords(2, 1e-323, 1),
+			PointFromCoords(1, -1, 1),
+			PointFromCoords(1e-323, 0, 1),
+			false,
+			false,
+		},
+		{
+			"two edges that barely cross each other near the middle of one edge",
+			// Computing the exact determinant of some of the triangles in this test
+			// requires more than 2000 bits of precision.
+			// TODO(roberts): Determine if this case should be dropped from
+			// the simplecrossing tests.
+			PointFromCoords(1, -1e-323, -1e-323),
+			PointFromCoords(1e-323, 1, 1e-323),
+			PointFromCoords(1, -1, 1e-323),
+			PointFromCoords(1, 1, 0),
+			false,
+			true,
+		},
+		{
+			"two edges that barely cross each other near the middle separated by a distance of about 1e-640",
+			PointFromCoords(1, 1e-323, -1e-323),
+			PointFromCoords(-1e-323, 1, 1e-323),
+			PointFromCoords(1, -1, 1e-323),
+			PointFromCoords(1, 1, 0),
+			false,
+			true,
 		},
 	}
 
 	for _, test := range tests {
-		if got := SimpleCrossing(test.a, test.b, test.c, test.d); got != test.want {
-			t.Errorf("SimpleCrossing(%v,%v,%v,%v) = %t, want %t",
-				test.a, test.b, test.c, test.d, got, test.want)
+		if got := SimpleCrossing(test.a, test.b, test.c, test.d); got != test.simple {
+			t.Errorf("%s: using vertex order (a,b,c,d)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
+				test.msg, test.a, test.b, test.c, test.d, got, test.simple)
+		}
+		if got := SimpleCrossing(test.b, test.a, test.c, test.d); got != test.simple {
+			t.Errorf("%s: using vertex order (b,a,c,d)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
+				test.msg, test.b, test.a, test.c, test.d, got, test.simple)
+		}
+		if got := SimpleCrossing(test.a, test.b, test.d, test.c); got != test.simple {
+			t.Errorf("%s: using vertex order (a,b,d,c)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
+				test.msg, test.a, test.b, test.d, test.c, got, test.simple)
+		}
+		if got := SimpleCrossing(test.b, test.a, test.d, test.c); got != test.simple {
+			t.Errorf("%s: using vertex order (b,a,d,c)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
+				test.msg, test.b, test.a, test.d, test.c, got, test.simple)
+		}
+
+		if got := SimpleCrossing(test.c, test.d, test.a, test.b); got != test.simple {
+			t.Errorf("%s: using vertex order (c,d,a,b)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
+				test.msg, test.c, test.d, test.a, test.b, got, test.simple)
+		}
+
+		if got := VertexCrossing(test.a, test.b, test.c, test.b); got != test.vertex {
+			t.Errorf("%s: VertexCrossing(%v,%v,%v,%v) = %t, want %t",
+				test.msg, test.a, test.b, test.c, test.d, got, test.vertex)
 		}
 	}
 }
