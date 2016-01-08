@@ -155,13 +155,13 @@ func Sign(a, b, c Point) bool {
 //
 // RobustSign satisfies the following conditions:
 //
-//  (1) RobustSign(a,b,c) == 0 if and only if a == b, b == c, or c == a
+//  (1) RobustSign(a,b,c) == Indeterminate if and only if a == b, b == c, or c == a
 //  (2) RobustSign(b,c,a) == RobustSign(a,b,c) for all a,b,c
 //  (3) RobustSign(c,b,a) == -RobustSign(a,b,c) for all a,b,c
 //
 // In other words:
 //
-//  (1) The result is zero if and only if two points are the same.
+//  (1) The result is Indeterminate if and only if two points are the same.
 //  (2) Rotating the order of the arguments does not affect the result.
 //  (3) Exchanging any two arguments inverts the result.
 //
@@ -169,11 +169,20 @@ func Sign(a, b, c Point) bool {
 // RobustSign(-a,b,c) == -RobustSign(a,b,c), or any similar identities
 // involving antipodal points.
 func RobustSign(a, b, c Point) Direction {
-	// This method combines the computations from the C++ methods
-	// RobustSign, TriageSign, ExpensiveSign, and StableSign.
-	// TODO: Split these extra functions out when the need arises.
+	sign := triageSign(a, b, c)
+	if sign == Indeterminate {
+		sign = expensiveSign(a, b, c)
+	}
+	return sign
+}
 
-	// Start with TriageSign
+// triageSign returns the direction sign of the points. It returns Indeterminate if two
+// points are identical or the result is uncertain. Uncertain cases can be resolved, if
+// desired, by calling expensiveSign.
+//
+// The purpose of this method is to allow additional cheap tests to be done without
+// calling expensiveSign.
+func triageSign(a, b, c Point) Direction {
 	det := c.Cross(a.Vector).Dot(b.Vector)
 	if det > maxDeterminantError {
 		return CounterClockwise
@@ -181,13 +190,49 @@ func RobustSign(a, b, c Point) Direction {
 	if det < -maxDeterminantError {
 		return Clockwise
 	}
+	return Indeterminate
+}
 
-	// ExpensiveSign
+// expensiveSign reports the direction sign of the points. It returns Indeterminate
+// if two of the input points are the same. It uses multiple-precision arithmetic
+// to ensure that its results are always self-consistent.
+func expensiveSign(a, b, c Point) Direction {
+	// Return Indeterminate if and only if two points are the same.
+	// This ensures RobustSign(a,b,c) == Indeterminate if and only if a == b, b == c, or c == a.
+	// ie. Property 1 of RobustSign.
 	if a == b || b == c || c == a {
 		return Indeterminate
 	}
 
-	// StableSign
+	// Next we try recomputing the determinant still using floating-point
+	// arithmetic but in a more precise way.  This is more expensive than the
+	// simple calculation done by triageSign, but it is still *much* cheaper
+	// than using arbitrary-precision arithmetic.  This optimization is able to
+	// compute the correct determinant sign in virtually all cases except when
+	// the three points are truly collinear (e.g., three points on the equator).
+	detSign := stableSign(a, b, c)
+	if detSign != Indeterminate {
+		return detSign
+	}
+
+	// Otherwise fall back to exact arithmetic and symbolic permutations.
+	return exactSign(a, b, c)
+}
+
+// stableSign reports the direction sign of the points in a numerically stable way.
+// Unlike triageSign, this method can usually compute the correct determinant sign even when all
+// three points are as collinear as possible.  For example if three points are
+// spaced 1km apart along a random line on the Earth's surface using the
+// nearest representable points, there is only a 0.4% chance that this method
+// will not be able to find the determinant sign.  The probability of failure
+// decreases as the points get closer together; if the collinear points are
+// 1 meter apart, the failure rate drops to 0.0004%.
+//
+// This method could be extended to also handle nearly-antipodal points (and
+// in fact an earlier version of this code did exactly that), but antipodal
+// points are rare in practice so it seems better to simply fall back to
+// exact arithmetic in that case.
+func stableSign(a, b, c Point) Direction {
 	ab := a.Sub(b.Vector)
 	ab2 := ab.Norm2()
 	bc := b.Sub(c.Vector)
@@ -195,9 +240,13 @@ func RobustSign(a, b, c Point) Direction {
 	ca := c.Sub(a.Vector)
 	ca2 := ca.Norm2()
 
+	// Now compute the determinant ((A-C)x(B-C)).C, where the vertices have been
+	// cyclically permuted if necessary so that AB is the longest edge.  (This
+	// minimizes the magnitude of cross product.)  At the same time we also
+	// compute the maximum error in the determinant.
+
 	// The two shortest edges, pointing away from their common point.
 	var e1, e2, op r3.Vector
-
 	if ab2 >= bc2 && ab2 >= ca2 {
 		// AB is the longest edge.
 		e1, e2, op = ca, bc, c.Vector
@@ -209,17 +258,21 @@ func RobustSign(a, b, c Point) Direction {
 		e1, e2, op = bc, ab, b.Vector
 	}
 
-	det = e1.Cross(e2).Dot(op)
+	det := e1.Cross(e2).Dot(op)
 	maxErr := detErrorMultiplier * math.Sqrt(e1.Norm2()*e2.Norm2())
 
-	// If the determinant isn't zero, we know definitively the point ordering.
+	// If the determinant isn't zero, within maxErr, we know definitively the point ordering.
 	if det > maxErr {
 		return CounterClockwise
 	}
 	if det < -maxErr {
 		return Clockwise
 	}
+	return Indeterminate
+}
 
+// exactSign reports the direction sign of the points using exact precision arithmetic.
+func exactSign(a, b, c Point) Direction {
 	// In the C++ version, the final computation is performed using OpenSSL's
 	// Bignum exact precision math library. The existence of an equivalent
 	// library in Go is indeterminate. In C++, using the exact precision library
@@ -326,6 +379,5 @@ func PointArea(a, b, c Point) float64 {
 }
 
 // TODO(dnadasi):
-//   - Other Sign methods
 //   - Maybe more Area methods?
 //   - Centroid methods
