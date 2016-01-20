@@ -355,7 +355,6 @@ func TestPointArea(t *testing.T) {
 }
 
 func TestPointAreaQuarterHemisphere(t *testing.T) {
-	epsilon := 1e-14
 	tests := []struct {
 		a, b, c, d, e Point
 		want          float64

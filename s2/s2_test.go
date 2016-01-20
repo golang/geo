@@ -26,8 +26,12 @@ import (
 	"github.com/golang/geo/s1"
 )
 
+const (
+	epsilon = 1e-15
+)
+
 // float64Eq reports whether the two values are within the default epsilon.
-func float64Eq(x, y float64) bool { return float64Near(x, y, 1e-14) }
+func float64Eq(x, y float64) bool { return float64Near(x, y, epsilon) }
 
 // float64Near reports whether the two values are within the given epsilon.
 func float64Near(x, y, ε float64) bool {
@@ -198,6 +202,15 @@ func randomCap(minArea, maxArea float64) Cap {
 // the epsilon.
 func pointsApproxEquals(a, b Point, epsilon float64) bool {
 	return float64(a.Vector.Angle(b.Vector)) <= epsilon
+}
+
+// rectsApproxEqual reports whether the two rect are within the given tolerances
+// at each corner from each other. The tolerances are specific to each axis.
+func rectsApproxEqual(a, b Rect, tolLat, tolLng float64) bool {
+	return math.Abs(a.Lat.Lo-b.Lat.Lo) < tolLat &&
+		math.Abs(a.Lat.Hi-b.Lat.Hi) < tolLat &&
+		math.Abs(a.Lng.Lo-b.Lng.Lo) < tolLng &&
+		math.Abs(a.Lng.Hi-b.Lng.Hi) < tolLng
 }
 
 // matricesApproxEqual reports whether all cells in both matrices are equal within

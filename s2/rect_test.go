@@ -62,8 +62,7 @@ func TestArea(t *testing.T) {
 		{Rect{r1.Interval{0, math.Pi / 2}, s1.Interval{0, math.Pi / 2}}, math.Pi / 2},
 	}
 	for _, test := range tests {
-		got := test.rect.Area()
-		if math.Abs(got-test.want) > 1e-14 {
+		if got := test.rect.Area(); !float64Eq(got, test.want) {
 			t.Errorf("%v.Area() = %v, want %v", test.rect, got, test.want)
 		}
 	}
@@ -103,14 +102,6 @@ func rectFromDegrees(latLo, lngLo, latHi, lngHi float64) Rect {
 	}
 }
 
-func rectApproxEqual(a, b Rect) bool {
-	const epsilon = 1e-15
-	return math.Abs(a.Lat.Lo-b.Lat.Lo) < epsilon &&
-		math.Abs(a.Lat.Hi-b.Lat.Hi) < epsilon &&
-		math.Abs(a.Lng.Lo-b.Lng.Lo) < epsilon &&
-		math.Abs(a.Lng.Hi-b.Lng.Hi) < epsilon
-}
-
 func TestRectFromCenterSize(t *testing.T) {
 	tests := []struct {
 		center, size LatLng
@@ -133,7 +124,7 @@ func TestRectFromCenterSize(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if got := RectFromCenterSize(test.center, test.size); !rectApproxEqual(got, test.want) {
+		if got := RectFromCenterSize(test.center, test.size); !rectsApproxEqual(got, test.want, epsilon, epsilon) {
 			t.Errorf("RectFromCenterSize(%v,%v) was %v, want %v", test.center, test.size, got, test.want)
 		}
 	}
@@ -167,7 +158,7 @@ func TestAddPoint(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if got, want := test.input.AddPoint(test.point), test.want; !rectApproxEqual(got, want) {
+		if got, want := test.input.AddPoint(test.point), test.want; !rectsApproxEqual(got, want, epsilon, epsilon) {
 			t.Errorf("%v.AddPoint(%v) was %v, want %v", test.input, test.point, got, want)
 		}
 	}
@@ -314,7 +305,7 @@ func TestExpanded(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if got, want := test.input.expanded(test.margin), test.want; !rectApproxEqual(got, want) {
+		if got, want := test.input.expanded(test.margin), test.want; !rectsApproxEqual(got, want, epsilon, epsilon) {
 			t.Errorf("%v.Expanded(%v) was %v, want %v", test.input, test.margin, got, want)
 		}
 	}
@@ -343,7 +334,7 @@ func TestPolarClosure(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if got := test.r.PolarClosure(); !rectApproxEqual(got, test.want) {
+		if got := test.r.PolarClosure(); !rectsApproxEqual(got, test.want, epsilon, epsilon) {
 			t.Errorf("%v.PolarClosure() was %v, want %v", test.r, got, test.want)
 		}
 	}

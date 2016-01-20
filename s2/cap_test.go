@@ -24,7 +24,6 @@ import (
 )
 
 const (
-	epsilon = 1e-14
 	tinyRad = 1e-10
 )
 
@@ -148,6 +147,10 @@ func TestCapContains(t *testing.T) {
 }
 
 func TestCapContainsPoint(t *testing.T) {
+	// We don't use the standard epsilon in this test due different compiler
+	// math optimizations that are permissible (FMA vs no FMA) that yield
+	// slightly different floating point results between gccgo and gc.
+	epsilon := 1e-14
 	tangent := tiny.center.Cross(PointFromCoords(3, 2, 1).Vector).Normalize()
 	tests := []struct {
 		c    Cap
@@ -166,6 +169,8 @@ func TestCapContainsPoint(t *testing.T) {
 		{hemi.Complement(), xAxisPt, false},
 		{concave, PointFromLatLng(LatLngFromDegrees(-70*(1-epsilon), 10)), true},
 		{concave, PointFromLatLng(LatLngFromDegrees(-70*(1+epsilon), 10)), false},
+		// This test case is the one where the floating point values end up
+		// different in the 15th place and beyond.
 		{concave, PointFromLatLng(LatLngFromDegrees(-50*(1-epsilon), -170)), true},
 		{concave, PointFromLatLng(LatLngFromDegrees(-50*(1+epsilon), -170)), false},
 	}
@@ -245,11 +250,11 @@ func TestRadiusToHeight(t *testing.T) {
 		{-7.0 * s1.Degree, emptyHeight},
 		{-0.0 * s1.Degree, 0},
 		{0.0 * s1.Degree, 0},
-		{12.0 * s1.Degree, 0.02185239926619},
-		{30.0 * s1.Degree, 0.13397459621556},
-		{45.0 * s1.Degree, 0.29289321881345},
+		{12.0 * s1.Degree, 0.0218523992661943},
+		{30.0 * s1.Degree, 0.1339745962155613},
+		{45.0 * s1.Degree, 0.2928932188134525},
 		{90.0 * s1.Degree, 1.0},
-		{179.99 * s1.Degree, 1.99999998476912},
+		{179.99 * s1.Degree, 1.9999999847691292},
 		{180.0 * s1.Degree, fullHeight},
 		{270.0 * s1.Degree, fullHeight},
 		// Radians tests.
@@ -258,8 +263,8 @@ func TestRadiusToHeight(t *testing.T) {
 		{0.0 * s1.Radian, 0},
 		{1.0 * s1.Radian, 0.45969769413186},
 		{math.Pi / 2.0 * s1.Radian, 1.0},
-		{2.0 * s1.Radian, 1.41614683654714},
-		{3.0 * s1.Radian, 1.98999249660044},
+		{2.0 * s1.Radian, 1.4161468365471424},
+		{3.0 * s1.Radian, 1.9899924966004454},
 		{math.Pi * s1.Radian, fullHeight},
 		{4.0 * s1.Radian, fullHeight},
 	}

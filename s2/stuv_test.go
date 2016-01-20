@@ -58,18 +58,18 @@ func TestFaceXYZToUV(t *testing.T) {
 		v     float64
 		ok    bool
 	}{
-		{0, point, 1.09090909090909, 1.18181818181818, true},
+		{0, point, 1 + (1.0 / 11), 1 + (2.0 / 11), true},
 		{0, pointNeg, 0, 0, false},
-		{1, point, -0.916666666666666, 1.08333333333333, true},
+		{1, point, -11.0 / 12, 1 + (1.0 / 12), true},
 		{1, pointNeg, 0, 0, false},
-		{2, point, -0.846153846153846, -0.923076923076923, true},
+		{2, point, -11.0 / 13, -12.0 / 13, true},
 		{2, pointNeg, 0, 0, false},
 		{3, point, 0, 0, false},
-		{3, pointNeg, 1.18181818181818, 1.09090909090909, true},
+		{3, pointNeg, 1 + (2.0 / 11), 1 + (1.0 / 11), true},
 		{4, point, 0, 0, false},
-		{4, pointNeg, 1.08333333333333, -0.91666666666666, true},
+		{4, pointNeg, 1 + (1.0 / 12), -(11.0 / 12), true},
 		{5, point, 0, 0, false},
-		{5, pointNeg, -0.923076923076923, -0.846153846153846, true},
+		{5, pointNeg, -12.0 / 13, -11.0 / 13, true},
 	}
 
 	for _, test := range tests {
