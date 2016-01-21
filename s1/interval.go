@@ -35,7 +35,8 @@ type Interval struct {
 }
 
 // IntervalFromEndpoints constructs a new interval from endpoints.
-// Both arguments must be in the range [-π,π].
+// Both arguments must be in the range [-π,π]. This function allows inverted intervals
+// to be created.
 func IntervalFromEndpoints(lo, hi float64) Interval {
 	i := Interval{lo, hi}
 	if lo == -math.Pi && hi != math.Pi {
