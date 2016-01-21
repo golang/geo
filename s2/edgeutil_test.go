@@ -20,6 +20,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/golang/geo/r1"
 	"github.com/golang/geo/s1"
 )
 
@@ -273,6 +274,133 @@ func TestRepeatedInterpolation(t *testing.T) {
 		}
 		if !a.Vector.IsUnit() {
 			t.Errorf("repeated Interpolate(%v, %v, %v) calls did not stay unit length for", 0.01, a, b)
+		}
+	}
+}
+
+var (
+	rectErrorLat = 10 * dblEpsilon
+	rectErrorLng = dblEpsilon
+)
+
+func rectBoundForPoints(a, b Point) Rect {
+	bounder := NewRectBounder()
+	bounder.AddPoint(a)
+	bounder.AddPoint(b)
+	return bounder.RectBound()
+}
+
+func TestRectBounderMaxLatitudeSimple(t *testing.T) {
+	cubeLat := math.Asin(1 / math.Sqrt(3)) // 35.26 degrees
+	cubeLatRect := Rect{r1.IntervalFromPoint(-cubeLat).AddPoint(cubeLat),
+		s1.IntervalFromEndpoints(-math.Pi/4, math.Pi/4)}
+
+	tests := []struct {
+		a, b Point
+		want Rect
+	}{
+		// Check cases where the min/max latitude is attained at a vertex.
+		{
+			a:    PointFromCoords(1, 1, 1),
+			b:    PointFromCoords(1, -1, -1),
+			want: cubeLatRect,
+		},
+		{
+			a:    PointFromCoords(1, -1, 1),
+			b:    PointFromCoords(1, 1, -1),
+			want: cubeLatRect,
+		},
+	}
+
+	for _, test := range tests {
+		if got := rectBoundForPoints(test.a, test.b); !rectsApproxEqual(got, test.want, rectErrorLat, rectErrorLng) {
+			t.Errorf("RectBounder for points (%v, %v) near max lat failed: got %v, want %v", test.a, test.b, got, test.want)
+		}
+	}
+}
+
+func TestRectBounderMaxLatitudeEdgeInterior(t *testing.T) {
+	// Check cases where the min/max latitude occurs in the edge interior.
+	// These tests expect the result to be pretty close to the middle of the
+	// allowable error range (i.e., by adding 0.5 * kRectError).
+
+	tests := []struct {
+		got  float64
+		want float64
+	}{
+		// Max latitude, CW edge
+		{
+			math.Pi/4 + 0.5*rectErrorLat,
+			rectBoundForPoints(PointFromCoords(1, 1, 1), PointFromCoords(1, -1, 1)).Lat.Hi,
+		},
+		// Min latitude, CW edge
+		{
+			-math.Pi/4 - 0.5*rectErrorLat,
+			rectBoundForPoints(PointFromCoords(1, -1, -1), PointFromCoords(-1, -1, -1)).Lat.Lo,
+		},
+		// Max latitude, CCW edge
+		{
+			math.Pi/4 + 0.5*rectErrorLat,
+			rectBoundForPoints(PointFromCoords(1, -1, 1), PointFromCoords(1, 1, 1)).Lat.Hi,
+		},
+		// Min latitude, CCW edge
+		{
+			-math.Pi/4 - 0.5*rectErrorLat,
+			rectBoundForPoints(PointFromCoords(-1, 1, -1), PointFromCoords(-1, -1, -1)).Lat.Lo,
+		},
+
+		// Check cases where the edge passes through one of the poles.
+		{
+			math.Pi / 2,
+			rectBoundForPoints(PointFromCoords(.3, .4, 1), PointFromCoords(-.3, -.4, 1)).Lat.Hi,
+		},
+		{
+			-math.Pi / 2,
+			rectBoundForPoints(PointFromCoords(.3, .4, -1), PointFromCoords(-.3, -.4, -1)).Lat.Lo,
+		},
+	}
+
+	for _, test := range tests {
+		if !float64Eq(test.got, test.want) {
+			t.Errorf("RectBound for max lat on interior of edge failed; got %v want %v", test.got, test.want)
+		}
+	}
+}
+
+func TestRectBounderMaxLatitudeRandom(t *testing.T) {
+	// Check that the maximum latitude of edges is computed accurately to within
+	// 3 * dblEpsilon (the expected maximum error). We concentrate on maximum
+	// latitudes near the equator and north pole since these are the extremes.
+
+	for iter := 0; iter < 100; iter++ {
+		// Construct a right-handed coordinate frame (U,V,W) such that U points
+		// slightly above the equator, V points at the equator, and W is slightly
+		// offset from the north pole.
+		u := randomPoint()
+		u.Z = dblEpsilon * 1e-6 * math.Pow(1e12, randomFloat64())
+
+		u = Point{u.Normalize()}
+		v := Point{PointFromCoords(0, 0, 1).PointCross(u).Normalize()}
+		w := Point{u.PointCross(v).Normalize()}
+
+		// Construct a line segment AB that passes through U, and check that the
+		// maximum latitude of this segment matches the latitude of U.
+		a := Point{u.Sub(v.Mul(randomFloat64())).Normalize()}
+		b := Point{u.Add(v.Mul(randomFloat64())).Normalize()}
+		abBound := rectBoundForPoints(a, b)
+		if !float64Near(latitude(u).Radians(), abBound.Lat.Hi, rectErrorLat) {
+			t.Errorf("bound for line AB not near enough to the latitude of point %v. got %v, want %v",
+				u, latitude(u).Radians(), abBound.Lat.Hi)
+		}
+
+		// Construct a line segment CD that passes through W, and check that the
+		// maximum latitude of this segment matches the latitude of W.
+		c := Point{w.Sub(v.Mul(randomFloat64())).Normalize()}
+		d := Point{w.Add(v.Mul(randomFloat64())).Normalize()}
+		cdBound := rectBoundForPoints(c, d)
+		if !float64Near(latitude(w).Radians(), cdBound.Lat.Hi, rectErrorLat) {
+			t.Errorf("bound for line CD not near enough to the lat of point %v. got %v, want %v",
+				v, latitude(w).Radians(), cdBound.Lat.Hi)
 		}
 	}
 }
