@@ -248,14 +248,28 @@ func (c Cell) CapBound() Cap {
 	return cap
 }
 
-// ContainsPoint reports whether this cell contains the given point.
+// ContainsPoint reports whether this cell contains the given point. Note that
+// unlike Loop/Polygon, a Cell is considered to be a closed set. This means
+// that a point on a Cell's edge or vertex belong to the Cell and the relevant
+// adjacent Cells too.
+//
+// If you want every point to be contained by exactly one Cell,
+// you will need to convert the Cell to a Loop.
 func (c Cell) ContainsPoint(p Point) bool {
 	var uv r2.Point
 	var ok bool
 	if uv.X, uv.Y, ok = faceXYZToUV(int(c.face), p); !ok {
 		return false
 	}
-	return c.uv.ContainsPoint(uv)
+
+	// Expand the (u,v) bound to ensure that
+	//
+	//   CellFromPoint(p).ContainsPoint(p)
+	//
+	// is always true. To do this, we need to account for the error when
+	// converting from (u,v) coordinates to (s,t) coordinates. In the
+	// normal case the total error is at most dblEpsilon.
+	return c.uv.ExpandedByMargin(dblEpsilon).ContainsPoint(uv)
 }
 
 // TODO(roberts, or $SOMEONE): Differences from C++, almost everything else still.

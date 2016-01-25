@@ -448,7 +448,15 @@ func stToIJ(s float64) int {
 	return clamp(int(math.Floor(maxSize*s)), 0, maxSize-1)
 }
 
-// cellIDFromPoint returns the leaf cell containing point p.
+// cellIDFromPoint returns a leaf cell containing point p. Usually there is
+// exactly one such cell, but for points along the edge of a cell, any
+// adjacent cell may be (deterministically) chosen. This is because
+// s2.CellIDs are considered to be closed sets. The returned cell will
+// always contain the given point, i.e.
+//
+//   CellFromPoint(p).ContainsPoint(p)
+//
+// is always true.
 func cellIDFromPoint(p Point) CellID {
 	f, u, v := xyzToFaceUV(r3.Vector{p.X, p.Y, p.Z})
 	i := stToIJ(uvToST(u))

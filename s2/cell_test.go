@@ -20,6 +20,8 @@ import (
 	"math"
 	"testing"
 	"unsafe"
+
+	"github.com/golang/geo/s1"
 )
 
 // maxCellSize is the upper bounds on the number of bytes we want the Cell object to ever be.
@@ -274,5 +276,41 @@ func TestContainsPoint(t *testing.T) {
 		if got := test.c.ContainsPoint(test.p); got != test.want {
 			t.Errorf("Cell(%v).ContainsPoint(%v) = %t; want %t", test.c, test.p, got, test.want)
 		}
+	}
+}
+
+func TestContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
+	// Construct many points that are nearly on a Cell edge, and verify that
+	// CellFromCellID(cellIDFromPoint(p)).Contains(p) is always true.
+	for iter := 0; iter < 1000; iter++ {
+		cell := CellFromCellID(randomCellID())
+		i1 := randomUniformInt(4)
+		i2 := (i1 + 1) & 3
+		v1 := cell.Vertex(i1)
+		v2 := samplePointFromCap(CapFromCenterAngle(cell.Vertex(i2), s1.Angle(epsilon)))
+		p := Interpolate(randomFloat64(), v1, v2)
+		if !CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) {
+			t.Errorf("For p=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p)
+		}
+	}
+}
+
+func TestContainsPointContainsAmbiguousPoint(t *testing.T) {
+	// This tests a case where S2CellId returns the "wrong" cell for a point
+	// that is very close to the cell edge. (ConsistentWithS2CellIdFromPoint
+	// generates more examples like this.)
+	//
+	// The Point below should have x = 0, but conversion from LatLng to
+	// (x,y,z) gives x = ~6.1e-17. When xyz is converted to uv, this gives
+	// u = -6.1e-17. However when converting to st, which has a range of [0,1],
+	// the low precision bits of u are lost and we wind up with s = 0.5.
+	// cellIDFromPoint then chooses an arbitrary neighboring cell.
+	//
+	// This tests that Cell.ContainsPoint() expands the cell bounds sufficiently
+	// so that the returned cell is still considered to contain p.
+	p := PointFromLatLng(LatLngFromDegrees(-2, 90))
+	cell := CellFromCellID(cellIDFromPoint(p).Parent(1))
+	if !cell.ContainsPoint(p) {
+		t.Errorf("For p=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p)
 	}
 }
