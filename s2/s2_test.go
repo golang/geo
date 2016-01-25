@@ -93,6 +93,26 @@ func randomPoint() Point {
 		randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)).Normalize()}
 }
 
+// randomFrame returns a right-handed coordinate frame (three orthonormal vectors) for
+// a randomly generated point.
+func randomFrame() *matrix3x3 {
+	return randomFrameAtPoint(randomPoint())
+}
+
+// randomFrameAtPoint returns a right-handed coordinate frame using the given
+// point as the z-axis. The x- and y-axes are computed such that (x,y,z) is a
+// right-handed coordinate frame (three orthonormal vectors).
+func randomFrameAtPoint(z Point) *matrix3x3 {
+	x := Point{z.Cross(randomPoint().Vector).Normalize()}
+	y := Point{z.Cross(x.Vector).Normalize()}
+
+	m := &matrix3x3{}
+	m.setCol(0, x)
+	m.setCol(1, y)
+	m.setCol(2, z)
+	return m
+}
+
 // randomCellIDForLevel returns a random CellID at the given level.
 // The distribution is uniform over the space of cell ids, but only
 // approximately uniform over the surface of the sphere.

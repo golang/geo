@@ -98,3 +98,30 @@ func (m *matrix3x3) String() string {
 		m[2][0], m[2][1], m[2][2],
 	)
 }
+
+// getFrame returns the orthonormal frame for the given point on the unit sphere.
+func getFrame(p Point) matrix3x3 {
+	// Given the point p on the unit sphere, extend this into a right-handed
+	// coordinate frame of unit-length column vectors m = (x,y,z).  Note that
+	// the vectors (x,y) are an orthonormal frame for the tangent space at point p,
+	// while p itself is an orthonormal frame for the normal space at p.
+	m := matrix3x3{}
+	m.setCol(2, p)
+	m.setCol(1, Point{p.Ortho()})
+	m.setCol(0, Point{m.col(1).Cross(p.Vector)})
+	return m
+}
+
+// toFrame returns the coordinates of the given point with respect to its orthonormal basis m.
+// The resulting point q satisfies the identity (m * q == p).
+func toFrame(m matrix3x3, p Point) Point {
+	// The inverse of an orthonormal matrix is its transpose.
+	return m.transpose().mul(p)
+}
+
+// fromFrame returns the coordinates of the given point in standard axis-aligned basis
+// from its orthonormal basis m.
+// The resulting point p satisfies the identity (p == m * q).
+func fromFrame(m matrix3x3, q Point) Point {
+	return m.mul(q)
+}

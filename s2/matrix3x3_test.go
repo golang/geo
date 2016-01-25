@@ -454,3 +454,39 @@ func TestString(t *testing.T) {
 		}
 	}
 }
+
+func TestFrames(t *testing.T) {
+	z := PointFromCoords(0.2, 0.5, -3.3)
+	m := getFrame(z)
+
+	if !m.col(0).IsUnit() {
+		t.Errorf("col(0) of frame not unit length")
+	}
+	if !m.col(1).IsUnit() {
+		t.Errorf("col(1) of frame not unit length")
+	}
+	if !float64Eq(m.det(), 1) {
+		t.Errorf("determinant of frame = %v, want %v", m.det(), 1)
+	}
+
+	tests := []struct {
+		a Point
+		b Point
+	}{
+		{m.col(2), z},
+
+		{toFrame(m, m.col(0)), PointFromCoords(1, 0, 0)},
+		{toFrame(m, m.col(1)), PointFromCoords(0, 1, 0)},
+		{toFrame(m, m.col(2)), PointFromCoords(0, 0, 1)},
+
+		{fromFrame(m, PointFromCoords(1, 0, 0)), m.col(0)},
+		{fromFrame(m, PointFromCoords(0, 1, 0)), m.col(1)},
+		{fromFrame(m, PointFromCoords(0, 0, 1)), m.col(2)},
+	}
+
+	for _, test := range tests {
+		if !pointsApproxEquals(test.a, test.b, epsilon) {
+			t.Errorf("%v != %v", test.a, test.b)
+		}
+	}
+}
