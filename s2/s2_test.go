@@ -263,5 +263,24 @@ func samplePointFromRect(rect Rect) Point {
 	return PointFromLatLng(LatLng{s1.Angle(lat), s1.Angle(lng)}.Normalized())
 }
 
+// samplePointFromCap returns a point chosen uniformly at random (with respect
+// to area) from the given cap.
+func samplePointFromCap(c Cap) Point {
+	// We consider the cap axis to be the "z" axis. We choose two other axes to
+	// complete the coordinate frame.
+	m := getFrame(c.Center())
+
+	// The surface area of a spherical cap is directly proportional to its
+	// height. First we choose a random height, and then we choose a random
+	// point along the circle at that height.
+	h := randomFloat64() * c.Height()
+	theta := 2 * math.Pi * randomFloat64()
+	r := math.Sqrt(h * (2 - h))
+
+	// The result should already be very close to unit-length, but we might as
+	// well make it accurate as possible.
+	return Point{fromFrame(m, PointFromCoords(math.Cos(theta)*r, math.Sin(theta)*r, 1-h)).Normalize()}
+}
+
 // TODO:
 // Most of the other s2 testing methods.
