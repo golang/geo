@@ -278,11 +278,6 @@ func TestRepeatedInterpolation(t *testing.T) {
 	}
 }
 
-var (
-	rectErrorLat = 10 * dblEpsilon
-	rectErrorLng = dblEpsilon
-)
-
 func rectBoundForPoints(a, b Point) Rect {
 	bounder := NewRectBounder()
 	bounder.AddPoint(a)
@@ -401,6 +396,93 @@ func TestRectBounderMaxLatitudeRandom(t *testing.T) {
 		if !float64Near(latitude(w).Radians(), cdBound.Lat.Hi, rectErrorLat) {
 			t.Errorf("bound for line CD not near enough to the lat of point %v. got %v, want %v",
 				v, latitude(w).Radians(), cdBound.Lat.Hi)
+		}
+	}
+}
+
+func TestExpandForSubregions(t *testing.T) {
+	// Test the full and empty bounds.
+	if !ExpandForSubregions(FullRect()).IsFull() {
+		t.Errorf("Subregion Bound of full rect should be full")
+	}
+	if !ExpandForSubregions(EmptyRect()).IsEmpty() {
+		t.Errorf("Subregion Bound of empty rect should be empty")
+	}
+
+	tests := []struct {
+		xLat, xLng, yLat, yLng float64
+		wantFull               bool
+	}{
+		// Cases where the bound does not straddle the equator (but almost does),
+		// and spans nearly 180 degrees in longitude.
+		{3e-16, 0, 1e-14, math.Pi, true},
+		{9e-16, 0, 1e-14, math.Pi, false},
+		{1e-16, 7e-16, 1e-14, math.Pi, true},
+		{3e-16, 14e-16, 1e-14, math.Pi, false},
+		{1e-100, 14e-16, 1e-14, math.Pi, true},
+		{1e-100, 22e-16, 1e-14, math.Pi, false},
+		// Cases where the bound spans at most 90 degrees in longitude, and almost
+		// 180 degrees in latitude.  Note that DBL_EPSILON is about 2.22e-16, which
+		// implies that the double-precision value just below Pi/2 can be written as
+		// (math.Pi/2 - 2e-16).
+		{-math.Pi / 2, -1e-15, math.Pi/2 - 7e-16, 0, true},
+		{-math.Pi / 2, -1e-15, math.Pi/2 - 30e-16, 0, false},
+		{-math.Pi/2 + 4e-16, 0, math.Pi/2 - 2e-16, 1e-7, true},
+		{-math.Pi/2 + 30e-16, 0, math.Pi / 2, 1e-7, false},
+		{-math.Pi/2 + 4e-16, 0, math.Pi/2 - 4e-16, math.Pi / 2, true},
+		{-math.Pi / 2, 0, math.Pi/2 - 30e-16, math.Pi / 2, false},
+		// Cases where the bound straddles the equator and spans more than 90
+		// degrees in longitude.  These are the cases where the critical distance is
+		// between a corner of the bound and the opposite longitudinal edge.  Unlike
+		// the cases above, here the bound may contain nearly-antipodal points (to
+		// within 3.055 * DBL_EPSILON) even though the latitude and longitude ranges
+		// are both significantly less than (math.Pi - 3.055 * DBL_EPSILON).
+		{-math.Pi / 2, 0, math.Pi/2 - 1e-8, math.Pi - 1e-7, true},
+		{-math.Pi / 2, 0, math.Pi/2 - 1e-7, math.Pi - 1e-7, false},
+		{-math.Pi/2 + 1e-12, -math.Pi + 1e-4, math.Pi / 2, 0, true},
+		{-math.Pi/2 + 1e-11, -math.Pi + 1e-4, math.Pi / 2, 0, true},
+	}
+
+	for _, tc := range tests {
+		in := RectFromLatLng(LatLng{s1.Angle(tc.xLat), s1.Angle(tc.xLng)})
+		in = in.AddPoint(LatLng{s1.Angle(tc.yLat), s1.Angle(tc.yLng)})
+		got := ExpandForSubregions(in)
+
+		// Test that the bound is actually expanded.
+		if !got.Contains(in) {
+			t.Errorf("Subregion bound of (%f, %f, %f, %f) should contain original rect", tc.xLat, tc.xLng, tc.yLat, tc.yLng)
+		}
+		if in.Lat == validRectLatRange && in.Lat.ContainsInterval(got.Lat) {
+			t.Errorf("Subregion bound of (%f, %f, %f, %f) shouldn't be contained by original rect", tc.xLat, tc.xLng, tc.yLat, tc.yLng)
+		}
+
+		// We check the various situations where the bound contains nearly-antipodal points. The tests are organized into pairs
+		// where the two bounds are similar except that the first bound meets the nearly-antipodal criteria while the second does not.
+		if got.IsFull() != tc.wantFull {
+			t.Errorf("Subregion Bound of (%f, %f, %f, %f).IsFull should be %t", tc.xLat, tc.xLng, tc.yLat, tc.yLng, tc.wantFull)
+		}
+	}
+
+	rectTests := []struct {
+		xLat, xLng, yLat, yLng float64
+		wantRect               Rect
+	}{
+		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 2e-16, Rect{r1.Interval{1.5, 1.5}, s1.FullInterval()}},
+		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 7e-16, Rect{r1.Interval{1.5, 1.5}, s1.Interval{-math.Pi / 2, math.Pi/2 - 7e-16}}},
+		// Check for cases where the bound is expanded to include one of the poles
+		{-math.Pi/2 + 1e-15, 0, -math.Pi/2 + 1e-15, 0, Rect{r1.Interval{-math.Pi / 2, -math.Pi/2 + 1e-15}, s1.FullInterval()}},
+		{math.Pi/2 - 1e-15, 0, math.Pi/2 - 1e-15, 0, Rect{r1.Interval{math.Pi/2 - 1e-15, math.Pi / 2}, s1.FullInterval()}},
+	}
+
+	for _, tc := range rectTests {
+		// Now we test cases where the bound does not contain nearly-antipodal
+		// points, but it does contain points that are approximately 180 degrees
+		// apart in latitude.
+		in := RectFromLatLng(LatLng{s1.Angle(tc.xLat), s1.Angle(tc.xLng)})
+		in = in.AddPoint(LatLng{s1.Angle(tc.yLat), s1.Angle(tc.yLng)})
+		got := ExpandForSubregions(in)
+		if !rectsApproxEqual(got, tc.wantRect, rectErrorLat, rectErrorLng) {
+			t.Errorf("Subregion Bound of (%f, %f, %f, %f) = (%v) should be %v", tc.xLat, tc.xLng, tc.yLat, tc.yLng, got, tc.wantRect)
 		}
 	}
 }

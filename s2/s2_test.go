@@ -224,6 +224,11 @@ func pointsApproxEquals(a, b Point, epsilon float64) bool {
 	return float64(a.Vector.Angle(b.Vector)) <= epsilon
 }
 
+var (
+	rectErrorLat = 10 * dblEpsilon
+	rectErrorLng = dblEpsilon
+)
+
 // rectsApproxEqual reports whether the two rect are within the given tolerances
 // at each corner from each other. The tolerances are specific to each axis.
 func rectsApproxEqual(a, b Rect, tolLat, tolLng float64) bool {

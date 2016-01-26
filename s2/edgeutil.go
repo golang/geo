@@ -307,3 +307,151 @@ func (r *RectBounder) AddPoint(b Point) {
 func (r *RectBounder) RectBound() Rect {
 	return r.bound.expanded(LatLng{s1.Angle(2 * dblEpsilon), 0}).PolarClosure()
 }
+
+// ExpandForSubregions expands a bounding Rect so that it is guaranteed to
+// contain the bounds of any subregion whose bounds are computed using
+// ComputeRectBound. For example, consider a loop L that defines a square.
+// GetBound ensures that if a point P is contained by this square, then
+// LatLngFromPoint(P) is contained by the bound. But now consider a diamond
+// shaped loop S contained by L. It is possible that GetBound returns a
+// *larger* bound for S than it does for L, due to rounding errors. This
+// method expands the bound for L so that it is guaranteed to contain the
+// bounds of any subregion S.
+//
+// More precisely, if L is a loop that does not contain either pole, and S
+// is a loop such that L.Contains(S), then
+//
+//   ExpandForSubregions(L.RectBound).Contains(S.RectBound).
+//
+func ExpandForSubregions(bound Rect) Rect {
+	// Empty bounds don't need expansion.
+	if bound.IsEmpty() {
+		return bound
+	}
+
+	// First we need to check whether the bound B contains any nearly-antipodal
+	// points (to within 4.309 * dblEpsilon). If so then we need to return
+	// FullRect, since the subregion might have an edge between two
+	// such points, and AddPoint returns Full for such edges. Note that
+	// this can happen even if B is not Full for example, consider a loop
+	// that defines a 10km strip straddling the equator extending from
+	// longitudes -100 to +100 degrees.
+	//
+	// It is easy to check whether B contains any antipodal points, but checking
+	// for nearly-antipodal points is trickier. Essentially we consider the
+	// original bound B and its reflection through the origin B', and then test
+	// whether the minimum distance between B and B' is less than 4.309 * dblEpsilon.
+
+	// lngGap is a lower bound on the longitudinal distance between B and its
+	// reflection B'. (2.5 * dblEpsilon is the maximum combined error of the
+	// endpoint longitude calculations and the Length call.)
+	lngGap := math.Max(0, math.Pi-bound.Lng.Length()-2.5*dblEpsilon)
+
+	// minAbsLat is the minimum distance from B to the equator (if zero or
+	// negative, then B straddles the equator).
+	minAbsLat := math.Max(bound.Lat.Lo, -bound.Lat.Hi)
+
+	// latGapSouth and latGapNorth measure the minimum distance from B to the
+	// south and north poles respectively.
+	latGapSouth := math.Pi/2 + bound.Lat.Lo
+	latGapNorth := math.Pi/2 - bound.Lat.Hi
+
+	if minAbsLat >= 0 {
+		// The bound B does not straddle the equator. In this case the minimum
+		// distance is between one endpoint of the latitude edge in B closest to
+		// the equator and the other endpoint of that edge in B'. The latitude
+		// distance between these two points is 2*minAbsLat, and the longitude
+		// distance is lngGap. We could compute the distance exactly using the
+		// Haversine formula, but then we would need to bound the errors in that
+		// calculation. Since we only need accuracy when the distance is very
+		// small (close to 4.309 * dblEpsilon), we substitute the Euclidean
+		// distance instead. This gives us a right triangle XYZ with two edges of
+		// length x = 2*minAbsLat and y ~= lngGap. The desired distance is the
+		// length of the third edge z, and we have
+		//
+		//         z  ~=  sqrt(x^2 + y^2)  >=  (x + y) / sqrt(2)
+		//
+		// Therefore the region may contain nearly antipodal points only if
+		//
+		//  2*minAbsLat + lngGap  <  sqrt(2) * 4.309 * dblEpsilon
+		//                        ~= 1.354e-15
+		//
+		// Note that because the given bound B is conservative, minAbsLat and
+		// lngGap are both lower bounds on their true values so we do not need
+		// to make any adjustments for their errors.
+		if 2*minAbsLat+lngGap < 1.354e-15 {
+			return FullRect()
+		}
+	} else if lngGap >= math.Pi/2 {
+		// B spans at most Pi/2 in longitude. The minimum distance is always
+		// between one corner of B and the diagonally opposite corner of B'. We
+		// use the same distance approximation that we used above; in this case
+		// we have an obtuse triangle XYZ with two edges of length x = latGapSouth
+		// and y = latGapNorth, and angle Z >= Pi/2 between them. We then have
+		//
+		//         z  >=  sqrt(x^2 + y^2)  >=  (x + y) / sqrt(2)
+		//
+		// Unlike the case above, latGapSouth and latGapNorth are not lower bounds
+		// (because of the extra addition operation, and because math.Pi/2 is not
+		// exactly equal to Pi/2); they can exceed their true values by up to
+		// 0.75 * dblEpsilon. Putting this all together, the region may contain
+		// nearly antipodal points only if
+		//
+		//   latGapSouth + latGapNorth  <  (sqrt(2) * 4.309 + 1.5) * dblEpsilon
+		//                              ~= 1.687e-15
+		if latGapSouth+latGapNorth < 1.687e-15 {
+			return FullRect()
+		}
+	} else {
+		// Otherwise we know that (1) the bound straddles the equator and (2) its
+		// width in longitude is at least Pi/2. In this case the minimum
+		// distance can occur either between a corner of B and the diagonally
+		// opposite corner of B' (as in the case above), or between a corner of B
+		// and the opposite longitudinal edge reflected in B'. It is sufficient
+		// to only consider the corner-edge case, since this distance is also a
+		// lower bound on the corner-corner distance when that case applies.
+
+		// Consider the spherical triangle XYZ where X is a corner of B with
+		// minimum absolute latitude, Y is the closest pole to X, and Z is the
+		// point closest to X on the opposite longitudinal edge of B'. This is a
+		// right triangle (Z = Pi/2), and from the spherical law of sines we have
+		//
+		//     sin(z) / sin(Z)  =  sin(y) / sin(Y)
+		//     sin(maxLatGap) / 1  =  sin(dMin) / sin(lngGap)
+		//     sin(dMin)  =  sin(maxLatGap) * sin(lngGap)
+		//
+		// where "maxLatGap" = max(latGapSouth, latGapNorth) and "dMin" is the
+		// desired minimum distance. Now using the facts that sin(t) >= (2/Pi)*t
+		// for 0 <= t <= Pi/2, that we only need an accurate approximation when
+		// at least one of "maxLatGap" or lngGap is extremely small (in which
+		// case sin(t) ~= t), and recalling that "maxLatGap" has an error of up
+		// to 0.75 * dblEpsilon, we want to test whether
+		//
+		//   maxLatGap * lngGap  <  (4.309 + 0.75) * (Pi/2) * dblEpsilon
+		//                       ~= 1.765e-15
+		if math.Max(latGapSouth, latGapNorth)*lngGap < 1.765e-15 {
+			return FullRect()
+		}
+	}
+	// Next we need to check whether the subregion might contain any edges that
+	// span (math.Pi - 2 * dblEpsilon) radians or more in longitude, since AddPoint
+	// sets the longitude bound to Full in that case. This corresponds to
+	// testing whether (lngGap <= 0) in lngExpansion below.
+
+	// Otherwise, the maximum latitude error in AddPoint is 4.8 * dblEpsilon.
+	// In the worst case, the errors when computing the latitude bound for a
+	// subregion could go in the opposite direction as the errors when computing
+	// the bound for the original region, so we need to double this value.
+	// (More analysis shows that it's okay to round down to a multiple of
+	// dblEpsilon.)
+	//
+	// For longitude, we rely on the fact that atan2 is correctly rounded and
+	// therefore no additional bounds expansion is necessary.
+
+	latExpansion := 9 * dblEpsilon
+	lngExpansion := 0.0
+	if lngGap <= 0 {
+		lngExpansion = math.Pi
+	}
+	return bound.expanded(LatLng{s1.Angle(latExpansion), s1.Angle(lngExpansion)}).PolarClosure()
+}
