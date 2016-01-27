@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -29,10 +30,12 @@ func TestCrossings(t *testing.T) {
 	na2 := math.Nextafter(1, 2)
 
 	tests := []struct {
-		msg        string
-		a, b, c, d Point
-		simple     bool
-		vertex     bool
+		msg          string
+		a, b, c, d   Point
+		simpleTest   bool
+		robust       Crossing
+		vertex       bool
+		edgeOrVertex bool
 	}{
 		{
 			"two regular edges that cross",
@@ -40,6 +43,8 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(1, -3, 0.5),
 			PointFromCoords(1, -0.5, -3),
 			PointFromCoords(0.1, 0.5, 3),
+			true,
+			Cross,
 			true,
 			true,
 		},
@@ -49,8 +54,10 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(1, -3, 0.5),
 			PointFromCoords(-1, 0.5, 3),
 			PointFromCoords(-0.1, -0.5, -3),
-			false,
 			true,
+			DoNotCross,
+			true,
+			false,
 		},
 		{
 			"two edges on the same great circle",
@@ -58,6 +65,8 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(0, 1, 0),
 			PointFromCoords(0, 1, 1),
 			PointFromCoords(0, 0, 1),
+			true,
+			DoNotCross,
 			false,
 			false,
 		},
@@ -68,6 +77,8 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(1, -0.1, 1),
 			PointFromCoords(1, 1, -0.1),
 			true,
+			Cross,
+			true,
 			true,
 		},
 		{
@@ -76,8 +87,10 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(0, 1, 0),
 			PointFromCoords(0, 0, -1),
 			PointFromCoords(-1, -1, 1),
-			false,
 			true,
+			DoNotCross,
+			true,
+			false,
 		},
 		{
 			"two edges that share an endpoint",
@@ -87,8 +100,10 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(-1, 2, 5),
 			PointFromCoords(7, -2, 3),
 			PointFromCoords(2, 3, 4),
-			false,
 			true,
+			MaybeCross,
+			true,
+			false,
 		},
 		{
 			"two edges that barely cross near the middle of one edge",
@@ -98,8 +113,10 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(1, na1, -1),
 			PointFromCoords(11, -12, -1),
 			PointFromCoords(10, 10, 1),
+			false,
+			DoNotCross, // TODO(sbeckman): Should be 1, fix once exactSign is implemented.
 			true,
-			true,
+			false, // TODO(sbeckman): Should be true, fix once exactSign is implemented.
 		},
 		{
 			"two edges that barely cross near the middle separated by a distance of about 1e-15",
@@ -108,20 +125,22 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(1, -1, 0),
 			PointFromCoords(1, 1, 0),
 			false,
+			DoNotCross,
+			false,
 			false,
 		},
 		{
 			"two edges that barely cross each other near the end of both edges",
 			// This example cannot be handled using regular double-precision
 			// arithmetic due to floating-point underflow.
-			// TODO(roberts): Determine if this case should be dropped from
-			// the simplecrossing tests.
 			PointFromCoords(0, 0, 1),
 			PointFromCoords(2, -1e-323, 1),
 			PointFromCoords(1, -1, 1),
 			PointFromCoords(1e-323, 0, 1),
 			false,
+			DoNotCross, // TODO(sbeckman): Should be 1, fix once exactSign is implemented.
 			false,
+			false, // TODO(sbeckman): Should be true, fix once exactSign is implemented.
 		},
 		{
 			"two edges that barely cross each other near the end separated by a distance of about 1e-640",
@@ -130,19 +149,21 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(1, -1, 1),
 			PointFromCoords(1e-323, 0, 1),
 			false,
+			DoNotCross,
+			false,
 			false,
 		},
 		{
 			"two edges that barely cross each other near the middle of one edge",
 			// Computing the exact determinant of some of the triangles in this test
 			// requires more than 2000 bits of precision.
-			// TODO(roberts): Determine if this case should be dropped from
-			// the simplecrossing tests.
 			PointFromCoords(1, -1e-323, -1e-323),
 			PointFromCoords(1e-323, 1, 1e-323),
 			PointFromCoords(1, -1, 1e-323),
 			PointFromCoords(1, 1, 0),
 			false,
+			Cross,
+			true,
 			true,
 		},
 		{
@@ -152,38 +173,72 @@ func TestCrossings(t *testing.T) {
 			PointFromCoords(1, -1, 1e-323),
 			PointFromCoords(1, 1, 0),
 			false,
+			Cross, // TODO(sbeckman): Should be -1, fix once exactSign is implemented.
 			true,
+			true, // TODO(sbeckman): Should be false, fix once exactSign is implemented.
 		},
 	}
 
 	for _, test := range tests {
-		if got := SimpleCrossing(test.a, test.b, test.c, test.d); got != test.simple {
-			t.Errorf("%s: using vertex order (a,b,c,d)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
-				test.msg, test.a, test.b, test.c, test.d, got, test.simple)
+		if err := testCrossing(test.a, test.b, test.c, test.d, test.robust, test.vertex, test.edgeOrVertex, test.simpleTest); err != nil {
+			t.Errorf("%s: %v", test.msg, err)
 		}
-		if got := SimpleCrossing(test.b, test.a, test.c, test.d); got != test.simple {
-			t.Errorf("%s: using vertex order (b,a,c,d)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
-				test.msg, test.b, test.a, test.c, test.d, got, test.simple)
+		if err := testCrossing(test.b, test.a, test.c, test.d, test.robust, test.vertex, test.edgeOrVertex, test.simpleTest); err != nil {
+			t.Errorf("%s: %v", test.msg, err)
 		}
-		if got := SimpleCrossing(test.a, test.b, test.d, test.c); got != test.simple {
-			t.Errorf("%s: using vertex order (a,b,d,c)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
-				test.msg, test.a, test.b, test.d, test.c, got, test.simple)
+		if err := testCrossing(test.a, test.b, test.d, test.c, test.robust, test.vertex, test.edgeOrVertex, test.simpleTest); err != nil {
+			t.Errorf("%s: %v", test.msg, err)
 		}
-		if got := SimpleCrossing(test.b, test.a, test.d, test.c); got != test.simple {
-			t.Errorf("%s: using vertex order (b,a,d,c)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
-				test.msg, test.b, test.a, test.d, test.c, got, test.simple)
+		if err := testCrossing(test.b, test.a, test.c, test.d, test.robust, test.vertex, test.edgeOrVertex, test.simpleTest); err != nil {
+			t.Errorf("%s: %v", test.msg, err)
 		}
-
-		if got := SimpleCrossing(test.c, test.d, test.a, test.b); got != test.simple {
-			t.Errorf("%s: using vertex order (c,d,a,b)\nSimpleCrossing(%v,%v,%v,%v) = %t, want %t",
-				test.msg, test.c, test.d, test.a, test.b, got, test.simple)
+		if err := testCrossing(test.a, test.b, test.a, test.b, MaybeCross, true, true, false); err != nil {
+			t.Errorf("%s: %v", test.msg, err)
+		}
+		if err := testCrossing(test.c, test.d, test.a, test.b, test.robust, test.vertex, test.edgeOrVertex != (test.robust == MaybeCross), test.simpleTest); err != nil {
+			t.Errorf("%s: %v", test.msg, err)
 		}
 
 		if got := VertexCrossing(test.a, test.b, test.c, test.b); got != test.vertex {
-			t.Errorf("%s: VertexCrossing(%v,%v,%v,%v) = %t, want %t",
-				test.msg, test.a, test.b, test.c, test.d, got, test.vertex)
+			t.Errorf("%s: VertexCrossing(%v,%v,%v,%v) = %t, want %t", test.msg, test.a, test.b, test.c, test.d, got, test.vertex)
 		}
 	}
+}
+
+func testCrossing(a, b, c, d Point, robust Crossing, vertex, edgeOrVertex, simple bool) error {
+	input := fmt.Sprintf("a: %v, b: %v, c: %v, d: %v", a, b, c, d)
+	if got, want := SimpleCrossing(a, b, c, d), robust == Cross; simple && got != want {
+		return fmt.Errorf("%v, SimpleCrossing(a, b, c, d) = %t, want %t", input, got, want)
+	}
+
+	crosser := NewChainEdgeCrosser(a, b, c)
+	if got, want := crosser.ChainCrossingSign(d), robust; got != want {
+		return fmt.Errorf("%v, ChainCrossingSign(d) = %d, want %d", input, got, want)
+	}
+	if got, want := crosser.ChainCrossingSign(c), robust; got != want {
+		return fmt.Errorf("%v, ChainCrossingSign(c) = %d, want %d", input, got, want)
+	}
+	if got, want := crosser.CrossingSign(d, c), robust; got != want {
+		return fmt.Errorf("%v, CrossingSign(d, c) = %d, want %d", input, got, want)
+	}
+	if got, want := crosser.CrossingSign(c, d), robust; got != want {
+		return fmt.Errorf("%v, CrossingSign(c, d) = %d, want %d", input, got, want)
+	}
+
+	crosser.RestartAt(c)
+	if got, want := crosser.EdgeOrVertexChainCrossing(d), edgeOrVertex; got != want {
+		return fmt.Errorf("%v, EdgeOrVertexChainCrossing(d) = %t, want %t", input, got, want)
+	}
+	if got, want := crosser.EdgeOrVertexChainCrossing(c), edgeOrVertex; got != want {
+		return fmt.Errorf("%v, EdgeOrVertexChainCrossing(c) = %t, want %t", input, got, want)
+	}
+	if got, want := crosser.EdgeOrVertexCrossing(d, c), edgeOrVertex; got != want {
+		return fmt.Errorf("%v, EdgeOrVertexCrossing(d, c) = %t, want %t", input, got, want)
+	}
+	if got, want := crosser.EdgeOrVertexCrossing(c, d), edgeOrVertex; got != want {
+		return fmt.Errorf("%v, EdgeOrVertexCrossing(c, d) = %t, want %t", input, got, want)
+	}
+	return nil
 }
 
 func TestInterpolate(t *testing.T) {
