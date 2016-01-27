@@ -608,4 +608,22 @@ func TestRectContainsCell(t *testing.T) {
 			t.Errorf("%v.ContainsCell(%v) = %v, want %v", test.r, test.c, got, test.want)
 		}
 	}
+
+}
+func TestRectContainsPoint(t *testing.T) {
+	r1 := rectFromDegrees(0, -180, 90, 0)
+
+	tests := []struct {
+		r    Rect
+		p    Point
+		want bool
+	}{
+		{r1, PointFromCoords(0.5, -0.3, 0.1), true},
+		{r1, PointFromCoords(0.5, 0.2, 0.1), false},
+	}
+	for _, test := range tests {
+		if got, want := test.r.ContainsPoint(test.p), test.want; got != want {
+			t.Errorf("%v.ContainsPoint(%v) was %v, want %v", test.r, test.p, got, want)
+		}
+	}
 }

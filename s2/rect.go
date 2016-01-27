@@ -111,14 +111,6 @@ func (r Rect) Area() float64 {
 	return r.Lng.Length() * capDiff
 }
 
-// ContainsLatLng reports whether the given LatLng is within the Rect.
-func (r Rect) ContainsLatLng(ll LatLng) bool {
-	if !ll.IsValid() {
-		return false
-	}
-	return r.Lat.Contains(ll.Lat.Radians()) && r.Lng.Contains(ll.Lng.Radians())
-}
-
 // AddPoint increases the size of the rectangle to include the given point.
 func (r Rect) AddPoint(ll LatLng) Rect {
 	if !ll.IsValid() {
@@ -250,7 +242,7 @@ func (r Rect) Contains(other Rect) bool {
 	return r.Lat.ContainsInterval(other.Lat) && r.Lng.ContainsInterval(other.Lng)
 }
 
-// ContainsCell reports whether the given point is contained by this Rect.
+// ContainsCell reports whether the given Cell is contained by this Rect.
 func (r Rect) ContainsCell(c Cell) bool {
 	// A latitude-longitude rectangle contains a cell if and only if it contains
 	// the cell's bounding rectangle. This test is exact from a mathematical
@@ -262,6 +254,19 @@ func (r Rect) ContainsCell(c Cell) bool {
 	// effects; for instance, if one creates an s2.Polygon from an s2.Cell, the
 	// polygon will contain the cell, but the polygon's bounding box will not.
 	return r.Contains(c.RectBound())
+}
+
+// ContainsLatLng reports whether the given LatLng is within the Rect.
+func (r Rect) ContainsLatLng(ll LatLng) bool {
+	if !ll.IsValid() {
+		return false
+	}
+	return r.Lat.Contains(ll.Lat.Radians()) && r.Lng.Contains(ll.Lng.Radians())
+}
+
+// ContainsPoint reports whether the given Point is within the Rect.
+func (r Rect) ContainsPoint(p Point) bool {
+	return r.ContainsLatLng(LatLngFromPoint(p))
 }
 
 // BUG(dsymonds): The major differences from the C++ version are:
