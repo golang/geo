@@ -82,6 +82,28 @@ func (r Rect) IsFull() bool { return r.Lat.Equal(validRectLatRange) && r.Lng.IsF
 // IsPoint reports whether the rectangle is a single point.
 func (r Rect) IsPoint() bool { return r.Lat.Lo == r.Lat.Hi && r.Lng.Lo == r.Lng.Hi }
 
+// Vertex returns the i-th vertex of the rectangle (i = 0,1,2,3) in CCW order
+// (lower left, lower right, upper right, upper left).
+func (r Rect) Vertex(i int) LatLng {
+	var lat, lng float64
+
+	switch i {
+	case 0:
+		lat = r.Lat.Lo
+		lng = r.Lng.Lo
+	case 1:
+		lat = r.Lat.Lo
+		lng = r.Lng.Hi
+	case 2:
+		lat = r.Lat.Hi
+		lng = r.Lng.Hi
+	case 3:
+		lat = r.Lat.Hi
+		lng = r.Lng.Lo
+	}
+	return LatLng{s1.Angle(lat) * s1.Radian, s1.Angle(lng) * s1.Radian}
+}
+
 // Lo returns one corner of the rectangle.
 func (r Rect) Lo() LatLng {
 	return LatLng{s1.Angle(r.Lat.Lo) * s1.Radian, s1.Angle(r.Lng.Lo) * s1.Radian}

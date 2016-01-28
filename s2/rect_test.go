@@ -163,6 +163,44 @@ func TestAddPoint(t *testing.T) {
 		}
 	}
 }
+func TestRectVertex(t *testing.T) {
+	r1 := Rect{r1.Interval{0, math.Pi / 2}, s1.IntervalFromEndpoints(-math.Pi, 0)}
+	tests := []struct {
+		r    Rect
+		i    int
+		want LatLng
+	}{
+		{r1, 0, LatLng{0, math.Pi}},
+		{r1, 1, LatLng{0, 0}},
+		{r1, 2, LatLng{math.Pi / 2, 0}},
+		{r1, 3, LatLng{math.Pi / 2, math.Pi}},
+	}
+
+	for _, test := range tests {
+		if got := test.r.Vertex(test.i); got != test.want {
+			t.Errorf("%v.Vertex(%d) = %v, want %v", test.r, test.i, got, test.want)
+		}
+	}
+}
+func TestRectVertexCCWOrder(t *testing.T) {
+	for i := 0; i < 4; i++ {
+		lat := math.Pi / 4 * float64(i-2)
+		lng := math.Pi/2*float64(i-2) + 0.2
+		r := Rect{
+			r1.Interval{lat, lat + math.Pi/4},
+			s1.Interval{
+				math.Remainder(lng, 2*math.Pi),
+				math.Remainder(lng+math.Pi/2, 2*math.Pi),
+			},
+		}
+
+		for k := 0; k < 4; k++ {
+			if !Sign(PointFromLatLng(r.Vertex((k-1)&3)), PointFromLatLng(r.Vertex(k)), PointFromLatLng(r.Vertex((k+1)&3))) {
+				t.Errorf("%v.Vertex(%v), vertices were not in CCW order", r, k)
+			}
+		}
+	}
+}
 
 func TestContainsLatLng(t *testing.T) {
 	tests := []struct {
