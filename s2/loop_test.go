@@ -17,7 +17,10 @@ limitations under the License.
 package s2
 
 import (
+	"math"
 	"testing"
+
+	"github.com/golang/geo/r1"
 )
 
 var (
@@ -152,15 +155,56 @@ func TestEmptyFullLoops(t *testing.T) {
 	if !fullLoop.isEmptyOrFull() {
 		t.Errorf("full loop should pass IsEmptyOrFull")
 	}
+}
 
-	if !empty.RectBound().IsEmpty() {
-		t.Errorf("empty loops RectBound should be empty")
+func TestLoopRectBound(t *testing.T) {
+	if !EmptyLoop().RectBound().IsEmpty() {
+		t.Errorf("empty loop's RectBound should be empty")
+	}
+	if !FullLoop().RectBound().IsFull() {
+		t.Errorf("full loop's RectBound should be full")
+	}
+	if !candyCane.RectBound().Lng.IsFull() {
+		t.Errorf("candy cane loop's RectBound should have a full longitutde range")
+	}
+	if got := candyCane.RectBound().Lat.Lo; got >= -0.349066 {
+		t.Errorf("candy cane loop's RectBound should have a lower latitude (%v) under -0.349066 radians", got)
+	}
+	if got := candyCane.RectBound().Lat.Hi; got <= 0.174533 {
+		t.Errorf("candy cane loop's RectBound should have an upper latitude (%v) over 0.174533 radians", got)
+	}
+	if !smallNECW.RectBound().IsFull() {
+		t.Errorf("small northeast clockwise loop's RectBound should be full")
+	}
+	if got, want := arctic80.RectBound(), rectFromDegrees(80, -180, 90, 180); !rectsApproxEqual(got, want, rectErrorLat, rectErrorLng) {
+		t.Errorf("arctic 80 loop's RectBound (%v) should be %v", got, want)
+	}
+	if got, want := antarctic80.RectBound(), rectFromDegrees(-90, -180, -80, 180); !rectsApproxEqual(got, want, rectErrorLat, rectErrorLng) {
+		t.Errorf("antarctic 80 loop's RectBound (%v) should be %v", got, want)
+	}
+	if !southHemi.RectBound().Lng.IsFull() {
+		t.Errorf("south hemi loop's RectBound should have a full longitutde range")
+	}
+	got, want := southHemi.RectBound().Lat, r1.Interval{-math.Pi / 2, 0}
+	if !got.ApproxEqual(want) {
+		t.Errorf("south hemi loop's RectBound latitude interval (%v) should be %v", got, want)
 	}
 
-	if !full.RectBound().IsFull() {
-		t.Errorf("full loops RectBound should be full")
+	// Create a loop that contains the complement of the arctic80 loop.
+	arctic80Inv := invert(arctic80)
+	// The highest latitude of each edge is attained at its midpoint.
+	mid := Point{arctic80Inv.vertices[0].Vector.Add(arctic80Inv.vertices[1].Vector).Mul(.5)}
+	if got, want := arctic80Inv.RectBound().Lat.Hi, float64(LatLngFromPoint(mid).Lat); math.Abs(got-want) > 10*dblEpsilon {
+		t.Errorf("arctic 80 inverse loop's RectBound should have a latutude hi of %v, got %v", got, want)
 	}
+}
 
+func invert(l *Loop) *Loop {
+	vertices := make([]Point, 0, len(l.vertices))
+	for i := len(l.vertices) - 1; i >= 0; i-- {
+		vertices = append(vertices, l.vertices[i])
+	}
+	return LoopFromPoints(vertices)
 }
 
 func TestOriginInside(t *testing.T) {

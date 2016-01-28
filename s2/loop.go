@@ -17,7 +17,11 @@ limitations under the License.
 package s2
 
 import (
+	"math"
+
+	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
 
 // Loop represents a simple spherical polygon. It consists of a sequence
@@ -121,13 +125,11 @@ func (l *Loop) initOriginAndBound() {
 }
 
 // initBound sets up the approximate bounding Rects for this loop.
-//
-// TODO(roberts): Full implementation depends on s2edgeutil and s2rectbounder.
 func (l *Loop) initBound() {
 	// Check for the special "empty" and "full" loops.
 	if l.isEmptyOrFull() {
 		if l.IsEmpty() {
-			l.bound = Rect{}
+			l.bound = EmptyRect()
 		} else {
 			l.bound = FullRect()
 		}
@@ -135,8 +137,32 @@ func (l *Loop) initBound() {
 		return
 	}
 
-	// TODO(roberts): As other s2 pieces get ported, complete this method.
-	return
+	// The bounding rectangle of a loop is not necessarily the same as the
+	// bounding rectangle of its vertices. First, the maximal latitude may be
+	// attained along the interior of an edge. Second, the loop may wrap
+	// entirely around the sphere (e.g. a loop that defines two revolutions of a
+	// candy-cane stripe). Third, the loop may include one or both poles.
+	// Note that a small clockwise loop near the equator contains both poles.
+	bounder := NewRectBounder()
+	for _, p := range l.vertices {
+		bounder.AddPoint(p)
+	}
+	bounder.AddPoint(l.vertices[0])
+	b := bounder.RectBound()
+
+	if l.ContainsPoint(Point{r3.Vector{0, 0, 1}}) {
+		b = Rect{r1.Interval{b.Lat.Lo, math.Pi / 2}, s1.FullInterval()}
+	}
+	// If a loop contains the south pole, then either it wraps entirely
+	// around the sphere (full longitude range), or it also contains the
+	// north pole in which case b.Lng.IsFull() due to the test above.
+	// Either way, we only need to do the south pole containment test if
+	// b.Lng.IsFull().
+	if b.Lng.IsFull() && l.ContainsPoint(Point{r3.Vector{0, 0, -1}}) {
+		b.Lat.Lo = -math.Pi / 2
+	}
+	l.bound = b
+	l.subregionBound = ExpandForSubregions(l.bound)
 }
 
 // ContainsOrigin reports true if this loop contains s2.OriginPoint().
