@@ -89,12 +89,29 @@ func (l *Loop) initOriginAndBound() {
 		// the vertex is in the southern hemisphere or not.
 		l.originInside = l.vertices[0].Z < 0
 	} else {
-		// TODO(roberts): Once ContainsPoint is implemented, add this section.
+		// Point containment testing is done by counting edge crossings starting
+		// at a fixed point on the sphere (OriginPoint). We need to know whether
+		// the reference point (OriginPoint) is inside or outside the loop before
+		// we can construct the S2ShapeIndex. We do this by first guessing that
+		// it is outside, and then seeing whether we get the correct containment
+		// result for vertex 1. If the result is incorrect, the origin must be
+		// inside the loop.
+		//
+		// A loop with consecutive vertices A,B,C contains vertex B if and only if
+		// the fixed vector R = B.Ortho is contained by the wedge ABC. The
+		// wedge is closed at A and open at C, i.e. the point B is inside the loop
+		// if A = R but not if C = R. This convention is required for compatibility
+		// with VertexCrossing. (Note that we can't use OriginPoint
+		// as the fixed vector because of the possibility that B == OriginPoint.)
 		l.originInside = false
+		v1Inside := OrderedCCW(Point{l.vertices[1].Ortho()}, l.vertices[0], l.vertices[2], l.vertices[1])
+		if v1Inside != l.ContainsPoint(l.vertices[1]) {
+			l.originInside = true
+		}
 	}
 
-	// We *must* call initBound() before initIndex(), because initBound() calls
-	// Contains(s2.Point), and Contains(s2.Point) does a bounds check whenever the
+	// We *must* call initBound before initIndex, because initBound calls
+	// ContainsPoint(s2.Point), and ContainsPoint(s2.Point) does a bounds check whenever the
 	// index is not fresh (i.e., the loop has been added to the index but the
 	// index has not been updated yet).
 	l.initBound()
@@ -122,7 +139,7 @@ func (l *Loop) initBound() {
 	return
 }
 
-// ContainsOrigin reports true if this loop contains s2.Origin().
+// ContainsOrigin reports true if this loop contains s2.OriginPoint().
 func (l Loop) ContainsOrigin() bool {
 	return l.originInside
 }
@@ -151,6 +168,26 @@ func (l Loop) RectBound() Rect {
 // Vertices returns the vertices in the loop.
 func (l Loop) Vertices() []Point {
 	return l.vertices
+}
+
+// ContainsPoint returns true if the loop contains the point.
+func (l Loop) ContainsPoint(p Point) bool {
+	// TODO(sbeckman): Move to bruteForceContains and update with ShapeIndex when available.
+	// Empty and full loops don't need a special case, but invalid loops with
+	// zero vertices do, so we might as well handle them all at once.
+	if len(l.vertices) < 3 {
+		return l.originInside
+	}
+
+	origin := OriginPoint()
+	inside := l.originInside
+	crosser := NewChainEdgeCrosser(origin, p, l.vertices[0])
+	for i := 1; i < len(l.vertices); i++ {
+		inside = inside != crosser.EdgeOrVertexChainCrossing(l.vertices[i])
+	}
+	// Test the closing edge of the loop too.
+	inside = inside != crosser.EdgeOrVertexChainCrossing(l.vertices[0])
+	return inside
 }
 
 // BUG(): The major differences from the C++ version is pretty much everything.

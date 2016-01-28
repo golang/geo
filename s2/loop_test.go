@@ -162,3 +162,112 @@ func TestEmptyFullLoops(t *testing.T) {
 	}
 
 }
+
+func TestOriginInside(t *testing.T) {
+	if !northHemi.originInside {
+		t.Errorf("north hemisphere polygon should include origin")
+	}
+	if !northHemi3.originInside {
+		t.Errorf("north hemisphere 3 polygon should include origin")
+	}
+	if southHemi.originInside {
+		t.Errorf("south hemisphere polygon should not include origin")
+	}
+	if westHemi.originInside {
+		t.Errorf("west hemisphere polygon should not include origin")
+	}
+	if !eastHemi.originInside {
+		t.Errorf("east hemisphere polygon should include origin")
+	}
+	if !nearHemi.originInside {
+		t.Errorf("near hemisphere polygon should include origin")
+	}
+	if farHemi.originInside {
+		t.Errorf("far hemisphere polygon should not include origin")
+	}
+	if candyCane.originInside {
+		t.Errorf("candy cane polygon should not include origin")
+	}
+	if !smallNECW.originInside {
+		t.Errorf("smallNECW polygon should include origin")
+	}
+	if arctic80.originInside {
+		t.Errorf("arctic 80 polygon should not include origin")
+	}
+	if antarctic80.originInside {
+		t.Errorf("antarctic 80 polygon should not include origin")
+	}
+	if loopA.originInside {
+		t.Errorf("loop A polygon should not include origin")
+	}
+}
+
+func TestLoopContainsPoint(t *testing.T) {
+	north := PointFromCoords(0, 0, 1)
+	south := PointFromCoords(0, 0, -1)
+
+	if EmptyLoop().ContainsPoint(north) {
+		t.Errorf("empty loop should not not have any points")
+	}
+	if !FullLoop().ContainsPoint(south) {
+		t.Errorf("full loop should have full point vertex")
+	}
+
+	for _, tc := range []struct {
+		name string
+		l    *Loop
+		in   Point
+		out  Point
+	}{
+		{
+			"north hemisphere",
+			northHemi,
+			PointFromCoords(0, 0, 1),
+			PointFromCoords(0, 0, -1),
+		},
+		{
+			"south hemisphere",
+			southHemi,
+			PointFromCoords(0, 0, -1),
+			PointFromCoords(0, 0, 1),
+		},
+		{
+			"west hemisphere",
+			westHemi,
+			PointFromCoords(0, -1, 0),
+			PointFromCoords(0, 1, 0),
+		},
+		{
+			"east hemisphere",
+			eastHemi,
+			PointFromCoords(0, 1, 0),
+			PointFromCoords(0, -1, 0),
+		},
+		{
+			"candy cane",
+			candyCane,
+			PointFromLatLng(LatLngFromDegrees(5, 71)),
+			PointFromLatLng(LatLngFromDegrees(-8, 71)),
+		},
+	} {
+		l := tc.l
+		for i := 0; i < 4; i++ {
+			if !l.ContainsPoint(tc.in) {
+				t.Errorf("%s loop should contain %v at rotation %d", tc.name, tc.in, i)
+			}
+			if l.ContainsPoint(tc.out) {
+				t.Errorf("%s loop shouldn't contain %v at rotation %d", tc.name, tc.out, i)
+			}
+			l = rotate(l)
+		}
+	}
+}
+
+func rotate(l *Loop) *Loop {
+	vertices := make([]Point, 0, len(l.vertices))
+	for i := 1; i < len(l.vertices); i++ {
+		vertices = append(vertices, l.vertices[i])
+	}
+	vertices = append(vertices, l.vertices[0])
+	return LoopFromPoints(vertices)
+}
