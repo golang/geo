@@ -87,6 +87,11 @@ func randomUniformFloat64(min, max float64) float64 {
 	return min + randomFloat64()*(max-min)
 }
 
+// oneIn returns true with a probability of 1/n.
+func oneIn(n int) bool {
+	return randomUniformInt(n) == 0
+}
+
 // randomPoint returns a random unit-length vector.
 func randomPoint() Point {
 	return Point{PointFromCoords(randomUniformFloat64(-1, 1),
@@ -285,6 +290,61 @@ func samplePointFromCap(c Cap) Point {
 	// The result should already be very close to unit-length, but we might as
 	// well make it accurate as possible.
 	return Point{fromFrame(m, PointFromCoords(math.Cos(theta)*r, math.Sin(theta)*r, 1-h)).Normalize()}
+}
+
+// perturbATowardsB returns a point that has been shifted some distance towards the
+// second point based on a random number.
+func perturbATowardsB(a, b Point) Point {
+	choice := randomFloat64()
+	if choice < 0.1 {
+		return a
+	}
+	if choice < 0.3 {
+		// Return a point that is exactly proportional to A and that still
+		// satisfies IsUnitLength().
+		for {
+			b := Point{a.Mul(2 - a.Norm() + 5*(randomFloat64()-0.5)*dblEpsilon)}
+			if !b.ApproxEqual(a) && b.IsUnit() {
+				return b
+			}
+		}
+	}
+	if choice < 0.5 {
+		// Return a point such that the distance squared to A will underflow.
+		return InterpolateAtDistance(1e-300, a, b)
+	}
+	// Otherwise return a point whose distance from A is near dblEpsilon such
+	// that the log of the pdf is uniformly distributed.
+	distance := dblEpsilon * 1e-5 * math.Pow(1e6, randomFloat64())
+	return InterpolateAtDistance(s1.Angle(distance), a, b)
+}
+
+// perturbedCornerOrMidpoint returns a Point from a line segment whose endpoints are
+// difficult to handle correctly. Given two adjacent cube vertices P and Q,
+// it returns either an edge midpoint, face midpoint, or corner vertex that is
+// in the plane of PQ and that has been perturbed slightly. It also sometimes
+// returns a random point from anywhere on the sphere.
+func perturbedCornerOrMidpoint(p, q Point) Point {
+	a := p.Mul(float64(randomUniformInt(3) - 1)).Add(q.Mul(float64(randomUniformInt(3) - 1)))
+	if oneIn(10) {
+		// This perturbation often has no effect except on coordinates that are
+		// zero, in which case the perturbed value is so small that operations on
+		// it often result in underflow.
+		a = a.Add(randomPoint().Mul(math.Pow(1e-300, randomFloat64())))
+	} else if oneIn(2) {
+		// For coordinates near 1 (say > 0.5), this perturbation yields values
+		// that are only a few representable values away from the initial value.
+		a = a.Add(randomPoint().Mul(4 * dblEpsilon))
+	} else {
+		// A perturbation whose magnitude is in the range [1e-25, 1e-10].
+		a = a.Add(randomPoint().Mul(1e-10 * math.Pow(1e-15, randomFloat64())))
+	}
+
+	if a.Norm2() < dblEpsilon {
+		// If a.Norm2() is denormalized, Normalize() loses too much precision.
+		return perturbedCornerOrMidpoint(p, q)
+	}
+	return Point{a}
 }
 
 // TODO:

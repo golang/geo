@@ -17,7 +17,6 @@ limitations under the License.
 package s2
 
 import (
-	"math/rand"
 	"reflect"
 	"testing"
 )
@@ -204,10 +203,6 @@ func TestCellUnion(t *testing.T) {
 			}
 		}
 	}
-}
-
-func oneIn(n int) bool {
-	return rand.Intn(n) == 0
 }
 
 func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *testing.T) {
