@@ -648,6 +648,7 @@ func TestRectContainsCell(t *testing.T) {
 	}
 
 }
+
 func TestRectContainsPoint(t *testing.T) {
 	r1 := rectFromDegrees(0, -180, 90, 0)
 
@@ -662,6 +663,162 @@ func TestRectContainsPoint(t *testing.T) {
 	for _, test := range tests {
 		if got, want := test.r.ContainsPoint(test.p), test.want; got != want {
 			t.Errorf("%v.ContainsPoint(%v) was %v, want %v", test.r, test.p, got, want)
+		}
+	}
+}
+
+func TestIntersectsLatEdge(t *testing.T) {
+	tests := []struct {
+		a, b  Point
+		lat   s1.Angle
+		lngLo s1.Angle
+		lngHi s1.Angle
+		want  bool
+	}{
+		{
+			a:     PointFromCoords(-1, -1, 1),
+			b:     PointFromCoords(1, -1, 1),
+			lat:   41 * s1.Degree,
+			lngLo: -87 * s1.Degree,
+			lngHi: -79 * s1.Degree,
+			want:  false,
+		},
+		{
+			a:     PointFromCoords(-1, -1, 1),
+			b:     PointFromCoords(1, -1, 1),
+			lat:   42 * s1.Degree,
+			lngLo: -87 * s1.Degree,
+			lngHi: -79 * s1.Degree,
+			want:  false,
+		},
+		{
+			a:     PointFromCoords(-1, -1, -1),
+			b:     PointFromCoords(1, 1, 0),
+			lat:   -3 * s1.Degree,
+			lngLo: -1 * s1.Degree,
+			lngHi: 23 * s1.Degree,
+			want:  false,
+		},
+		{
+			a:     PointFromCoords(1, 0, 1),
+			b:     PointFromCoords(1, -1, 0),
+			lat:   -28 * s1.Degree,
+			lngLo: 69 * s1.Degree,
+			lngHi: 115 * s1.Degree,
+			want:  false,
+		},
+		{
+			a:     PointFromCoords(0, 1, 0),
+			b:     PointFromCoords(1, -1, -1),
+			lat:   44 * s1.Degree,
+			lngLo: 60 * s1.Degree,
+			lngHi: 177 * s1.Degree,
+			want:  true,
+		},
+		{
+			a:     PointFromCoords(0, 1, 1),
+			b:     PointFromCoords(0, 1, -1),
+			lat:   -25 * s1.Degree,
+			lngLo: -74 * s1.Degree,
+			lngHi: -165 * s1.Degree,
+			want:  true,
+		},
+		{
+			a:     PointFromCoords(1, 0, 0),
+			b:     PointFromCoords(0, 0, -1),
+			lat:   -4 * s1.Degree,
+			lngLo: -152 * s1.Degree,
+			lngHi: 171 * s1.Degree,
+			want:  true,
+		},
+	}
+
+	for _, test := range tests {
+		if got := intersectsLatEdge(test.a, test.b, test.lat, s1.Interval{float64(test.lngLo), float64(test.lngHi)}); got != test.want {
+			t.Errorf("intersectsLatEdge(%v, %v, %v, {%v, %v}) = %t, want %t",
+				test.a, test.b, test.lat, test.lngLo, test.lngHi, got, test.want)
+		}
+	}
+}
+
+func TestIntersectsLngEdge(t *testing.T) {
+	tests := []struct {
+		a, b  Point
+		latLo s1.Angle
+		latHi s1.Angle
+		lng   s1.Angle
+		want  bool
+	}{
+		{
+			a:     PointFromCoords(-1, -1, 1),
+			b:     PointFromCoords(1, -1, 1),
+			latLo: 41 * s1.Degree,
+			latHi: 42 * s1.Degree,
+			lng:   -79 * s1.Degree,
+			want:  false,
+		},
+		{
+			a:     PointFromCoords(-1, -1, 1),
+			b:     PointFromCoords(1, -1, 1),
+			latLo: 41 * s1.Degree,
+			latHi: 42 * s1.Degree,
+			lng:   -87 * s1.Degree,
+			want:  false,
+		},
+		{
+			a:     PointFromCoords(-1, -1, 1),
+			b:     PointFromCoords(1, -1, 1),
+			latLo: 42 * s1.Degree,
+			latHi: 41 * s1.Degree,
+			lng:   79 * s1.Degree,
+			want:  false,
+		},
+		{
+			a:     PointFromCoords(-1, -1, 1),
+			b:     PointFromCoords(1, -1, 1),
+			latLo: 41 * s1.Degree,
+			latHi: 42 * s1.Degree,
+			lng:   87 * s1.Degree,
+			want:  false,
+		},
+		{
+			a:     PointFromCoords(0, -1, -1),
+			b:     PointFromCoords(-1, 0, -1),
+			latLo: -87 * s1.Degree,
+			latHi: 13 * s1.Degree,
+			lng:   -143 * s1.Degree,
+			want:  true,
+		},
+		{
+			a:     PointFromCoords(1, 1, -1),
+			b:     PointFromCoords(1, -1, 1),
+			latLo: -64 * s1.Degree,
+			latHi: 13 * s1.Degree,
+			lng:   40 * s1.Degree,
+			want:  true,
+		},
+		{
+			a:     PointFromCoords(1, 1, 0),
+			b:     PointFromCoords(-1, 0, -1),
+			latLo: -64 * s1.Degree,
+			latHi: 56 * s1.Degree,
+			lng:   151 * s1.Degree,
+			want:  true,
+		},
+		{
+			a:     PointFromCoords(-1, -1, 0),
+			b:     PointFromCoords(1, -1, -1),
+			latLo: -50 * s1.Degree,
+			latHi: 18 * s1.Degree,
+			lng:   -84 * s1.Degree,
+			want:  true,
+		},
+	}
+
+	for _, test := range tests {
+		if got := intersectsLngEdge(test.a, test.b, r1.Interval{float64(test.latLo), float64(test.latHi)}, test.lng); got != test.want {
+			t.Errorf("intersectsLngEdge(%v, %v, {%v, %v}, %v) = %v, want %v",
+				test.a, test.b, test.latLo, test.latHi, test.lng, got, test.want)
 		}
 	}
 }

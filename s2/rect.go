@@ -291,5 +291,71 @@ func (r Rect) ContainsPoint(p Point) bool {
 	return r.ContainsLatLng(LatLngFromPoint(p))
 }
 
+// intersectsLatEdge reports if the edge AB intersects the given edge of constant
+// latitude. Requires the points to have unit length.
+func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
+	// Unfortunately, lines of constant latitude are curves on
+	// the sphere. They can intersect a straight edge in 0, 1, or 2 points.
+
+	// First, compute the normal to the plane AB that points vaguely north.
+	z := a.PointCross(b)
+	if z.Z < 0 {
+		z = Point{z.Mul(-1)}
+	}
+
+	// Extend this to an orthonormal frame (x,y,z) where x is the direction
+	// where the great circle through AB achieves its maximium latitude.
+	y := z.PointCross(PointFromCoords(0, 0, 1))
+	x := y.Cross(z.Vector)
+
+	// Compute the angle "theta" from the x-axis (in the x-y plane defined
+	// above) where the great circle intersects the given line of latitude.
+	sinLat := math.Sin(float64(lat))
+	if math.Abs(sinLat) >= x.Z {
+		// The great circle does not reach the given latitude.
+		return false
+	}
+
+	cosTheta := sinLat / x.Z
+	sinTheta := math.Sqrt(1 - cosTheta*cosTheta)
+	theta := math.Atan2(sinTheta, cosTheta)
+
+	// The candidate intersection points are located +/- theta in the x-y
+	// plane. For an intersection to be valid, we need to check that the
+	// intersection point is contained in the interior of the edge AB and
+	// also that it is contained within the given longitude interval "lng".
+
+	// Compute the range of theta values spanned by the edge AB.
+	abTheta := s1.IntervalFromEndpoints(
+		math.Atan2(a.Dot(y.Vector), a.Dot(x)),
+		math.Atan2(b.Dot(y.Vector), b.Dot(x)))
+
+	if abTheta.Contains(theta) {
+		// Check if the intersection point is also in the given lng interval.
+		isect := x.Mul(cosTheta).Add(y.Mul(sinTheta))
+		if lng.Contains(math.Atan2(isect.Y, isect.X)) {
+			return true
+		}
+	}
+
+	if abTheta.Contains(-theta) {
+		// Check if the other intersection point is also in the given lng interval.
+		isect := x.Mul(cosTheta).Sub(y.Mul(sinTheta))
+		if lng.Contains(math.Atan2(isect.Y, isect.X)) {
+			return true
+		}
+	}
+	return false
+}
+
+// intersectsLngEdge reports if the edge AB intersects the given edge of constant
+// longitude. Requires the points to have unit length.
+func intersectsLngEdge(a, b Point, lat r1.Interval, lng s1.Angle) bool {
+	// The nice thing about edges of constant longitude is that
+	// they are straight lines on the sphere (geodesics).
+	return SimpleCrossing(a, b, PointFromLatLng(LatLng{s1.Angle(lat.Lo), lng}),
+		PointFromLatLng(LatLng{s1.Angle(lat.Hi), lng}))
+}
+
 // BUG(dsymonds): The major differences from the C++ version are:
 //   - almost everything
