@@ -46,6 +46,25 @@ package s2
 //  - No loop may be empty.  The full loop may appear only in the full polygon.
 type Polygon struct {
 	loops []*Loop
+
+	// index is a spatial index of all the polygon loops.
+	index ShapeIndex
+
+	// hasHoles tracks if this polygon has at least one hole.
+	hasHoles bool
+
+	// numVertices keeps the running total of all of the vertices of the contained loops.
+	numVertices int
+
+	// bound is a conservative bound on all points contained by this loop.
+	// If l.ContainsPoint(P), then l.bound.ContainsPoint(P).
+	bound Rect
+
+	// Since bound is not exact, it is possible that a loop A contains
+	// another loop B whose bounds are slightly larger. subregionBound
+	// has been expanded sufficiently to account for this error, i.e.
+	// if A.Contains(B), then A.subregionBound.Contains(B.bound).
+	subregionBound Rect
 }
 
 // PolygonFromLoops constructs a polygon from the given hierarchically nested
@@ -63,7 +82,10 @@ func PolygonFromLoops(loops []*Loop) *Polygon {
 		panic("s2.PolygonFromLoops for multiple loops is not yet implemented")
 	}
 	return &Polygon{
-		loops: loops,
+		loops:          loops,
+		numVertices:    len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
+		bound:          EmptyRect(),
+		subregionBound: EmptyRect(),
 	}
 }
 
@@ -73,6 +95,9 @@ func FullPolygon() *Polygon {
 		loops: []*Loop{
 			FullLoop(),
 		},
+		numVertices:    len(FullLoop().Vertices()),
+		bound:          FullRect(),
+		subregionBound: FullRect(),
 	}
 }
 
