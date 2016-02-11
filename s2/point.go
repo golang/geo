@@ -62,7 +62,7 @@ const detErrorMultiplier = 7.1767e-16
 
 // Point represents a point on the unit sphere as a normalized 3D vector.
 //
-// Points are guaranteed to be close to normal in the sense that the norm of any points will be very close to 1.
+// Points are guaranteed to be close to normalized.
 //
 // Fields should be treated as read-only. Use one of the factory methods for creation.
 type Point struct {
@@ -205,9 +205,9 @@ func expensiveSign(a, b, c Point) Direction {
 	}
 
 	// Next we try recomputing the determinant still using floating-point
-	// arithmetic but in a more precise way.  This is more expensive than the
+	// arithmetic but in a more precise way. This is more expensive than the
 	// simple calculation done by triageSign, but it is still *much* cheaper
-	// than using arbitrary-precision arithmetic.  This optimization is able to
+	// than using arbitrary-precision arithmetic. This optimization is able to
 	// compute the correct determinant sign in virtually all cases except when
 	// the three points are truly collinear (e.g., three points on the equator).
 	detSign := stableSign(a, b, c)
@@ -221,10 +221,10 @@ func expensiveSign(a, b, c Point) Direction {
 
 // stableSign reports the direction sign of the points in a numerically stable way.
 // Unlike triageSign, this method can usually compute the correct determinant sign even when all
-// three points are as collinear as possible.  For example if three points are
+// three points are as collinear as possible. For example if three points are
 // spaced 1km apart along a random line on the Earth's surface using the
 // nearest representable points, there is only a 0.4% chance that this method
-// will not be able to find the determinant sign.  The probability of failure
+// will not be able to find the determinant sign. The probability of failure
 // decreases as the points get closer together; if the collinear points are
 // 1 meter apart, the failure rate drops to 0.0004%.
 //
@@ -241,7 +241,7 @@ func stableSign(a, b, c Point) Direction {
 	ca2 := ca.Norm2()
 
 	// Now compute the determinant ((A-C)x(B-C)).C, where the vertices have been
-	// cyclically permuted if necessary so that AB is the longest edge.  (This
+	// cyclically permuted if necessary so that AB is the longest edge. (This
 	// minimizes the magnitude of cross product.)  At the same time we also
 	// compute the maximum error in the determinant.
 
@@ -378,6 +378,77 @@ func PointArea(a, b, c Point) float64 {
 		math.Tan(0.5*(s-sb))*math.Tan(0.5*(s-sc)))))
 }
 
+// TrueCentroid returns the true centroid of the spherical triangle ABC multiplied by the
+// signed area of spherical triangle ABC. The result is not normalized.
+// The reasons for multiplying by the signed area are (1) this is the quantity
+// that needs to be summed to compute the centroid of a union or difference of triangles,
+// and (2) it's actually easier to calculate this way. All points must have unit length.
+//
+// The true centroid (mass centroid) is defined as the surface integral
+// over the spherical triangle of (x,y,z) divided by the triangle area.
+// This is the point that the triangle would rotate around if it was
+// spinning in empty space.
+//
+// The best centroid for most purposes is the true centroid. Unlike the
+// planar and surface centroids, the true centroid behaves linearly as
+// regions are added or subtracted. That is, if you split a triangle into
+// pieces and compute the average of their centroids (weighted by triangle
+// area), the result equals the centroid of the original triangle. This is
+// not true of the other centroids.
+func TrueCentroid(a, b, c Point) Point {
+	ra := float64(1)
+	if sa := float64(b.Distance(c)); sa != 0 {
+		ra = sa / math.Sin(sa)
+	}
+	rb := float64(1)
+	if sb := float64(c.Distance(a)); sb != 0 {
+		rb = sb / math.Sin(sb)
+	}
+	rc := float64(1)
+	if sc := float64(a.Distance(b)); sc != 0 {
+		rc = sc / math.Sin(sc)
+	}
+
+	// Now compute a point M such that:
+	//
+	//  [Ax Ay Az] [Mx]                       [ra]
+	//  [Bx By Bz] [My]  = 0.5 * det(A,B,C) * [rb]
+	//  [Cx Cy Cz] [Mz]                       [rc]
+	//
+	// To improve the numerical stability we subtract the first row (A) from the
+	// other two rows; this reduces the cancellation error when A, B, and C are
+	// very close together. Then we solve it using Cramer's rule.
+	//
+	// This code still isn't as numerically stable as it could be.
+	// The biggest potential improvement is to compute B-A and C-A more
+	// accurately so that (B-A)x(C-A) is always inside triangle ABC.
+	x := r3.Vector{a.X, b.X - a.X, c.X - a.X}
+	y := r3.Vector{a.Y, b.Y - a.Y, c.Y - a.Y}
+	z := r3.Vector{a.Z, b.Z - a.Z, c.Z - a.Z}
+	r := r3.Vector{ra, rb - ra, rc - ra}
+
+	return Point{r3.Vector{y.Cross(z).Dot(r), z.Cross(x).Dot(r), x.Cross(y).Dot(r)}.Mul(0.5)}
+}
+
+// PlanarCentroid returns the centroid of the planar triangle ABC, which is not normalized.
+// It can be normalized to unit length to obtain the "surface centroid" of the corresponding
+// spherical triangle, i.e. the intersection of the three medians. However,
+// note that for large spherical triangles the surface centroid may be
+// nowhere near the intuitive "center" (see example in TrueCentroid comments).
+//
+// Note that the surface centroid may be nowhere near the intuitive
+// "center" of a spherical triangle. For example, consider the triangle
+// with vertices A=(1,eps,0), B=(0,0,1), C=(-1,eps,0) (a quarter-sphere).
+// The surface centroid of this triangle is at S=(0, 2*eps, 1), which is
+// within a distance of 2*eps of the vertex B. Note that the median from A
+// (the segment connecting A to the midpoint of BC) passes through S, since
+// this is the shortest path connecting the two endpoints. On the other
+// hand, the true centroid is at M=(0, 0.5, 0.5), which when projected onto
+// the surface is a much more reasonable interpretation of the "center" of
+// this triangle.
+func PlanarCentroid(a, b, c Point) Point {
+	return Point{a.Add(b.Vector).Add(c.Vector).Mul(1. / 3)}
+}
+
 // TODO(dnadasi):
 //   - Maybe more Area methods?
-//   - Centroid methods

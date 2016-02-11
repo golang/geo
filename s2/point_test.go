@@ -117,15 +117,15 @@ var (
 	z = Point{r3.Vector{0, 0, 1}}
 
 	// The following points happen to be *exactly collinear* along a line that it
-	// approximate tangent to the surface of the unit sphere.  In fact, C is the
-	// exact midpoint of the line segment AB.  All of these points are close
+	// approximate tangent to the surface of the unit sphere. In fact, C is the
+	// exact midpoint of the line segment AB. All of these points are close
 	// enough to unit length to satisfy r3.Vector.IsUnit().
 	poA = Point{r3.Vector{0.72571927877036835, 0.46058825605889098, 0.51106749730504852}}
 	poB = Point{r3.Vector{0.7257192746638208, 0.46058826573818168, 0.51106749441312738}}
 	poC = Point{r3.Vector{0.72571927671709457, 0.46058826089853633, 0.51106749585908795}}
 
 	// The points "x1" and "x2" are exactly proportional, i.e. they both lie
-	// on a common line through the origin.  Both points are considered to be
+	// on a common line through the origin. Both points are considered to be
 	// normalized, and in fact they both satisfy (x == x.Normalize()).
 	// Therefore the triangle (x1, x2, -x1) consists of three distinct points
 	// that all lie on a common line through the origin.
@@ -187,8 +187,8 @@ func TestRobustSign(t *testing.T) {
 
 		// Edge cases:
 		// The following points happen to be *exactly collinear* along a line that it
-		// approximate tangent to the surface of the unit sphere.  In fact, C is the
-		// exact midpoint of the line segment AB.  All of these points are close
+		// approximate tangent to the surface of the unit sphere. In fact, C is the
+		// exact midpoint of the line segment AB. All of these points are close
 		// enough to unit length to satisfy S2::IsUnitLength().
 		{
 			// Until we get ExactSign, this will only return Indeterminate.
@@ -197,7 +197,7 @@ func TestRobustSign(t *testing.T) {
 		},
 
 		// The points "x1" and "x2" are exactly proportional, i.e. they both lie
-		// on a common line through the origin.  Both points are considered to be
+		// on a common line through the origin. Both points are considered to be
 		// normalized, and in fact they both satisfy (x == x.Normalize()).
 		// Therefore the triangle (x1, x2, -x1) consists of three distinct points
 		// that all lie on a common line through the origin.
@@ -216,7 +216,7 @@ func TestRobustSign(t *testing.T) {
 		},
 
 		// The following points demonstrate that Normalize() is not idempotent,
-		// i.e. y0.Normalize() != y0.Normalize().Normalize().  Both points satisfy
+		// i.e. y0.Normalize() != y0.Normalize().Normalize(). Both points satisfy
 		// S2::IsNormalized(), though, and the two points are exactly proportional.
 		{
 			// Until we get ExactSign, this will only return Indeterminate.
@@ -374,6 +374,71 @@ func TestPointAreaQuarterHemisphere(t *testing.T) {
 
 		if !float64Eq(area, test.want) {
 			t.Errorf("Adding up 4 quarter hemispheres with PointArea(), got %v want %v", area, test.want)
+		}
+	}
+}
+
+func TestPlanarCentroid(t *testing.T) {
+	tests := []struct {
+		name             string
+		p0, p1, p2, want Point
+	}{
+		{
+			name: "xyz axis",
+			p0:   PointFromCoords(0, 0, 1),
+			p1:   PointFromCoords(0, 1, 0),
+			p2:   PointFromCoords(1, 0, 0),
+			want: PointFromCoords(1./3, 1./3, 1./3),
+		},
+		{
+			name: "Same point",
+			p0:   PointFromCoords(1, 0, 0),
+			p1:   PointFromCoords(1, 0, 0),
+			p2:   PointFromCoords(1, 0, 0),
+			want: PointFromCoords(1, 0, 0),
+		},
+	}
+
+	for _, test := range tests {
+		got := PlanarCentroid(test.p0, test.p1, test.p2)
+		if !got.ApproxEqual(test.want) {
+			t.Errorf("%s: PlanarCentroid(%v, %v, %v) = %v, want %v", test.name, test.p0, test.p1, test.p2, got, test.want)
+		}
+	}
+}
+
+func TestTrueCentroid(t *testing.T) {
+	// Test TrueCentroid with very small triangles. This test assumes that
+	// the triangle is small enough so that it is nearly planar.
+	// The centroid of a planar triangle is at the intersection of its
+	// medians, which is two-thirds of the way along each median.
+	for i := 0; i < 100; i++ {
+		f := randomFrame()
+		p := f.col(0)
+		x := f.col(1)
+		y := f.col(2)
+		d := 1e-4 * math.Pow(1e-4, randomFloat64())
+
+		// Make a triangle with two equal sides.
+		p0 := Point{p.Sub(x.Mul(d)).Normalize()}
+		p1 := Point{p.Add(x.Mul(d)).Normalize()}
+		p2 := Point{p.Add(y.Mul(d * 3)).Normalize()}
+		want := Point{p.Add(y.Mul(d)).Normalize()}
+
+		got := TrueCentroid(p0, p1, p2).Normalize()
+		if got.Distance(want.Vector) >= 2e-8 {
+			t.Errorf("TrueCentroid(%v, %v, %v).Normalize() = %v, want %v", p0, p1, p2, got, want)
+		}
+
+		// Make a triangle with a right angle.
+		p0 = p
+		p1 = Point{p.Add(x.Mul(d * 3)).Normalize()}
+		p2 = Point{p.Add(y.Mul(d * 6)).Normalize()}
+		want = Point{p.Add(x.Add(y.Mul(2)).Mul(d)).Normalize()}
+
+		got = TrueCentroid(p0, p1, p2).Normalize()
+		if got.Distance(want.Vector) >= 2e-8 {
+			t.Errorf("TrueCentroid(%v, %v, %v).Normalize() = %v, want %v", p0, p1, p2, got, want)
 		}
 	}
 }
