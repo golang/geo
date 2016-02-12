@@ -357,5 +357,70 @@ func intersectsLngEdge(a, b Point, lat r1.Interval, lng s1.Angle) bool {
 		PointFromLatLng(LatLng{s1.Angle(lat.Hi), lng}))
 }
 
-// BUG(dsymonds): The major differences from the C++ version are:
-//   - almost everything
+// IntersectsCell reports whether this rectangle intersects the given cell. This is an
+// exact test and may be fairly expensive.
+func (r Rect) IntersectsCell(c Cell) bool {
+	// First we eliminate the cases where one region completely contains the
+	// other. Once these are disposed of, then the regions will intersect
+	// if and only if their boundaries intersect.
+	if r.IsEmpty() {
+		return false
+	}
+	if r.ContainsPoint(Point{c.id.rawPoint()}) {
+		return true
+	}
+	if c.ContainsPoint(PointFromLatLng(r.Center())) {
+		return true
+	}
+
+	// Quick rejection test (not required for correctness).
+	if !r.Intersects(c.RectBound()) {
+		return false
+	}
+
+	// Precompute the cell vertices as points and latitude-longitudes. We also
+	// check whether the Cell contains any corner of the rectangle, or
+	// vice-versa, since the edge-crossing tests only check the edge interiors.
+	vertices := [4]Point{}
+	latlngs := [4]LatLng{}
+
+	for i := range vertices {
+		vertices[i] = c.Vertex(i)
+		latlngs[i] = LatLngFromPoint(vertices[i])
+		if r.ContainsLatLng(latlngs[i]) {
+			return true
+		}
+		if c.ContainsPoint(PointFromLatLng(r.Vertex(i))) {
+			return true
+		}
+	}
+
+	// Now check whether the boundaries intersect. Unfortunately, a
+	// latitude-longitude rectangle does not have straight edges: two edges
+	// are curved, and at least one of them is concave.
+	for i := range vertices {
+		edgeLng := s1.IntervalFromEndpoints(latlngs[i].Lng.Radians(), latlngs[(i+1)&3].Lng.Radians())
+		if !r.Lng.Intersects(edgeLng) {
+			continue
+		}
+
+		a := vertices[i]
+		b := vertices[(i+1)&3]
+		if edgeLng.Contains(r.Lng.Lo) && intersectsLngEdge(a, b, r.Lat, s1.Angle(r.Lng.Lo)) {
+			return true
+		}
+		if edgeLng.Contains(r.Lng.Hi) && intersectsLngEdge(a, b, r.Lat, s1.Angle(r.Lng.Hi)) {
+			return true
+		}
+		if intersectsLatEdge(a, b, s1.Angle(r.Lat.Lo), r.Lng) {
+			return true
+		}
+		if intersectsLatEdge(a, b, s1.Angle(r.Lat.Hi), r.Lng) {
+			return true
+		}
+	}
+	return false
+}
+
+// BUG: The major differences from the C++ version are:
+//   - GetCentroid, Get*Distance, Vertex, InteriorContains(LatLng|Rect|Point)

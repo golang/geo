@@ -534,116 +534,137 @@ func TestRectIntervalOps(t *testing.T) {
 	}
 }
 
-func TestRectContainsCell(t *testing.T) {
+func TestRectCellOps(t *testing.T) {
 	cell0 := CellFromPoint(PointFromCoords(1+1e-12, 1, 1))
-	vertex0 := LatLngFromPoint(cell0.Vertex(0))
+	v0 := LatLngFromPoint(cell0.Vertex(0))
 
 	cell202 := CellFromCellID(CellIDFromFacePosLevel(2, 0, 2))
 	bound202 := cell202.RectBound()
 
 	tests := []struct {
-		r    Rect
-		c    Cell
-		want bool
+		r          Rect
+		c          Cell
+		contains   bool
+		intersects bool
 	}{
+		// Special cases
 		{
-			EmptyRect(),
-			CellFromCellID(CellIDFromFacePosLevel(3, 0, 0)),
-			false,
+			r:          EmptyRect(),
+			c:          CellFromCellID(CellIDFromFacePosLevel(3, 0, 0)),
+			contains:   false,
+			intersects: false,
 		},
 		{
-			FullRect(),
-			CellFromCellID(CellIDFromFacePosLevel(2, 0, 0)),
-			true,
+			r:          FullRect(),
+			c:          CellFromCellID(CellIDFromFacePosLevel(2, 0, 0)),
+			contains:   true,
+			intersects: true,
 		},
 		{
-			FullRect(),
-			CellFromCellID(CellIDFromFacePosLevel(5, 0, 25)),
-			true,
+			r:          FullRect(),
+			c:          CellFromCellID(CellIDFromFacePosLevel(5, 0, 25)),
+			contains:   true,
+			intersects: true,
 		},
 		// This rectangle includes the first quadrant of face 0.  It's expanded
 		// slightly because cell bounding rectangles are slightly conservative.
 		{
-			rectFromDegrees(-45.1, -45.1, 0.1, 0.1),
-			CellFromCellID(CellIDFromFacePosLevel(0, 0, 0)),
-			false,
+			r:          rectFromDegrees(-45.1, -45.1, 0.1, 0.1),
+			c:          CellFromCellID(CellIDFromFacePosLevel(0, 0, 0)),
+			contains:   false,
+			intersects: true,
 		},
 		{
-			rectFromDegrees(-45.1, -45.1, 0.1, 0.1),
-			CellFromCellID(CellIDFromFacePosLevel(0, 0, 1)),
-			true,
+			r:          rectFromDegrees(-45.1, -45.1, 0.1, 0.1),
+			c:          CellFromCellID(CellIDFromFacePosLevel(0, 0, 1)),
+			contains:   true,
+			intersects: true,
 		},
 		{
-			rectFromDegrees(-45.1, -45.1, 0.1, 0.1),
-			CellFromCellID(CellIDFromFacePosLevel(1, 0, 1)),
-			false,
+			r:          rectFromDegrees(-45.1, -45.1, 0.1, 0.1),
+			c:          CellFromCellID(CellIDFromFacePosLevel(1, 0, 1)),
+			contains:   false,
+			intersects: false,
 		},
 		// This rectangle intersects the first quadrant of face 0.
 		{
-			rectFromDegrees(-10, -45, 10, 0),
-			CellFromCellID(CellIDFromFacePosLevel(0, 0, 0)),
-			false,
+			r:          rectFromDegrees(-10, -45, 10, 0),
+			c:          CellFromCellID(CellIDFromFacePosLevel(0, 0, 0)),
+			contains:   false,
+			intersects: true,
 		},
 		{
-			rectFromDegrees(-10, -45, 10, 0),
-			CellFromCellID(CellIDFromFacePosLevel(0, 0, 1)),
-			false,
+			r:          rectFromDegrees(-10, -45, 10, 0),
+			c:          CellFromCellID(CellIDFromFacePosLevel(0, 0, 1)),
+			contains:   false,
+			intersects: true,
 		},
 		{
-			rectFromDegrees(-10, -45, 10, 0),
-			CellFromCellID(CellIDFromFacePosLevel(1, 0, 1)),
-			false,
+			r:          rectFromDegrees(-10, -45, 10, 0),
+			c:          CellFromCellID(CellIDFromFacePosLevel(1, 0, 1)),
+			contains:   false,
+			intersects: false,
 		},
 		// Rectangle consisting of a single point.
 		{
-			rectFromDegrees(4, 4, 4, 4),
-			CellFromCellID(CellIDFromFace(0)),
-			false,
+			r:          rectFromDegrees(4, 4, 4, 4),
+			c:          CellFromCellID(CellIDFromFace(0)),
+			contains:   false,
+			intersects: true,
 		},
 		// Rectangles that intersect the bounding rectangle of a face
 		// but not the face itself.
 		{
-			rectFromDegrees(41, -87, 42, -79),
-			CellFromCellID(CellIDFromFace(2)),
-			false,
+			r:          rectFromDegrees(41, -87, 42, -79),
+			c:          CellFromCellID(CellIDFromFace(2)),
+			contains:   false,
+			intersects: false,
 		},
 		{
-			rectFromDegrees(-41, 160, -40, -160),
-			CellFromCellID(CellIDFromFace(5)),
-			false,
+			r:          rectFromDegrees(-41, 160, -40, -160),
+			c:          CellFromCellID(CellIDFromFace(5)),
+			contains:   false,
+			intersects: false,
 		},
 		{
 			// This is the leaf cell at the top right hand corner of face 0.
 			// It has two angles of 60 degrees and two of 120 degrees.
-			rectFromDegrees(vertex0.Lat.Degrees()-1e-8,
-				vertex0.Lng.Degrees()-1e-8,
-				vertex0.Lat.Degrees()-2e-10,
-				vertex0.Lng.Degrees()+1e-10),
-			cell0,
-			false,
+			r: rectFromDegrees(v0.Lat.Degrees()-1e-8,
+				v0.Lng.Degrees()-1e-8,
+				v0.Lat.Degrees()-2e-10,
+				v0.Lng.Degrees()+1e-10),
+			c:          cell0,
+			contains:   false,
+			intersects: false,
 		},
 		{
 			// Rectangles that intersect a face but where no vertex of one region
 			// is contained by the other region.  The first one passes through
 			// a corner of one of the face cells.
-			rectFromDegrees(-37, -70, -36, -20),
-			CellFromCellID(CellIDFromFace(5)),
-			false,
+			r:          rectFromDegrees(-37, -70, -36, -20),
+			c:          CellFromCellID(CellIDFromFace(5)),
+			contains:   false,
+			intersects: true,
 		},
 		{
 			// These two intersect like a diamond and a square.
-			rectFromDegrees(bound202.Lo().Lat.Degrees()+3,
+			r: rectFromDegrees(bound202.Lo().Lat.Degrees()+3,
 				bound202.Lo().Lng.Degrees()+3,
 				bound202.Hi().Lat.Degrees()-3,
 				bound202.Hi().Lng.Degrees()-3),
-			cell202,
-			false,
+			c:          cell202,
+			contains:   false,
+			intersects: true,
 		},
 	}
 
 	for _, test := range tests {
-		if got := test.r.ContainsCell(test.c); got != test.want {
-			t.Errorf("%v.ContainsCell(%v) = %v, want %v", test.r, test.c, got, test.want)
+		if got := test.r.ContainsCell(test.c); got != test.contains {
+			t.Errorf("%v.ContainsCell(%v) = %v, want %v", test.r, test.c, got, test.contains)
+		}
+
+		if got := test.r.IntersectsCell(test.c); got != test.intersects {
+			t.Errorf("%v.IntersectsCell(%v) = %v, want %v", test.r, test.c, got, test.intersects)
 		}
 	}
 
