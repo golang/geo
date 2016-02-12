@@ -170,6 +170,24 @@ func (l Loop) ContainsOrigin() bool {
 	return l.originInside
 }
 
+// HasInterior returns true because all loops have an interior.
+func (l Loop) HasInterior() bool {
+	return true
+}
+
+// NumEdges returns the number of edges in this shape.
+func (l Loop) NumEdges() int {
+	if l.isEmptyOrFull() {
+		return 0
+	}
+	return len(l.vertices)
+}
+
+// Edge returns the endpoints for the given edge index.
+func (l Loop) Edge(i int) (a, b Point) {
+	return l.Vertex(i), l.Vertex(i + 1)
+}
+
 // IsEmpty reports true if this is the special "empty" loop that contains no points.
 func (l Loop) IsEmpty() bool {
 	return l.isEmptyOrFull() && !l.ContainsOrigin()
@@ -189,6 +207,13 @@ func (l Loop) isEmptyOrFull() bool {
 // the bound also contains it.
 func (l Loop) RectBound() Rect {
 	return l.bound
+}
+
+// Vertex returns the vertex for the given index. For convenience, the vertex indices
+// wrap automatically for methods that do index math such as Edge.
+// i.e., Vertex(NumEdges() + n) is the same as Vertex(n).
+func (l Loop) Vertex(i int) Point {
+	return l.vertices[i%len(l.vertices)]
 }
 
 // Vertices returns the vertices in the loop.

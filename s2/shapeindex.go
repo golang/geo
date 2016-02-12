@@ -33,6 +33,11 @@ type Shape interface {
 	ContainsOrigin() bool
 }
 
+// A minimal check for types that should satisfy the Shape interface.
+var (
+	_ Shape = Loop{}
+)
+
 // CellRelation describes the possible relationships between a target cell
 // and the cells of the ShapeIndex. If the target is an index cell or is
 // contained by an index cell, it is Indexed. If the target is subdivided

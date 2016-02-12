@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/golang/geo/r1"
+	"github.com/golang/geo/r3"
 )
 
 var (
@@ -303,6 +304,135 @@ func TestLoopContainsPoint(t *testing.T) {
 				t.Errorf("%s loop shouldn't contain %v at rotation %d", tc.name, tc.out, i)
 			}
 			l = rotate(l)
+		}
+	}
+}
+
+func TestVertex(t *testing.T) {
+	tests := []struct {
+		loop   *Loop
+		vertex int
+		want   Point
+	}{
+		{EmptyLoop(), 0, PointFromCoords(0, 0, 1)},
+		{EmptyLoop(), 1, PointFromCoords(0, 0, 1)},
+		{FullLoop(), 0, PointFromCoords(0, 0, -1)},
+		{FullLoop(), 1, PointFromCoords(0, 0, -1)},
+		{arctic80, 0, parsePoint("80:-150")},
+		{arctic80, 1, parsePoint("80:-30")},
+		{arctic80, 2, parsePoint("80:90")},
+		{arctic80, 3, parsePoint("80:-150")},
+	}
+
+	for _, test := range tests {
+		if got := test.loop.Vertex(test.vertex); !pointsApproxEquals(got, test.want, epsilon) {
+			t.Errorf("%v.Vertex(%d) = %v, want %v", test.loop, test.vertex, got, test.want)
+		}
+	}
+
+	// Check that wrapping is correct.
+	if !pointsApproxEquals(arctic80.Vertex(2), arctic80.Vertex(5), epsilon) {
+		t.Errorf("Vertex should wrap values. %v.Vertex(2) = %v != %v.Vertex(5) = %v",
+			arctic80, arctic80.Vertex(2), arctic80, arctic80.Vertex(5))
+	}
+
+	loopAroundThrice := 2 + 3*len(arctic80.vertices)
+	if !pointsApproxEquals(arctic80.Vertex(2), arctic80.Vertex(loopAroundThrice), epsilon) {
+		t.Errorf("Vertex should wrap values. %v.Vertex(2) = %v != %v.Vertex(%d) = %v",
+			arctic80, arctic80.Vertex(2), arctic80, loopAroundThrice, arctic80.Vertex(loopAroundThrice))
+	}
+}
+
+func TestNumEdges(t *testing.T) {
+	tests := []struct {
+		loop *Loop
+		want int
+	}{
+		{EmptyLoop(), 0},
+		{FullLoop(), 0},
+		{farHemi, 4},
+		{candyCane, 6},
+		{smallNECW, 3},
+		{arctic80, 3},
+		{antarctic80, 3},
+		{lineTriangle, 3},
+		{skinnyChevron, 4},
+	}
+
+	for _, test := range tests {
+		if got := test.loop.NumEdges(); got != test.want {
+			t.Errorf("%v.NumEdges() = %v, want %v", test.loop, got, test.want)
+		}
+	}
+}
+
+func TestEdge(t *testing.T) {
+	tests := []struct {
+		loop  *Loop
+		edge  int
+		wantA Point
+		wantB Point
+	}{
+		{
+			loop:  farHemi,
+			edge:  2,
+			wantA: Point{r3.Vector{0, 0, -1}},
+			wantB: Point{r3.Vector{0, -1, 0}},
+		},
+		{
+			loop: candyCane,
+			edge: 0,
+
+			wantA: parsePoint("-20:150"),
+			wantB: parsePoint("-20:-70"),
+		},
+		{
+			loop:  candyCane,
+			edge:  1,
+			wantA: parsePoint("-20:-70"),
+			wantB: parsePoint("0:70"),
+		},
+		{
+			loop:  candyCane,
+			edge:  2,
+			wantA: parsePoint("0:70"),
+			wantB: parsePoint("10:-150"),
+		},
+		{
+			loop:  candyCane,
+			edge:  3,
+			wantA: parsePoint("10:-150"),
+			wantB: parsePoint("10:70"),
+		},
+		{
+			loop:  candyCane,
+			edge:  4,
+			wantA: parsePoint("10:70"),
+			wantB: parsePoint("-10:-70"),
+		},
+		{
+			loop:  candyCane,
+			edge:  5,
+			wantA: parsePoint("-10:-70"),
+			wantB: parsePoint("-20:150"),
+		},
+		{
+			loop:  skinnyChevron,
+			edge:  2,
+			wantA: parsePoint("0:1e-320"),
+			wantB: parsePoint("1e-320:80"),
+		},
+		{
+			loop:  skinnyChevron,
+			edge:  3,
+			wantA: parsePoint("1e-320:80"),
+			wantB: parsePoint("0:0"),
+		},
+	}
+
+	for _, test := range tests {
+		if a, b := test.loop.Edge(test.edge); !(pointsApproxEquals(a, test.wantA, epsilon) && pointsApproxEquals(b, test.wantB, epsilon)) {
+			t.Errorf("%v.Edge(%d) = (%v, %v), want (%v, %v)", test.loop, test.edge, a, b, test.wantA, test.wantB)
 		}
 	}
 }
