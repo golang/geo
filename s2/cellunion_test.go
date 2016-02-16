@@ -17,8 +17,12 @@ limitations under the License.
 package s2
 
 import (
+	"math"
 	"reflect"
 	"testing"
+
+	"github.com/golang/geo/r1"
+	"github.com/golang/geo/s1"
 )
 
 func TestNormalization(t *testing.T) {
@@ -48,6 +52,44 @@ func TestNormalization(t *testing.T) {
 		t.Errorf("after redundant add, got %v, want %v", cu, exp)
 	}
 	*/
+}
+
+func TestCellUnionBasic(t *testing.T) {
+	empty := CellUnion{}
+	empty.Normalize()
+	if len(empty) != 0 {
+		t.Errorf("empty CellUnion had %d cells, want 0", len(empty))
+	}
+
+	face1ID := CellIDFromFace(1)
+	face1Cell := CellFromCellID(face1ID)
+	face1Union := CellUnion{face1ID}
+	face1Union.Normalize()
+	if len(face1Union) != 1 {
+		t.Errorf("%v had %d cells, want 1", face1Union, len(face1Union))
+	}
+	if face1ID != face1Union[0] {
+		t.Errorf("%v[0] = %v, want %v", face1Union, face1Union[0], face1ID)
+	}
+	if got := face1Union.ContainsCell(face1Cell); !got {
+		t.Errorf("%v.ContainsCell(%v) = %t, want %t", face1Union, face1Cell, got, true)
+	}
+
+	face2ID := CellIDFromFace(2)
+	face2Cell := CellFromCellID(face2ID)
+	face2Union := CellUnion{face2ID}
+	face2Union.Normalize()
+	if len(face2Union) != 1 {
+		t.Errorf("%v had %d cells, want 1", face2Union, len(face2Union))
+	}
+	if face2ID != face2Union[0] {
+		t.Errorf("%v[0] = %v, want %v", face2Union, face2Union[0], face2ID)
+	}
+
+	if got := face1Union.ContainsCell(face2Cell); got {
+		t.Errorf("%v.ContainsCell(%v) = %t, want %t", face1Union, face2Cell, got, false)
+	}
+
 }
 
 func TestCellUnion(t *testing.T) {
@@ -305,6 +347,10 @@ func TestNormalizePseudoRandom(t *testing.T) {
 		}
 
 		for _, j := range input {
+			if !cellunion.ContainsCellID(j) {
+				t.Errorf("Expected containment of CellID %v", j)
+			}
+
 			if cellunion.Intersects(j) == false {
 				t.Errorf("Expected intersection with %v.", j)
 			}
@@ -325,14 +371,34 @@ func TestNormalizePseudoRandom(t *testing.T) {
 			}
 
 			if !j.IsLeaf() {
+				if cellunion.ContainsCellID(j.ChildBegin()) == false {
+					t.Errorf("Expected containment of %v.", j.ChildBegin())
+				}
 				if cellunion.Intersects(j.ChildBegin()) == false {
 					t.Errorf("Expected intersection with %v.", j.ChildBegin())
+				}
+				if cellunion.ContainsCellID(j.ChildEnd().Prev()) == false {
+					t.Errorf("Expected containment of %v.", j.ChildEnd().Prev())
 				}
 				if cellunion.Intersects(j.ChildEnd().Prev()) == false {
 					t.Errorf("Expected intersection with %v.", j.ChildEnd().Prev())
 				}
+				if cellunion.ContainsCellID(j.ChildBeginAtLevel(maxLevel)) == false {
+					t.Errorf("Expected containment of %v.", j.ChildBeginAtLevel(maxLevel))
+				}
 				if cellunion.Intersects(j.ChildBeginAtLevel(maxLevel)) == false {
 					t.Errorf("Expected intersection with %v.", j.ChildBeginAtLevel(maxLevel))
+				}
+			}
+		}
+
+		for _, exp := range expected {
+			if !exp.isFace() {
+				if cellunion.ContainsCellID(exp.Parent(exp.Level() - 1)) {
+					t.Errorf("cellunion should not contain its parent %v", exp.Parent(exp.Level()-1))
+				}
+				if cellunion.ContainsCellID(exp.Parent(0)) {
+					t.Errorf("cellunion should not contain the top level parent %v", exp.Parent(0))
 				}
 			}
 		}
@@ -342,10 +408,17 @@ func TestNormalizePseudoRandom(t *testing.T) {
 		addCells(CellID(0), false, &test, &dummy, t)
 		for _, j := range test {
 			intersects := false
+			contains := false
 			for _, k := range expected {
+				if k.Contains(j) {
+					contains = true
+				}
 				if k.Intersects(j) {
 					intersects = true
 				}
+			}
+			if cellunion.ContainsCellID(j) != contains {
+				t.Errorf("Expected contains with %v.", (uint64)(j))
 			}
 			if cellunion.Intersects(j) != intersects {
 				t.Errorf("Expected intersection with %v.", (uint64)(j))
@@ -446,6 +519,74 @@ func TestDenormalize(t *testing.T) {
 	for _, test := range tests {
 		if test.cu.Denormalize(test.minL, test.lMod); !reflect.DeepEqual(test.cu, test.exp) {
 			t.Errorf("test: %s; got %v, want %v", test.name, test.cu, test.exp)
+		}
+	}
+}
+
+func TestCellUnionRectBound(t *testing.T) {
+	tests := []struct {
+		cu   *CellUnion
+		want Rect
+	}{
+		{&CellUnion{}, EmptyRect()},
+		{
+			&CellUnion{CellIDFromFace(1)},
+			Rect{
+				r1.Interval{-math.Pi / 4, math.Pi / 4},
+				s1.Interval{math.Pi / 4, 3 * math.Pi / 4},
+			},
+		},
+		{
+			&CellUnion{
+				0x808c000000000000, // Big SFO
+			},
+			Rect{
+				r1.Interval{
+					float64(s1.Degree * 34.644220547108482),
+					float64(s1.Degree * 38.011928357226651),
+				},
+				s1.Interval{
+					float64(s1.Degree * -124.508522987668428),
+					float64(s1.Degree * -121.628309835221216),
+				},
+			},
+		},
+		{
+			&CellUnion{
+				0x89c4000000000000, // Big NYC
+			},
+			Rect{
+				r1.Interval{
+					float64(s1.Degree * 38.794595155857657),
+					float64(s1.Degree * 41.747046884651063),
+				},
+				s1.Interval{
+					float64(s1.Degree * -76.456308667788633),
+					float64(s1.Degree * -73.465162142654819),
+				},
+			},
+		},
+		{
+			&CellUnion{
+				0x89c4000000000000, // Big NYC
+				0x808c000000000000, // Big SFO
+			},
+			Rect{
+				r1.Interval{
+					float64(s1.Degree * 34.644220547108482),
+					float64(s1.Degree * 41.747046884651063),
+				},
+				s1.Interval{
+					float64(s1.Degree * -124.508522987668428),
+					float64(s1.Degree * -73.465162142654819),
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.cu.RectBound(); !rectsApproxEqual(got, test.want, epsilon, epsilon) {
+			t.Errorf("%v.RectBound() = %v, want %v", test.cu, got, test.want)
 		}
 	}
 }

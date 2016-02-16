@@ -149,3 +149,19 @@ func (cu *CellUnion) Denormalize(minLevel, levelMod int) {
 	}
 	*cu = denorm
 }
+
+// RectBound returns a Rect that bounds this entity.
+func (cu *CellUnion) RectBound() Rect {
+	bound := EmptyRect()
+	for _, c := range *cu {
+		bound = bound.Union(CellFromCellID(c).RectBound())
+	}
+	return bound
+}
+
+// ContainsCell reports whether this cell union contains the given cell.
+func (cu *CellUnion) ContainsCell(c Cell) bool {
+	return cu.ContainsCellID(c.id)
+}
+
+// BUG: Differences from C++, almost everything.
