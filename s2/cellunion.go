@@ -86,10 +86,10 @@ func (cu *CellUnion) Normalize() {
 	*cu = output
 }
 
-// Intersects reports whether this cell union intersects the given cell ID.
+// IntersectsCellID reports whether this cell union intersects the given cell ID.
 //
 // This method assumes that the CellUnion has been normalized.
-func (cu *CellUnion) Intersects(id CellID) bool {
+func (cu *CellUnion) IntersectsCellID(id CellID) bool {
 	// Find index of array item that occurs directly after our probe cell:
 	i := sort.Search(len(*cu), func(i int) bool { return id < (*cu)[i] })
 

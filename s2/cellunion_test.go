@@ -210,7 +210,7 @@ func TestCellUnion(t *testing.T) {
 
 		// Ensure self-containment tests are correct.
 		for _, id := range test.cells {
-			if !union.Intersects(id) {
+			if !union.IntersectsCellID(id) {
 				t.Errorf("CellUnion %v should self-intersect %v but does not", union, id)
 			}
 			if !union.ContainsCellID(id) {
@@ -219,7 +219,7 @@ func TestCellUnion(t *testing.T) {
 		}
 		// Test for containment specified in test case.
 		for _, id := range test.contained {
-			if !union.Intersects(id) {
+			if !union.IntersectsCellID(id) {
 				t.Errorf("CellUnion %v should intersect %v but does not", union, id)
 			}
 			if !union.ContainsCellID(id) {
@@ -228,7 +228,7 @@ func TestCellUnion(t *testing.T) {
 		}
 		// Make sure the CellUnion intersect these cells but do not contain.
 		for _, id := range test.overlaps {
-			if !union.Intersects(id) {
+			if !union.IntersectsCellID(id) {
 				t.Errorf("CellUnion %v should intersect %v but does not", union, id)
 			}
 			if union.ContainsCellID(id) {
@@ -237,7 +237,7 @@ func TestCellUnion(t *testing.T) {
 		}
 		// Negative cases make sure the CellUnion neither contain nor intersect these cells
 		for _, id := range test.disjoint {
-			if union.Intersects(id) {
+			if union.IntersectsCellID(id) {
 				t.Errorf("CellUnion %v should not intersect %v but does", union, id)
 			}
 			if union.ContainsCellID(id) {
@@ -351,19 +351,19 @@ func TestNormalizePseudoRandom(t *testing.T) {
 				t.Errorf("Expected containment of CellID %v", j)
 			}
 
-			if cellunion.Intersects(j) == false {
+			if cellunion.IntersectsCellID(j) == false {
 				t.Errorf("Expected intersection with %v.", j)
 			}
 
 			if !j.isFace() {
-				if cellunion.Intersects(j.immediateParent()) == false {
+				if cellunion.IntersectsCellID(j.immediateParent()) == false {
 					t.Errorf("Expected intersection with parent cell %v.", j.immediateParent())
 					if j.Level() > 1 {
-						if cellunion.Intersects(j.immediateParent().immediateParent()) == false {
+						if cellunion.IntersectsCellID(j.immediateParent().immediateParent()) == false {
 							t.Errorf("Expected intersection with parent's parent %v.",
 								j.immediateParent().immediateParent())
 						}
-						if cellunion.Intersects(j.Parent(0)) == false {
+						if cellunion.IntersectsCellID(j.Parent(0)) == false {
 							t.Errorf("Expected intersection with parent %v at level 0.", j.Parent(0))
 						}
 					}
@@ -374,19 +374,19 @@ func TestNormalizePseudoRandom(t *testing.T) {
 				if cellunion.ContainsCellID(j.ChildBegin()) == false {
 					t.Errorf("Expected containment of %v.", j.ChildBegin())
 				}
-				if cellunion.Intersects(j.ChildBegin()) == false {
+				if cellunion.IntersectsCellID(j.ChildBegin()) == false {
 					t.Errorf("Expected intersection with %v.", j.ChildBegin())
 				}
 				if cellunion.ContainsCellID(j.ChildEnd().Prev()) == false {
 					t.Errorf("Expected containment of %v.", j.ChildEnd().Prev())
 				}
-				if cellunion.Intersects(j.ChildEnd().Prev()) == false {
+				if cellunion.IntersectsCellID(j.ChildEnd().Prev()) == false {
 					t.Errorf("Expected intersection with %v.", j.ChildEnd().Prev())
 				}
 				if cellunion.ContainsCellID(j.ChildBeginAtLevel(maxLevel)) == false {
 					t.Errorf("Expected containment of %v.", j.ChildBeginAtLevel(maxLevel))
 				}
-				if cellunion.Intersects(j.ChildBeginAtLevel(maxLevel)) == false {
+				if cellunion.IntersectsCellID(j.ChildBeginAtLevel(maxLevel)) == false {
 					t.Errorf("Expected intersection with %v.", j.ChildBeginAtLevel(maxLevel))
 				}
 			}
@@ -420,7 +420,7 @@ func TestNormalizePseudoRandom(t *testing.T) {
 			if cellunion.ContainsCellID(j) != contains {
 				t.Errorf("Expected contains with %v.", (uint64)(j))
 			}
-			if cellunion.Intersects(j) != intersects {
+			if cellunion.IntersectsCellID(j) != intersects {
 				t.Errorf("Expected intersection with %v.", (uint64)(j))
 			}
 		}

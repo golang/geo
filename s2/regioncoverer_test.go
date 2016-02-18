@@ -95,8 +95,8 @@ func checkCoveringTight(t *testing.T, r *Region, cover CellUnion, checkTight boo
 
 	if !(*r).IntersectsCell(CellFromCellID(id)) {
 		// If region does not intersect id, then neither should the covering.
-		if got := cover.Intersects(id); checkTight && got {
-			t.Errorf("CellUnion(%v).Intersects(%s) = %t; want = %t", cover, id.ToToken(), got, false)
+		if got := cover.IntersectsCellID(id); checkTight && got {
+			t.Errorf("CellUnion(%v).IntersectsCellID(%s) = %t; want = %t", cover, id.ToToken(), got, false)
 		}
 	} else if !cover.ContainsCellID(id) {
 		// The region may intersect id, but we can't assert that the covering
