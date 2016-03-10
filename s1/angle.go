@@ -40,12 +40,23 @@ func (a Angle) Radians() float64 { return float64(a) }
 // Degrees returns the angle in degrees.
 func (a Angle) Degrees() float64 { return float64(a / Degree) }
 
+// round returns the value rounded to nearest as an int32.
+// This does not match C++ exactly for the case of x.5.
+func round(val float64) int32 {
+	if val < 0 {
+		return int32(val - 0.5)
+	}
+	return int32(val + 0.5)
+}
+
 // E5 returns the angle in hundred thousandths of degrees.
-func (a Angle) E5() int32 { return int32(a.Degrees() * 1e5) } // TODO(dsymonds): Check rounding
+func (a Angle) E5() int32 { return round(a.Degrees() * 1e5) }
+
 // E6 returns the angle in millionths of degrees.
-func (a Angle) E6() int32 { return int32(a.Degrees() * 1e6) } // TODO(dsymonds): Check rounding
+func (a Angle) E6() int32 { return round(a.Degrees() * 1e6) }
+
 // E7 returns the angle in ten millionths of degrees.
-func (a Angle) E7() int32 { return int32(a.Degrees() * 1e7) } // TODO(dsymonds): Check rounding
+func (a Angle) E7() int32 { return round(a.Degrees() * 1e7) }
 
 // Abs returns the absolute value of the angle.
 func (a Angle) Abs() Angle { return Angle(math.Abs(float64(a))) }

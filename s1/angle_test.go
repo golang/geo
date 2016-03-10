@@ -77,6 +77,27 @@ func TestE5E6E7Representation(t *testing.T) {
 	if exp, act := int32(-123456789), (-12.3456789 * Degree).E7(); exp != act {
 		t.Errorf("(-12.3456789°).E7() was %v, want %v", act, exp)
 	}
+
+	roundingTests := []struct {
+		have Angle
+		want int32
+	}{
+		{0.500000001, 1},
+		{-0.500000001, -1},
+		{0.499999999, 0},
+		{-0.499999999, 0},
+	}
+	for _, test := range roundingTests {
+		if act := (test.have * 1e-5 * Degree).E5(); test.want != act {
+			t.Errorf("(%v°).E5() was %v, want %v", test.have, act, test.want)
+		}
+		if act := (test.have * 1e-6 * Degree).E6(); test.want != act {
+			t.Errorf("(%v°).E6() was %v, want %v", test.have, act, test.want)
+		}
+		if act := (test.have * 1e-7 * Degree).E7(); test.want != act {
+			t.Errorf("(%v°).E7() was %v, want %v", test.have, act, test.want)
+		}
+	}
 }
 
 func TestNormalizeCorrectlyCanonicalizesAngles(t *testing.T) {
