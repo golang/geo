@@ -85,10 +85,10 @@ func (r Rect) IsEmpty() bool {
 // CCW direction starting with the lower left corner.
 func (r Rect) Vertices() [4]Point {
 	return [4]Point{
-		Point{r.X.Lo, r.Y.Lo},
-		Point{r.X.Hi, r.Y.Lo},
-		Point{r.X.Hi, r.Y.Hi},
-		Point{r.X.Lo, r.Y.Hi},
+		{r.X.Lo, r.Y.Lo},
+		{r.X.Hi, r.Y.Lo},
+		{r.X.Hi, r.Y.Hi},
+		{r.X.Lo, r.Y.Hi},
 	}
 }
 

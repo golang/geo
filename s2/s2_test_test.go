@@ -142,12 +142,12 @@ func TestParseLatLngs(t *testing.T) {
 		have string
 		want []LatLng
 	}{
-		{"0:0", []LatLng{LatLng{0, 0}}},
+		{"0:0", []LatLng{{0, 0}}},
 		{
 			"37.4210:-122.0866, 37.4231:-122.0819",
 			[]LatLng{
-				LatLng{s1.Degree * 37.4210, s1.Degree * -122.0866},
-				LatLng{s1.Degree * 37.4231, s1.Degree * -122.0819},
+				{s1.Degree * 37.4210, s1.Degree * -122.0866},
+				{s1.Degree * 37.4231, s1.Degree * -122.0819},
 			},
 		},
 	}

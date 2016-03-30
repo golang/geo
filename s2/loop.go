@@ -71,12 +71,12 @@ func LoopFromPoints(pts []Point) *Loop {
 
 // EmptyLoop returns a special "empty" loop.
 func EmptyLoop() *Loop {
-	return LoopFromPoints([]Point{Point{r3.Vector{X: 0, Y: 0, Z: 1}}})
+	return LoopFromPoints([]Point{{r3.Vector{X: 0, Y: 0, Z: 1}}})
 }
 
 // FullLoop returns a special "full" loop.
 func FullLoop() *Loop {
-	return LoopFromPoints([]Point{Point{r3.Vector{X: 0, Y: 0, Z: -1}}})
+	return LoopFromPoints([]Point{{r3.Vector{X: 0, Y: 0, Z: -1}}})
 }
 
 // initOriginAndBound sets the origin containment for the given point and then calls
