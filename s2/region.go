@@ -44,5 +44,6 @@ var (
 	_ Region = Cell{}
 	_ Region = Cap{}
 	// _ Region = CellUnion{}
+	//_ Region = (*Polygon)(nil)
 	_ Region = Rect{}
 )

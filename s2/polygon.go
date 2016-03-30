@@ -116,3 +116,17 @@ func (p *Polygon) IsFull() bool {
 func (p *Polygon) Loops() []*Loop {
 	return p.loops
 }
+
+// CapBound returns a bounding spherical cap.
+func (p *Polygon) CapBound() Cap { return p.bound.CapBound() }
+
+// RectBound returns a bounding latitude-longitude rectangle.
+func (p *Polygon) RectBound() Rect { return p.bound }
+
+// ContainsCell reports whether the polygon contains the given cell.
+// TODO
+//func (p *Polygon) ContainsCell(c Cell) bool { ... }
+
+// IntersectsCell reports whether the polygon intersects the given cell.
+// TODO
+//func (p *Polygon) IntersectsCell(c Cell) bool { ... }
