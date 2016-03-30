@@ -89,7 +89,13 @@ func TestCellFaces(t *testing.T) {
 	}
 }
 
-func TestExactArea(t *testing.T) {
+func TestAreas(t *testing.T) {
+
+	// relative error bounds for each type of area computation
+	var exactError = math.Log(1 + 1e-6)
+	var approxError = math.Log(1.03)
+	var avgError = math.Log(1 + 1e-15)
+
 	// Test 1. Check the area of a top level cell.
 	const level1Cell = CellID(0x1000000000000000)
 	const wantArea = 4 * math.Pi / 6
@@ -101,16 +107,45 @@ func TestExactArea(t *testing.T) {
 	// the sum of the areas of the children is equal to the area of the parent.
 	childIndex := 1
 	for cell := CellID(0x1000000000000000); cell.Level() < 21; cell = cell.Children()[childIndex] {
-		childrenArea := 0.0
+		var exactArea, approxArea, avgArea float64
 		for _, child := range cell.Children() {
-			childrenArea += CellFromCellID(child).ExactArea()
+			exactArea += CellFromCellID(child).ExactArea()
+			approxArea += CellFromCellID(child).ApproxArea()
+			avgArea += CellFromCellID(child).AverageArea()
 		}
-		if area := CellFromCellID(cell).ExactArea(); !float64Eq(childrenArea, area) {
+
+		if area := CellFromCellID(cell).ExactArea(); !float64Eq(exactArea, area) {
 			t.Fatalf("Areas of children of a level-%d cell %v don't add up to parent's area. "+
 				"This cell: %e, sum of children: %e",
-				cell.Level(), cell, area, childrenArea)
+				cell.Level(), cell, area, exactArea)
 		}
+
 		childIndex = (childIndex + 1) % 4
+
+		// For ExactArea(), the best relative error we can expect is about 1e-6
+		// because the precision of the unit vector coordinates is only about 1e-15
+		// and the edge length of a leaf cell is about 1e-9.
+		if logExact := math.Abs(math.Log(exactArea / CellFromCellID(cell).ExactArea())); logExact > exactError {
+			t.Errorf("The relative error of ExactArea for children of a level-%d "+
+				"cell %v should be less than %e, got %e. This cell: %e, children area: %e",
+				cell.Level(), cell, exactError, logExact,
+				CellFromCellID(cell).ExactArea(), exactArea)
+		}
+		// For ApproxArea(), the areas are accurate to within a few percent.
+		if logApprox := math.Abs(math.Log(approxArea / CellFromCellID(cell).ApproxArea())); logApprox > approxError {
+			t.Errorf("The relative error of ApproxArea for children of a level-%d "+
+				"cell %v should be within %e%%, got %e. This cell: %e, sum of children: %e",
+				cell.Level(), cell, approxError, logApprox,
+				CellFromCellID(cell).ExactArea(), exactArea)
+		}
+		// For AverageArea(), the areas themselves are not very accurate, but
+		// the average area of a parent is exactly 4 times the area of a child.
+		if logAvg := math.Abs(math.Log(avgArea / CellFromCellID(cell).AverageArea())); logAvg > avgError {
+			t.Errorf("The relative error of AverageArea for children of a level-%d "+
+				"cell %v should be less than %e, got %e. This cell: %e, sum of children: %e",
+				cell.Level(), cell, avgError, logAvg,
+				CellFromCellID(cell).AverageArea(), avgArea)
+		}
 	}
 }
 

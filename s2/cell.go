@@ -88,10 +88,41 @@ func (c Cell) Edge(k int) Point {
 	}
 }
 
-// ExactArea return the area of this cell as accurately as possible.
+// ExactArea returns the area of this cell as accurately as possible.
 func (c Cell) ExactArea() float64 {
 	v0, v1, v2, v3 := c.Vertex(0), c.Vertex(1), c.Vertex(2), c.Vertex(3)
 	return PointArea(v0, v1, v2) + PointArea(v0, v2, v3)
+}
+
+// ApproxArea returns the approximate area of this cell. This method is accurate
+// to within 3% percent for all cell sizes and accurate to within 0.1% for cells
+// at level 5 or higher (i.e. squares 350km to a side or smaller on the Earth's
+// surface). It is moderately cheap to compute.
+func (c Cell) ApproxArea() float64 {
+	// All cells at the first two levels have the same area.
+	if c.level < 2 {
+		return c.AverageArea()
+	}
+
+	// First, compute the approximate area of the cell when projected
+	// perpendicular to its normal. The cross product of its diagonals gives
+	// the normal, and the length of the normal is twice the projected area.
+	flatArea := 0.5 * (c.Vertex(2).Sub(c.Vertex(0).Vector).
+		Cross(c.Vertex(3).Sub(c.Vertex(1).Vector)).Norm())
+
+	// Now, compensate for the curvature of the cell surface by pretending
+	// that the cell is shaped like a spherical cap. The ratio of the
+	// area of a spherical cap to the area of its projected disc turns out
+	// to be 2 / (1 + sqrt(1 - r*r)) where r is the radius of the disc.
+	// For example, when r=0 the ratio is 1, and when r=1 the ratio is 2.
+	// Here we set Pi*r*r == flatArea to find the equivalent disc.
+	return flatArea * 2 / (1 + math.Sqrt(1-math.Min(1/math.Pi*flatArea, 1)))
+}
+
+// AverageArea returns the average area of cells at the level of this cell.
+// This is accurate to within a factor of 1.7.
+func (c Cell) AverageArea() float64 {
+	return AvgAreaMetric.Value(int(c.level))
 }
 
 // IntersectsCell reports whether the intersection of this cell and the other cell is not nil.
