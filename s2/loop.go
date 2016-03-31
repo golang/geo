@@ -209,6 +209,13 @@ func (l Loop) RectBound() Rect {
 	return l.bound
 }
 
+// CapBound returns a bounding cap that may have more padding than the corresponding
+// RectBound. The bound is conservative such that if the loop contains a point P,
+// the bound also contains it.
+func (l Loop) CapBound() Cap {
+	return l.bound.CapBound()
+}
+
 // Vertex returns the vertex for the given index. For convenience, the vertex indices
 // wrap automatically for methods that do index math such as Edge.
 // i.e., Vertex(NumEdges() + n) is the same as Vertex(n).

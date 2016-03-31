@@ -200,6 +200,24 @@ func TestLoopRectBound(t *testing.T) {
 	}
 }
 
+func TestLoopCapBound(t *testing.T) {
+	if !EmptyLoop().CapBound().IsEmpty() {
+		t.Errorf("empty loop's CapBound should be empty")
+	}
+	if !FullLoop().CapBound().IsFull() {
+		t.Errorf("full loop's CapBound should be full")
+	}
+	if !smallNECW.CapBound().IsFull() {
+		t.Errorf("small northeast clockwise loop's CapBound should be full")
+	}
+	if got, want := arctic80.CapBound(), rectFromDegrees(80, -180, 90, 180).CapBound(); !got.ApproxEqual(want) {
+		t.Errorf("arctic 80 loop's CapBound (%v) should be %v", got, want)
+	}
+	if got, want := antarctic80.CapBound(), rectFromDegrees(-90, -180, -80, 180).CapBound(); !got.ApproxEqual(want) {
+		t.Errorf("antarctic 80 loop's CapBound (%v) should be %v", got, want)
+	}
+}
+
 func invert(l *Loop) *Loop {
 	vertices := make([]Point, 0, len(l.vertices))
 	for i := len(l.vertices) - 1; i >= 0; i-- {
