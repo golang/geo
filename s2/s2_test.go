@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/golang/geo/r2"
 	"github.com/golang/geo/s1"
 )
 
@@ -233,6 +234,11 @@ var (
 	rectErrorLat = 10 * dblEpsilon
 	rectErrorLng = dblEpsilon
 )
+
+// r2PointsApproxEqual reports whether the two points are within the given epsilon.
+func r2PointsApproxEquals(a, b r2.Point, epsilon float64) bool {
+	return float64Near(a.X, b.X, epsilon) && float64Near(a.Y, b.Y, epsilon)
+}
 
 // rectsApproxEqual reports whether the two rect are within the given tolerances
 // at each corner from each other. The tolerances are specific to each axis.

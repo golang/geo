@@ -20,6 +20,7 @@ import (
 	"math"
 
 	"github.com/golang/geo/r1"
+	"github.com/golang/geo/r2"
 	"github.com/golang/geo/s1"
 )
 
@@ -29,12 +30,53 @@ var (
 	// the rectangle [-1,1]x[1,1] or slightly outside it (by 1e-10 or less).
 	edgeClipErrorUVCoord = 2.25 * dblEpsilon
 
+	// edgeClipErrorUVDist is the maximum distance from a clipped point to
+	// the corresponding exact result. It is equal to the error in a single
+	// coordinate because at most one coordinate is subject to error.
+	edgeClipErrorUVDist = 2.25 * dblEpsilon
+
+	// faceClipErrorRadians is the maximum angle between a returned vertex
+	// and the nearest point on the exact edge AB. It is equal to the
+	// maximum directional error in PointCross, plus the error when
+	// projecting points onto a cube face.
+	faceClipErrorRadians = 3 * dblEpsilon
+
+	// faceClipErrorDist is the same angle expressed as a maximum distance
+	// in (u,v)-space. In other words, a returned vertex is at most this far
+	// from the exact edge AB projected into (u,v)-space.
+	faceClipErrorUVDist = 9 * dblEpsilon
+
 	// faceClipErrorUVCoord is the maximum angle between a returned vertex
 	// and the nearest point on the exact edge AB expressed as the maximum error
 	// in an individual u- or v-coordinate. In other words, for each
 	// returned vertex there is a point on the exact edge AB whose u- and
 	// v-coordinates differ from the vertex by at most this amount.
 	faceClipErrorUVCoord = 9.0 * (1.0 / math.Sqrt2) * dblEpsilon
+
+	// intersectsRectErrorUVDist is the maximum error when computing if a point
+	// intersects with a given Rect. If some point of AB is inside the
+	// rectangle by at least this distance, the result is guaranteed to be true;
+	// if all points of AB are outside the rectangle by at least this distance,
+	// the result is guaranteed to be false. This bound assumes that rect is
+	// a subset of the rectangle [-1,1]x[-1,1] or extends slightly outside it
+	// (e.g., by 1e-10 or less).
+	intersectsRectErrorUVDist = 3 * math.Sqrt2 * dblEpsilon
+
+	// intersectionError can be set somewhat arbitrarily, because the algorithm
+	// uses more precision if necessary in order to achieve the specified error.
+	// The only strict requirement is that intersectionError >= dblEpsilon
+	// radians. However, using a larger error tolerance makes the algorithm more
+	// efficient because it reduces the number of cases where exact arithmetic is
+	// needed.
+	intersectionError = s1.Angle(4 * dblEpsilon)
+
+	// intersectionMergeRadius is used to ensure that intersection points that
+	// are supposed to be coincident are merged back together into a single
+	// vertex. This is required in order for various polygon operations (union,
+	// intersection, etc) to work correctly. It is twice the intersection error
+	// because two coincident intersection points might have errors in
+	// opposite directions.
+	intersectionMergeRadius = 2 * intersectionError
 )
 
 // SimpleCrossing reports whether edge AB crosses CD at a point that is interior
@@ -652,4 +694,114 @@ func (e *EdgeCrosser) crossingSign(d Point, bda Direction) Crossing {
 		return Cross
 	}
 	return DoNotCross
+}
+
+// pointUVW represents a Point in (u,v,w) coordinate space of a cube face.
+type pointUVW Point
+
+// intersectsFace reports whether a given directed line L intersects the cube face F.
+// The line L is defined by its normal N in the (u,v,w) coordinates of F.
+func (p pointUVW) intersectsFace() bool {
+	// L intersects the [-1,1]x[-1,1] square in (u,v) if and only if the dot
+	// products of N with the four corner vertices (-1,-1,1), (1,-1,1), (1,1,1),
+	// and (-1,1,1) do not all have the same sign. This is true exactly when
+	// |Nu| + |Nv| >= |Nw|. The code below evaluates this expression exactly.
+	u := math.Abs(p.X)
+	v := math.Abs(p.Y)
+	w := math.Abs(p.Z)
+
+	// We only need to consider the cases where u or v is the smallest value,
+	// since if w is the smallest then both expressions below will have a
+	// positive LHS and a negative RHS.
+	return (v >= w-u) && (u >= w-v)
+}
+
+// intersectsOppositeEdges reports whether a directed line L intersects two
+// opposite edges of a cube face F. This includs the case where L passes
+// exactly through a corner vertex of F. The directed line L is defined
+// by its normal N in the (u,v,w) coordinates of F.
+func (p pointUVW) intersectsOppositeEdges() bool {
+	// The line L intersects opposite edges of the [-1,1]x[-1,1] (u,v) square if
+	// and only exactly two of the corner vertices lie on each side of L. This
+	// is true exactly when ||Nu| - |Nv|| >= |Nw|. The code below evaluates this
+	// expression exactly.
+	u := math.Abs(p.X)
+	v := math.Abs(p.Y)
+	w := math.Abs(p.Z)
+
+	// If w is the smallest, the following line returns an exact result.
+	if math.Abs(u-v) != w {
+		return math.Abs(u-v) >= w
+	}
+
+	// Otherwise u - v = w exactly, or w is not the smallest value. In either
+	// case the following returns the correct result.
+	if u >= v {
+		return u-w >= v
+	}
+	return v-w >= u
+}
+
+// axis represents the possible results of exitAxis.
+type axis int
+
+const (
+	axisU axis = iota
+	axisV
+)
+
+// exitAxis reports which axis the directed line L exits the cube face F on.
+// The directed line L is represented by its CCW normal N in the (u,v,w) coordinates
+// of F. It returns axisU if L exits through the u=-1 or u=+1 edge, and axisV if L exits
+// through the v=-1 or v=+1 edge. Either result is acceptable if L exits exactly
+// through a corner vertex of the cube face.
+func (p pointUVW) exitAxis() axis {
+	if p.intersectsOppositeEdges() {
+		// The line passes through through opposite edges of the face.
+		// It exits through the v=+1 or v=-1 edge if the u-component of N has a
+		// larger absolute magnitude than the v-component.
+		if math.Abs(p.X) >= math.Abs(p.Y) {
+			return axisV
+		}
+		return axisU
+	}
+
+	// The line passes through through two adjacent edges of the face.
+	// It exits the v=+1 or v=-1 edge if an even number of the components of N
+	// are negative. We test this using signbit() rather than multiplication
+	// to avoid the possibility of underflow.
+	var x, y, z int
+	if math.Signbit(p.X) {
+		x = 1
+	}
+	if math.Signbit(p.Y) {
+		y = 1
+	}
+	if math.Signbit(p.Z) {
+		z = 1
+	}
+
+	if x^y^z == 0 {
+		return axisV
+	}
+	return axisU
+}
+
+// exitPoint returns the UV coordinates of the point where a directed line L (represented
+// by the CCW normal of this point), exits the cube face this point is derived from along
+// the given axis.
+func (p pointUVW) exitPoint(a axis) r2.Point {
+	if a == axisU {
+		u := -1.0
+		if p.Y > 0 {
+			u = 1.0
+		}
+		return r2.Point{u, (-u*p.X - p.Z) / p.Y}
+	}
+
+	v := -1.0
+	if p.X < 0 {
+		v = 1.0
+	}
+	return r2.Point{(-v*p.Y - p.Z) / p.X, v}
 }

@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	"github.com/golang/geo/r1"
+	"github.com/golang/geo/r2"
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -538,6 +540,87 @@ func TestExpandForSubregions(t *testing.T) {
 		got := ExpandForSubregions(in)
 		if !rectsApproxEqual(got, tc.wantRect, rectErrorLat, rectErrorLng) {
 			t.Errorf("Subregion Bound of (%f, %f, %f, %f) = (%v) should be %v", tc.xLat, tc.xLng, tc.yLat, tc.yLng, got, tc.wantRect)
+		}
+	}
+}
+
+func TestIntersectsFace(t *testing.T) {
+	tests := []struct {
+		a    pointUVW
+		want bool
+	}{
+		{pointUVW{r3.Vector{2.05335e-06, 3.91604e-22, 2.90553e-06}}, false},
+		{pointUVW{r3.Vector{-3.91604e-22, -2.05335e-06, -2.90553e-06}}, false},
+		{pointUVW{r3.Vector{0.169258, -0.169258, 0.664013}}, false},
+		{pointUVW{r3.Vector{0.169258, -0.169258, -0.664013}}, false},
+		{pointUVW{r3.Vector{math.Sqrt(2.0 / 3.0), -math.Sqrt(2.0 / 3.0), 3.88578e-16}}, true},
+		{pointUVW{r3.Vector{-3.88578e-16, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, true},
+	}
+
+	for _, test := range tests {
+		if got := test.a.intersectsFace(); got != test.want {
+			t.Errorf("%v.intersectsFace() = %v, want %v", test.a, got, test.want)
+		}
+	}
+}
+
+func TestIntersectsOppositeEdges(t *testing.T) {
+	tests := []struct {
+		a    pointUVW
+		want bool
+	}{
+		{pointUVW{r3.Vector{0.169258, -0.169258, 0.664013}}, false},
+		{pointUVW{r3.Vector{0.169258, -0.169258, -0.664013}}, false},
+
+		{pointUVW{r3.Vector{-math.Sqrt(4.0 / 3.0), 0, -math.Sqrt(4.0 / 3.0)}}, true},
+		{pointUVW{r3.Vector{math.Sqrt(4.0 / 3.0), 0, math.Sqrt(4.0 / 3.0)}}, true},
+
+		{pointUVW{r3.Vector{-math.Sqrt(2.0 / 3.0), -math.Sqrt(2.0 / 3.0), 1.66533453694e-16}}, false},
+		{pointUVW{r3.Vector{math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0), -1.66533453694e-16}}, false},
+	}
+	for _, test := range tests {
+		if got := test.a.intersectsOppositeEdges(); got != test.want {
+			t.Errorf("%v.intersectsOppositeEdges() = %v, want %v", test.a, got, test.want)
+		}
+	}
+}
+
+func TestExitAxis(t *testing.T) {
+	tests := []struct {
+		a    pointUVW
+		want axis
+	}{
+		{pointUVW{r3.Vector{0, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, axisU},
+		{pointUVW{r3.Vector{0, math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0)}}, axisU},
+		{pointUVW{r3.Vector{-math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0), 0}}, axisV},
+		{pointUVW{r3.Vector{math.Sqrt(4.0 / 3.0), math.Sqrt(4.0 / 3.0), 0}}, axisV},
+		{pointUVW{r3.Vector{math.Sqrt(2.0 / 3.0), -math.Sqrt(2.0 / 3.0), 0}}, axisV},
+		{pointUVW{r3.Vector{1.67968702783622, 0, 0.870988820096491}}, axisV},
+		{pointUVW{r3.Vector{0, math.Sqrt2, math.Sqrt2}}, axisU},
+	}
+
+	for _, test := range tests {
+		if got := test.a.exitAxis(); got != test.want {
+			t.Errorf("%v.exitAxis() = %v, want %v", test.a, got, test.want)
+		}
+	}
+}
+
+func TestExitPoint(t *testing.T) {
+	tests := []struct {
+		a        pointUVW
+		exitAxis axis
+		want     r2.Point
+	}{
+		{pointUVW{r3.Vector{-3.88578058618805e-16, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, axisU, r2.Point{-1, 1}},
+		{pointUVW{r3.Vector{math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0), 0}}, axisV, r2.Point{-1, -1}},
+		{pointUVW{r3.Vector{-math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0), 0}}, axisV, r2.Point{-1, 1}},
+		{pointUVW{r3.Vector{-6.66134e-16, math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0)}}, axisU, r2.Point{1, 1}},
+	}
+
+	for _, test := range tests {
+		if got := test.a.exitPoint(test.exitAxis); !r2PointsApproxEquals(got, test.want, epsilon) {
+			t.Errorf("%v.exitPoint() = %v, want %v", test.a, got, test.want)
 		}
 	}
 }
