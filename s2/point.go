@@ -183,7 +183,7 @@ func RobustSign(a, b, c Point) Direction {
 // The purpose of this method is to allow additional cheap tests to be done without
 // calling expensiveSign.
 func triageSign(a, b, c Point) Direction {
-	det := c.Cross(a.Vector).Dot(b.Vector)
+	det := a.Cross(b.Vector).Dot(c.Vector)
 	if det > maxDeterminantError {
 		return CounterClockwise
 	}
