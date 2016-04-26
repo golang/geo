@@ -242,11 +242,11 @@ func TestOriginInside(t *testing.T) {
 	if !eastHemi.originInside {
 		t.Errorf("east hemisphere polygon should include origin")
 	}
-	if !nearHemi.originInside {
-		t.Errorf("near hemisphere polygon should include origin")
+	if nearHemi.originInside {
+		t.Errorf("near hemisphere polygon should not include origin")
 	}
-	if farHemi.originInside {
-		t.Errorf("far hemisphere polygon should not include origin")
+	if !farHemi.originInside {
+		t.Errorf("far hemisphere polygon should include origin")
 	}
 	if candyCane.originInside {
 		t.Errorf("candy cane polygon should not include origin")
@@ -254,8 +254,8 @@ func TestOriginInside(t *testing.T) {
 	if !smallNECW.originInside {
 		t.Errorf("smallNECW polygon should include origin")
 	}
-	if arctic80.originInside {
-		t.Errorf("arctic 80 polygon should not include origin")
+	if !arctic80.originInside {
+		t.Errorf("arctic 80 polygon should include origin")
 	}
 	if antarctic80.originInside {
 		t.Errorf("antarctic 80 polygon should not include origin")

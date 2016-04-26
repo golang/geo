@@ -24,9 +24,28 @@ import (
 )
 
 func TestOriginPoint(t *testing.T) {
-	if math.Abs(OriginPoint().Norm()-1) > 1e-16 {
+	if math.Abs(OriginPoint().Norm()-1) > 1e-15 {
 		t.Errorf("Origin point norm = %v, want 1", OriginPoint().Norm())
 	}
+
+	// The point chosen below is about 66km from the north pole towards the East
+	// Siberian Sea. The purpose of the stToUV(2/3) calculation is to keep the
+	// origin as far away as possible from the longitudinal edges of large
+	// Cells. (The line of longitude through the chosen point is always 1/3
+	// or 2/3 of the way across any Cell with longitudinal edges that it
+	// passes through.)
+	p := PointFromCoords(-0.01, 0.01*stToUV(2.0/3), 1)
+	if !p.ApproxEqual(OriginPoint()) {
+		t.Errorf("Origin point should fall in the Siberian Sea, but does not.")
+	}
+
+	// Check that the origin is not too close to either pole.
+	// The Earth's mean radius in kilometers (according to NASA).
+	const earthRadiusKm = 6371.01
+	if dist := math.Acos(OriginPoint().Z) * earthRadiusKm; dist <= 50 {
+		t.Errorf("Origin point is to close to the North Pole. Got %v, want >= 50km", dist)
+	}
+
 }
 
 func TestPointCross(t *testing.T) {

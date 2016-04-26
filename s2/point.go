@@ -92,7 +92,7 @@ func PointFromCoords(x, y, z float64) Point {
 // north and south poles). It should also not be on the boundary of any
 // low-level S2Cell for the same reason.
 func OriginPoint() Point {
-	return Point{r3.Vector{0.00456762077230, 0.99947476613078, 0.03208315302933}}
+	return Point{r3.Vector{-0.0099994664350250197, 0.0025924542609324121, 0.99994664350250195}}
 }
 
 // PointCross returns a Point that is orthogonal to both p and op. This is similar to
