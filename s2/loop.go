@@ -69,6 +69,16 @@ func LoopFromPoints(pts []Point) *Loop {
 	return l
 }
 
+// LoopFromDegrees constructs a loop from the given lat/lng degree pairs.
+func LoopFromDegrees(degs ...[]float64) *Loop {
+	pts := make([]Point, len(degs))
+	for i, d := range degs {
+		ll := LatLngFromDegrees(d[0], d[1])
+		pts[i] = PointFromLatLng(ll)
+	}
+	return LoopFromPoints(pts)
+}
+
 // EmptyLoop returns a special "empty" loop.
 func EmptyLoop() *Loop {
 	return LoopFromPoints([]Point{{r3.Vector{X: 0, Y: 0, Z: 1}}})
@@ -226,6 +236,40 @@ func (l Loop) Vertex(i int) Point {
 // Vertices returns the vertices in the loop.
 func (l Loop) Vertices() []Point {
 	return l.vertices
+}
+
+// CapBound returns the cap that contains this loop
+func (l Loop) CapBound() Cap {
+	return l.RectBound().CapBound()
+}
+
+// ContainsCell checks whether the cell is completely enclosed by this loop.
+// Does not count for loop interior and uses raycasting.
+func (l Loop) ContainsCell(c Cell) bool {
+	for i := 0; i < 4; i++ {
+		v := c.Vertex(i)
+		if !l.ContainsPoint(v) {
+			return false
+		}
+	}
+	return true
+}
+
+// IntersectsCell checks if any edge of the cell intersects the loop or if the cell is contained.
+// Does not count for loop interior and uses raycasting.
+func (l Loop) IntersectsCell(c Cell) bool {
+	for i := 0; i < 4; i++ {
+		crosser := NewChainEdgeCrosser(c.Vertex(i), c.Vertex((i+1)%4), l.Vertex(0))
+		for _, v := range l.Vertices()[1:] {
+			if crosser.EdgeOrVertexChainCrossing(v) {
+				return true
+			}
+		}
+		if crosser.EdgeOrVertexChainCrossing(l.Vertex(0)) { //close the loop
+			return true
+		}
+	}
+	return l.ContainsCell(c)
 }
 
 // ContainsPoint returns true if the loop contains the point.
