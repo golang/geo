@@ -587,4 +587,37 @@ func (ci CellID) Advance(steps int64) CellID {
 	return ci + CellID(steps)<<stepShift
 }
 
+// centerST return the center of the CellID in (s,t)-space.
+func (ci CellID) centerST() r2.Point {
+	_, si, ti := ci.faceSiTi()
+	return r2.Point{siTiToST(uint64(si)), siTiToST(uint64(ti))}
+}
+
+// sizeST returns the edge length of this CellID in (s,t)-space at the given level.
+func (ci CellID) sizeST(level int) float64 {
+	return ijToSTMin(sizeIJ(level))
+}
+
+// boundST returns the bound of this CellID in (s,t)-space.
+func (ci CellID) boundST() r2.Rect {
+	s := ci.sizeST(ci.Level())
+	return r2.RectFromCenterSize(ci.centerST(), r2.Point{s, s})
+}
+
+// centerUV returns the center of this CellID in (u,v)-space. Note that
+// the center of the cell is defined as the point at which it is recursively
+// subdivided into four children; in general, it is not at the midpoint of
+// the (u,v) rectangle covered by the cell.
+func (ci CellID) centerUV() r2.Point {
+	_, si, ti := ci.faceSiTi()
+	return r2.Point{stToUV(siTiToST(uint64(si))), stToUV(siTiToST(uint64(ti)))}
+}
+
+// boundUV returns the bound of this CellID in (u,v)-space.
+func (ci CellID) boundUV() r2.Rect {
+	_, i, j, _ := ci.faceIJOrientation()
+	return ijLevelToBoundUV(i, j, ci.Level())
+
+}
+
 // BUG(dsymonds): The major differences from the C++ version is that barely anything is implemented.
