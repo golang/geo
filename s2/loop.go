@@ -69,6 +69,30 @@ func LoopFromPoints(pts []Point) *Loop {
 	return l
 }
 
+// LoopFromCell constructs a loop corresponding to the given cell.
+//
+// Note that the loop and cell *do not* contain exactly the same set of
+// points, because Loop and Cell have slightly different definitions of
+// point containment. For example, a Cell vertex is contained by all
+// four neighboring Cells, but it is contained by exactly one of four
+// Loops constructed from those cells. As another example, the cell
+// coverings of cell and LoopFromCell(cell) will be different, because the
+// loop contains points on its boundary that actually belong to other cells
+// (i.e., the covering will include a layer of neighboring cells).
+func LoopFromCell(c Cell) *Loop {
+	l := &Loop{
+		vertices: []Point{
+			c.Vertex(0),
+			c.Vertex(1),
+			c.Vertex(2),
+			c.Vertex(3),
+		},
+	}
+
+	l.initOriginAndBound()
+	return l
+}
+
 // EmptyLoop returns a special "empty" loop.
 func EmptyLoop() *Loop {
 	return LoopFromPoints([]Point{{r3.Vector{X: 0, Y: 0, Z: 1}}})

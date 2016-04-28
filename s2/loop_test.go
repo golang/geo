@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
 
 var (
@@ -166,7 +167,7 @@ func TestLoopRectBound(t *testing.T) {
 		t.Errorf("full loop's RectBound should be full")
 	}
 	if !candyCane.RectBound().Lng.IsFull() {
-		t.Errorf("candy cane loop's RectBound should have a full longitutde range")
+		t.Errorf("candy cane loop's RectBound should have a full longitude range")
 	}
 	if got := candyCane.RectBound().Lat.Lo; got >= -0.349066 {
 		t.Errorf("candy cane loop's RectBound should have a lower latitude (%v) under -0.349066 radians", got)
@@ -184,7 +185,7 @@ func TestLoopRectBound(t *testing.T) {
 		t.Errorf("antarctic 80 loop's RectBound (%v) should be %v", got, want)
 	}
 	if !southHemi.RectBound().Lng.IsFull() {
-		t.Errorf("south hemi loop's RectBound should have a full longitutde range")
+		t.Errorf("south hemi loop's RectBound should have a full longitude range")
 	}
 	got, want := southHemi.RectBound().Lat, r1.Interval{-math.Pi / 2, 0}
 	if !got.ApproxEqual(want) {
@@ -462,4 +463,15 @@ func rotate(l *Loop) *Loop {
 	}
 	vertices = append(vertices, l.vertices[0])
 	return LoopFromPoints(vertices)
+}
+
+func TestLoopFromCell(t *testing.T) {
+	cell := CellFromCellID(CellIDFromLatLng(LatLng{40.565459 * s1.Degree, -74.645276 * s1.Degree}))
+	loopFromCell := LoopFromCell(cell)
+
+	// Demonstrates the reason for this test; the cell bounds are more
+	// conservative than the resulting loop bounds.
+	if loopFromCell.RectBound().Contains(cell.RectBound()) {
+		t.Errorf("loopFromCell's RectBound countains the original cells RectBound, but should not")
+	}
 }
