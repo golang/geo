@@ -16,7 +16,9 @@ limitations under the License.
 
 package s2
 
-import "sort"
+import (
+	"sort"
+)
 
 // A CellUnion is a collection of CellIDs.
 //
@@ -159,9 +161,47 @@ func (cu *CellUnion) RectBound() Rect {
 	return bound
 }
 
+// CapBound returns a Cap that bounds this entity.
+func (cu *CellUnion) CapBound() Cap {
+	if len(*cu) == 0 {
+		return EmptyCap()
+	}
+
+	// Compute the approximate centroid of the region. This won't produce the
+	// bounding cap of minimal area, but it should be close enough.
+	var centroid Point
+
+	for _, ci := range *cu {
+		area := AvgAreaMetric.Value(ci.Level())
+		centroid = Point{centroid.Add(ci.Point().Mul(area))}
+	}
+
+	if zero := (Point{}); centroid == zero {
+		centroid = PointFromCoords(1, 0, 0)
+	} else {
+		centroid = Point{centroid.Normalize()}
+	}
+
+	// Use the centroid as the cap axis, and expand the cap angle so that it
+	// contains the bounding caps of all the individual cells.  Note that it is
+	// *not* sufficient to just bound all the cell vertices because the bounding
+	// cap may be concave (i.e. cover more than one hemisphere).
+	c := CapFromPoint(centroid)
+	for _, ci := range *cu {
+		c = c.AddCap(CellFromCellID(ci).CapBound())
+	}
+
+	return c
+}
+
 // ContainsCell reports whether this cell union contains the given cell.
 func (cu *CellUnion) ContainsCell(c Cell) bool {
 	return cu.ContainsCellID(c.id)
+}
+
+// IntersectsCell reports whether this cell union intersects the given cell.
+func (cu *CellUnion) IntersectsCell(c Cell) bool {
+	return cu.IntersectsCellID(c.id)
 }
 
 // BUG: Differences from C++, almost everything.

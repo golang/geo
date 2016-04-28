@@ -41,9 +41,9 @@ type Region interface {
 
 // Enforce interface satisfaction.
 var (
-	_ Region = Cell{}
 	_ Region = Cap{}
-	// _ Region = CellUnion{}
+	_ Region = Cell{}
+	_ Region = (*CellUnion)(nil)
 	//_ Region = (*Polygon)(nil)
 	_ Region = Rect{}
 )

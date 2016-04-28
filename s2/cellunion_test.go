@@ -346,6 +346,14 @@ func TestNormalizePseudoRandom(t *testing.T) {
 				len(expected), len(cellunion))
 		}
 
+		// Test GetCapBound().
+		cb := cellunion.CapBound()
+		for _, ci := range cellunion {
+			if !cb.ContainsCell(CellFromCellID(ci)) {
+				t.Errorf("CapBound %v of union %v should contain cellID %v", cb, cellunion, ci)
+			}
+		}
+
 		for _, j := range input {
 			if !cellunion.ContainsCellID(j) {
 				t.Errorf("Expected containment of CellID %v", j)
