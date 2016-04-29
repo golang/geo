@@ -168,10 +168,9 @@ func (l *Loop) initBound() {
 	// candy-cane stripe). Third, the loop may include one or both poles.
 	// Note that a small clockwise loop near the equator contains both poles.
 	bounder := NewRectBounder()
-	for _, p := range l.vertices {
-		bounder.AddPoint(p)
+	for i := 0; i <= len(l.vertices); i++ { // add vertex 0 twice
+		bounder.AddPoint(l.Vertex(i))
 	}
-	bounder.AddPoint(l.vertices[0])
 	b := bounder.RectBound()
 
 	if l.ContainsPoint(Point{r3.Vector{0, 0, 1}}) {
@@ -263,12 +262,10 @@ func (l Loop) ContainsPoint(p Point) bool {
 
 	origin := OriginPoint()
 	inside := l.originInside
-	crosser := NewChainEdgeCrosser(origin, p, l.vertices[0])
-	for i := 1; i < len(l.vertices); i++ {
-		inside = inside != crosser.EdgeOrVertexChainCrossing(l.vertices[i])
+	crosser := NewChainEdgeCrosser(origin, p, l.Vertex(0))
+	for i := 1; i <= len(l.vertices); i++ { // add vertex 0 twice
+		inside = inside != crosser.EdgeOrVertexChainCrossing(l.Vertex(i))
 	}
-	// Test the closing edge of the loop too.
-	inside = inside != crosser.EdgeOrVertexChainCrossing(l.vertices[0])
 	return inside
 }
 
