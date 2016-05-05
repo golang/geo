@@ -267,6 +267,9 @@ func (ci CellID) String() string {
 }
 
 // Point returns the center of the s2 cell on the sphere as a Point.
+// The maximum directional error in Point (compared to the exact
+// mathematical result) is 1.5 * dblEpsilon radians, and the maximum length
+// error is 2 * dblEpsilon (the same as Normalize).
 func (ci CellID) Point() Point { return Point{ci.rawPoint().Normalize()} }
 
 // LatLng returns the center of the s2 cell on the sphere as a LatLng.
