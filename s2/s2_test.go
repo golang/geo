@@ -209,6 +209,49 @@ func parsePoints(s string) []Point {
 	return points
 }
 
+// makeLoop constructs a loop from a comma separated string of lat:lng
+// coordinates in degrees. Example of the input format:
+//   "-20:150, 10:-120, 0.123:-170.652"
+// The special strings "empty" or "full" create an empty or full loop respectively.
+func makeLoop(s string) *Loop {
+	if s == "full" {
+		return FullLoop()
+	}
+	if s == "empty" {
+		return EmptyLoop()
+	}
+
+	return LoopFromPoints(parsePoints(s))
+}
+
+// makePolygon constructs a polygon from the set of semicolon separated CSV
+// strings of lat:lng points defining each loop in the polygon. If the normalize
+// flag is set to true, loops are normalized by inverting them
+// if necessary so that they enclose at most half of the unit sphere.
+//
+// Examples of the input format:
+//     "10:20, 90:0, 20:30"                                  // one loop
+//     "10:20, 90:0, 20:30; 5.5:6.5, -90:-180, -15.2:20.3"   // two loops
+//     ""       // the empty polygon (consisting of no loops)
+//     "full"   // the full polygon (consisting of one full loop)
+//     "empty"  // **INVALID** (a polygon consisting of one empty loop)
+func makePolygon(s string, normalize bool) *Polygon {
+	strs := strings.Split(s, ";")
+	var loops []*Loop
+	for _, str := range strs {
+		if str == "" {
+			continue
+		}
+		loop := makeLoop(strings.TrimSpace(str))
+		if normalize {
+			// TODO(roberts): Uncomment once Normalize is implemented.
+			// loop.Normalize()
+		}
+		loops = append(loops, loop)
+	}
+	return PolygonFromLoops(loops)
+}
+
 // skewedInt returns a number in the range [0,2^max_log-1] with bias towards smaller numbers.
 func skewedInt(maxLog int) int {
 	base := uint32(rand.Int31n(int32(maxLog + 1)))
