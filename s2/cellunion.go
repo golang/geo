@@ -204,4 +204,21 @@ func (cu *CellUnion) IntersectsCell(c Cell) bool {
 	return cu.IntersectsCellID(c.id)
 }
 
-// BUG: Differences from C++, almost everything.
+// LeafCellsCovered reports the number of leaf cells covered by this cell union.
+// This will be no more than 6*2^60 for the whole sphere.
+func (cu *CellUnion) LeafCellsCovered() int64 {
+	var numLeaves int64
+	for _, c := range *cu {
+		numLeaves += 1 << uint64((maxLevel-int64(c.Level()))<<1)
+	}
+	return numLeaves
+}
+
+// BUG: Differences from C++:
+//  Contains(CellUnion)/Intersects(CellUnion)
+//  Union(CellUnion)/Intersection(CellUnion)/Difference(CellUnion)
+//  Expand
+//  IntersectsCellID
+//  CapBound
+//  ContainsPoint
+//  AverageArea/ApproxArea/ExactArea
