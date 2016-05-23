@@ -389,7 +389,7 @@ func perturbedCornerOrMidpoint(p, q Point) Point {
 		a = a.Add(randomPoint().Mul(1e-10 * math.Pow(1e-15, randomFloat64())))
 	}
 
-	if a.Norm2() < dblEpsilon {
+	if a.Norm2() < math.SmallestNonzeroFloat64 {
 		// If a.Norm2() is denormalized, Normalize() loses too much precision.
 		return perturbedCornerOrMidpoint(p, q)
 	}
