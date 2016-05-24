@@ -49,6 +49,16 @@ func round(val float64) int32 {
 	return int32(val + 0.5)
 }
 
+// InfAngle returns an angle larger than any finite angle.
+func InfAngle() Angle {
+	return Angle(math.Inf(1))
+}
+
+// isInf reports whether this Angle is infinite.
+func (a Angle) isInf() bool {
+	return math.IsInf(float64(a), 0)
+}
+
 // E5 returns the angle in hundred thousandths of degrees.
 func (a Angle) E5() int32 { return round(a.Degrees() * 1e5) }
 

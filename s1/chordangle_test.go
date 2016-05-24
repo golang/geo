@@ -17,6 +17,7 @@ limitations under the License.
 package s1
 
 import (
+	"math"
 	"testing"
 )
 
@@ -39,6 +40,7 @@ func TestChordAngleBasics(t *testing.T) {
 		{StraightChordAngle, StraightChordAngle, false, true},
 		{StraightChordAngle, InfChordAngle(), true, false},
 
+		{InfChordAngle(), InfChordAngle(), false, true},
 		{InfChordAngle(), InfChordAngle(), false, true},
 	}
 
@@ -81,5 +83,21 @@ func TestChordIsFunctions(t *testing.T) {
 		if got := test.have.isSpecial(); got != test.isSpecial {
 			t.Errorf("%v.isSpecial() = %t, want %t", test.have, got, test.isSpecial)
 		}
+	}
+}
+
+func TestChordToChordFromAngle(t *testing.T) {
+	for _, angle := range []float64{0, 1, -1, math.Pi} {
+		if got := ChordFromAngle(Angle(angle)).Angle().Radians(); got != angle {
+			t.Errorf("ChordFromAngle(Angle(%v)) = %v, want %v", angle, got, angle)
+		}
+	}
+
+	if got := ChordFromAngle(Angle(math.Pi)); got != StraightChordAngle {
+		t.Errorf("a ChordAngle from an Angle of π = %v, want %v", got, StraightChordAngle)
+	}
+
+	if InfAngle() != ChordFromAngle(InfAngle()).Angle() {
+		t.Errorf("converting infinite Angle to ChordAngle should yield infinite Angle")
 	}
 }

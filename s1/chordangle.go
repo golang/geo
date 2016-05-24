@@ -37,10 +37,40 @@ const (
 	// Angle conversions.
 	NegativeChordAngle = ChordAngle(-1)
 
+	// RightChordAngle represents a chord angle of 90 degrees (a "right angle").
+	RightChordAngle = ChordAngle(2)
+
 	// StraightChordAngle represents a chord angle of 180 degrees (a "straight angle").
 	// This is the maximum finite chord angle.
 	StraightChordAngle = ChordAngle(4)
 )
+
+var (
+	dblEpsilon = math.Nextafter(1, 2) - 1
+)
+
+// ChordFromAngle returns a ChordAngle from the given Angle.
+func ChordFromAngle(a Angle) ChordAngle {
+	if a < 0 {
+		return NegativeChordAngle
+	}
+	if a.isInf() {
+		return InfChordAngle()
+	}
+	l := 2 * math.Sin(0.5*math.Min(math.Pi, a.Radians()))
+	return ChordAngle(l * l)
+}
+
+// Angle converts this ChordAngle to an Angle.
+func (c ChordAngle) Angle() Angle {
+	if c < 0 {
+		return -1 * Radian
+	}
+	if c.isInf() {
+		return InfAngle()
+	}
+	return Angle(2 * math.Asin(0.5*math.Sqrt(float64(c))))
+}
 
 // InfChordAngle returns a chord angle larger than any finite chord angle.
 // The only valid operations on an InfChordAngle are comparisons and Angle conversions.
@@ -57,3 +87,31 @@ func (c ChordAngle) isInf() bool {
 func (c ChordAngle) isSpecial() bool {
 	return c < 0 || c.isInf()
 }
+
+// isValid reports whether this ChordAngle is valid or not.
+func (c ChordAngle) isValid() bool {
+	return (c >= 0 && c <= 4) || c.isSpecial()
+}
+
+// MaxPointError returns the maximum error size for a ChordAngle constructed
+// from 2 Points x and y, assuming that x and y are normalized to within the
+// bounds guaranteed by s2.Point.Normalize. The error is defined with respect to
+// the true distance after the points are projected to lie exactly on the sphere.
+func (c ChordAngle) MaxPointError() float64 {
+	// There is a relative error of (2*dblEpsilon) when computing the squared
+	// distance, plus an absolute error of (16 * dblEpsilon**2) because the
+	// lengths of the input points may differ from 1 by up to (2*dblEpsilon) each.
+	return 2*dblEpsilon*float64(c) + 16*dblEpsilon*dblEpsilon
+}
+
+// MaxAngleError returns the maximum error for a ChordAngle constructed
+// as an Angle distance.
+func (c ChordAngle) MaxAngleError() float64 {
+	return dblEpsilon * float64(c)
+}
+
+// BUG(roberts): The major differences from the C++ version are:
+//   - no S2Point constructors
+//   - no FromLength constructor
+//   - no PlusError
+//   - no trigonometric or arithmetic operators
