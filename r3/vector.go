@@ -30,7 +30,7 @@ type Vector struct {
 
 // ApproxEqual reports whether v and ov are equal within a small epsilon.
 func (v Vector) ApproxEqual(ov Vector) bool {
-	const epsilon = 1e-14
+	const epsilon = 1e-16
 	return math.Abs(v.X-ov.X) < epsilon && math.Abs(v.Y-ov.Y) < epsilon && math.Abs(v.Z-ov.Z) < epsilon
 }
 
