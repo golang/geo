@@ -70,6 +70,11 @@ func (i Interval) IsEmpty() bool { return i.Lo-i.Hi == 2*math.Pi }
 // IsInverted reports whether the interval is inverted; that is, whether Lo > Hi.
 func (i Interval) IsInverted() bool { return i.Lo > i.Hi }
 
+// Invert returns the interval with endpoints swapped.
+func (i Interval) Invert() Interval {
+	return Interval{i.Hi, i.Lo}
+}
+
 // Center returns the midpoint of the interval.
 // It is undefined for full and empty intervals.
 func (i Interval) Center() float64 {
