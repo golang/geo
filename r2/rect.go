@@ -27,6 +27,15 @@ type Point struct {
 	X, Y float64
 }
 
+// Add returns the sum of p and op.
+func (p Point) Add(op Point) Point { return Point{p.X + op.X, p.Y + op.Y} }
+
+// Sub returns the difference of p and op.
+func (p Point) Sub(op Point) Point { return Point{p.X - op.X, p.Y - op.Y} }
+
+// Mul returns the scalar product of p and m.
+func (p Point) Mul(m float64) Point { return Point{m * p.X, m * p.Y} }
+
 // Rect represents a closed axis-aligned rectangle in the (x,y) plane.
 type Rect struct {
 	X, Y r1.Interval
