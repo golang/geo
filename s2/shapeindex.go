@@ -67,33 +67,35 @@ var (
 // ShapeIndex indexes a set of Shapes, where a Shape is some collection of
 // edges. A shape can be as simple as a single edge, or as complex as a set of loops.
 // For Shapes that have interiors, the index makes it very fast to determine which
-// Shape(s) that contain a given point or region.
+// Shape(s) contain a given point or region.
 type ShapeIndex struct {
-	// shapes contains all the shapes in this index, accessible by their shape id.
-	// Removed shapes are replaced by nil.
-	//
-	// TODO(roberts): Is there a better storage structure to use? C++ uses a btree
-	// deep down for the index. There do appear to be a number of Go BTree
-	// implementations available that may be suitable. Further investigation
-	// is needed before selecting an appropriate option.
-	//
-	// The slice is an interim storage solution to get the index up and usable.
-	shapes []Shape
+	// shapes maps all shapes to their index.
+	shapes map[Shape]int32
 
 	maxEdgesPerCell int
+
+	// nextID tracks the next ID to hand out. IDs are not reused when shapes
+	// are removed from the index.
+	nextID int32
 }
 
 // NewShapeIndex creates a new ShapeIndex.
 func NewShapeIndex() *ShapeIndex {
 	return &ShapeIndex{
 		maxEdgesPerCell: 10,
+		shapes:          make(map[Shape]int32),
 	}
 }
 
-// Add adds the given shape to the index and assign a unique id to the shape.
-// Shape ids are assigned sequentially starting from 0 in the order shapes are added.
+// Add adds the given shape to the index and assign an ID to it.
 func (s *ShapeIndex) Add(shape Shape) {
-	s.shapes = append(s.shapes, shape)
+	s.shapes[shape] = s.nextID
+	s.nextID++
+}
+
+// Remove removes the given shape from the index.
+func (s *ShapeIndex) Remove(shape Shape) {
+	delete(s.shapes, shape)
 }
 
 // Len reports the number of Shapes in this index.
@@ -101,16 +103,8 @@ func (s *ShapeIndex) Len() int {
 	return len(s.shapes)
 }
 
-// At returns the shape with the given index. If the given index is not valid, nil is returned.
-func (s *ShapeIndex) At(i int) Shape {
-	// TODO(roberts): This blindly assumes that no Shapes have been removed and
-	// that the slice has no holes in it. As this gets implemented, change this
-	// to be smarter and safer about verifying existence before returning it.
-	return s.shapes[i]
-}
-
 // Reset clears the contents of the index and resets it to its original state.
-// Any options specified via Init are preserved.
 func (s *ShapeIndex) Reset() {
-	s.shapes = nil
+	s.shapes = make(map[Shape]int32)
+	s.nextID = 0
 }

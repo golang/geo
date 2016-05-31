@@ -120,7 +120,7 @@ func (l *Loop) initOriginAndBound() {
 		// Point containment testing is done by counting edge crossings starting
 		// at a fixed point on the sphere (OriginPoint). We need to know whether
 		// the reference point (OriginPoint) is inside or outside the loop before
-		// we can construct the S2ShapeIndex. We do this by first guessing that
+		// we can construct the ShapeIndex. We do this by first guessing that
 		// it is outside, and then seeing whether we get the correct containment
 		// result for vertex 1. If the result is incorrect, the origin must be
 		// inside the loop.

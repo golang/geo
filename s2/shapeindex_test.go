@@ -27,6 +27,10 @@ type testShape struct {
 	edges int
 }
 
+func newTestShape() *testShape {
+	return &testShape{}
+}
+
 func (s *testShape) NumEdges() int {
 	return s.edges
 }
@@ -45,17 +49,15 @@ func (s *testShape) ContainsOrigin() bool {
 
 func TestShapeIndexBasics(t *testing.T) {
 	si := NewShapeIndex()
-	s := &testShape{}
+	s := newTestShape()
 
 	if si.Len() != 0 {
 		t.Errorf("initial index should be empty after creation")
 	}
 	si.Add(s)
 
-	// TODO: once an ID is available, use that rather than assuming the first one
-	// is always 0.
-	if si.At(0) != s {
-		t.Errorf("the first element in the index did not match what was added")
+	if si.Len() == 0 {
+		t.Errorf("index should not be empty after adding shape")
 	}
 
 	si.Reset()
