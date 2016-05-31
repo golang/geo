@@ -210,7 +210,7 @@ func (c *coverer) addCandidate(cand *candidate) {
 	maxChildrenShift := uint(2 * c.levelMod)
 	if cand.numChildren == 0 {
 		return
-	} else if !c.interiorCovering && numTerminals == 1<<maxChildrenShift && level > c.minLevel {
+	} else if !c.interiorCovering && numTerminals == 1<<maxChildrenShift && level >= c.minLevel {
 		// Optimization: add the parent cell rather than all of its children.
 		// We can't do this for interior coverings, since the children just
 		// intersect the region, but may not be contained by it - we need to
@@ -224,7 +224,7 @@ func (c *coverer) addCandidate(cand *candidate) {
 		// of the same size, we prefer the cells with the fewest children.
 		// Finally, among cells with equal numbers of children we prefer those
 		// with the smallest number of children that cannot be refined further.
-		cand.priority = -((level<<maxChildrenShift+cand.numChildren)<<maxChildrenShift + numTerminals)
+		cand.priority = -(((level<<maxChildrenShift)+cand.numChildren)<<maxChildrenShift + numTerminals)
 		heap.Push(&c.pq, cand)
 	}
 }
