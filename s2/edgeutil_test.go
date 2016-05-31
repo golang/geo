@@ -624,3 +624,125 @@ func TestExitPoint(t *testing.T) {
 		}
 	}
 }
+
+// testClipToPaddedFace performs a comprehensive set of tests across all faces and
+// with random padding for the given points.
+//
+// We do this by defining an (x,y) coordinate system for the plane containing AB,
+// and converting points along the great circle AB to angles in the range
+// [-Pi, Pi]. We then accumulate the angle intervals spanned by each
+// clipped edge; the union over all 6 faces should approximately equal the
+// interval covered by the original edge.
+func testClipToPaddedFace(t *testing.T, a, b Point) {
+	a = Point{a.Normalize()}
+	b = Point{b.Normalize()}
+	if a.Vector == b.Mul(-1) {
+		return
+	}
+
+	norm := Point{a.PointCross(b).Normalize()}
+	aTan := Point{norm.Cross(a.Vector)}
+
+	padding := 0.0
+	if !oneIn(10) {
+		padding = 1e-10 * math.Pow(1e-5, randomFloat64())
+	}
+
+	xAxis := a
+	yAxis := aTan
+
+	// Given the points A and B, we expect all angles generated from the clipping
+	// to fall within this range.
+	expectedAngles := s1.Interval{0, float64(a.Angle(b.Vector))}
+	if expectedAngles.IsInverted() {
+		expectedAngles = s1.Interval{expectedAngles.Hi, expectedAngles.Lo}
+	}
+	maxAngles := expectedAngles.Expanded(faceClipErrorRadians)
+	var actualAngles s1.Interval
+
+	for face := 0; face < 6; face++ {
+		aUV, bUV, intersects := ClipToPaddedFace(a, b, face, padding)
+		if !intersects {
+			continue
+		}
+
+		aClip := Point{faceUVToXYZ(face, aUV.X, aUV.Y).Normalize()}
+		bClip := Point{faceUVToXYZ(face, bUV.X, bUV.Y).Normalize()}
+
+		desc := fmt.Sprintf("on face %d, a=%v, b=%v, aClip=%v, bClip=%v,", face, a, b, aClip, bClip)
+
+		if got := math.Abs(aClip.Dot(norm.Vector)); got > faceClipErrorRadians {
+			t.Errorf("%s abs(%v.Dot(%v)) = %v, want <= %v", desc, aClip, norm, got, faceClipErrorRadians)
+		}
+		if got := math.Abs(bClip.Dot(norm.Vector)); got > faceClipErrorRadians {
+			t.Errorf("%s abs(%v.Dot(%v)) = %v, want <= %v", desc, bClip, norm, got, faceClipErrorRadians)
+		}
+
+		if float64(aClip.Angle(a.Vector)) > faceClipErrorRadians {
+			if got := math.Max(math.Abs(aUV.X), math.Abs(aUV.Y)); !float64Eq(got, 1+padding) {
+				t.Errorf("%s the largest component of %v = %v, want %v", desc, aUV, got, 1+padding)
+			}
+		}
+		if float64(bClip.Angle(b.Vector)) > faceClipErrorRadians {
+			if got := math.Max(math.Abs(bUV.X), math.Abs(bUV.Y)); !float64Eq(got, 1+padding) {
+				t.Errorf("%s the largest component of %v = %v, want %v", desc, bUV, got, 1+padding)
+			}
+		}
+
+		aAngle := math.Atan2(aClip.Dot(yAxis.Vector), aClip.Dot(xAxis.Vector))
+		bAngle := math.Atan2(bClip.Dot(yAxis.Vector), bClip.Dot(xAxis.Vector))
+
+		// Rounding errors may cause bAngle to be slightly less than aAngle.
+		// We handle this by constructing the interval with FromPointPair,
+		// which is okay since the interval length is much less than math.Pi.
+		faceAngles := s1.IntervalFromEndpoints(aAngle, bAngle)
+		if faceAngles.IsInverted() {
+			faceAngles = s1.Interval{faceAngles.Hi, faceAngles.Lo}
+		}
+		if !maxAngles.ContainsInterval(faceAngles) {
+			t.Errorf("%s %v.ContainsInterval(%v) = false, but should have contained this interval", desc, maxAngles, faceAngles)
+		}
+		actualAngles = actualAngles.Union(faceAngles)
+	}
+	if !actualAngles.Expanded(faceClipErrorRadians).ContainsInterval(expectedAngles) {
+		t.Errorf("the union of all angle segments should be larger than the expected angle")
+	}
+}
+
+func TestFaceClipping(t *testing.T) {
+	// Start with a few simple cases.
+	// An edge that is entirely contained within one cube face:
+	testClipToPaddedFace(t, PointFromCoords(1, -0.5, -0.5), PointFromCoords(1, 0.5, 0.5))
+	testClipToPaddedFace(t, PointFromCoords(1, 0.5, 0.5), PointFromCoords(1, -0.5, -0.5))
+	// An edge that crosses one cube edge:
+	testClipToPaddedFace(t, PointFromCoords(1, 0, 0), PointFromCoords(0, 1, 0))
+	testClipToPaddedFace(t, PointFromCoords(0, 1, 0), PointFromCoords(1, 0, 0))
+	// An edge that crosses two opposite edges of face 0:
+	testClipToPaddedFace(t, PointFromCoords(0.75, 0, -1), PointFromCoords(0.75, 0, 1))
+	testClipToPaddedFace(t, PointFromCoords(0.75, 0, 1), PointFromCoords(0.75, 0, -1))
+	// An edge that crosses two adjacent edges of face 2:
+	testClipToPaddedFace(t, PointFromCoords(1, 0, 0.75), PointFromCoords(0, 1, 0.75))
+	testClipToPaddedFace(t, PointFromCoords(0, 1, 0.75), PointFromCoords(1, 0, 0.75))
+	// An edges that crosses three cube edges (four faces):
+	testClipToPaddedFace(t, PointFromCoords(1, 0.9, 0.95), PointFromCoords(-1, 0.95, 0.9))
+	testClipToPaddedFace(t, PointFromCoords(-1, 0.95, 0.9), PointFromCoords(1, 0.9, 0.95))
+
+	// Comprehensively test edges that are difficult to handle, especially those
+	// that nearly follow one of the 12 cube edges.
+	biunit := r2.Rect{r1.Interval{-1, 1}, r1.Interval{-1, 1}}
+
+	for iter := 0; iter < 1000; iter++ {
+		// Choose two adjacent cube corners P and Q.
+		face := randomUniformInt(6)
+		i := randomUniformInt(4)
+		j := (i + 1) & 3
+		p := Point{faceUVToXYZ(face, biunit.Vertices()[i].X, biunit.Vertices()[i].Y)}
+		q := Point{faceUVToXYZ(face, biunit.Vertices()[j].X, biunit.Vertices()[j].Y)}
+
+		// Now choose two points that are nearly in the plane of PQ, preferring
+		// points that are near cube corners, face midpoints, or edge midpoints.
+		a := perturbedCornerOrMidpoint(p, q)
+		b := perturbedCornerOrMidpoint(p, q)
+		testClipToPaddedFace(t, a, b)
+	}
+}

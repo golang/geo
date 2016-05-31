@@ -21,6 +21,7 @@ import (
 
 	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r2"
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -804,4 +805,132 @@ func (p pointUVW) exitPoint(a axis) r2.Point {
 		v = 1.0
 	}
 	return r2.Point{(-v*p.Y - p.Z) / p.X, v}
+}
+
+// clipDestination returns a score which is used to indicate if the clipped edge AB
+// on the given face intersects the face at all. This function returns the score for
+// the given endpoint, which is an integer ranging from 0 to 3. If the sum of the scores
+// from both of the endpoints is 3 or more, then edge AB does not intersect this face.
+//
+// First, it clips the line segment AB to find the clipped destination B' on a given
+// face. (The face is specified implicitly by expressing *all arguments* in the (u,v,w)
+// coordinates of that face.) Second, it partially computes whether the segment AB
+// intersects this face at all. The actual condition is fairly complicated, but it
+// turns out that it can be expressed as a "score" that can be computed independently
+// when clipping the two endpoints A and B.
+func clipDestination(a, b, scaledN, aTan, bTan pointUVW, scaleUV float64) (r2.Point, int) {
+	var uv r2.Point
+
+	// Optimization: if B is within the safe region of the face, use it.
+	maxSafeUVCoord := 1 - faceClipErrorUVCoord
+	if b.Z > 0 {
+		uv = r2.Point{b.X / b.Z, b.Y / b.Z}
+		if math.Max(math.Abs(uv.X), math.Abs(uv.Y)) <= maxSafeUVCoord {
+			return uv, 0
+		}
+	}
+
+	// Otherwise find the point B' where the line AB exits the face.
+	uv = scaledN.exitPoint(scaledN.exitAxis()).Mul(scaleUV)
+
+	p := pointUVW(PointFromCoords(uv.X, uv.Y, 1.0))
+
+	// Determine if the exit point B' is contained within the segment. We do this
+	// by computing the dot products with two inward-facing tangent vectors at A
+	// and B. If either dot product is negative, we say that B' is on the "wrong
+	// side" of that point. As the point B' moves around the great circle AB past
+	// the segment endpoint B, it is initially on the wrong side of B only; as it
+	// moves further it is on the wrong side of both endpoints; and then it is on
+	// the wrong side of A only. If the exit point B' is on the wrong side of
+	// either endpoint, we can't use it; instead the segment is clipped at the
+	// original endpoint B.
+	//
+	// We reject the segment if the sum of the scores of the two endpoints is 3
+	// or more. Here is what that rule encodes:
+	//  - If B' is on the wrong side of A, then the other clipped endpoint A'
+	//    must be in the interior of AB (otherwise AB' would go the wrong way
+	//    around the circle). There is a similar rule for A'.
+	//  - If B' is on the wrong side of either endpoint (and therefore we must
+	//    use the original endpoint B instead), then it must be possible to
+	//    project B onto this face (i.e., its w-coordinate must be positive).
+	//    This rule is only necessary to handle certain zero-length edges (A=B).
+	score := 0
+	if p.Sub(a.Vector).Dot(aTan.Vector) < 0 {
+		score = 2 // B' is on wrong side of A.
+	} else if p.Sub(b.Vector).Dot(bTan.Vector) < 0 {
+		score = 1 // B' is on wrong side of B.
+	}
+
+	if score > 0 { // B' is not in the interior of AB.
+		if b.Z <= 0 {
+			score = 3 // B cannot be projected onto this face.
+		} else {
+			uv = r2.Point{b.X / b.Z, b.Y / b.Z}
+		}
+	}
+
+	return uv, score
+}
+
+// ClipToFace returns the (u,v) coordinates for the portion of the edge AB that
+// intersects the given face, or false if the edge AB does not intersect.
+// This method guarantees that the clipped vertices lie within the [-1,1]x[-1,1]
+// cube face rectangle and are within faceClipErrorUVDist of the line AB, but
+// the results may differ from those produced by faceSegments.
+func ClipToFace(a, b Point, face int) (aUV, bUV r2.Point, intersects bool) {
+	return ClipToPaddedFace(a, b, face, 0.0)
+}
+
+// ClipToPaddedFace returns the (u,v) coordinates for the portion of the edge AB that
+// intersects the given face, but rather than clipping to the square [-1,1]x[-1,1]
+// in (u,v) space, this method clips to [-R,R]x[-R,R] where R=(1+padding).
+// Padding must be non-negative.
+func ClipToPaddedFace(a, b Point, f int, padding float64) (aUV, bUV r2.Point, intersects bool) {
+	// Fast path: both endpoints are on the given face.
+	if face(a.Vector) == f && face(b.Vector) == f {
+		au, av := validFaceXYZToUV(f, a.Vector)
+		bu, bv := validFaceXYZToUV(f, b.Vector)
+		return r2.Point{au, av}, r2.Point{bu, bv}, true
+	}
+
+	// Convert everything into the (u,v,w) coordinates of the given face. Note
+	// that the cross product *must* be computed in the original (x,y,z)
+	// coordinate system because PointCross (unlike the mathematical cross
+	// product) can produce different results in different coordinate systems
+	// when one argument is a linear multiple of the other, due to the use of
+	// symbolic perturbations.
+	normUVW := pointUVW(faceXYZtoUVW(f, a.PointCross(b)))
+	aUVW := pointUVW(faceXYZtoUVW(f, a))
+	bUVW := pointUVW(faceXYZtoUVW(f, b))
+
+	// Padding is handled by scaling the u- and v-components of the normal.
+	// Letting R=1+padding, this means that when we compute the dot product of
+	// the normal with a cube face vertex (such as (-1,-1,1)), we will actually
+	// compute the dot product with the scaled vertex (-R,-R,1). This allows
+	// methods such as intersectsFace, exitAxis, etc, to handle padding
+	// with no further modifications.
+	scaleUV := 1 + padding
+	scaledN := pointUVW{r3.Vector{X: scaleUV * normUVW.X, Y: scaleUV * normUVW.Y, Z: normUVW.Z}}
+	if !scaledN.intersectsFace() {
+		return aUV, bUV, false
+	}
+
+	// TODO(roberts): This is a workaround for extremely small vectors where some
+	// loss of precision can occur in Normalize causing underflow. When PointCross
+	// is updated to work around this, this can be removed.
+	if math.Max(math.Abs(normUVW.X), math.Max(math.Abs(normUVW.Y), math.Abs(normUVW.Z))) < math.Ldexp(1, -511) {
+		normUVW = pointUVW{normUVW.Mul(math.Ldexp(1, 563))}
+	}
+
+	normUVW = pointUVW{normUVW.Normalize()}
+
+	aTan := pointUVW{normUVW.Cross(aUVW.Vector)}
+	bTan := pointUVW{bUVW.Cross(normUVW.Vector)}
+
+	// As described in clipDestination, if the sum of the scores from clipping the two
+	// endpoints is 3 or more, then the segment does not intersect this face.
+	aUV, aScore := clipDestination(bUVW, aUVW, pointUVW{scaledN.Mul(-1)}, bTan, aTan, scaleUV)
+	bUV, bScore := clipDestination(aUVW, bUVW, scaledN, aTan, bTan, scaleUV)
+
+	return aUV, bUV, aScore+bScore < 3
 }
