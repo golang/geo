@@ -151,3 +151,22 @@ func TestUVWAxis(t *testing.T) {
 		}
 	}
 }
+
+func TestSiTiSTRoundtrip(t *testing.T) {
+	// test int -> float -> int direction.
+	for i := 0; i < 1000; i++ {
+		si := uint64(randomUniformInt(maxSiTi))
+		if got := stToSiTi(siTiToST(si)); got != si {
+			t.Errorf("stToSiTi(siTiToST(%v)) = %v, want %v", si, got, si)
+		}
+	}
+	// test float -> int -> float direction.
+	for i := 0; i < 1000; i++ {
+		st := randomUniformFloat64(0, 1.0)
+		// this uses near not exact because there is some loss in precision
+		// when scaling down to the nearest 1/maxLevel and back.
+		if got := siTiToST(stToSiTi(st)); !float64Near(got, st, 1e-8) {
+			t.Errorf("siTiToST(stToSiTi(%v)) = %v, want %v", st, got, st)
+		}
+	}
+}

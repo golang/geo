@@ -34,7 +34,17 @@ func siTiToST(si uint64) float64 {
 	if si > maxSiTi {
 		return 1.0
 	}
-	return float64(si / maxSiTi)
+	return float64(si) / float64(maxSiTi)
+}
+
+// stToSiTi converts the s- or t-value to the nearest si- or ti-coordinate.
+// The result may be outside the range of valid (si,ti)-values. Value of
+// 0.49999999999999994 (math.NextAfter(0.5, -1)), will be incorrectly rounded up.
+func stToSiTi(s float64) uint64 {
+	if s < 0 {
+		return uint64(s*maxSiTi - 0.5)
+	}
+	return uint64(s*maxSiTi + 0.5)
 }
 
 // stToUV converts an s or t value to the corresponding u or v value.
