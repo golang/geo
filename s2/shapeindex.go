@@ -16,6 +16,10 @@ limitations under the License.
 
 package s2
 
+import (
+	"github.com/golang/geo/r2"
+)
+
 // Shape defines an interface for any s2 type that needs to be indexable.
 type Shape interface {
 	// NumEdges returns the number of edges in this shape.
@@ -63,6 +67,38 @@ var (
 	// and not at query time.
 	cellPadding = 2.0 * (faceClipErrorUVCoord + edgeClipErrorUVCoord)
 )
+
+// faceEdge and clippedEdge store temporary edge data while the index is being
+// updated.
+//
+// While it would be possible to combine all the edge information into one
+// structure, there are two good reasons for separating it:
+//
+//  - Memory usage. Separating the two means that we only need to
+//    store one copy of the per-face data no matter how many times an edge is
+//    subdivided, and it also lets us delay computing bounding boxes until
+//    they are needed for processing each face (when the dataset spans
+//    multiple faces).
+//
+//  - Performance. UpdateEdges is significantly faster on large polygons when
+//    the data is separated, because it often only needs to access the data in
+//    clippedEdge and this data is cached more successfully.
+
+// faceEdge represents an edge that has been projected onto a given face,
+type faceEdge struct {
+	shapeID     int32    // The ID of shape that this edge belongs to
+	edgeID      int      // Edge ID within that shape
+	maxLevel    int      // Not desirable to subdivide this edge beyond this level
+	hasInterior bool     // Belongs to a shape that has an interior
+	a, b        r2.Point // The edge endpoints, clipped to a given face
+	va, vb      Point    // The original Loop vertices of this edge.
+}
+
+// clippedEdge represents the portion of that edge that has been clipped to a given Cell.
+type clippedEdge struct {
+	faceEdge *faceEdge // The original unclipped edge
+	bound    r2.Rect   // Bounding box for the clipped portion
+}
 
 // ShapeIndex indexes a set of Shapes, where a Shape is some collection of
 // edges. A shape can be as simple as a single edge, or as complex as a set of loops.
