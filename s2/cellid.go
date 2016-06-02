@@ -104,32 +104,7 @@ func (ci CellID) Pos() uint64 { return uint64(ci) & (^uint64(0) >> faceBits) }
 
 // Level returns the subdivision level of this cell ID, in the range [0, maxLevel].
 func (ci CellID) Level() int {
-	// Fast path for leaf cells.
-	if ci.IsLeaf() {
-		return maxLevel
-	}
-	x := uint32(ci)
-	level := -1
-	if x != 0 {
-		level += 16
-	} else {
-		x = uint32(uint64(ci) >> 32)
-	}
-	// Only need to look at even-numbered bits for valid cell IDs.
-	x &= -x // remove all but the LSB.
-	if x&0x00005555 != 0 {
-		level += 8
-	}
-	if x&0x00550055 != 0 {
-		level += 4
-	}
-	if x&0x05050505 != 0 {
-		level += 2
-	}
-	if x&0x11111111 != 0 {
-		level += 1
-	}
-	return level
+	return maxLevel - findLSBSetNonZero64(uint64(ci))>>1
 }
 
 // IsLeaf returns whether this cell ID is at the deepest level;
