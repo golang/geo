@@ -318,22 +318,22 @@ func (ci CellID) faceSiTi() (face, si, ti int) {
 }
 
 // faceIJOrientation uses the global lookupIJ table to unfiddle the bits of ci.
-func (ci CellID) faceIJOrientation() (f, i, j, bits int) {
+func (ci CellID) faceIJOrientation() (f, i, j, orientation int) {
 	f = ci.Face()
-	bits = f & swapMask
+	orientation = f & swapMask
 	nbits := maxLevel - 7*lookupBits // first iteration
 
 	for k := 7; k >= 0; k-- {
-		bits += (int(uint64(ci)>>uint64(k*2*lookupBits+1)) & ((1 << uint((2 * nbits))) - 1)) << 2
-		bits = lookupIJ[bits]
-		i += (bits >> (lookupBits + 2)) << uint(k*lookupBits)
-		j += ((bits >> 2) & ((1 << lookupBits) - 1)) << uint(k*lookupBits)
-		bits &= (swapMask | invertMask)
+		orientation += (int(uint64(ci)>>uint64(k*2*lookupBits+1)) & ((1 << uint((2 * nbits))) - 1)) << 2
+		orientation = lookupIJ[orientation]
+		i += (orientation >> (lookupBits + 2)) << uint(k*lookupBits)
+		j += ((orientation >> 2) & ((1 << lookupBits) - 1)) << uint(k*lookupBits)
+		orientation &= (swapMask | invertMask)
 		nbits = lookupBits // following iterations
 	}
 
 	if ci.lsb()&0x1111111111111110 != 0 {
-		bits ^= swapMask
+		orientation ^= swapMask
 	}
 
 	return
