@@ -101,6 +101,16 @@ func (r Rect) Vertices() [4]Point {
 	}
 }
 
+// Lo returns the low corner of the rect.
+func (r Rect) Lo() Point {
+	return Point{r.X.Lo, r.Y.Lo}
+}
+
+// Hi returns the high corner of the rect.
+func (r Rect) Hi() Point {
+	return Point{r.X.Hi, r.Y.Hi}
+}
+
 // Center returns the center of the rectangle in (x,y)-space
 func (r Rect) Center() Point {
 	return Point{r.X.Center(), r.Y.Center()}
@@ -207,4 +217,4 @@ func (r Rect) ApproxEquals(r2 Rect) bool {
 	return r.X.ApproxEqual(r2.X) && r.Y.ApproxEqual(r2.Y)
 }
 
-func (r Rect) String() string { return fmt.Sprintf("X %s, Y %s", r.X, r.Y) }
+func (r Rect) String() string { return fmt.Sprintf("[Lo%s, Hi%s]", r.Lo(), r.Hi()) }
