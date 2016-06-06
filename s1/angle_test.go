@@ -21,6 +21,11 @@ import (
 	"testing"
 )
 
+// float64Eq reports whether the two values are within the default epsilon.
+func float64Eq(x, y float64) bool {
+	return math.Abs(x-y) <= 1e-15
+}
+
 func TestEmptyValue(t *testing.T) {
 	var a Angle
 	if rad := a.Radians(); rad != 0 {
@@ -121,5 +126,39 @@ func TestNormalizeCorrectlyCanonicalizesAngles(t *testing.T) {
 func TestAngleString(t *testing.T) {
 	if s, exp := (180 * Degree).String(), "180.0000000"; s != exp {
 		t.Errorf("(180°).String() = %q, want %q", s, exp)
+	}
+}
+
+func TestDegreesVsRadians(t *testing.T) {
+	// This test tests the exactness of specific values between degrees and radians.
+	for k := -8; k <= 8; k++ {
+		if got, want := Angle(45*k)*Degree, Angle((float64(k)*math.Pi)/4)*Radian; got != want {
+			t.Errorf("45°*%d != (%d*π)/4 radians (%f vs %f)", k, k, got, want)
+		}
+
+		if got, want := (Angle(45*k) * Degree).Degrees(), float64(45*k); got != want {
+			t.Errorf("Angle(45°*%d).Degrees() != 45*%d, (%f vs %f)", k, k, got, want)
+		}
+	}
+
+	for k := uint64(0); k < 30; k++ {
+		m := 1 << k
+		n := float64(m)
+		for _, test := range []struct{ deg, rad float64 }{
+			{180, 1},
+			{60, 3},
+			{36, 5},
+			{20, 9},
+			{4, 45},
+		} {
+			if got, want := Angle(test.deg/n)*Degree, Angle(math.Pi/(test.rad*n))*Radian; got != want {
+				t.Errorf("%v°/%d != π/%v*%d rad (%f vs %f)", test.deg, m, test.rad, m, got, want)
+			}
+		}
+	}
+
+	// We also spot check a non-identity.
+	if got := (60 * Degree).Degrees(); float64Eq(got, 60) {
+		t.Errorf("Angle(60).Degrees() == 60, but should not (%f vs %f)", got, 60.0)
 	}
 }

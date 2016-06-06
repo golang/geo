@@ -21,7 +21,36 @@ import (
 	"strconv"
 )
 
-// Angle represents a 1D angle.
+// Angle represents a 1D angle. The internal representation is a double precision
+// value in radians, so conversion to and from radians is exact.
+// Conversions between E5, E6, E7, and Degrees are not always
+// exact. For example, Degrees(3.1) is different from E6(3100000) or E7(310000000).
+//
+// The following conversions between degrees and radians are exact:
+//
+//       Degree*180 == Radian*math.Pi
+//   Degree*(180/n) == Radian*(math.Pi/n)     for n == 0..8
+//
+// These identities hold when the arguments are scaled up or down by any power
+// of 2. Some similar identities are also true, for example,
+//
+//   Degree*60 == Radian*(math.Pi/3)
+//
+// But be aware that this type of identity does not hold in general. For example,
+//
+//   Degree*3 != Radian*(math.Pi/60)
+//
+// Similarly, the conversion to radians means that (Angle(x)*Degree).Degrees()
+// does not always equal x. For example,
+//
+//   (Angle(45*n)*Degree).Degrees() == 45*n     for n == 0..8
+//
+// but
+//
+//   (60*Degree).Degrees() != 60
+//
+// When testing for equality, you should allow for numerical errors (floatApproxEq)
+// or convert to discrete E5/E6/E7 values first.
 type Angle float64
 
 // Angle units.
