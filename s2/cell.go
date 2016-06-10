@@ -88,6 +88,11 @@ func (c Cell) Edge(k int) Point {
 	}
 }
 
+// BoundUV returns the bounds of this cell in (u,v)-space.
+func (c Cell) BoundUV() r2.Rect {
+	return c.uv
+}
+
 // ExactArea returns the area of this cell as accurately as possible.
 func (c Cell) ExactArea() float64 {
 	v0, v1, v2, v3 := c.Vertex(0), c.Vertex(1), c.Vertex(2), c.Vertex(3)
