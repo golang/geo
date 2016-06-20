@@ -42,27 +42,27 @@ import (
 // chain, they are defined as having exactly one vertex each (see EmptyLoop
 // and FullLoop).
 type Loop struct {
-	vertices []Point
+	Vertices []Point
 
 	// originInside keeps a precomputed value whether this loop contains the origin
 	// versus computing from the set of vertices every time.
-	originInside bool
+	OriginInside bool
 
 	// bound is a conservative bound on all points contained by this loop.
 	// If l.ContainsPoint(P), then l.bound.ContainsPoint(P).
-	bound Rect
+	Bound Rect
 
 	// Since "bound" is not exact, it is possible that a loop A contains
 	// another loop B whose bounds are slightly larger. subregionBound
 	// has been expanded sufficiently to account for this error, i.e.
 	// if A.Contains(B), then A.subregionBound.Contains(B.bound).
-	subregionBound Rect
+	SubregionBound Rect
 }
 
 // LoopFromPoints constructs a loop from the given points.
 func LoopFromPoints(pts []Point) *Loop {
 	l := &Loop{
-		vertices: pts,
+		Vertices: pts,
 	}
 
 	l.initOriginAndBound()
@@ -81,7 +81,7 @@ func LoopFromPoints(pts []Point) *Loop {
 // (i.e., the covering will include a layer of neighboring cells).
 func LoopFromCell(c Cell) *Loop {
 	l := &Loop{
-		vertices: []Point{
+		Vertices: []Point{
 			c.Vertex(0),
 			c.Vertex(1),
 			c.Vertex(2),
@@ -116,16 +116,16 @@ func FullLoop() *Loop {
 // initOriginAndBound sets the origin containment for the given point and then calls
 // the initialization for the bounds objects and the internal index.
 func (l *Loop) initOriginAndBound() {
-	if len(l.vertices) < 3 {
+	if len(l.Vertices) < 3 {
 		// Check for the special "empty" and "full" loops (which have one vertex).
 		if !l.isEmptyOrFull() {
-			l.originInside = false
+			l.OriginInside = false
 			return
 		}
 
 		// This is the special empty or full loop, so the origin depends on if
 		// the vertex is in the southern hemisphere or not.
-		l.originInside = l.vertices[0].Z < 0
+		l.OriginInside = l.Vertices[0].Z < 0
 	} else {
 		// Point containment testing is done by counting edge crossings starting
 		// at a fixed point on the sphere (OriginPoint). We need to know whether
@@ -141,10 +141,10 @@ func (l *Loop) initOriginAndBound() {
 		// if A = R but not if C = R. This convention is required for compatibility
 		// with VertexCrossing. (Note that we can't use OriginPoint
 		// as the fixed vector because of the possibility that B == OriginPoint.)
-		l.originInside = false
-		v1Inside := OrderedCCW(Point{l.vertices[1].Ortho()}, l.vertices[0], l.vertices[2], l.vertices[1])
-		if v1Inside != l.ContainsPoint(l.vertices[1]) {
-			l.originInside = true
+		l.OriginInside = false
+		v1Inside := OrderedCCW(Point{l.Vertices[1].Ortho()}, l.Vertices[0], l.Vertices[2], l.Vertices[1])
+		if v1Inside != l.ContainsPoint(l.Vertices[1]) {
+			l.OriginInside = true
 		}
 	}
 
@@ -163,11 +163,11 @@ func (l *Loop) initBound() {
 	// Check for the special "empty" and "full" loops.
 	if l.isEmptyOrFull() {
 		if l.IsEmpty() {
-			l.bound = EmptyRect()
+			l.Bound = EmptyRect()
 		} else {
-			l.bound = FullRect()
+			l.Bound = FullRect()
 		}
-		l.subregionBound = l.bound
+		l.SubregionBound = l.Bound
 		return
 	}
 
@@ -178,7 +178,7 @@ func (l *Loop) initBound() {
 	// candy-cane stripe). Third, the loop may include one or both poles.
 	// Note that a small clockwise loop near the equator contains both poles.
 	bounder := NewRectBounder()
-	for i := 0; i <= len(l.vertices); i++ { // add vertex 0 twice
+	for i := 0; i <= len(l.Vertices); i++ { // add vertex 0 twice
 		bounder.AddPoint(l.Vertex(i))
 	}
 	b := bounder.RectBound()
@@ -194,13 +194,13 @@ func (l *Loop) initBound() {
 	if b.Lng.IsFull() && l.ContainsPoint(Point{r3.Vector{0, 0, -1}}) {
 		b.Lat.Lo = -math.Pi / 2
 	}
-	l.bound = b
-	l.subregionBound = ExpandForSubregions(l.bound)
+	l.Bound = b
+	l.SubregionBound = ExpandForSubregions(l.Bound)
 }
 
 // ContainsOrigin reports true if this loop contains s2.OriginPoint().
 func (l Loop) ContainsOrigin() bool {
-	return l.originInside
+	return l.OriginInside
 }
 
 // HasInterior returns true because all loops have an interior.
@@ -213,7 +213,7 @@ func (l Loop) NumEdges() int {
 	if l.isEmptyOrFull() {
 		return 0
 	}
-	return len(l.vertices)
+	return len(l.Vertices)
 }
 
 // Edge returns the endpoints for the given edge index.
@@ -233,32 +233,27 @@ func (l Loop) IsFull() bool {
 
 // isEmptyOrFull reports true if this loop is either the "empty" or "full" special loops.
 func (l Loop) isEmptyOrFull() bool {
-	return len(l.vertices) == 1
+	return len(l.Vertices) == 1
 }
 
 // RectBound returns a tight bounding rectangle. If the loop contains the point,
 // the bound also contains it.
 func (l Loop) RectBound() Rect {
-	return l.bound
+	return l.Bound
 }
 
 // CapBound returns a bounding cap that may have more padding than the corresponding
 // RectBound. The bound is conservative such that if the loop contains a point P,
 // the bound also contains it.
 func (l Loop) CapBound() Cap {
-	return l.bound.CapBound()
+	return l.Bound.CapBound()
 }
 
 // Vertex returns the vertex for the given index. For convenience, the vertex indices
 // wrap automatically for methods that do index math such as Edge.
 // i.e., Vertex(NumEdges() + n) is the same as Vertex(n).
 func (l Loop) Vertex(i int) Point {
-	return l.vertices[i%len(l.vertices)]
-}
-
-// Vertices returns the vertices in the loop.
-func (l Loop) Vertices() []Point {
-	return l.vertices
+	return l.Vertices[i%len(l.Vertices)]
 }
 
 // ContainsCell checks whether the cell is completely enclosed by this loop.
@@ -278,7 +273,7 @@ func (l Loop) ContainsCell(c Cell) bool {
 func (l Loop) IntersectsCell(c Cell) bool {
 	for i := 0; i < 4; i++ {
 		crosser := NewChainEdgeCrosser(c.Vertex(i), c.Vertex((i+1)%4), l.Vertex(0))
-		for _, v := range l.Vertices()[1:] {
+		for _, v := range l.Vertices[1:] {
 			if crosser.EdgeOrVertexChainCrossing(v) {
 				return true
 			}
@@ -295,14 +290,14 @@ func (l Loop) ContainsPoint(p Point) bool {
 	// TODO(sbeckman): Move to bruteForceContains and update with ShapeIndex when available.
 	// Empty and full loops don't need a special case, but invalid loops with
 	// zero vertices do, so we might as well handle them all at once.
-	if len(l.vertices) < 3 {
-		return l.originInside
+	if len(l.Vertices) < 3 {
+		return l.OriginInside
 	}
 
 	origin := OriginPoint()
-	inside := l.originInside
+	inside := l.OriginInside
 	crosser := NewChainEdgeCrosser(origin, p, l.Vertex(0))
-	for i := 1; i <= len(l.vertices); i++ { // add vertex 0 twice
+	for i := 1; i <= len(l.Vertices); i++ { // add vertex 0 twice
 		inside = inside != crosser.EdgeOrVertexChainCrossing(l.Vertex(i))
 	}
 	return inside

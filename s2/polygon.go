@@ -92,7 +92,7 @@ func PolygonFromLoops(loops []*Loop) *Polygon {
 		// TODO(roberts): This is explicitly set as depth of 0 for the one loop in
 		// the polygon. When multiple loops are supported, fix this to set the depths.
 		loopDepths:     []int{0},
-		numVertices:    len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
+		numVertices:    len(loops[0].Vertices), // TODO(roberts): Once multi-loop is supported, fix this.
 		bound:          EmptyRect(),
 		subregionBound: EmptyRect(),
 	}
@@ -105,7 +105,7 @@ func FullPolygon() *Polygon {
 			FullLoop(),
 		},
 		loopDepths:     []int{0},
-		numVertices:    len(FullLoop().Vertices()),
+		numVertices:    len(FullLoop().Vertices),
 		bound:          FullRect(),
 		subregionBound: FullRect(),
 	}
