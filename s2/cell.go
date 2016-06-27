@@ -93,6 +93,14 @@ func (c Cell) BoundUV() r2.Rect {
 	return c.uv
 }
 
+// Center returns the direction vector corresponding to the center in
+// (s,t)-space of the given cell. This is the point at which the cell is
+// divided into four subcells; it is not necessarily the centroid of the
+// cell in (u,v)-space or (x,y,z)-space
+func (c Cell) Center() Point {
+	return Point{c.id.rawPoint().Normalize()}
+}
+
 // ExactArea returns the area of this cell as accurately as possible.
 func (c Cell) ExactArea() float64 {
 	v0, v1, v2, v3 := c.Vertex(0), c.Vertex(1), c.Vertex(2), c.Vertex(3)
@@ -308,5 +316,9 @@ func (c Cell) ContainsPoint(p Point) bool {
 	return c.uv.ExpandedByMargin(dblEpsilon).ContainsPoint(uv)
 }
 
-// TODO(roberts, or $SOMEONE): Differences from C++, almost everything else still.
-// Implement the accessor methods on the internal fields.
+// BUG(roberts): Differences from C++:
+// Accessor methods
+// Subdivide
+// BoundUV
+// Distance/DistanceToEdge
+// VertexChordDistance
