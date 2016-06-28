@@ -20,12 +20,12 @@ package s2
 // interior of a loop is defined to be its left-hand side (see Loop).
 //
 // When the polygon is initialized, the given loops are automatically converted
-// into a canonical form consisting of "shells" and "holes".  Shells and holes
-// are both oriented CCW, and are nested hierarchically.  The loops are
+// into a canonical form consisting of "shells" and "holes". Shells and holes
+// are both oriented CCW, and are nested hierarchically. The loops are
 // reordered to correspond to a preorder traversal of the nesting hierarchy.
 //
 // Polygons may represent any region of the sphere with a polygonal boundary,
-// including the entire sphere (known as the "full" polygon).  The full polygon
+// including the entire sphere (known as the "full" polygon). The full polygon
 // consists of a single full loop (see Loop), whereas the empty polygon has no
 // loops at all.
 //
@@ -43,9 +43,15 @@ package s2
 //  - Loops may share vertices, however no vertex may appear twice in a
 //    single loop (see Loop).
 //
-//  - No loop may be empty.  The full loop may appear only in the full polygon.
+//  - No loop may be empty. The full loop may appear only in the full polygon.
 type Polygon struct {
 	loops []*Loop
+
+	// loopDepths keeps track of how deep a given loop is in this polygon.
+	// The depths tracked in this slice are kept in 1:1 lockstep with the
+	// elements in the loops list.
+	// Holes inside a polygon are stored as odd numbers, and shells are even.
+	loopDepths []int
 
 	// index is a spatial index of all the polygon loops.
 	index ShapeIndex
@@ -82,7 +88,10 @@ func PolygonFromLoops(loops []*Loop) *Polygon {
 		panic("s2.PolygonFromLoops for multiple loops is not yet implemented")
 	}
 	return &Polygon{
-		loops:          loops,
+		loops: loops,
+		// TODO(roberts): This is explicitly set as depth of 0 for the one loop in
+		// the polygon. When multiple loops are supported, fix this to set the depths.
+		loopDepths:     []int{0},
 		numVertices:    len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
 		bound:          EmptyRect(),
 		subregionBound: EmptyRect(),
@@ -95,6 +104,7 @@ func FullPolygon() *Polygon {
 		loops: []*Loop{
 			FullLoop(),
 		},
+		loopDepths:     []int{0},
 		numVertices:    len(FullLoop().Vertices()),
 		bound:          FullRect(),
 		subregionBound: FullRect(),
@@ -112,9 +122,78 @@ func (p *Polygon) IsFull() bool {
 	return len(p.loops) == 1 && p.loops[0].IsFull()
 }
 
+// NumLoops returns the number of loops in this polygon.
+func (p *Polygon) NumLoops() int {
+	return len(p.loops)
+}
+
 // Loops returns the loops in this polygon.
 func (p *Polygon) Loops() []*Loop {
 	return p.loops
+}
+
+// Loop returns the loop at the given index. Note that during initialization,
+// the given loops are reordered according to a preorder traversal of the loop
+// nesting hierarchy. This implies that every loop is immediately followed by
+// its descendants. This hierarchy can be traversed using the methods Parent,
+// LastDescendant, and Loop.depth.
+func (p *Polygon) Loop(k int) *Loop {
+	return p.loops[k]
+}
+
+// Parent returns the index of the parent of loop k.
+// If the loop does not have a parent, ok=false is returned.
+func (p *Polygon) Parent(k int) (index int, ok bool) {
+	// See where we are on the depth heirarchy.
+	depth := p.loopDepths[k]
+	if depth == 0 {
+		return -1, false
+	}
+
+	// There may be several loops at the same nesting level as us that share a
+	// parent loop with us. (Imagine a slice of swiss cheese, of which we are one loop.
+	// we don't know how many may be next to us before we get back to our parent loop.)
+	// Move up one position from us, and then begin traversing back through the set of loops
+	// until we find the one that is our parent or we get to the top of the polygon.
+	for k--; k >= 0 && p.loopDepths[k] <= depth; k-- {
+	}
+	return k, true
+}
+
+// LastDescendant returns the index of the last loop that is contained within loop k.
+// If k is negative, it returns the last loop in the polygon.
+// Note that loops are indexed according to a preorder traversal of the nesting
+// hierarchy, so the immediate children of loop k can be found by iterating over
+// the loops (k+1)..LastDescendant(k) and selecting those whose depth is equal
+// to Loop(k).depth+1.
+func (p *Polygon) LastDescendant(k int) int {
+	if k < 0 {
+		return len(p.loops) - 1
+	}
+
+	depth := p.loopDepths[k]
+
+	// Find the next loop immediately past us in the set of loops, and then start
+	// moving down the list until we either get to the end or find the next loop
+	// that is higher up the heirarchy than we are.
+	for k++; k < len(p.loops) && p.loopDepths[k] > depth; k++ {
+	}
+	return k - 1
+}
+
+// loopIsHole reports whether the given loop represents a hole in this polygon.
+func (p *Polygon) loopIsHole(k int) bool {
+	return p.loopDepths[k]&1 != 0
+}
+
+// loopSign returns -1 if this loop represents a hole in this polygon.
+// Otherwise, it returns +1. This is used when computing the area of a polygon.
+// (holes are subtracted from the total area).
+func (p *Polygon) loopSign(k int) int {
+	if p.loopIsHole(k) {
+		return -1
+	}
+	return 1
 }
 
 // CapBound returns a bounding spherical cap.
@@ -124,9 +203,9 @@ func (p *Polygon) CapBound() Cap { return p.bound.CapBound() }
 func (p *Polygon) RectBound() Rect { return p.bound }
 
 // ContainsCell reports whether the polygon contains the given cell.
-// TODO
+// TODO(roberts)
 //func (p *Polygon) ContainsCell(c Cell) bool { ... }
 
 // IntersectsCell reports whether the polygon intersects the given cell.
-// TODO
+// TODO(roberts)
 //func (p *Polygon) IntersectsCell(c Cell) bool { ... }
