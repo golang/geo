@@ -68,6 +68,52 @@ var (
 	cellPadding = 2.0 * (faceClipErrorUVCoord + edgeClipErrorUVCoord)
 )
 
+type clippedShape struct {
+	// shapeID is the index of the shape this clipped shape is a part of.
+	shapeID int32
+
+	// containsCenter indicates if the center of the CellID this shape has been
+	// clipped to falls inside this shape. This is false for shapes that do not
+	// have an interior.
+	containsCenter bool
+
+	// edges is the ordered set of ShapeIndex original edge ids. Edges
+	// are stored in increasing order of edge id.
+	edges []int
+}
+
+// init initializes this shape for the given shapeID and number of expected edges.
+func newClippedShape(id int32, numEdges int) *clippedShape {
+	return &clippedShape{
+		shapeID: id,
+		edges:   make([]int, numEdges),
+	}
+}
+
+// shapeIndexCell stores the index contents for a particular CellID.
+type shapeIndexCell struct {
+	shapes []*clippedShape
+}
+
+// add adds the given clipped shape to this index cell.
+func (s *shapeIndexCell) add(c *clippedShape) {
+	s.shapes = append(s.shapes, c)
+}
+
+// findByID returns the clipped shape that contains the given shapeID,
+// or nil if none of the clipped shapes contain it.
+func (s *shapeIndexCell) findByID(shapeID int32) *clippedShape {
+	// Linear search is fine because the number of shapes per cell is typically
+	// very small (most often 1), and is large only for pathological inputs
+	// (e.g. very deeply nested loops).
+	for _, clipped := range s.shapes {
+		if clipped.shapeID == shapeID {
+			return clipped
+		}
+	}
+	return nil
+}
+
 // faceEdge and clippedEdge store temporary edge data while the index is being
 // updated.
 //
@@ -143,4 +189,13 @@ func (s *ShapeIndex) Len() int {
 func (s *ShapeIndex) Reset() {
 	s.shapes = make(map[Shape]int32)
 	s.nextID = 0
+}
+
+// NumEdges returns the number of edges in this index.
+func (s *ShapeIndex) NumEdges() int {
+	numEdges := 0
+	for shape := range s.shapes {
+		numEdges += shape.NumEdges()
+	}
+	return numEdges
 }
