@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"math"
 	"sort"
 	"testing"
 
@@ -545,6 +546,99 @@ func TestFindLSBSetNonZero64(t *testing.T) {
 	}
 }
 
+func TestWrapping(t *testing.T) {
+	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)
+
+	tests := []struct {
+		msg  string
+		got  CellID
+		want CellID
+	}{
+		{
+			"test wrap from beginning to end of Hilbert curve",
+			CellIDFromFace(5).ChildEndAtLevel(0).Prev(),
+			CellIDFromFace(0).ChildBeginAtLevel(0).PrevWrap(),
+		},
+		{
+			"smallest end leaf wraps to smallest first leaf using PrevWrap",
+			CellIDFromFacePosLevel(5, ^uint64(0)>>faceBits, maxLevel),
+			CellIDFromFace(0).ChildBeginAtLevel(maxLevel).PrevWrap(),
+		},
+		{
+			"smallest end leaf wraps to smallest first leaf using AdvanceWrap",
+			CellIDFromFacePosLevel(5, ^uint64(0)>>faceBits, maxLevel),
+			CellIDFromFace(0).ChildBeginAtLevel(maxLevel).AdvanceWrap(-1),
+		},
+		{
+			"PrevWrap is the same as AdvanceWrap(-1)",
+			CellIDFromFace(0).ChildBeginAtLevel(maxLevel).AdvanceWrap(-1),
+			CellIDFromFace(0).ChildBeginAtLevel(maxLevel).PrevWrap(),
+		},
+		{
+			"Prev + NextWrap stays the same at given level",
+			CellIDFromFace(0).ChildBeginAtLevel(4),
+			CellIDFromFace(5).ChildEndAtLevel(4).Prev().NextWrap(),
+		},
+		{
+			"AdvanceWrap forward and back stays the same at given level",
+			CellIDFromFace(0).ChildBeginAtLevel(4),
+			CellIDFromFace(5).ChildEndAtLevel(4).Advance(-1).AdvanceWrap(1),
+		},
+		{
+			"Prev().NextWrap() stays same for first cell at level",
+			CellIDFromFacePosLevel(0, 0, maxLevel),
+			CellIDFromFace(5).ChildEndAtLevel(maxLevel).Prev().NextWrap(),
+		},
+		{
+			"AdvanceWrap forward and back stays same for first cell at level",
+			CellIDFromFacePosLevel(0, 0, maxLevel),
+			CellIDFromFace(5).ChildEndAtLevel(maxLevel).Advance(-1).AdvanceWrap(1),
+		},
+		// Check basic properties of AdvanceWrap().
+		{
+			"advancing 7 steps around cube should end up one past start.",
+			CellIDFromFace(1),
+			CellIDFromFace(0).ChildBeginAtLevel(0).AdvanceWrap(7),
+		},
+		{
+			"twice around should end up where we started",
+			CellIDFromFace(0).ChildBeginAtLevel(0),
+			CellIDFromFace(0).ChildBeginAtLevel(0).AdvanceWrap(12),
+		},
+		{
+			"backwards once around plus one step should be one before we started",
+			CellIDFromFace(4),
+			CellIDFromFace(5).AdvanceWrap(-7),
+		},
+		{
+			"wrapping even multiple of times around should end where we started",
+			CellIDFromFace(0).ChildBeginAtLevel(0),
+			CellIDFromFace(0).ChildBeginAtLevel(0).AdvanceWrap(-12000000),
+		},
+		{
+			"wrapping combination of even times around should end where it started",
+			CellIDFromFace(0).ChildBeginAtLevel(5).AdvanceWrap(6644),
+			CellIDFromFace(0).ChildBeginAtLevel(5).AdvanceWrap(-11788),
+		},
+		{
+			"moving 256 should advance us one cell at max level",
+			id.Next().ChildBeginAtLevel(maxLevel),
+			id.ChildBeginAtLevel(maxLevel).AdvanceWrap(256),
+		},
+		{
+			"wrapping by 4 times cells per face should advance 4 faces",
+			CellIDFromFacePosLevel(1, 0, maxLevel),
+			CellIDFromFacePosLevel(5, 0, maxLevel).AdvanceWrap(2 << (2 * maxLevel)),
+		},
+	}
+
+	for _, test := range tests {
+		if test.got != test.want {
+			t.Errorf("%s: got %v want %v", test.msg, test.got, test.want)
+		}
+	}
+}
+
 func TestAdvance(t *testing.T) {
 	tests := []struct {
 		ci    CellID
@@ -613,3 +707,48 @@ func TestFaceSiTi(t *testing.T) {
 		}
 	}
 }
+
+func TestContinuity(t *testing.T) {
+	const maxWalkLevel = 8
+	const cellSize = 1.0 / (1 << maxWalkLevel)
+
+	// Make sure that sequentially increasing cell ids form a continuous
+	// path over the surface of the sphere, i.e. there are no
+	// discontinuous jumps from one region to another.
+
+	maxDist := MaxWidthMetric.Value(maxWalkLevel)
+	end := CellIDFromFace(5).ChildEndAtLevel(maxWalkLevel)
+	id := CellIDFromFace(0).ChildBeginAtLevel(maxWalkLevel)
+
+	for ; id != end; id = id.Next() {
+
+		if got := id.rawPoint().Angle(id.NextWrap().rawPoint()); float64(got) > maxDist {
+			t.Errorf("%v.rawPoint().Angle(%v.NextWrap().rawPoint()) = %v > %v", id, id, got, maxDist)
+		}
+		if id.NextWrap() != id.AdvanceWrap(1) {
+			t.Errorf("%v.NextWrap() != %v.AdvanceWrap(1) %v != %v)", id, id, id.NextWrap(), id.AdvanceWrap(1))
+		}
+		if id != id.NextWrap().AdvanceWrap(-1) {
+			t.Errorf("%v.NextWrap().AdvanceWrap(-1) = %v want %v)", id, id.NextWrap().AdvanceWrap(-1), id)
+		}
+
+		// Check that the rawPoint() returns the center of each cell
+		// in (s,t) coordinates.
+		_, u, v := xyzToFaceUV(id.rawPoint())
+		if !float64Eq(math.Remainder(uvToST(u), 0.5*cellSize), 0.0) {
+			t.Errorf("uvToST(%v) = %v, want %v", u, uvToST(u), 0.5*cellSize)
+		}
+		if !float64Eq(math.Remainder(uvToST(v), 0.5*cellSize), 0.0) {
+			t.Errorf("uvToST(%v) = %v, want %v", v, uvToST(v), 0.5*cellSize)
+		}
+	}
+
+}
+
+// TODO(roberts): Remaining tests to convert.
+//
+// DistanceFromBegin
+// MaximumTile
+// Coverage
+// VertexNeighbors needs AppendAllNeighbors test.
+// ExpandedByDistanceUV

@@ -282,7 +282,7 @@ func (ci CellID) ChildEndAtLevel(level int) CellID {
 }
 
 // Next returns the next cell along the Hilbert curve.
-// This is expected to be used with ChildStart and ChildEnd.
+// This is expected to be used with ChildBegin and ChildEnd.
 func (ci CellID) Next() CellID {
 	return CellID(uint64(ci) + ci.lsb()<<1)
 }
@@ -290,6 +290,61 @@ func (ci CellID) Next() CellID {
 // Prev returns the previous cell along the Hilbert curve.
 func (ci CellID) Prev() CellID {
 	return CellID(uint64(ci) - ci.lsb()<<1)
+}
+
+// NextWrap returns the next cell along the Hilbert curve, wrapping from last to
+// first as necessary. This should not be used with ChildBegin and ChildEnd.
+func (ci CellID) NextWrap() CellID {
+	n := ci.Next()
+	if uint64(n) < wrapOffset {
+		return n
+	}
+	return CellID(uint64(n) - wrapOffset)
+}
+
+// PrevWrap returns the previous cell along the Hilbert curve, wrapping around from
+// first to last as necessary. This should not be used with ChildBegin and ChildEnd.
+func (ci CellID) PrevWrap() CellID {
+	p := ci.Prev()
+	if uint64(p) < wrapOffset {
+		return p
+	}
+	return CellID(uint64(p) + wrapOffset)
+}
+
+// AdvanceWrap advances or retreats the indicated number of steps along the
+// Hilbert curve at the current level and returns the new position. The
+// position wraps between the first and last faces as necessary.
+func (ci CellID) AdvanceWrap(steps int64) CellID {
+	if steps == 0 {
+		return ci
+	}
+
+	// We clamp the number of steps if necessary to ensure that we do not
+	// advance past the End() or before the Begin() of this level.
+	shift := uint(2*(maxLevel-ci.Level()) + 1)
+	if steps < 0 {
+		if min := -int64(uint64(ci) >> shift); steps < min {
+			wrap := int64(wrapOffset >> shift)
+			steps %= wrap
+			if steps < min {
+				steps += wrap
+			}
+		}
+	} else {
+		// Unlike Advance(), we don't want to return End(level).
+		if max := int64((wrapOffset - uint64(ci)) >> shift); steps > max {
+			wrap := int64(wrapOffset >> shift)
+			steps %= wrap
+			if steps > max {
+				steps -= wrap
+			}
+		}
+	}
+
+	// If steps is negative, then shifting it left has undefined behavior.
+	// Cast to uint64 for a 2's complement answer.
+	return CellID(uint64(ci) + (uint64(steps) << shift))
 }
 
 // TODO: the methods below are not exported yet.  Settle on the entire API design
