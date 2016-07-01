@@ -20,6 +20,7 @@ limitations under the License.
 package r2
 
 import (
+	"math"
 	"reflect"
 	"testing"
 
@@ -38,6 +39,118 @@ var (
 	rectSW  = RectFromPoints(sw, sw)
 	rectNE  = RectFromPoints(ne, ne)
 )
+
+func float64Eq(x, y float64) bool { return math.Abs(x-y) < 1e-14 }
+
+func pointsApproxEqual(a, b Point) bool {
+	return float64Eq(a.X, b.X) && float64Eq(a.Y, b.Y)
+}
+
+func TestOrtho(t *testing.T) {
+	tests := []struct {
+		p    Point
+		want Point
+	}{
+		{Point{0, 0}, Point{0, 0}},
+		{Point{0, 1}, Point{-1, 0}},
+		{Point{1, 1}, Point{-1, 1}},
+		{Point{-4, 7}, Point{-7, -4}},
+		{Point{1, math.Sqrt(3)}, Point{-math.Sqrt(3), 1}},
+	}
+	for _, test := range tests {
+		if got := test.p.Ortho(); !pointsApproxEqual(got, test.want) {
+			t.Errorf("%v.Ortho() = %v, want %v", test.p, got, test.want)
+		}
+	}
+}
+
+func TestDot(t *testing.T) {
+	tests := []struct {
+		p    Point
+		op   Point
+		want float64
+	}{
+		{Point{0, 0}, Point{0, 0}, 0},
+		{Point{0, 1}, Point{0, 0}, 0},
+		{Point{1, 1}, Point{4, 3}, 7},
+		{Point{-4, 7}, Point{1, 5}, 31},
+	}
+	for _, test := range tests {
+		if got := test.p.Dot(test.op); !float64Eq(got, test.want) {
+			t.Errorf("%v.Dot(%v) = %v, want %v", test.p, test.op, got, test.want)
+		}
+	}
+}
+
+func TestCross(t *testing.T) {
+	tests := []struct {
+		p    Point
+		op   Point
+		want float64
+	}{
+		{Point{0, 0}, Point{0, 0}, 0},
+		{Point{0, 1}, Point{0, 0}, 0},
+		{Point{1, 1}, Point{-1, -1}, 0},
+		{Point{1, 1}, Point{4, 3}, -1},
+		{Point{1, 5}, Point{-2, 3}, 13},
+	}
+
+	for _, test := range tests {
+		if got := test.p.Cross(test.op); !float64Eq(got, test.want) {
+			t.Errorf("%v.Cross(%v) = %v, want %v", test.p, test.op, got, test.want)
+		}
+	}
+}
+
+func TestNorm(t *testing.T) {
+	tests := []struct {
+		p    Point
+		want float64
+	}{
+		{Point{0, 0}, 0},
+		{Point{0, 1}, 1},
+		{Point{-1, 0}, 1},
+		{Point{3, 4}, 5},
+		{Point{3, -4}, 5},
+		{Point{2, 2}, 2 * math.Sqrt(2)},
+		{Point{1, math.Sqrt(3)}, 2},
+		{Point{29, 29 * math.Sqrt(3)}, 29 * 2},
+		{Point{1, 1e15}, 1e15},
+		{Point{1e14, math.MaxFloat32 - 1}, math.MaxFloat32},
+	}
+
+	for _, test := range tests {
+		if !float64Eq(test.p.Norm(), test.want) {
+			t.Errorf("%v.Norm() = %v, want %v", test.p, test.p.Norm(), test.want)
+		}
+	}
+}
+
+func TestNormalize(t *testing.T) {
+	tests := []struct {
+		have Point
+		want Point
+	}{
+		{Point{}, Point{}},
+		{Point{0, 0}, Point{0, 0}},
+		{Point{0, 1}, Point{0, 1}},
+		{Point{-1, 0}, Point{-1, 0}},
+		{Point{3, 4}, Point{0.6, 0.8}},
+		{Point{3, -4}, Point{0.6, -0.8}},
+		{Point{2, 2}, Point{math.Sqrt(2) / 2, math.Sqrt(2) / 2}},
+		{Point{7, 7 * math.Sqrt(3)}, Point{0.5, math.Sqrt(3) / 2}},
+		{Point{1e21, 1e21 * math.Sqrt(3)}, Point{0.5, math.Sqrt(3) / 2}},
+		{Point{1, 1e16}, Point{0, 1}},
+		{Point{1e4, math.MaxFloat32 - 1}, Point{0, 1}},
+	}
+
+	for _, test := range tests {
+		if got := test.have.Normalize(); !pointsApproxEqual(got, test.want) {
+			t.Errorf("%v.Normalize() = %v, want %v", test.have, got, test.want)
+		}
+	}
+
+}
 
 func TestEmptyRect(t *testing.T) {
 	if !empty.IsValid() {

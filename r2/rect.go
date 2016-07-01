@@ -18,6 +18,7 @@ package r2
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/golang/geo/r1"
 )
@@ -35,6 +36,28 @@ func (p Point) Sub(op Point) Point { return Point{p.X - op.X, p.Y - op.Y} }
 
 // Mul returns the scalar product of p and m.
 func (p Point) Mul(m float64) Point { return Point{m * p.X, m * p.Y} }
+
+// Ortho returns a counterclockwise orthogonal point with the same norm.
+func (p Point) Ortho() Point { return Point{-p.Y, p.X} }
+
+// Dot returns the dot product between p and op.
+func (p Point) Dot(op Point) float64 { return p.X*op.X + p.Y*op.Y }
+
+// Cross returns the cross product of p and op.
+func (p Point) Cross(op Point) float64 { return p.X*op.Y - p.Y*op.X }
+
+// Norm returns the vector's norm.
+func (p Point) Norm() float64 { return math.Hypot(p.X, p.Y) }
+
+// Normalize returns a unit point in the same direction as p.
+func (p Point) Normalize() Point {
+	if p.X == 0 && p.Y == 0 {
+		return p
+	}
+	return p.Mul(1 / p.Norm())
+}
+
+func (p Point) String() string { return fmt.Sprintf("(%.12f, %.12f)", p.X, p.Y) }
 
 // Rect represents a closed axis-aligned rectangle in the (x,y) plane.
 type Rect struct {
@@ -99,6 +122,20 @@ func (r Rect) Vertices() [4]Point {
 		{r.X.Hi, r.Y.Hi},
 		{r.X.Lo, r.Y.Hi},
 	}
+}
+
+// VertexIJ returns the vertex in direction i along the X-axis (0=left, 1=right) and
+// direction j along the Y-axis (0=down, 1=up).
+func (r Rect) VertexIJ(i, j int) Point {
+	x := r.X.Lo
+	if i == 1 {
+		x = r.X.Hi
+	}
+	y := r.Y.Lo
+	if j == 1 {
+		y = r.Y.Hi
+	}
+	return Point{x, y}
 }
 
 // Lo returns the low corner of the rect.
