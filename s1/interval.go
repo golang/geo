@@ -257,7 +257,7 @@ func (i Interval) Intersection(oi Interval) Interval {
 	return EmptyInterval()
 }
 
-var epsilon = math.Nextafter(0, 1)
+var epsilon = math.Nextafter(1, 2) - 1
 
 // AddPoint returns the interval expanded by the minimum amount necessary such
 // that it contains the given point "p" (an angle in the range [-Pi, Pi]).
