@@ -188,6 +188,40 @@ func faceXYZtoUVW(face int, p Point) Point {
 	}
 }
 
+// faceSiTiToXYZ transforms the (si, ti) coordinates to a (not necessarily
+// unit length) Point on the given face.
+func faceSiTiToXYZ(face int, si, ti uint64) Point {
+	return Point{faceUVToXYZ(face, stToUV(siTiToST(si)), stToUV(siTiToST(ti)))}
+}
+
+// xyzToFaceSiTi transforms the (not necessarily unit length) Point to
+// (face, si, ti) coordinates and the level the Point is at.
+func xyzToFaceSiTi(p Point) (face int, si, ti uint64, level int) {
+	face, u, v := xyzToFaceUV(p.Vector)
+	si = stToSiTi(uvToST(u))
+	ti = stToSiTi(uvToST(v))
+
+	// If the levels corresponding to si,ti are not equal, then p is not a cell
+	// center. The si,ti values of 0 and maxSiTi need to be handled specially
+	// because they do not correspond to cell centers at any valid level; they
+	// are mapped to level -1 by the code at the end.
+	level = maxLevel - findLSBSetNonZero64(si|maxSiTi)
+	if level < 0 || level != maxLevel-findLSBSetNonZero64(ti|maxSiTi) {
+		return face, si, ti, -1
+	}
+
+	// In infinite precision, this test could be changed to ST == SiTi. However,
+	// due to rounding errors, uvToST(xyzToFaceUV(faceUVToXYZ(stToUV(...)))) is
+	// not idempotent. On the other hand, the center is computed exactly the same
+	// way p was originally computed (if it is indeed the center of a Cell);
+	// the comparison can be exact.
+	if p.Vector == faceSiTiToXYZ(face, si, ti).Normalize() {
+		return face, si, ti, level
+	}
+
+	return face, si, ti, -1
+}
+
 // uNorm returns the right-handed normal (not necessarily unit length) for an
 // edge in the direction of the positive v-axis at the given u-value on
 // the given face.  (This vector is perpendicular to the plane through
@@ -239,9 +273,25 @@ var faceUVWAxes = [6][3]Point{
 	{Point{r3.Vector{0, 1, 0}}, Point{r3.Vector{1, 0, 0}}, Point{r3.Vector{0, 0, -1}}},
 }
 
+// faceUVWFaces are the precomputed neighbors of each face.
+var faceUVWFaces = [6][3][2]int{
+	{{4, 1}, {5, 2}, {3, 0}},
+	{{0, 3}, {5, 2}, {4, 1}},
+	{{0, 3}, {1, 4}, {5, 2}},
+	{{2, 5}, {1, 4}, {0, 3}},
+	{{2, 5}, {3, 0}, {1, 4}},
+	{{4, 1}, {3, 0}, {2, 5}},
+}
+
 // uvwAxis returns the given axis of the given face.
 func uvwAxis(face, axis int) Point {
 	return faceUVWAxes[face][axis]
+}
+
+// uvwFaces returns the face in the (u,v,w) coordinate system on the given axis
+// in the given direction.
+func uvwFace(face, axis, direction int) int {
+	return faceUVWFaces[face][axis][direction]
 }
 
 // uAxis returns the u-axis for the given face.

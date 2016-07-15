@@ -170,3 +170,102 @@ func TestSiTiSTRoundtrip(t *testing.T) {
 		}
 	}
 }
+
+func TestUVWFace(t *testing.T) {
+	// Check that uvwFace is consistent with uvwAxis.
+	for f := 0; f < 6; f++ {
+		for axis := 0; axis < 3; axis++ {
+			if got, want := face(uvwAxis(f, axis).Mul(-1)), uvwFace(f, axis, 0); got != want {
+				t.Errorf("face(%v) in positive direction = %v, want %v", uvwAxis(f, axis).Mul(-1), got, want)
+			}
+			if got, want := face(uvwAxis(f, axis).Vector), uvwFace(f, axis, 1); got != want {
+				t.Errorf("face(%v) in negative direction = %v, want %v", uvwAxis(f, axis), got, want)
+			}
+		}
+	}
+}
+
+func TestXYZToFaceSiTi(t *testing.T) {
+	for level := 0; level < maxLevel; level++ {
+		for i := 0; i < 1000; i++ {
+			ci := randomCellIDForLevel(level)
+			f, si, ti, gotLevel := xyzToFaceSiTi(ci.Point())
+			if gotLevel != level {
+				t.Errorf("level of CellID %v = %v, want %v", ci, gotLevel, level)
+			}
+			gotID := cellIDFromFaceIJ(f, int(si/2), int(ti/2)).Parent(level)
+			if gotID != ci {
+				t.Errorf("CellID = %b, want %b", gotID, ci)
+			}
+
+			// Test a point near the cell center but not equal to it.
+			pMoved := ci.Point().Add(r3.Vector{1e-13, 1e-13, 1e-13})
+			fMoved, siMoved, tiMoved, gotLevel := xyzToFaceSiTi(Point{pMoved})
+
+			if gotLevel != -1 {
+				t.Errorf("level of %v = %v, want %v", pMoved, gotLevel, -1)
+			}
+
+			if f != fMoved {
+				t.Errorf("face of %v = %v, want %v", pMoved, fMoved, f)
+			}
+
+			if si != siMoved {
+				t.Errorf("si of %v = %v, want %v", pMoved, siMoved, si)
+			}
+
+			if ti != tiMoved {
+				t.Errorf("ti of %v = %v, want %v", pMoved, tiMoved, ti)
+			}
+
+			// Finally, test some random (si,ti) values that may be at different
+			// levels, or not at a valid level at all (for example, si == 0).
+			faceRandom := randomUniformInt(numFaces)
+			var siRandom, tiRandom uint64
+			mask := -1 << uint64(maxLevel-level)
+			for siRandom > maxSiTi || tiRandom > maxSiTi {
+				siRandom = uint64(randomUint32() & uint32(mask))
+				tiRandom = uint64(randomUint32() & uint32(mask))
+			}
+
+			pRandom := faceSiTiToXYZ(faceRandom, siRandom, tiRandom)
+			f, si, ti, gotLevel = xyzToFaceSiTi(pRandom)
+
+			// The chosen point is on the edge of a top-level face cell.
+			if f != faceRandom {
+				if gotLevel != -1 {
+					t.Errorf("level of random CellID = %v, want %v", gotLevel, -1)
+				}
+				if got := si == 0 || si == maxSiTi || ti == 0 || ti == maxSiTi; !got {
+					t.Errorf("%v face %d, si = %v, want 0 || %v, ti = %v, want 0 || %v", f, faceRandom, si, maxSiTi, ti, maxSiTi)
+				}
+				continue
+			}
+
+			if siRandom != si {
+				t.Errorf("xyzToFaceSiTi(%v).si = %v, want %v", pRandom, siRandom, si)
+			}
+			if tiRandom != ti {
+				t.Errorf("xyzToFaceSiTi(%v).ti = %v, want %v", pRandom, tiRandom, ti)
+			}
+			if gotLevel >= 0 {
+				if got := cellIDFromFaceIJ(f, int(si/2), int(ti/2)).Parent(gotLevel).Point(); pRandom.ApproxEqual(got) {
+					t.Errorf("cellIDFromFaceIJ(%d, %d, %d, %d) = %v, want %v", f, int(si/2), int(ti/2), gotLevel, got, pRandom)
+				}
+			}
+		}
+	}
+}
+
+func TestXYZFaceSiTiRoundtrip(t *testing.T) {
+	for level := 0; level < maxLevel; level++ {
+		for i := 0; i < 1000; i++ {
+			ci := randomCellIDForLevel(level)
+			f, si, ti, _ := xyzToFaceSiTi(ci.Point())
+			op := faceSiTiToXYZ(f, si, ti)
+			if !ci.Point().ApproxEqual(op) {
+				t.Errorf("faceSiTiToXYZ(xyzToFaceSiTi(%v)) = %v, want %v", ci.Point(), op, ci.Point())
+			}
+		}
+	}
+}
