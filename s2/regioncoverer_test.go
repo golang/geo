@@ -43,7 +43,7 @@ func TestRandomCells(t *testing.T) {
 }
 
 // checkCovering reports whether covering is a valid cover for the region.
-func checkCovering(t *testing.T, rc *RegionCoverer, r *Region, covering CellUnion, interior bool) {
+func checkCovering(t *testing.T, rc *RegionCoverer, r Region, covering CellUnion, interior bool) {
 	// Keep track of how many cells have the same rc.MinLevel ancestor.
 	minLevelCells := map[CellID]int{}
 	var tempCover CellUnion
@@ -72,28 +72,28 @@ func checkCovering(t *testing.T, rc *RegionCoverer, r *Region, covering CellUnio
 	}
 	if interior {
 		for _, ci := range covering {
-			if !(*r).ContainsCell(CellFromCellID(ci)) {
+			if !r.ContainsCell(CellFromCellID(ci)) {
 				t.Errorf("Region(%v).ContainsCell(%v) = %t, want = %t", r, CellFromCellID(ci), false, true)
 			}
 		}
 	} else {
 		tempCover.Normalize()
-		checkCoveringTight(t, r, tempCover, true, 0, rc)
+		checkCoveringTight(t, r, tempCover, true, 0)
 	}
 }
 
 // checkCoveringTight checks that "cover" completely covers the given region.
 // If "checkTight" is true, also checks that it does not contain any cells that
 // do not intersect the given region. ("id" is only used internally.)
-func checkCoveringTight(t *testing.T, r *Region, cover CellUnion, checkTight bool, id CellID, rc *RegionCoverer) {
+func checkCoveringTight(t *testing.T, r Region, cover CellUnion, checkTight bool, id CellID) {
 	if !id.IsValid() {
 		for f := 0; f < 6; f++ {
-			checkCoveringTight(t, r, cover, checkTight, CellIDFromFace(f), rc)
+			checkCoveringTight(t, r, cover, checkTight, CellIDFromFace(f))
 		}
 		return
 	}
 
-	if !(*r).IntersectsCell(CellFromCellID(id)) {
+	if !r.IntersectsCell(CellFromCellID(id)) {
 		// If region does not intersect id, then neither should the covering.
 		if got := cover.IntersectsCellID(id); checkTight && got {
 			t.Errorf("CellUnion(%v).IntersectsCellID(%s) = %t; want = %t", cover, id.ToToken(), got, false)
@@ -102,15 +102,15 @@ func checkCoveringTight(t *testing.T, r *Region, cover CellUnion, checkTight boo
 		// The region may intersect id, but we can't assert that the covering
 		// intersects id because we may discover that the region does not actually
 		// intersect upon further subdivision.  (IntersectsCell is not exact.)
-		if got := (*r).ContainsCell(CellFromCellID(id)); got {
-			t.Errorf("Region(%v).ContainsCell(%v) = %t; want = %t", *r, CellFromCellID(id), got, false)
+		if got := r.ContainsCell(CellFromCellID(id)); got {
+			t.Errorf("Region(%v).ContainsCell(%v) = %t; want = %t", r, CellFromCellID(id), got, false)
 		}
 		if got := id.IsLeaf(); got {
 			t.Errorf("CellID(%s).IsLeaf() = %t; want = %t", id.ToToken(), got, false)
 		}
-		end := id.ChildEnd()
-		for ci := id.ChildBegin(); ci != end; ci = ci.Next() {
-			checkCoveringTight(t, r, cover, checkTight, ci, rc)
+
+		for child := id.ChildBegin(); child != id.ChildEnd(); child = child.Next() {
+			checkCoveringTight(t, r, cover, checkTight, child)
 		}
 	}
 }
@@ -128,12 +128,12 @@ func TestRandomCaps(t *testing.T) {
 		rc.MaxCells = int(skewedInt(10))
 
 		maxArea := math.Min(4*math.Pi, float64(3*rc.MaxCells+1)*AvgAreaMetric.Value(rc.MinLevel))
-		r := Region(randomCap(0.1*AvgAreaMetric.Value(rc.MaxLevel), maxArea))
+		r := Region(randomCap(0.1*AvgAreaMetric.Value(maxLevel), maxArea))
 
 		covering := rc.Covering(r)
-		checkCovering(t, rc, &r, covering, false)
+		checkCovering(t, rc, r, covering, false)
 		interior := rc.InteriorCovering(r)
-		checkCovering(t, rc, &r, interior, true)
+		checkCovering(t, rc, r, interior, true)
 
 		// Check that Covering is deterministic.
 		covering2 := rc.Covering(r)
@@ -146,6 +146,6 @@ func TestRandomCaps(t *testing.T) {
 		// s2.RegionCoverer does not guarantee that it will not output all four
 		// children of the same parent.
 		covering.Denormalize(rc.MinLevel, rc.LevelMod)
-		checkCovering(t, rc, &r, covering, false)
+		checkCovering(t, rc, r, covering, false)
 	}
 }
