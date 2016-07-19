@@ -234,9 +234,10 @@ func (r *RectBounder) AddPoint(b Point) {
 	// when the two points are nearly identical or antipodal). We handle this
 	// by choosing a maximum allowable error, and if the error is greater than
 	// this we fall back to a different technique. Since it turns out that
-	// the other sources of error add up to at most 1.16 * dblEpsilon, and it
-	// is desirable to have the total error be a multiple of dblEpsilon, we
-	// have chosen the maximum error threshold here to be 3.84 * dblEpsilon.
+	// the other sources of error in converting the normal to a maximum
+	// latitude add up to at most 1.16 * dblEpsilon, and it is desirable to
+	// have the total error be a multiple of dblEpsilon, we have chosen to
+	// limit the maximum error in the normal to be 3.84 * dblEpsilon.
 	// It is possible to show that the error is less than this when
 	//
 	// n.Norm() >= 8 * sqrt(3) / (3.84 - 0.5 - sqrt(3)) * dblEpsilon
