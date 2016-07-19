@@ -27,6 +27,13 @@ import (
 // Generally, ChordAngle should only be used in loops where many angles need
 // to be calculated and compared. Otherwise it is simpler to use Angle.
 //
+// ChordAngle loses some accuracy as the angle approaches π radians.
+// Specifically, the representation of (π - x) radians has an error of about
+// (1e-15 / x), with a maximum error of about 2e-8 radians (about 13cm on the
+// Earth's surface). For comparison, for angles up to π/2 radians (10000km)
+// the worst-case representation error is about 2e-16 radians (1 nanonmeter),
+// which is about the same as Angle.
+//
 // ChordAngles are represented by the squared chord length, which can
 // range from 0 to 4. Positive infinity represents an infinite squared length.
 type ChordAngle float64
@@ -98,10 +105,10 @@ func (c ChordAngle) isValid() bool {
 // bounds guaranteed by s2.Point.Normalize. The error is defined with respect to
 // the true distance after the points are projected to lie exactly on the sphere.
 func (c ChordAngle) MaxPointError() float64 {
-	// There is a relative error of (2*dblEpsilon) when computing the squared
+	// There is a relative error of (2.5*dblEpsilon) when computing the squared
 	// distance, plus an absolute error of (16 * dblEpsilon**2) because the
 	// lengths of the input points may differ from 1 by up to (2*dblEpsilon) each.
-	return 2*dblEpsilon*float64(c) + 16*dblEpsilon*dblEpsilon
+	return 2.5*dblEpsilon*float64(c) + 16*dblEpsilon*dblEpsilon
 }
 
 // MaxAngleError returns the maximum error for a ChordAngle constructed
