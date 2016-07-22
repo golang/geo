@@ -90,6 +90,33 @@ func TestSimplePredicates(t *testing.T) {
 	}
 }
 
+func TestAlmostFullOrEmpty(t *testing.T) {
+	// Test that rounding errors don't cause intervals that are almost empty or
+	// full to be considered empty or full.  The following value is the greatest
+	// representable value less than Pi.
+	almostPi := math.Pi - 2*dblEpsilon
+
+	i := Interval{-almostPi, math.Pi}
+	if i.IsFull() {
+		t.Errorf("%v.IsFull should not be true", i)
+	}
+
+	i = Interval{-math.Pi, almostPi}
+	if i.IsFull() {
+		t.Errorf("%v.IsFull should not be true", i)
+	}
+
+	i = Interval{math.Pi, -almostPi}
+	if i.IsEmpty() {
+		t.Errorf("%v.IsEmpty should not be true", i)
+	}
+
+	i = Interval{almostPi, -math.Pi}
+	if i.IsEmpty() {
+		t.Errorf("%v.IsEmpty should not be true", i)
+	}
+}
+
 func TestCenter(t *testing.T) {
 	tests := []struct {
 		interval Interval

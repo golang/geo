@@ -62,10 +62,10 @@ func (i Interval) IsValid() bool {
 }
 
 // IsFull reports whether the interval is full.
-func (i Interval) IsFull() bool { return i.Hi-i.Lo == 2*math.Pi }
+func (i Interval) IsFull() bool { return i.Lo == -math.Pi && i.Hi == math.Pi }
 
 // IsEmpty reports whether the interval is empty.
-func (i Interval) IsEmpty() bool { return i.Lo-i.Hi == 2*math.Pi }
+func (i Interval) IsEmpty() bool { return i.Lo == math.Pi && i.Hi == -math.Pi }
 
 // IsInverted reports whether the interval is inverted; that is, whether Lo > Hi.
 func (i Interval) IsInverted() bool { return i.Lo > i.Hi }
