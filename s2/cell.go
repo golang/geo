@@ -67,14 +67,14 @@ func (c Cell) SizeIJ() int {
 	return sizeIJ(int(c.level))
 }
 
-// Vertex returns the k-th vertex of the cell (k = [0,3]) in CCW order
+// Vertex returns the k-th vertex of the cell (k = 0,1,2,3) in CCW order
 // (lower left, lower right, upper right, upper left in the UV plane).
 func (c Cell) Vertex(k int) Point {
 	return Point{faceUVToXYZ(int(c.face), c.uv.Vertices()[k].X, c.uv.Vertices()[k].Y).Normalize()}
 }
 
 // Edge returns the inward-facing normal of the great circle passing through
-// the CCW ordered edge from vertex k to vertex k+1 (mod 4).
+// the CCW ordered edge from vertex k to vertex k+1 (mod 4) (for k = 0,1,2,3).
 func (c Cell) Edge(k int) Point {
 	switch k {
 	case 0:
