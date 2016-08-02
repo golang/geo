@@ -115,8 +115,35 @@ func (p PaddedCell) ChildIJ(pos int) (i, j int) {
 	return ij >> 1, ij & 1
 }
 
+// EntryVertex return the vertex where the space-filling curve enters this cell.
+func (p PaddedCell) EntryVertex() Point {
+	// The curve enters at the (0,0) vertex unless the axis directions are
+	// reversed, in which case it enters at the (1,1) vertex.
+	i := p.iLo
+	j := p.jLo
+	if p.orientation&invertMask != 0 {
+		ijSize := sizeIJ(p.level)
+		i += ijSize
+		j += ijSize
+	}
+	return Point{faceSiTiToXYZ(p.id.Face(), uint64(2*i), uint64(2*j)).Normalize()}
+}
+
+// ExitVertex returns the vertex where the space-filling curve exits this cell.
+func (p PaddedCell) ExitVertex() Point {
+	// The curve exits at the (1,0) vertex unless the axes are swapped or
+	// inverted but not both, in which case it exits at the (0,1) vertex.
+	i := p.iLo
+	j := p.jLo
+	ijSize := sizeIJ(p.level)
+	if p.orientation == 0 || p.orientation == swapMask+invertMask {
+		i += ijSize
+	} else {
+		j += ijSize
+	}
+	return Point{faceSiTiToXYZ(p.id.Face(), uint64(2*i), uint64(2*j)).Normalize()}
+}
+
 // TODO(roberts): The major differences from the C++ version are:
 // PaddedCellFromParentIJ
 // ShrinkToFit
-// EntryVertex
-// ExitVertex

@@ -58,3 +58,39 @@ func TestPaddedCellMethods(t *testing.T) {
 		// add the remainder of this test section.
 	}
 }
+
+func TestEntryExitVertices(t *testing.T) {
+	for i := 0; i < 1000; i++ {
+		id := randomCellID()
+		unpadded := PaddedCellFromCellID(id, 0)
+		padded := PaddedCellFromCellID(id, 0.5)
+
+		// Check that entry/exit vertices do not depend on padding.
+		if unpadded.EntryVertex() != padded.EntryVertex() {
+			t.Errorf("entry vertex should not depend on padding; %v != %v", unpadded.EntryVertex(), padded.EntryVertex())
+		}
+
+		if unpadded.ExitVertex() != padded.ExitVertex() {
+			t.Errorf("exit vertex should not depend on padding; %v != %v", unpadded.ExitVertex(), padded.ExitVertex())
+		}
+
+		// Check that the exit vertex of one cell is the same as the entry vertex
+		// of the immediately following cell. This also tests wrapping from the
+		// end to the start of the CellID curve with high probability.
+		if got := PaddedCellFromCellID(id.NextWrap(), 0).EntryVertex(); unpadded.ExitVertex() != got {
+			t.Errorf("PaddedCellFromCellID(%v.NextWrap(), 0).EntryVertex() = %v, want %v", id, got, unpadded.ExitVertex())
+		}
+
+		// Check that the entry vertex of a cell is the same as the entry vertex
+		// of its first child, and similarly for the exit vertex.
+		if id.IsLeaf() {
+			continue
+		}
+		if got := PaddedCellFromCellID(id.Children()[0], 0).EntryVertex(); unpadded.EntryVertex() != got {
+			t.Errorf("PaddedCellFromCellID(%v.Children()[0], 0).EntryVertex() = %v, want %v", id, got, unpadded.EntryVertex())
+		}
+		if got := PaddedCellFromCellID(id.Children()[3], 0).ExitVertex(); unpadded.ExitVertex() != got {
+			t.Errorf("PaddedCellFromCellID(%v.Children()[3], 0).ExitVertex() = %v, want %v", id, got, unpadded.ExitVertex())
+		}
+	}
+}
