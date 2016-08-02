@@ -935,3 +935,162 @@ func ClipToPaddedFace(a, b Point, f int, padding float64) (aUV, bUV r2.Point, in
 
 	return aUV, bUV, aScore+bScore < 3
 }
+
+// interpolateDouble returns a value with the same combination of a1 and b1 as the
+// given value x is of a and b. This function makes the following guarantees:
+//  - If x == a, then x1 = a1 (exactly).
+//  - If x == b, then x1 = b1 (exactly).
+//  - If a <= x <= b, then a1 <= x1 <= b1 (even if a1 == b1).
+// This requires a != b.
+func interpolateDouble(x, a, b, a1, b1 float64) float64 {
+	// To get results that are accurate near both A and B, we interpolate
+	// starting from the closer of the two points.
+	if math.Abs(a-x) <= math.Abs(b-x) {
+		return a1 + (b1-a1)*(x-a)/(b-a)
+	}
+	return b1 + (a1-b1)*(x-b)/(a-b)
+}
+
+// updateEndpoint returns the interval with the specified endpoint updated to
+// the given value. If the value lies beyond the opposite endpoint, nothing is
+// changed and false is returned.
+func updateEndpoint(bound r1.Interval, highEndpoint bool, value float64) (r1.Interval, bool) {
+	if !highEndpoint {
+		if bound.Hi < value {
+			return bound, false
+		}
+		if bound.Lo < value {
+			bound.Lo = value
+		}
+		return bound, true
+	}
+
+	if bound.Lo > value {
+		return bound, false
+	}
+	if bound.Hi > value {
+		bound.Hi = value
+	}
+	return bound, true
+}
+
+// clipBoundAxis returns the clipped versions of the bounding intervals for the given
+// axes for the line segment from (a0,a1) to (b0,b1) so that neither extends beyond the
+// given clip interval. negSlope is a precomputed helper variable that indicates which
+// diagonal of the bounding box is spanned by AB; it is false if AB has positive slope,
+// and true if AB has negative slope. If the clipping interval doesn't overlap the bounds,
+// false is returned.
+func clipBoundAxis(a0, b0 float64, bound0 r1.Interval, a1, b1 float64, bound1 r1.Interval,
+	negSlope bool, clip r1.Interval) (bound0c, bound1c r1.Interval, updated bool) {
+
+	if bound0.Lo < clip.Lo {
+		// If the upper bound is below the clips lower bound, there is nothing to do.
+		if bound0.Hi < clip.Lo {
+			return bound0, bound1, false
+		}
+		// narrow the intervals lower bound to the clip bound.
+		bound0.Lo = clip.Lo
+		if bound1, updated = updateEndpoint(bound1, negSlope, interpolateDouble(clip.Lo, a0, b0, a1, b1)); !updated {
+			return bound0, bound1, false
+		}
+	}
+
+	if bound0.Hi > clip.Hi {
+		// If the lower bound is above the clips upper bound, there is nothing to do.
+		if bound0.Lo > clip.Hi {
+			return bound0, bound1, false
+		}
+		// narrow the intervals upper bound to the clip bound.
+		bound0.Hi = clip.Hi
+		if bound1, updated = updateEndpoint(bound1, !negSlope, interpolateDouble(clip.Hi, a0, b0, a1, b1)); !updated {
+			return bound0, bound1, false
+		}
+	}
+	return bound0, bound1, true
+}
+
+// edgeIntersectsRect reports whether the edge defined by AB intersects the
+// given closed rectangle to within the error bound.
+func edgeIntersectsRect(a, b r2.Point, r r2.Rect) bool {
+	// First check whether the bounds of a Rect around AB intersects the given rect.
+	if !r.Intersects(r2.RectFromPoints(a, b)) {
+		return false
+	}
+
+	// Otherwise AB intersects the rect if and only if all four vertices of rect
+	// do not lie on the same side of the extended line AB. We test this by finding
+	// the two vertices of rect with minimum and maximum projections onto the normal
+	// of AB, and computing their dot products with the edge normal.
+	n := b.Sub(a).Ortho()
+
+	i := 0
+	if n.X >= 0 {
+		i = 1
+	}
+	j := 0
+	if n.Y >= 0 {
+		j = 1
+	}
+
+	max := n.Dot(r.VertexIJ(i, j).Sub(a))
+	min := n.Dot(r.VertexIJ(1-i, 1-j).Sub(a))
+
+	return (max >= 0) && (min <= 0)
+}
+
+// clippedEdgeBound returns the bounding rectangle of the portion of the edge defined
+// by AB intersected by clip. The resulting bound may be empty. This is a convenience
+// function built on top of clipEdgeBound.
+func clippedEdgeBound(a, b r2.Point, clip r2.Rect) r2.Rect {
+	bound := r2.RectFromPoints(a, b)
+	if b1, intersects := clipEdgeBound(a, b, clip, bound); intersects {
+		return b1
+	}
+	return r2.EmptyRect()
+}
+
+// clipEdgeBound clips an edge AB to sequence of rectangles efficiently.
+// It represents the clipped edges by their bounding boxes rather than as a pair of
+// endpoints. Specifically, let A'B' be some portion of an edge AB, and let bound be
+// a tight bound of A'B'. This function returns the bound that is a tight bound
+// of A'B' intersected with a given rectangle. If A'B' does not intersect clip,
+// it returns false and the original bound.
+func clipEdgeBound(a, b r2.Point, clip, bound r2.Rect) (r2.Rect, bool) {
+	// negSlope indicates which diagonal of the bounding box is spanned by AB: it
+	// is false if AB has positive slope, and true if AB has negative slope. This is
+	// used to determine which interval endpoints need to be updated each time
+	// the edge is clipped.
+	negSlope := (a.X > b.X) != (a.Y > b.Y)
+
+	b0x, b0y, up1 := clipBoundAxis(a.X, b.X, bound.X, a.Y, b.Y, bound.Y, negSlope, clip.X)
+	if !up1 {
+		return bound, false
+	}
+	b1y, b1x, up2 := clipBoundAxis(a.Y, b.Y, b0y, a.X, b.X, b0x, negSlope, clip.Y)
+	if !up2 {
+		return r2.Rect{b0x, b0y}, false
+	}
+	return r2.Rect{X: b1x, Y: b1y}, true
+}
+
+// clipEdge returns the portion of the edge defined by AB that is contained by the
+// given rectangle. If there is no intersection, false is returned and aClip and bClip
+// are undefined.
+func clipEdge(a, b r2.Point, clip r2.Rect) (aClip, bClip r2.Point, intersects bool) {
+	// Compute the bounding rectangle of AB, clip it, and then extract the new
+	// endpoints from the clipped bound.
+	bound := r2.RectFromPoints(a, b)
+	if bound, intersects = clipEdgeBound(a, b, clip, bound); !intersects {
+		return aClip, bClip, false
+	}
+	ai := 0
+	if a.X > b.X {
+		ai = 1
+	}
+	aj := 0
+	if a.Y > b.Y {
+		aj = 1
+	}
+
+	return bound.VertexIJ(ai, aj), bound.VertexIJ(1-ai, 1-aj), true
+}
