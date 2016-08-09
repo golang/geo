@@ -268,9 +268,12 @@ func (l Loop) ContainsCell(c Cell) bool {
 	return true
 }
 
-// IntersectsCell checks if any edge of the cell intersects the loop or if the cell is contained.
+// IntersectsCell checks if any edge of the cell intersects the loop, if the loop is contained or if the cell is contained.
 // Does not count for loop interior and uses raycasting.
 func (l Loop) IntersectsCell(c Cell) bool {
+	if c.ContainsPoint(l.Vertices[0]) {
+		return true
+	}
 	for i := 0; i < 4; i++ {
 		crosser := NewChainEdgeCrosser(c.Vertex(i), c.Vertex((i+1)%4), l.Vertex(0))
 		for _, v := range l.Vertices[1:] {
