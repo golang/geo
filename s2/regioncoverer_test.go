@@ -149,3 +149,61 @@ func TestCovererRandomCaps(t *testing.T) {
 		checkCovering(t, rc, r, covering, false)
 	}
 }
+
+func TestLoopAndCoverer(t *testing.T) {
+	rc := RegionCoverer{
+		MinLevel: 0,
+		MaxLevel: 30,
+		MaxCells: 500,
+	}
+
+	greenLand := LatLngFromDegrees(71.781613, -43.714276)
+	nyMidTown := LatLngFromDegrees(40.747034, -73.989891)
+
+	cases := []struct {
+		name            string
+		loopFromDegrees *Loop
+		// loopFromDegrees *Loop
+		outside Point
+		inside  Point
+	}{
+		{
+			"manhatan",
+			LoopFromDegrees([]float64{40.686366, -73.999100}, []float64{40.744656, -73.948288}, []float64{40.811730, -73.905716}, []float64{40.897425, -73.923569}, []float64{40.763901, -74.008713}, []float64{40.699381, -74.032745}),
+			PointFromLatLng(greenLand),
+			PointFromLatLng(nyMidTown),
+		},
+	}
+
+	for _, cas := range cases {
+		var cu CellUnion
+		// insideCell := CellFromPoint(cas.inside)
+		outsideCell := CellFromPoint(cas.outside)
+		cu = rc.FastCovering(cas.loopFromDegrees.CapBound())
+
+		if !cas.loopFromDegrees.ContainsPoint(cas.inside) {
+			t.Error("The loop does not contain what it sould.")
+		}
+		if cas.loopFromDegrees.ContainsPoint(cas.outside) {
+			t.Error("The loop contains what it sould not.")
+		}
+
+		if len(cu) == 0 {
+			t.Error("FastCovering of", cas.name, "returned an empty CellUnion.")
+		}
+
+		if cu.ContainsCell(outsideCell) {
+			t.Error("CellUnion of FastCovering contains what it should not.")
+		}
+
+		cu = rc.Covering(cas.loopFromDegrees)
+		if len(cu) == 0 {
+			t.Error("Covering of", cas.name, "returned an empty CellUnion.")
+		}
+
+		if cu.ContainsCell(outsideCell) {
+			t.Error("CellUnion of Covering contains what it should not.")
+		}
+	}
+
+}
