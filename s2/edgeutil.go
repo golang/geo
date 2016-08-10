@@ -1073,10 +1073,10 @@ func clipEdgeBound(a, b r2.Point, clip, bound r2.Rect) (r2.Rect, bool) {
 	return r2.Rect{X: b1x, Y: b1y}, true
 }
 
-// clipEdge returns the portion of the edge defined by AB that is contained by the
+// ClipEdge returns the portion of the edge defined by AB that is contained by the
 // given rectangle. If there is no intersection, false is returned and aClip and bClip
 // are undefined.
-func clipEdge(a, b r2.Point, clip r2.Rect) (aClip, bClip r2.Point, intersects bool) {
+func ClipEdge(a, b r2.Point, clip r2.Rect) (aClip, bClip r2.Point, intersects bool) {
 	// Compute the bounding rectangle of AB, clip it, and then extract the new
 	// endpoints from the clipped bound.
 	bound := r2.RectFromPoints(a, b)

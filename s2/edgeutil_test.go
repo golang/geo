@@ -862,7 +862,7 @@ func TestEdgeClipping(t *testing.T) {
 			a := chooseRectEndpoint(r)
 			b := chooseRectEndpoint(r)
 
-			aClip, bClip, intersects := clipEdge(a, b, r)
+			aClip, bClip, intersects := ClipEdge(a, b, r)
 			if !intersects {
 				if edgeIntersectsRect(a, b, r.ExpandedByMargin(-errorDist)) {
 					t.Errorf("edgeIntersectsRect(%v, %v, %v.ExpandedByMargin(%v) = true, want false", a, b, r, -errorDist)
