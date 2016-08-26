@@ -262,6 +262,7 @@ func (ci CellID) ChildBegin() CellID {
 
 // ChildBeginAtLevel returns the first cell in a traversal of children a given level deeper than this cell, in
 // Hilbert curve order. The given level must be no smaller than the cell's level.
+// See ChildBegin for example use.
 func (ci CellID) ChildBeginAtLevel(level int) CellID {
 	return CellID(uint64(ci) - ci.lsb() + lsbForLevel(level))
 }
@@ -282,7 +283,8 @@ func (ci CellID) ChildEndAtLevel(level int) CellID {
 }
 
 // Next returns the next cell along the Hilbert curve.
-// This is expected to be used with ChildBegin and ChildEnd.
+// This is expected to be used with ChildBegin and ChildEnd,
+// or ChildBeginAtLevel and ChildEndAtLevel.
 func (ci CellID) Next() CellID {
 	return CellID(uint64(ci) + ci.lsb()<<1)
 }
