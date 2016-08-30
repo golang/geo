@@ -257,8 +257,6 @@ func (i Interval) Intersection(oi Interval) Interval {
 	return EmptyInterval()
 }
 
-var epsilon = math.Nextafter(0, 1)
-
 // AddPoint returns the interval expanded by the minimum amount necessary such
 // that it contains the given point "p" (an angle in the range [-Pi, Pi]).
 func (i Interval) AddPoint(p float64) Interval {
@@ -280,6 +278,18 @@ func (i Interval) AddPoint(p float64) Interval {
 	return Interval{i.Lo, p}
 }
 
+// Define the maximum rounding error for arithmetic operations. Depending on the
+// platform the mantissa precision may be different than others, so we choose to
+// use specific values to be consistent across all.
+// The values come from the C++ implementation.
+var (
+	// epsilon is a small number that represents a reasonable level of noise between two
+	// values that can be considered to be equal.
+	epsilon = 1e-15
+	// dblEpsilon is a smaller number for values that require more precision.
+	dblEpsilon = 2.220446049e-16
+)
+
 // Expanded returns an interval that has been expanded on each side by margin.
 // If margin is negative, then the function shrinks the interval on
 // each side by margin instead. The resulting interval may be empty or
@@ -291,8 +301,8 @@ func (i Interval) Expanded(margin float64) Interval {
 			return i
 		}
 		// Check whether this interval will be full after expansion, allowing
-		// for a 1-bit rounding error when computing each endpoint.
-		if i.Length()+2*margin+2*epsilon >= 2*math.Pi {
+		// for a rounding error when computing each endpoint.
+		if i.Length()+2*margin+2*dblEpsilon >= 2*math.Pi {
 			return FullInterval()
 		}
 	} else {
@@ -300,8 +310,8 @@ func (i Interval) Expanded(margin float64) Interval {
 			return i
 		}
 		// Check whether this interval will be empty after expansion, allowing
-		// for a 1-bit rounding error when computing each endpoint.
-		if i.Length()+2*margin-2*epsilon <= 0 {
+		// for a rounding error when computing each endpoint.
+		if i.Length()+2*margin-2*dblEpsilon <= 0 {
 			return EmptyInterval()
 		}
 	}

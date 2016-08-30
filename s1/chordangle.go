@@ -52,10 +52,6 @@ const (
 	StraightChordAngle = ChordAngle(4)
 )
 
-var (
-	dblEpsilon = math.Nextafter(1, 2) - 1
-)
-
 // ChordFromAngle returns a ChordAngle from the given Angle.
 func ChordFromAngle(a Angle) ChordAngle {
 	if a < 0 {
