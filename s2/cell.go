@@ -57,6 +57,21 @@ func CellFromLatLng(ll LatLng) Cell {
 	return CellFromCellID(CellIDFromLatLng(ll))
 }
 
+// Face returns the face this cell is on.
+func (c Cell) Face() int {
+	return int(c.face)
+}
+
+// Level returns the level of this cell.
+func (c Cell) Level() int {
+	return int(c.level)
+}
+
+// ID returns the CellID this cell represents.
+func (c Cell) ID() CellID {
+	return c.id
+}
+
 // IsLeaf returns whether this Cell is a leaf or not.
 func (c Cell) IsLeaf() bool {
 	return c.level == maxLevel
@@ -317,7 +332,6 @@ func (c Cell) ContainsPoint(p Point) bool {
 }
 
 // BUG(roberts): Differences from C++:
-// Accessor methods
 // Subdivide
 // BoundUV
 // Distance/DistanceToEdge
