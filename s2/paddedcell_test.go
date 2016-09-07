@@ -59,7 +59,7 @@ func TestPaddedCellMethods(t *testing.T) {
 	}
 }
 
-func TestEntryExitVertices(t *testing.T) {
+func TestPaddedCellEntryExitVertices(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		id := randomCellID()
 		unpadded := PaddedCellFromCellID(id, 0)

@@ -24,7 +24,7 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-func TestEmptyAndFullRects(t *testing.T) {
+func TestRectEmptyAndFull(t *testing.T) {
 	tests := []struct {
 		rect  Rect
 		valid bool
@@ -52,7 +52,7 @@ func TestEmptyAndFullRects(t *testing.T) {
 	}
 }
 
-func TestArea(t *testing.T) {
+func TestRectArea(t *testing.T) {
 	tests := []struct {
 		rect Rect
 		want float64
@@ -130,7 +130,7 @@ func TestRectFromCenterSize(t *testing.T) {
 	}
 }
 
-func TestAddPoint(t *testing.T) {
+func TestRectAddPoint(t *testing.T) {
 	tests := []struct {
 		input Rect
 		point LatLng
@@ -202,7 +202,7 @@ func TestRectVertexCCWOrder(t *testing.T) {
 	}
 }
 
-func TestContainsLatLng(t *testing.T) {
+func TestRectContainsLatLng(t *testing.T) {
 	tests := []struct {
 		input Rect
 		ll    LatLng
@@ -236,7 +236,7 @@ func TestContainsLatLng(t *testing.T) {
 	}
 }
 
-func TestExpanded(t *testing.T) {
+func TestRectExpanded(t *testing.T) {
 	tests := []struct {
 		input  Rect
 		margin LatLng
@@ -349,7 +349,7 @@ func TestExpanded(t *testing.T) {
 	}
 }
 
-func TestPolarClosure(t *testing.T) {
+func TestRectPolarClosure(t *testing.T) {
 	tests := []struct {
 		r    Rect
 		want Rect
@@ -688,7 +688,7 @@ func TestRectContainsPoint(t *testing.T) {
 	}
 }
 
-func TestIntersectsLatEdge(t *testing.T) {
+func TestRectIntersectsLatEdge(t *testing.T) {
 	tests := []struct {
 		a, b  Point
 		lat   s1.Angle
@@ -762,7 +762,7 @@ func TestIntersectsLatEdge(t *testing.T) {
 	}
 }
 
-func TestIntersectsLngEdge(t *testing.T) {
+func TestRectIntersectsLngEdge(t *testing.T) {
 	tests := []struct {
 		a, b  Point
 		latLo s1.Angle

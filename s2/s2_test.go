@@ -27,10 +27,6 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-const (
-	epsilon = 1e-15
-)
-
 // float64Eq reports whether the two values are within the default epsilon.
 func float64Eq(x, y float64) bool { return float64Near(x, y, epsilon) }
 

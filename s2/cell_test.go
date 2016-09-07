@@ -89,7 +89,7 @@ func TestCellFaces(t *testing.T) {
 	}
 }
 
-func TestAreas(t *testing.T) {
+func TestCellAreas(t *testing.T) {
 
 	// relative error bounds for each type of area computation
 	var exactError = math.Log(1 + 1e-6)
@@ -149,7 +149,7 @@ func TestAreas(t *testing.T) {
 	}
 }
 
-func TestIntersectsCell(t *testing.T) {
+func TestCellIntersectsCell(t *testing.T) {
 	tests := []struct {
 		c    Cell
 		oc   Cell
@@ -178,7 +178,7 @@ func TestIntersectsCell(t *testing.T) {
 	}
 }
 
-func TestContainsCell(t *testing.T) {
+func TestCellContainsCell(t *testing.T) {
 	tests := []struct {
 		c    Cell
 		oc   Cell
@@ -217,7 +217,7 @@ func TestContainsCell(t *testing.T) {
 	}
 }
 
-func TestRectBound(t *testing.T) {
+func TestCellRectBound(t *testing.T) {
 	tests := []struct {
 		lat float64
 		lng float64
@@ -241,7 +241,7 @@ func TestRectBound(t *testing.T) {
 	}
 }
 
-func TestRectBoundAroundPoleMinLat(t *testing.T) {
+func TestCellRectBoundAroundPoleMinLat(t *testing.T) {
 	tests := []struct {
 		cellID       CellID
 		latLng       LatLng
@@ -275,7 +275,7 @@ func TestRectBoundAroundPoleMinLat(t *testing.T) {
 	}
 }
 
-func TestCapBound(t *testing.T) {
+func TestCellCapBound(t *testing.T) {
 	c := CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(20))
 	s2Cap := c.CapBound()
 	for i := 0; i < 4; i++ {
@@ -285,7 +285,7 @@ func TestCapBound(t *testing.T) {
 	}
 }
 
-func TestContainsPoint(t *testing.T) {
+func TestCellContainsPoint(t *testing.T) {
 	tests := []struct {
 		c    Cell
 		p    Point
@@ -314,7 +314,7 @@ func TestContainsPoint(t *testing.T) {
 	}
 }
 
-func TestContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
+func TestCellContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
 	// Construct many points that are nearly on a Cell edge, and verify that
 	// CellFromCellID(cellIDFromPoint(p)).Contains(p) is always true.
 	for iter := 0; iter < 1000; iter++ {
@@ -330,7 +330,7 @@ func TestContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
 	}
 }
 
-func TestContainsPointContainsAmbiguousPoint(t *testing.T) {
+func TestCellContainsPointContainsAmbiguousPoint(t *testing.T) {
 	// This tests a case where S2CellId returns the "wrong" cell for a point
 	// that is very close to the cell edge. (ConsistentWithS2CellIdFromPoint
 	// generates more examples like this.)

@@ -35,7 +35,7 @@ func TestCellIDFromFace(t *testing.T) {
 	}
 }
 
-func TestParentChildRelationships(t *testing.T) {
+func TestCellIDParentChildRelationships(t *testing.T) {
 	ci := CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)
 
 	if !ci.IsValid() {
@@ -87,7 +87,7 @@ func TestParentChildRelationships(t *testing.T) {
 	}
 }
 
-func TestContainment(t *testing.T) {
+func TestCellIDContainment(t *testing.T) {
 	a := CellID(0x80855c0000000000) // Pittsburg
 	b := CellID(0x80855d0000000000) // child of a
 	c := CellID(0x80855dc000000000) // child of b
@@ -135,7 +135,7 @@ func TestCellIDString(t *testing.T) {
 	}
 }
 
-func TestLatLng(t *testing.T) {
+func TestCellIDLatLng(t *testing.T) {
 	// You can generate these with the s2cellid2latlngtestcase C++ program in this directory.
 	tests := []struct {
 		id       CellID
@@ -170,7 +170,7 @@ func TestLatLng(t *testing.T) {
 	}
 }
 
-func TestEdgeNeighbors(t *testing.T) {
+func TestCellIDEdgeNeighbors(t *testing.T) {
 	// Check the edge neighbors of face 1.
 	faces := []int{5, 3, 2, 0}
 	for i, nbr := range cellIDFromFaceIJ(1, 0, 0).Parent(0).EdgeNeighbors() {
@@ -209,7 +209,7 @@ func (v byCellID) Len() int           { return len(v) }
 func (v byCellID) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
 func (v byCellID) Less(i, j int) bool { return uint64(v[i]) < uint64(v[j]) }
 
-func TestVertexNeighbors(t *testing.T) {
+func TestCellIDVertexNeighbors(t *testing.T) {
 	// Check the vertex neighbors of the center of face 2 at level 5.
 	id := cellIDFromPoint(PointFromCoords(0, 0, 1))
 	neighbors := id.VertexNeighbors(5)
@@ -427,7 +427,7 @@ func TestIJLevelToBoundUV(t *testing.T) {
 	}
 }
 
-func TestCommonAncestorLevel(t *testing.T) {
+func TestCellIDCommonAncestorLevel(t *testing.T) {
 	tests := []struct {
 		ci     CellID
 		other  CellID
@@ -546,7 +546,7 @@ func TestFindLSBSetNonZero64(t *testing.T) {
 	}
 }
 
-func TestWrapping(t *testing.T) {
+func TestCellIDWrapping(t *testing.T) {
 	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)
 
 	tests := []struct {
@@ -639,7 +639,7 @@ func TestWrapping(t *testing.T) {
 	}
 }
 
-func TestAdvance(t *testing.T) {
+func TestCellIDAdvance(t *testing.T) {
 	tests := []struct {
 		ci    CellID
 		steps int64
@@ -689,7 +689,7 @@ func TestAdvance(t *testing.T) {
 	}
 }
 
-func TestFaceSiTi(t *testing.T) {
+func TestCellIDFaceSiTi(t *testing.T) {
 	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel)
 	// Check that the (si, ti) coordinates of the center end in a
 	// 1 followed by (30 - level) 0's.
@@ -708,7 +708,7 @@ func TestFaceSiTi(t *testing.T) {
 	}
 }
 
-func TestContinuity(t *testing.T) {
+func TestCellIDContinuity(t *testing.T) {
 	const maxWalkLevel = 8
 	const cellSize = 1.0 / (1 << maxWalkLevel)
 

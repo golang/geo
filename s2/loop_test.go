@@ -133,7 +133,7 @@ var (
 	loopI = LoopFromPoints(parsePoints("10:34, 0:34, -10:34, -10:36, 0:36, 10:36"))
 )
 
-func TestEmptyFullLoops(t *testing.T) {
+func TestLoopEmptyAndFull(t *testing.T) {
 	emptyLoop := EmptyLoop()
 
 	if !emptyLoop.IsEmpty() {
@@ -227,7 +227,7 @@ func invert(l *Loop) *Loop {
 	return LoopFromPoints(vertices)
 }
 
-func TestOriginInside(t *testing.T) {
+func TestLoopOriginInside(t *testing.T) {
 	if !northHemi.originInside {
 		t.Errorf("north hemisphere polygon should include origin")
 	}
@@ -327,7 +327,7 @@ func TestLoopContainsPoint(t *testing.T) {
 	}
 }
 
-func TestVertex(t *testing.T) {
+func TestLoopVertex(t *testing.T) {
 	tests := []struct {
 		loop   *Loop
 		vertex int
@@ -362,7 +362,7 @@ func TestVertex(t *testing.T) {
 	}
 }
 
-func TestNumEdges(t *testing.T) {
+func TestLoopNumEdges(t *testing.T) {
 	tests := []struct {
 		loop *Loop
 		want int
@@ -385,7 +385,7 @@ func TestNumEdges(t *testing.T) {
 	}
 }
 
-func TestEdge(t *testing.T) {
+func TestLoopEdge(t *testing.T) {
 	tests := []struct {
 		loop  *Loop
 		edge  int

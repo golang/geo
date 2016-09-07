@@ -207,9 +207,18 @@ func (c Cell) longitude(i, j int) float64 {
 	return longitude(Point{faceUVToXYZ(int(c.face), u, v)}).Radians()
 }
 
-// TODO(akashagrawal): move these package private variables to a more appropriate location.
+// Define the maximum rounding error for arithmetic operations. Depending on the
+// platform the mantissa precision may be different, so we choose to use specific
+// values to be consistent across all. The values come from the C++ implementation.
+const (
+	// epsilon is a small number that represents a reasonable level of noise between two
+	// values that can be considered to be equal.
+	epsilon = 1e-15
+	// dblEpsilon is a smaller number for values that require more precision.
+	dblEpsilon = 2.220446049e-16
+)
+
 var (
-	dblEpsilon = math.Nextafter(1, 2) - 1
 	poleMinLat = math.Asin(math.Sqrt(1.0/3)) - 0.5*dblEpsilon
 )
 

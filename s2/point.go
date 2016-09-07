@@ -316,8 +316,7 @@ func (p Point) Distance(b Point) s1.Angle {
 
 // ApproxEqual reports if the two points are similar enough to be equal.
 func (p Point) ApproxEqual(other Point) bool {
-	const epsilon = 1e-14
-	return p.Vector.Angle(other.Vector) <= epsilon
+	return p.Vector.Angle(other.Vector) <= s1.Angle(epsilon)
 }
 
 // PointArea returns the area on the unit sphere for the triangle defined by the

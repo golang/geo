@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-func TestRandomCells(t *testing.T) {
+func TestCovererRandomCells(t *testing.T) {
 	rc := &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 1, MaxCells: 1}
 
 	// Test random cell ids at all levels.
@@ -115,7 +115,7 @@ func checkCoveringTight(t *testing.T, r Region, cover CellUnion, checkTight bool
 	}
 }
 
-func TestRandomCaps(t *testing.T) {
+func TestCovererRandomCaps(t *testing.T) {
 	rc := &RegionCoverer{}
 	for i := 0; i < 1000; i++ {
 		rc.MinLevel = int(rand.Int31n(maxLevel + 1))

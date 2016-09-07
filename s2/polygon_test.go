@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-func TestEmptyFullPolygons(t *testing.T) {
+func TestPolygonEmptyAndFull(t *testing.T) {
 	emptyPolygon := &Polygon{}
 
 	if !emptyPolygon.IsEmpty() {
@@ -40,7 +40,7 @@ func TestEmptyFullPolygons(t *testing.T) {
 	}
 }
 
-func TestLoop(t *testing.T) {
+func TestPolygonLoop(t *testing.T) {
 	full := FullPolygon()
 	if full.NumLoops() != 1 {
 		t.Errorf("full polygon should have one loop")
@@ -58,7 +58,7 @@ func TestLoop(t *testing.T) {
 	// TODO: When multiple loops are supported, add more test cases.
 }
 
-func TestParent(t *testing.T) {
+func TestPolygonParent(t *testing.T) {
 	p1 := PolygonFromLoops([]*Loop{&Loop{}})
 	tests := []struct {
 		p    *Polygon
@@ -80,7 +80,7 @@ func TestParent(t *testing.T) {
 	}
 }
 
-func TestLastDescendant(t *testing.T) {
+func TestPolygonLastDescendant(t *testing.T) {
 	p1 := PolygonFromLoops([]*Loop{&Loop{}})
 
 	tests := []struct {
@@ -104,7 +104,7 @@ func TestLastDescendant(t *testing.T) {
 	}
 }
 
-func TestLoopIsHoleAndLoopSign(t *testing.T) {
+func TestPolygonLoopIsHoleAndLoopSign(t *testing.T) {
 	if FullPolygon().loopIsHole(0) {
 		t.Errorf("the full polygons only loop should not be a hole")
 	}

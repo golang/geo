@@ -25,7 +25,7 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-func TestNormalization(t *testing.T) {
+func TestCellUnionNormalization(t *testing.T) {
 	cu := CellUnion{
 		0x80855c0000000000, // A: a cell over Pittsburg CA
 		0x80855d0000000000, // B, a child of A
@@ -324,9 +324,9 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 	}
 }
 
-func TestNormalizePseudoRandom(t *testing.T) {
-	// Try a bunch of random test cases, and keep track of average statistics for normalization (to
-	// see if they agree with the analysis above).
+func TestCellUnionNormalizePseudoRandom(t *testing.T) {
+	// Try a bunch of random test cases, and keep track of average statistics
+	// for normalization (to see if they agree with the analysis above).
 
 	inSum := 0
 	outSum := 0
@@ -436,7 +436,7 @@ func TestNormalizePseudoRandom(t *testing.T) {
 	t.Logf("avg in %.2f, avg out %.2f\n", (float64)(inSum)/(float64)(iters), (float64)(outSum)/(float64)(iters))
 }
 
-func TestDenormalize(t *testing.T) {
+func TestCellUnionDenormalize(t *testing.T) {
 	tests := []struct {
 		name string
 		minL int
@@ -599,7 +599,7 @@ func TestCellUnionRectBound(t *testing.T) {
 	}
 }
 
-func TestLeafCellsCovered(t *testing.T) {
+func TestCellUnionLeafCellsCovered(t *testing.T) {
 	tests := []struct {
 		have []CellID
 		want int64

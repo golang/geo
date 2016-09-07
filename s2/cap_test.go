@@ -150,7 +150,7 @@ func TestCapContainsPoint(t *testing.T) {
 	// We don't use the standard epsilon in this test due different compiler
 	// math optimizations that are permissible (FMA vs no FMA) that yield
 	// slightly different floating point results between gccgo and gc.
-	epsilon := 1e-14
+	const epsilon = 1e-14
 	tangent := tiny.center.Cross(PointFromCoords(3, 2, 1).Vector).Normalize()
 	tests := []struct {
 		c    Cap
@@ -236,7 +236,7 @@ func TestCapExpanded(t *testing.T) {
 	}
 }
 
-func TestRadiusToHeight(t *testing.T) {
+func TestCapRadiusToHeight(t *testing.T) {
 	tests := []struct {
 		got  s1.Angle
 		want float64
@@ -276,7 +276,7 @@ func TestRadiusToHeight(t *testing.T) {
 	}
 }
 
-func TestCapGetRectBounds(t *testing.T) {
+func TestCapRectBounds(t *testing.T) {
 	const epsilon = 1e-13
 	var tests = []struct {
 		desc     string
@@ -353,6 +353,7 @@ func TestCapGetRectBounds(t *testing.T) {
 }
 
 func TestCapAddPoint(t *testing.T) {
+	const epsilon = 1e-14
 	tests := []struct {
 		have Cap
 		p    Point
@@ -384,11 +385,10 @@ func TestCapAddPoint(t *testing.T) {
 				s1.Angle(120.0)*s1.Degree),
 		},
 		{
-			// This angle between this point and the center is acos(-sqrt(2/3))
 			hemi,
 			PointFromCoords(-1, -1, -1),
 			CapFromCenterAngle(Point{PointFromCoords(1, 0, 1).Normalize()},
-				s1.Angle(2.5261129449194)),
+				s1.Angle(math.Acos(-math.Sqrt(2.0/3.0)))),
 		},
 		{hemi, PointFromCoords(0, 1, 1), hemi},
 		{hemi, PointFromCoords(1, 0, 0), hemi},
@@ -439,8 +439,6 @@ func TestCapAddCap(t *testing.T) {
 	}
 }
 
-const eps = 1e-15
-
 func TestCapContainsCell(t *testing.T) {
 	faceRadius := math.Atan(math.Sqrt2)
 	for face := 0; face < 6; face++ {
@@ -448,10 +446,10 @@ func TestCapContainsCell(t *testing.T) {
 		rootCell := CellFromCellID(CellIDFromFace(face))
 
 		// A leaf cell at the midpoint of the v=1 edge.
-		edgeCell := CellFromPoint(Point{faceUVToXYZ(face, 0, 1-eps)})
+		edgeCell := CellFromPoint(Point{faceUVToXYZ(face, 0, 1-epsilon)})
 
 		// A leaf cell at the u=1, v=1 corner
-		cornerCell := CellFromPoint(Point{faceUVToXYZ(face, 1-eps, 1-eps)})
+		cornerCell := CellFromPoint(Point{faceUVToXYZ(face, 1-epsilon, 1-epsilon)})
 
 		// Quick check for full and empty caps.
 		if !full.ContainsCell(rootCell) {
@@ -473,7 +471,7 @@ func TestCapContainsCell(t *testing.T) {
 		for capFace := 0; capFace < 6; capFace++ {
 			// A cap that barely contains all of capFace.
 			center := unitNorm(capFace)
-			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+eps))
+			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+epsilon))
 			if got, want := covering.ContainsCell(rootCell), capFace == face; got != want {
 				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", covering, rootCell, got, want)
 			}
@@ -488,7 +486,7 @@ func TestCapContainsCell(t *testing.T) {
 			}
 
 			// A cap that barely intersects the edges of capFace.
-			bulging := CapFromCenterAngle(center, s1.Angle(math.Pi/4+eps))
+			bulging := CapFromCenterAngle(center, s1.Angle(math.Pi/4+epsilon))
 			if bulging.ContainsCell(rootCell) {
 				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", bulging, rootCell, true, false)
 			}
@@ -509,10 +507,10 @@ func TestCapIntersectsCell(t *testing.T) {
 		rootCell := CellFromCellID(CellIDFromFace(face))
 
 		// A leaf cell at the midpoint of the v=1 edge.
-		edgeCell := CellFromPoint(Point{faceUVToXYZ(face, 0, 1-eps)})
+		edgeCell := CellFromPoint(Point{faceUVToXYZ(face, 0, 1-epsilon)})
 
 		// A leaf cell at the u=1, v=1 corner
-		cornerCell := CellFromPoint(Point{faceUVToXYZ(face, 1-eps, 1-eps)})
+		cornerCell := CellFromPoint(Point{faceUVToXYZ(face, 1-epsilon, 1-epsilon)})
 
 		// Quick check for full and empty caps.
 		if empty.IntersectsCell(rootCell) {
@@ -535,7 +533,7 @@ func TestCapIntersectsCell(t *testing.T) {
 		for capFace := 0; capFace < 6; capFace++ {
 			// A cap that barely contains all of capFace.
 			center := unitNorm(capFace)
-			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+eps))
+			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+epsilon))
 			if got, want := covering.IntersectsCell(rootCell), capFace != antiFace; got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", covering, rootCell, got, want)
 			}
@@ -547,7 +545,7 @@ func TestCapIntersectsCell(t *testing.T) {
 			}
 
 			// A cap that barely intersects the edges of capFace.
-			bulging := CapFromCenterAngle(center, s1.Angle(math.Pi/4+eps))
+			bulging := CapFromCenterAngle(center, s1.Angle(math.Pi/4+epsilon))
 			if got, want := bulging.IntersectsCell(rootCell), capFace != antiFace; got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", bulging, rootCell, got, want)
 			}

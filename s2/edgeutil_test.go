@@ -27,7 +27,7 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-func TestCrossings(t *testing.T) {
+func TestEdgeutilCrossings(t *testing.T) {
 	na1 := math.Nextafter(1, 0)
 	na2 := math.Nextafter(1, 2)
 
@@ -243,7 +243,7 @@ func testCrossing(a, b, c, d Point, robust Crossing, vertex, edgeOrVertex, simpl
 	return nil
 }
 
-func TestInterpolate(t *testing.T) {
+func TestEdgeutilInterpolate(t *testing.T) {
 	// Choose test points designed to expose floating-point errors.
 	p1 := Point{PointFromCoords(0.1, 1e-30, 0.3).Normalize()}
 	p2 := Point{PointFromCoords(-0.7, -0.55, -1e30).Normalize()}
@@ -286,7 +286,7 @@ func TestInterpolate(t *testing.T) {
 	}
 }
 
-func TestInterpolateOverLongEdge(t *testing.T) {
+func TestEdgeutilInterpolateOverLongEdge(t *testing.T) {
 	lng := math.Pi - 1e-2
 	a := Point{PointFromLatLng(LatLng{0, 0}).Normalize()}
 	b := Point{PointFromLatLng(LatLng{0, s1.Angle(lng)}).Normalize()}
@@ -307,7 +307,7 @@ func TestInterpolateOverLongEdge(t *testing.T) {
 	}
 }
 
-func TestInterpolateAntipodal(t *testing.T) {
+func TestEdgeutilInterpolateAntipodal(t *testing.T) {
 	p1 := Point{PointFromCoords(0.1, 1e-30, 0.3).Normalize()}
 
 	// Test that interpolation on a 180 degree edge (antipodal endpoints) yields
@@ -320,7 +320,7 @@ func TestInterpolateAntipodal(t *testing.T) {
 	}
 }
 
-func TestRepeatedInterpolation(t *testing.T) {
+func TestEdgeutilRepeatedInterpolation(t *testing.T) {
 	// Check that points do not drift away from unit length when repeated
 	// interpolations are done.
 	for i := 0; i < 100; i++ {
@@ -342,7 +342,7 @@ func rectBoundForPoints(a, b Point) Rect {
 	return bounder.RectBound()
 }
 
-func TestRectBounderMaxLatitudeSimple(t *testing.T) {
+func TestEdgeutilRectBounderMaxLatitudeSimple(t *testing.T) {
 	cubeLat := math.Asin(1 / math.Sqrt(3)) // 35.26 degrees
 	cubeLatRect := Rect{r1.IntervalFromPoint(-cubeLat).AddPoint(cubeLat),
 		s1.IntervalFromEndpoints(-math.Pi/4, math.Pi/4)}
@@ -371,7 +371,7 @@ func TestRectBounderMaxLatitudeSimple(t *testing.T) {
 	}
 }
 
-func TestRectBounderMaxLatitudeEdgeInterior(t *testing.T) {
+func TestEdgeutilRectBounderMaxLatitudeEdgeInterior(t *testing.T) {
 	// Check cases where the min/max latitude occurs in the edge interior.
 	// These tests expect the result to be pretty close to the middle of the
 	// allowable error range (i.e., by adding 0.5 * kRectError).
@@ -419,7 +419,7 @@ func TestRectBounderMaxLatitudeEdgeInterior(t *testing.T) {
 	}
 }
 
-func TestRectBounderMaxLatitudeRandom(t *testing.T) {
+func TestEdgeutilRectBounderMaxLatitudeRandom(t *testing.T) {
 	// Check that the maximum latitude of edges is computed accurately to within
 	// 3 * dblEpsilon (the expected maximum error). We concentrate on maximum
 	// latitudes near the equator and north pole since these are the extremes.
@@ -457,7 +457,7 @@ func TestRectBounderMaxLatitudeRandom(t *testing.T) {
 	}
 }
 
-func TestExpandForSubregions(t *testing.T) {
+func TestEdgeutilExpandForSubregions(t *testing.T) {
 	// Test the full and empty bounds.
 	if !ExpandForSubregions(FullRect()).IsFull() {
 		t.Errorf("Subregion Bound of full rect should be full")
@@ -544,7 +544,7 @@ func TestExpandForSubregions(t *testing.T) {
 	}
 }
 
-func TestIntersectsFace(t *testing.T) {
+func TestEdgeutilIntersectsFace(t *testing.T) {
 	tests := []struct {
 		a    pointUVW
 		want bool
@@ -564,7 +564,7 @@ func TestIntersectsFace(t *testing.T) {
 	}
 }
 
-func TestIntersectsOppositeEdges(t *testing.T) {
+func TestEdgeutilIntersectsOppositeEdges(t *testing.T) {
 	tests := []struct {
 		a    pointUVW
 		want bool
@@ -585,7 +585,7 @@ func TestIntersectsOppositeEdges(t *testing.T) {
 	}
 }
 
-func TestExitAxis(t *testing.T) {
+func TestEdgeutilExitAxis(t *testing.T) {
 	tests := []struct {
 		a    pointUVW
 		want axis
@@ -606,7 +606,7 @@ func TestExitAxis(t *testing.T) {
 	}
 }
 
-func TestExitPoint(t *testing.T) {
+func TestEdgeutilExitPoint(t *testing.T) {
 	tests := []struct {
 		a        pointUVW
 		exitAxis axis
@@ -709,7 +709,7 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 	}
 }
 
-func TestFaceClipping(t *testing.T) {
+func TestEdgeutilFaceClipping(t *testing.T) {
 	// Start with a few simple cases.
 	// An edge that is entirely contained within one cube face:
 	testClipToPaddedFace(t, PointFromCoords(1, -0.5, -0.5), PointFromCoords(1, 0.5, 0.5))
@@ -827,7 +827,7 @@ func checkPointOnBoundary(t *testing.T, p, a r2.Point, clip r2.Rect) {
 	}
 }
 
-func TestEdgeClipping(t *testing.T) {
+func TestEdgeutilEdgeClipping(t *testing.T) {
 	// A bound for the error in edge clipping plus the error in the
 	// EdgeIntersectsRect calculation below.
 	errorDist := (edgeClipErrorUVDist + intersectsRectErrorUVDist)

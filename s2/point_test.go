@@ -295,8 +295,7 @@ func TestPointDistance(t *testing.T) {
 	}
 }
 
-func TestApproxEqual(t *testing.T) {
-	epsilon := 1e-14
+func TestPointApproxEqual(t *testing.T) {
 	tests := []struct {
 		x1, y1, z1 float64
 		x2, y2, z2 float64

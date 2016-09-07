@@ -251,9 +251,10 @@ func (c Cap) RectBound() Rect {
 	return Rect{lat, lng}
 }
 
-// ApproxEqual reports if this caps' center and height are within
+// ApproxEqual reports if this cap's center and height are within
 // a reasonable epsilon from the other cap.
 func (c Cap) ApproxEqual(other Cap) bool {
+	// Caps have a wider tolerance than the usual epsilon for approximately equal.
 	const epsilon = 1e-14
 	return c.center.ApproxEqual(other.center) &&
 		math.Abs(c.height-other.height) <= epsilon ||
