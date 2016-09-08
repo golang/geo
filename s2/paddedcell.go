@@ -144,6 +144,73 @@ func (p PaddedCell) ExitVertex() Point {
 	return Point{faceSiTiToXYZ(p.id.Face(), uint64(2*i), uint64(2*j)).Normalize()}
 }
 
-// TODO(roberts): The major differences from the C++ version are:
-// PaddedCellFromParentIJ
-// ShrinkToFit
+// ShrinkToFit returns the smallest CellID that contains all descendants of this
+// padded cell whose bounds intersect the given rect. For algorithms that use
+// recursive subdivision to find the cells that intersect a particular object, this
+// method can be used to skip all of the initial subdivision steps where only
+// one child needs to be expanded.
+//
+// Note that this method is not the same as returning the smallest cell that contains
+// the intersection of this cell with rect. Because of the padding, even if one child
+// completely contains rect it is still possible that a neighboring child may also
+// intersect the given rect.
+//
+// The provided Rect must intersect the bounds of this cell.
+func (p *PaddedCell) ShrinkToFit(rect r2.Rect) CellID {
+	// Quick rejection test: if rect contains the center of this cell along
+	// either axis, then no further shrinking is possible.
+	if p.level == 0 {
+		// Fast path (most calls to this function start with a face cell).
+		if rect.X.Contains(0) || rect.Y.Contains(0) {
+			return p.id
+		}
+	}
+
+	ijSize := sizeIJ(p.level)
+	if rect.X.Contains(stToUV(siTiToST(uint64(2*p.iLo+ijSize)))) ||
+		rect.Y.Contains(stToUV(siTiToST(uint64(2*p.jLo+ijSize)))) {
+		return p.id
+	}
+
+	// Otherwise we expand rect by the given padding on all sides and find
+	// the range of coordinates that it spans along the i- and j-axes. We then
+	// compute the highest bit position at which the min and max coordinates
+	// differ. This corresponds to the first cell level at which at least two
+	// children intersect rect.
+
+	// Increase the padding to compensate for the error in uvToST.
+	// (The constant below is a provable upper bound on the additional error.)
+	padded := rect.ExpandedByMargin(p.padding + 1.5*dblEpsilon)
+	iMin, jMin := p.iLo, p.jLo // Min i- or j- coordinate spanned by padded
+	var iXor, jXor int         // XOR of the min and max i- or j-coordinates
+
+	if iMin < stToIJ(uvToST(padded.X.Lo)) {
+		iMin = stToIJ(uvToST(padded.X.Lo))
+	}
+	if a, b := p.iLo+ijSize-1, stToIJ(uvToST(padded.X.Hi)); a <= b {
+		iXor = iMin ^ a
+	} else {
+		iXor = iMin ^ b
+	}
+
+	if jMin < stToIJ(uvToST(padded.Y.Lo)) {
+		jMin = stToIJ(uvToST(padded.Y.Lo))
+	}
+	if a, b := p.jLo+ijSize-1, stToIJ(uvToST(padded.Y.Hi)); a <= b {
+		jXor = jMin ^ a
+	} else {
+		jXor = jMin ^ b
+	}
+
+	// Compute the highest bit position where the two i- or j-endpoints differ,
+	// and then choose the cell level that includes both of these endpoints. So
+	// if both pairs of endpoints are equal we choose maxLevel; if they differ
+	// only at bit 0, we choose (maxLevel - 1), and so on.
+	levelMSB := uint64(((iXor | jXor) << 1) + 1)
+	level := maxLevel - int(findMSBSetNonZero64(levelMSB))
+	if level <= p.level {
+		return p.id
+	}
+
+	return cellIDFromFaceIJ(p.id.Face(), iMin, jMin).Parent(level)
+}

@@ -20,6 +20,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r2"
 )
 
@@ -91,6 +92,69 @@ func TestPaddedCellEntryExitVertices(t *testing.T) {
 		}
 		if got := PaddedCellFromCellID(id.Children()[3], 0).ExitVertex(); unpadded.ExitVertex() != got {
 			t.Errorf("PaddedCellFromCellID(%v.Children()[3], 0).ExitVertex() = %v, want %v", id, got, unpadded.ExitVertex())
+		}
+	}
+}
+
+func TestPaddedCellShrinkToFit(t *testing.T) {
+	for iter := 0; iter < 1000; iter++ {
+		// Start with the desired result and work backwards.
+		result := randomCellID()
+		resultUV := result.boundUV()
+		sizeUV := resultUV.Size()
+
+		// Find the biggest rectangle that fits in "result" after padding.
+		// (These calculations ignore numerical errors.)
+		maxPadding := 0.5 * math.Min(sizeUV.X, sizeUV.Y)
+		padding := maxPadding * randomFloat64()
+		maxRect := resultUV.ExpandedByMargin(-padding)
+
+		// Start with a random subset of the maximum rectangle.
+		a := r2.Point{
+			randomUniformFloat64(maxRect.X.Lo, maxRect.X.Hi),
+			randomUniformFloat64(maxRect.Y.Lo, maxRect.Y.Hi),
+		}
+		b := r2.Point{
+			randomUniformFloat64(maxRect.X.Lo, maxRect.X.Hi),
+			randomUniformFloat64(maxRect.Y.Lo, maxRect.Y.Hi),
+		}
+
+		if !result.IsLeaf() {
+			// If the result is not a leaf cell, we must ensure that no child of
+			// result also satisfies the conditions of ShrinkToFit().  We do this
+			// by ensuring that rect intersects at least two children of result
+			// (after padding).
+			useY := oneIn(2)
+			center := result.centerUV().X
+			if useY {
+				center = result.centerUV().Y
+			}
+
+			// Find the range of coordinates that are shared between child cells
+			// along that axis.
+			shared := r1.Interval{center - padding, center + padding}
+			if useY {
+				shared = shared.Intersection(maxRect.Y)
+			} else {
+				shared = shared.Intersection(maxRect.X)
+			}
+			mid := randomUniformFloat64(shared.Lo, shared.Hi)
+
+			if useY {
+				a.Y = randomUniformFloat64(maxRect.Y.Lo, mid)
+				b.Y = randomUniformFloat64(mid, maxRect.Y.Hi)
+			} else {
+				a.X = randomUniformFloat64(maxRect.X.Lo, mid)
+				b.X = randomUniformFloat64(mid, maxRect.X.Hi)
+			}
+		}
+		rect := r2.RectFromPoints(a, b)
+
+		// Choose an arbitrary ancestor as the PaddedCell.
+		initialID := result.Parent(randomUniformInt(result.Level() + 1))
+		pCell := PaddedCellFromCellID(initialID, padding)
+		if got := pCell.ShrinkToFit(rect); got != result {
+			t.Errorf("%v.ShrinkToFit(%v) = %v, want %v", pCell, rect, got, result)
 		}
 	}
 }
