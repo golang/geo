@@ -116,6 +116,55 @@ func (c Cell) Center() Point {
 	return Point{c.id.rawPoint().Normalize()}
 }
 
+// Children returns the four direct children of this cell in traversal order
+// and returns true. If this is a leaf cell, or the children could not be created,
+// false is returned.
+// The C++ method is called Subdivide.
+func (c Cell) Children() ([4]Cell, bool) {
+	var children [4]Cell
+
+	if c.id.IsLeaf() {
+		return children, false
+	}
+
+	// Compute the cell midpoint in uv-space.
+	uvMid := c.id.centerUV()
+
+	// Create four children with the appropriate bounds.
+	cid := c.id.ChildBegin()
+	for pos := 0; pos < 4; pos++ {
+		children[pos] = Cell{
+			face:        c.face,
+			level:       c.level + 1,
+			orientation: c.orientation ^ int8(posToOrientation[pos]),
+			id:          cid,
+		}
+
+		// We want to split the cell in half in u and v. To decide which
+		// side to set equal to the midpoint value, we look at cell's (i,j)
+		// position within its parent. The index for i is in bit 1 of ij.
+		ij := posToIJ[c.orientation][pos]
+		i := ij >> 1
+		j := ij & 1
+		if i == 1 {
+			children[pos].uv.X.Hi = c.uv.X.Hi
+			children[pos].uv.X.Lo = uvMid.X
+		} else {
+			children[pos].uv.X.Lo = c.uv.X.Lo
+			children[pos].uv.X.Hi = uvMid.X
+		}
+		if j == 1 {
+			children[pos].uv.Y.Hi = c.uv.Y.Hi
+			children[pos].uv.Y.Lo = uvMid.Y
+		} else {
+			children[pos].uv.Y.Lo = c.uv.Y.Lo
+			children[pos].uv.Y.Hi = uvMid.Y
+		}
+		cid = cid.Next()
+	}
+	return children, true
+}
+
 // ExactArea returns the area of this cell as accurately as possible.
 func (c Cell) ExactArea() float64 {
 	v0, v1, v2, v3 := c.Vertex(0), c.Vertex(1), c.Vertex(2), c.Vertex(3)

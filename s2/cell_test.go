@@ -21,6 +21,7 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/golang/geo/r2"
 	"github.com/golang/geo/s1"
 )
 
@@ -89,8 +90,178 @@ func TestCellFaces(t *testing.T) {
 	}
 }
 
-func TestCellAreas(t *testing.T) {
+func TestCellChildren(t *testing.T) {
+	testCellChildren(t, CellFromCellID(CellIDFromFace(0)))
+	testCellChildren(t, CellFromCellID(CellIDFromFace(3)))
+	testCellChildren(t, CellFromCellID(CellIDFromFace(5)))
+}
 
+func testCellChildren(t *testing.T, cell Cell) {
+	children, ok := cell.Children()
+	if cell.IsLeaf() && !ok {
+		return
+	}
+	if cell.IsLeaf() && ok {
+		t.Errorf("leaf cells should not be able to return children. cell %v", cell)
+	}
+
+	if !ok {
+		t.Errorf("unable to get Children for %v", cell)
+		return
+	}
+
+	childID := cell.id.ChildBegin()
+	for i, ci := range children {
+		// Check that the child geometry is consistent with its cell ID.
+		if childID != ci.id {
+			t.Errorf("%v.child[%d].id = %v, want %v", cell, i, ci.id, childID)
+		}
+
+		direct := CellFromCellID(childID)
+		if !ci.Center().ApproxEqual(childID.Point()) {
+			t.Errorf("%v.Center() = %v, want %v", ci, ci.Center(), childID.Point())
+		}
+		if ci.face != direct.face {
+			t.Errorf("%v.face = %v, want %v", ci, ci.face, direct.face)
+		}
+		if ci.level != direct.level {
+			t.Errorf("%v.level = %v, want %v", ci, ci.level, direct.level)
+		}
+		if ci.orientation != direct.orientation {
+			t.Errorf("%v.orientation = %v, want %v", ci, ci.orientation, direct.orientation)
+		}
+		if !ci.Center().ApproxEqual(direct.Center()) {
+			t.Errorf("%v.Center() = %v, want %v", ci, ci.Center(), direct.Center())
+		}
+
+		for k := 0; k < 4; k++ {
+			if !direct.Vertex(k).ApproxEqual(ci.Vertex(k)) {
+				t.Errorf("child %d %v.Vertex(%d) = %v, want %v", i, ci, k, ci.Vertex(k), direct.Vertex(k))
+			}
+			if direct.Edge(k) != ci.Edge(k) {
+				t.Errorf("child %d %v.Edge(%d) = %v, want %v", i, ci, k, ci.Edge(k), direct.Edge(k))
+			}
+		}
+
+		// Test ContainsCell() and IntersectsCell().
+		if !cell.ContainsCell(ci) {
+			t.Errorf("%v.ContainsCell(%v) = false, want true", cell, ci)
+		}
+		if !cell.IntersectsCell(ci) {
+			t.Errorf("%v.IntersectsCell(%v) = false, want true", cell, ci)
+		}
+		if ci.ContainsCell(cell) {
+			t.Errorf("%v.ContainsCell(%v) = true, want false", ci, cell)
+		}
+		if !cell.ContainsPoint(ci.Center()) {
+			t.Errorf("%v.ContainsPoint(%v) = false, want true", cell, ci.Center())
+		}
+		for j := 0; j < 4; j++ {
+			if !cell.ContainsPoint(ci.Vertex(j)) {
+				t.Errorf("%v.ContainsPoint(%v.Vertex(%d)) = false, want true", cell, ci, j)
+			}
+			if j != i {
+				if ci.ContainsPoint(children[j].Center()) {
+					t.Errorf("%v.ContainsPoint(%v[%d].Center()) = true, want false", ci, children, j)
+				}
+				if ci.IntersectsCell(children[j]) {
+					t.Errorf("%v.IntersectsCell(%v[%d]) = true, want false", ci, children, j)
+				}
+			}
+		}
+
+		// Test CapBound and RectBound.
+		parentCap := cell.CapBound()
+		parentRect := cell.RectBound()
+		if cell.ContainsPoint(PointFromCoords(0, 0, 1)) || cell.ContainsPoint(PointFromCoords(0, 0, -1)) {
+			if !parentRect.Lng.IsFull() {
+				t.Errorf("%v.Lng.IsFull() = false, want true", parentRect)
+			}
+		}
+		childCap := ci.CapBound()
+		childRect := ci.RectBound()
+		if !childCap.ContainsPoint(ci.Center()) {
+			t.Errorf("childCap %v.ContainsPoint(%v.Center()) = false, want true", childCap, ci)
+		}
+		if !childRect.ContainsPoint(ci.Center()) {
+			t.Errorf("childRect %v.ContainsPoint(%v.Center()) = false, want true", childRect, ci)
+		}
+		if !parentCap.ContainsPoint(ci.Center()) {
+			t.Errorf("parentCap %v.ContainsPoint(%v.Center()) = false, want true", parentCap, ci)
+		}
+		if !parentRect.ContainsPoint(ci.Center()) {
+			t.Errorf("parentRect %v.ContainsPoint(%v.Center()) = false, want true", parentRect, ci)
+		}
+		for j := 0; j < 4; j++ {
+			if !childCap.ContainsPoint(ci.Vertex(j)) {
+				t.Errorf("childCap %v.ContainsPoint(%v.Vertex(%d)) = false, want true", childCap, ci, j)
+			}
+			if !childRect.ContainsPoint(ci.Vertex(j)) {
+				t.Errorf("childRect %v.ContainsPoint(%v.Vertex(%d)) = false, want true", childRect, ci, j)
+			}
+			if !parentCap.ContainsPoint(ci.Vertex(j)) {
+				t.Errorf("parentCap %v.ContainsPoint(%v.Vertex(%d)) = false, want true", parentCap, ci, j)
+			}
+			if !parentRect.ContainsPoint(ci.Vertex(j)) {
+				t.Errorf("parentRect %v.ContainsPoint(%v.Vertex(%d)) = false, want true", parentRect, ci, j)
+			}
+			if j != i {
+				// The bounding caps and rectangles should be tight enough so that
+				// they exclude at least two vertices of each adjacent cell.
+				capCount := 0
+				rectCount := 0
+				for k := 0; k < 4; k++ {
+					if childCap.ContainsPoint(children[j].Vertex(k)) {
+						capCount++
+					}
+					if childRect.ContainsPoint(children[j].Vertex(k)) {
+						rectCount++
+					}
+				}
+				if capCount > 2 {
+					t.Errorf("childs bounding cap should contain no more than 2 points, got %d", capCount)
+				}
+				if childRect.Lat.Lo > -math.Pi/2 && childRect.Lat.Hi < math.Pi/2 {
+					// Bounding rectangles may be too large at the poles
+					// because the pole itself has an arbitrary longitude.
+					if rectCount > 2 {
+						t.Errorf("childs bounding rect should contain no more than 2 points, got %d", rectCount)
+					}
+				}
+			}
+		}
+
+		// Check all children for the first few levels, and then sample randomly.
+		// We also always subdivide the cells containing a few chosen points so
+		// that we have a better chance of sampling the minimum and maximum metric
+		// values.  kMaxSizeUV is the absolute value of the u- and v-coordinate
+		// where the cell size at a given level is maximal.
+		maxSizeUV := 0.3964182625366691
+		specialUV := []r2.Point{
+			r2.Point{dblEpsilon, dblEpsilon}, // Face center
+			r2.Point{dblEpsilon, 1},          // Edge midpoint
+			r2.Point{1, 1},                   // Face corner
+			r2.Point{maxSizeUV, maxSizeUV},   // Largest cell area
+			r2.Point{dblEpsilon, maxSizeUV},  // Longest edge/diagonal
+		}
+		forceSubdivide := false
+		for _, uv := range specialUV {
+			if ci.BoundUV().ContainsPoint(uv) {
+				forceSubdivide = true
+			}
+		}
+
+		// For a more in depth test, add an "|| oneIn(n)" to this condition
+		// to cause more children to be tested beyond the ones to level 5.
+		if forceSubdivide || cell.level < 5 {
+			testCellChildren(t, ci)
+		}
+
+		childID = childID.Next()
+	}
+}
+
+func TestCellAreas(t *testing.T) {
 	// relative error bounds for each type of area computation
 	var exactError = math.Log(1 + 1e-6)
 	var approxError = math.Log(1.03)

@@ -526,6 +526,12 @@ const (
 )
 
 var (
+	ijToPos = [4][4]int{
+		{0, 1, 3, 2}, // canonical order
+		{0, 3, 1, 2}, // axes swapped
+		{2, 3, 1, 0}, // bits inverted
+		{2, 1, 3, 0}, // swapped & inverted
+	}
 	posToIJ = [4][4]int{
 		{0, 1, 3, 2}, // canonical order:    (0,0), (0,1), (1,1), (1,0)
 		{0, 2, 3, 1}, // axes swapped:       (0,0), (1,0), (1,1), (0,1)

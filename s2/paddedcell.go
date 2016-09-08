@@ -62,6 +62,44 @@ func PaddedCellFromCellID(id CellID, padding float64) *PaddedCell {
 	return p
 }
 
+// PaddedCellFromParentIJ constructs the child of parent with the given (i,j) index.
+// The four child cells have indices of (0,0), (0,1), (1,0), (1,1), where the i and j
+// indices correspond to increasing u- and v-values respectively.
+func PaddedCellFromParentIJ(parent *PaddedCell, i, j int) *PaddedCell {
+	// Compute the position and orientation of the child incrementally from the
+	// orientation of the parent.
+	pos := ijToPos[parent.orientation][2*i+j]
+
+	p := &PaddedCell{
+		id:          parent.id.Children()[pos],
+		padding:     parent.padding,
+		bound:       parent.bound,
+		orientation: parent.orientation ^ posToOrientation[pos],
+		level:       parent.level + 1,
+		middle:      r2.EmptyRect(),
+	}
+
+	ijSize := sizeIJ(p.level)
+	p.iLo = parent.iLo + i*ijSize
+	p.jLo = parent.jLo + j*ijSize
+
+	// For each child, one corner of the bound is taken directly from the parent
+	// while the diagonally opposite corner is taken from middle().
+	middle := parent.Middle()
+	if i == 1 {
+		p.bound.X.Lo = middle.X.Lo
+	} else {
+		p.bound.X.Hi = middle.X.Hi
+	}
+	if j == 1 {
+		p.bound.Y.Lo = middle.Y.Lo
+	} else {
+		p.bound.Y.Hi = middle.Y.Hi
+	}
+
+	return p
+}
+
 // CellID returns the CellID this padded cell represents.
 func (p PaddedCell) CellID() CellID {
 	return p.id

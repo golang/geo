@@ -25,6 +25,7 @@ import (
 )
 
 func TestPaddedCellMethods(t *testing.T) {
+	// Test the PaddedCell methods that have approximate Cell equivalents.
 	for i := 0; i < 1000; i++ {
 		cid := randomCellID()
 		padding := math.Pow(1e-15, randomFloat64())
@@ -42,10 +43,9 @@ func TestPaddedCellMethods(t *testing.T) {
 			t.Errorf("%v.Padding() = %v, want %v", pCell, pCell.Padding(), padding)
 		}
 
-		// TODO(roberts): When Cell has BoundUV, uncomment this.
-		//if cell.BoundUV().Expanded(padding) != pCell.BoundUV() {
-		//	t.Errorf("%v.BoundUV() = %v, want %v", pCell, pCell.BoundUV(), cell.BoundUV().Expanded(padding))
-		//}
+		if got, want := pCell.Bound(), cell.BoundUV().ExpandedByMargin(padding); got != want {
+			t.Errorf("%v.BoundUV() = %v, want %v", pCell, got, want)
+		}
 
 		r := r2.RectFromPoints(cell.id.centerUV()).ExpandedByMargin(padding)
 		if r != pCell.Middle() {
@@ -55,8 +55,45 @@ func TestPaddedCellMethods(t *testing.T) {
 		if cell.id.Point() != pCell.Center() {
 			t.Errorf("%v.Center() = %v, want %v", pCell, pCell.Center(), cell.id.Point())
 		}
-		// TODO(roberts): When Cell has Children/Subdivide method,
-		// add the remainder of this test section.
+		if cid.IsLeaf() {
+			continue
+		}
+
+		children, ok := cell.Children()
+		if !ok {
+			t.Errorf("%v.Children() failed but should not have", cell)
+			continue
+		}
+		for pos := 0; pos < 4; pos++ {
+			i, j := pCell.ChildIJ(pos)
+
+			cellChild := children[pos]
+			pCellChild := PaddedCellFromParentIJ(pCell, i, j)
+			if cellChild.id != pCellChild.id {
+				t.Errorf("%v.id = %v, want %v", pCellChild, pCellChild.id, cellChild.id)
+			}
+			if cellChild.id.Level() != pCellChild.Level() {
+				t.Errorf("%v.Level() = %v, want %v", pCellChild, pCellChild.Level(), cellChild.id.Level())
+			}
+
+			if padding != pCellChild.Padding() {
+				t.Errorf("%v.Padding() = %v, want %v", pCellChild, pCellChild.Padding(), padding)
+			}
+
+			if got, want := pCellChild.Bound(), cellChild.BoundUV().ExpandedByMargin(padding); got != want {
+				t.Errorf("%v.BoundUV() = %v, want %v", pCellChild, got, want)
+			}
+
+			r := r2.RectFromPoints(cellChild.id.centerUV()).ExpandedByMargin(padding)
+			if got := pCellChild.Middle(); !r.ApproxEquals(got) {
+				t.Errorf("%v.Middle() = %v, want %v", pCellChild, got, r)
+			}
+
+			if cellChild.id.Point() != pCellChild.Center() {
+				t.Errorf("%v.Center() = %v, want %v", pCellChild, pCellChild.Center(), cellChild.id.Point())
+			}
+
+		}
 	}
 }
 
