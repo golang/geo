@@ -28,8 +28,8 @@ const (
 )
 
 var (
-	empty      = EmptyCap()
-	full       = FullCap()
+	emptyCap   = EmptyCap()
+	fullCap    = FullCap()
 	defaultCap = EmptyCap()
 
 	xAxisPt = PointFromCoords(1, 0, 0)
@@ -53,10 +53,10 @@ func TestCapBasicEmptyFullValid(t *testing.T) {
 	}{
 		{Cap{}, false, false, false},
 
-		{empty, true, false, true},
-		{empty.Complement(), false, true, true},
-		{full, false, true, true},
-		{full.Complement(), true, false, true},
+		{emptyCap, true, false, true},
+		{emptyCap.Complement(), false, true, true},
+		{fullCap, false, true, true},
+		{fullCap.Complement(), true, false, true},
 		{defaultCap, true, false, true},
 
 		{xComp, false, true, true},
@@ -86,17 +86,17 @@ func TestCapCenterHeightRadius(t *testing.T) {
 			xAxis, xAxis.Complement().Complement())
 	}
 
-	if full.height != fullHeight {
+	if fullCap.height != fullHeight {
 		t.Error("full Caps should be full height")
 	}
-	if full.Radius().Degrees() != 180.0 {
+	if fullCap.Radius().Degrees() != 180.0 {
 		t.Error("radius of x-axis cap should be 180 degrees")
 	}
 
-	if empty.center != defaultCap.center {
+	if emptyCap.center != defaultCap.center {
 		t.Error("empty Caps should be have the same center as the default")
 	}
-	if empty.height != defaultCap.height {
+	if emptyCap.height != defaultCap.height {
 		t.Error("empty Caps should be have the same height as the default")
 	}
 
@@ -125,14 +125,14 @@ func TestCapContains(t *testing.T) {
 		c1, c2 Cap
 		want   bool
 	}{
-		{empty, empty, true},
-		{full, empty, true},
-		{full, full, true},
-		{empty, xAxis, false},
-		{full, xAxis, true},
-		{xAxis, full, false},
+		{emptyCap, emptyCap, true},
+		{fullCap, emptyCap, true},
+		{fullCap, fullCap, true},
+		{emptyCap, xAxis, false},
+		{fullCap, xAxis, true},
+		{xAxis, fullCap, false},
 		{xAxis, xAxis, true},
-		{xAxis, empty, true},
+		{xAxis, emptyCap, true},
 		{hemi, tiny, true},
 		{hemi, CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/4-epsilon)), true},
 		{hemi, CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/4+epsilon)), false},
@@ -186,14 +186,14 @@ func TestCapInteriorIntersects(t *testing.T) {
 		c1, c2 Cap
 		want   bool
 	}{
-		{empty, empty, false},
-		{empty, xAxis, false},
-		{full, empty, false},
-		{full, full, true},
-		{full, xAxis, true},
-		{xAxis, full, false},
+		{emptyCap, emptyCap, false},
+		{emptyCap, xAxis, false},
+		{fullCap, emptyCap, false},
+		{fullCap, fullCap, true},
+		{fullCap, xAxis, true},
+		{xAxis, fullCap, false},
 		{xAxis, xAxis, false},
-		{xAxis, empty, false},
+		{xAxis, emptyCap, false},
 		{concave, hemi.Complement(), true},
 	}
 	for _, test := range tests {
@@ -214,10 +214,10 @@ func TestCapExpanded(t *testing.T) {
 	cap50 := CapFromCenterAngle(xAxisPt, 50.0*s1.Degree)
 	cap51 := CapFromCenterAngle(xAxisPt, 51.0*s1.Degree)
 
-	if !empty.Expanded(s1.Angle(fullHeight)).IsEmpty() {
+	if !emptyCap.Expanded(s1.Angle(fullHeight)).IsEmpty() {
 		t.Error("Expanding empty cap should return an empty cap")
 	}
-	if !full.Expanded(s1.Angle(fullHeight)).IsFull() {
+	if !fullCap.Expanded(s1.Angle(fullHeight)).IsFull() {
 		t.Error("Expanding a full cap should return an full cap")
 	}
 
@@ -364,8 +364,8 @@ func TestCapAddPoint(t *testing.T) {
 		{yAxis, yAxisPt, yAxis},
 
 		// Cap plus opposite point equals full.
-		{xAxis, PointFromCoords(-1, 0, 0), full},
-		{yAxis, PointFromCoords(0, -1, 0), full},
+		{xAxis, PointFromCoords(-1, 0, 0), fullCap},
+		{yAxis, PointFromCoords(0, -1, 0), fullCap},
 
 		// Cap plus orthogonal axis equals half cap.
 		{xAxis, PointFromCoords(0, 0, 1), CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/2.0))},
@@ -413,19 +413,19 @@ func TestCapAddCap(t *testing.T) {
 		want  Cap
 	}{
 		// Identity cases.
-		{empty, empty, empty},
-		{full, full, full},
+		{emptyCap, emptyCap, emptyCap},
+		{fullCap, fullCap, fullCap},
 
 		// Anything plus empty equals itself.
-		{full, empty, full},
-		{empty, full, full},
-		{xAxis, empty, xAxis},
-		{empty, xAxis, xAxis},
-		{yAxis, empty, yAxis},
-		{empty, yAxis, yAxis},
+		{fullCap, emptyCap, fullCap},
+		{emptyCap, fullCap, fullCap},
+		{xAxis, emptyCap, xAxis},
+		{emptyCap, xAxis, xAxis},
+		{yAxis, emptyCap, yAxis},
+		{emptyCap, yAxis, yAxis},
 
 		// Two halves make a whole.
-		{xAxis, xComp, full},
+		{xAxis, xComp, fullCap},
 
 		// Two zero-height orthogonal axis caps make a half-cap.
 		{xAxis, yAxis, CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/2.0))},
@@ -452,8 +452,8 @@ func TestCapContainsCell(t *testing.T) {
 		cornerCell := CellFromPoint(Point{faceUVToXYZ(face, 1-epsilon, 1-epsilon)})
 
 		// Quick check for full and empty caps.
-		if !full.ContainsCell(rootCell) {
-			t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", full, rootCell, false, true)
+		if !fullCap.ContainsCell(rootCell) {
+			t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", fullCap, rootCell, false, true)
 		}
 
 		// Check intersections with the bounding caps of the leaf cells that are adjacent to
@@ -513,8 +513,8 @@ func TestCapIntersectsCell(t *testing.T) {
 		cornerCell := CellFromPoint(Point{faceUVToXYZ(face, 1-epsilon, 1-epsilon)})
 
 		// Quick check for full and empty caps.
-		if empty.IntersectsCell(rootCell) {
-			t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", empty, rootCell, true, false)
+		if emptyCap.IntersectsCell(rootCell) {
+			t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", emptyCap, rootCell, true, false)
 		}
 
 		// Check intersections with the bounding caps of the leaf cells that are adjacent to
