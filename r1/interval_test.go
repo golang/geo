@@ -80,7 +80,133 @@ func TestLength(t *testing.T) {
 	}
 }
 
-// TODO(dsymonds): Tests for Contains, InteriorContains, ContainsInterval, InteriorContainsInterval, Intersects, InteriorIntersects
+func TestIntervalContains(t *testing.T) {
+	tests := []struct {
+		interval         Interval
+		p                float64
+		contains         bool
+		interiorContains bool
+	}{
+		{
+			interval:         unit,
+			p:                0.5,
+			contains:         true,
+			interiorContains: true,
+		},
+		{
+			interval:         unit,
+			p:                0,
+			contains:         true,
+			interiorContains: false,
+		},
+		{
+			interval:         unit,
+			p:                1,
+			contains:         true,
+			interiorContains: false,
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.interval.Contains(test.p); got != test.contains {
+			t.Errorf("%v.Contains(%v) = %t, want %t", test.interval, test.p, got, test.contains)
+		}
+		if got := test.interval.InteriorContains(test.p); got != test.interiorContains {
+			t.Errorf("%v.InteriorContains(%v) = %t, want %t", test.interval, test.p, got, test.interiorContains)
+		}
+	}
+}
+
+func TestIntervalOperations(t *testing.T) {
+	tests := []struct {
+		have               Interval
+		other              Interval
+		contains           bool
+		interiorContains   bool
+		intersects         bool
+		interiorIntersects bool
+	}{
+		{
+			have:               empty,
+			other:              empty,
+			contains:           true,
+			interiorContains:   true,
+			intersects:         false,
+			interiorIntersects: false,
+		},
+		{
+			have:               empty,
+			other:              unit,
+			contains:           false,
+			interiorContains:   false,
+			intersects:         false,
+			interiorIntersects: false,
+		},
+		{
+			have:               unit,
+			other:              half,
+			contains:           true,
+			interiorContains:   true,
+			intersects:         true,
+			interiorIntersects: true,
+		},
+		{
+			have:               unit,
+			other:              unit,
+			contains:           true,
+			interiorContains:   false,
+			intersects:         true,
+			interiorIntersects: true,
+		},
+		{
+			have:               unit,
+			other:              empty,
+			contains:           true,
+			interiorContains:   true,
+			intersects:         false,
+			interiorIntersects: false,
+		},
+		{
+			have:               unit,
+			other:              negunit,
+			contains:           false,
+			interiorContains:   false,
+			intersects:         true,
+			interiorIntersects: false,
+		},
+		{
+			have:               unit,
+			other:              Interval{0, 0.5},
+			contains:           true,
+			interiorContains:   false,
+			intersects:         true,
+			interiorIntersects: true,
+		},
+		{
+			have:               half,
+			other:              Interval{0, 0.5},
+			contains:           false,
+			interiorContains:   false,
+			intersects:         true,
+			interiorIntersects: false,
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.have.ContainsInterval(test.other); got != test.contains {
+			t.Errorf("%v.ContainsInterval(%v) = %t, want %t", test.have, test.other, got, test.contains)
+		}
+		if got := test.have.InteriorContainsInterval(test.other); got != test.interiorContains {
+			t.Errorf("%v.InteriorContainsInterval(%v) = %t, want %t", test.have, test.other, got, test.interiorContains)
+		}
+		if got := test.have.Intersects(test.other); got != test.intersects {
+			t.Errorf("%v.Intersects(%v) = %t, want %t", test.have, test.other, got, test.intersects)
+		}
+		if got := test.have.InteriorIntersects(test.other); got != test.interiorIntersects {
+			t.Errorf("%v.InteriorIntersects(%v) = %t, want %t", test.have, test.other, got, test.interiorIntersects)
+		}
+	}
+}
 
 func TestIntersection(t *testing.T) {
 	tests := []struct {
@@ -216,7 +342,7 @@ func TestApproxEqual(t *testing.T) {
 
 	for _, test := range tests {
 		if got := test.interval.ApproxEqual(test.other); got != test.want {
-			t.Errorf("%v.ApproxEqual(%v) = %v, want %v",
+			t.Errorf("%v.ApproxEqual(%v) = %t, want %t",
 				test.interval, test.other, got, test.want)
 		}
 	}

@@ -159,6 +159,3 @@ func (i Interval) ApproxEqual(other Interval) bool {
 	return math.Abs(other.Lo-i.Lo) <= epsilon &&
 		math.Abs(other.Hi-i.Hi) <= epsilon
 }
-
-// BUG(dsymonds): The major differences from the C++ version are:
-//   - a few other miscellaneous operations
