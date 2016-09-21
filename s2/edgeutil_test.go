@@ -914,3 +914,150 @@ func TestEdgeutilEdgeClipping(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckDistance(t *testing.T) {
+	// Uncomment once Distance / UpdateMinDistance are implemented.
+	//var zeroChordAngle s1.ChordAngle
+	tests := []struct {
+		x, a, b r3.Vector
+		distRad float64
+		want    r3.Vector
+	}{
+		{
+			x:       r3.Vector{1, 0, 0},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: 0,
+			want:    r3.Vector{1, 0, 0},
+		},
+		{
+			x:       r3.Vector{0, 1, 0},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: 0,
+			want:    r3.Vector{0, 1, 0},
+		},
+		{
+			x:       r3.Vector{1, 3, 0},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: 0,
+			want:    r3.Vector{1, 3, 0},
+		},
+		{
+			x:       r3.Vector{0, 0, 1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Pi / 2,
+			want:    r3.Vector{1, 0, 0},
+		},
+		{
+			x:       r3.Vector{0, 0, -1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Pi / 2,
+			want:    r3.Vector{1, 0, 0},
+		},
+		{
+			x:       r3.Vector{-1, -1, 0},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: 0.75 * math.Pi,
+			want:    r3.Vector{1, 0, 0},
+		},
+		{
+			x:       r3.Vector{0, 1, 0},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{1, 1, 0},
+			distRad: math.Pi / 4,
+			want:    r3.Vector{1, 1, 0},
+		},
+		{
+			x:       r3.Vector{0, -1, 0},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{1, 1, 0},
+			distRad: math.Pi / 2,
+			want:    r3.Vector{1, 0, 0},
+		},
+		{
+			x:       r3.Vector{0, -1, 0},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{-1, 1, 0},
+			distRad: math.Pi / 2,
+			want:    r3.Vector{1, 0, 0},
+		},
+		{
+			x:       r3.Vector{-1, -1, 0},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{-1, 1, 0},
+			distRad: math.Pi / 2,
+			want:    r3.Vector{-1, 1, 0},
+		},
+		{
+			x:       r3.Vector{1, 1, 1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Asin(math.Sqrt(1.0 / 3.0)),
+			want:    r3.Vector{1, 1, 0},
+		},
+		{
+			x:       r3.Vector{1, 1, -1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Asin(math.Sqrt(1.0 / 3.0)),
+			want:    r3.Vector{1, 1, 0}},
+		{
+			x:       r3.Vector{-1, 0, 0},
+			a:       r3.Vector{1, 1, 0},
+			b:       r3.Vector{1, 1, 0},
+			distRad: 0.75 * math.Pi,
+			want:    r3.Vector{1, 1, 0},
+		},
+		{
+			x:       r3.Vector{0, 0, -1},
+			a:       r3.Vector{1, 1, 0},
+			b:       r3.Vector{1, 1, 0},
+			distRad: math.Pi / 2,
+			want:    r3.Vector{1, 1, 0},
+		},
+		{
+			x:       r3.Vector{-1, 0, 0},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{1, 0, 0},
+			distRad: math.Pi,
+			want:    r3.Vector{1, 0, 0},
+		},
+	}
+
+	for _, test := range tests {
+		x := Point{test.x.Normalize()}
+		a := Point{test.a.Normalize()}
+		b := Point{test.b.Normalize()}
+		want := Point{test.want.Normalize()}
+
+		// Uncomment these once Distance / UpdateMinDistance are implemented.
+		//if !float64Near(test.distRad, Distance(x, a, b).radians(}, 1e-15) {
+		//	t.Errorf("Distance(%v, %v, %v) = %v, want %v", x, a, b, Distance(x, a, b).radians(}, test.distRad)
+		//}
+
+		closest := ClosestPoint(x, a, b)
+		if !closest.ApproxEqual(want) {
+			t.Errorf("ClosestPoint(%v, %v, %v) = %v, want %v", x, a, b, closest, want)
+		}
+
+		// Uncomment these once Distance / UpdateMinDistance are implemented.
+		//minDistance := zeroChordAngle
+		//if minDistance, ok := UpdateMinDistance(x, a, b, minDistance); ok {
+		//	t.Errorf("UpdateMinDistance(%x, %v, %v, %v) = %v, want %v", x, a, b, zeroChordAngle, minDistance, zeroChordAngle)
+		//}
+		//
+		//minDistance = s1.InfChordAngle()
+		//if minDistance, ok := UpdateMinDistance(x, a, b, minDistance); !ok {
+		//	t.Errorf("UpdateMinDistance(%x, %v, %v, %v) = %v, want %v", x, a, b, s1.InfChordAngle(), minDistance, s1.InfChordAngle())
+		//}
+		//
+		//if !float64Near(test.distRad, minDistance.Angle().Radians(), 1e-15) {
+		//	t.Errorf("%v != %v", minDistance.Angle().Radians(), test.distRad)
+		//}
+	}
+}

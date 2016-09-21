@@ -152,6 +152,17 @@ func VertexCrossing(a, b, c, d Point) bool {
 	return false
 }
 
+// DistanceFraction returns the distance ratio of the point X along an edge AB.
+// If X is on the line segment AB, this is the fraction T such
+// that X == Interpolate(T, A, B).
+//
+// This requires that A and B are distinct.
+func DistanceFraction(x, a, b Point) float64 {
+	d0 := x.Angle(a.Vector)
+	d1 := x.Angle(b.Vector)
+	return float64(d0 / (d0 + d1))
+}
+
 // Interpolate returns the point X along the line segment AB whose distance from A
 // is the given fraction "t" of the distance AB. Does NOT require that "t" be
 // between 0 and 1. Note that all distances are measured on the surface of
@@ -1094,3 +1105,44 @@ func ClipEdge(a, b r2.Point, clip r2.Rect) (aClip, bClip r2.Point, intersects bo
 
 	return bound.VertexIJ(ai, aj), bound.VertexIJ(1-ai, 1-aj), true
 }
+
+// ClosestPoint returns the point along the edge AB that is closest to the point X.
+// The fractional distance of this point along the edge AB can be obtained
+// using DistanceFraction.
+//
+// This requires that all points are unit length.
+func ClosestPoint(x, a, b Point) Point {
+	aXb := Point{a.Cross(b.Vector)}
+	// Find the closest point to X along the great circle through AB.
+	p := x.Sub(aXb.Mul(x.Dot(aXb.Vector) / aXb.Vector.Norm2()))
+
+	// If this point is on the edge AB, then it's the closest point.
+	if Sign(aXb, a, Point{p}) && Sign(Point{p}, b, aXb) {
+		return Point{p.Normalize()}
+	}
+
+	// Otherwise, the closest point is either A or B.
+	if x.Sub(a.Vector).Norm2() <= x.Sub(b.Vector).Norm2() {
+		return a
+	}
+	return b
+}
+
+// TODO(roberts): Differences from C++
+//  LongitudePruner
+//  updateMinDistanceMaxError
+//  Distance
+//  IsDistanceLess
+//  UpdateMinDistance
+//  IsInteriorDistanceLess
+//  UpdateMinInteriorDistance
+//  UpdateEdgePairMinDistance
+//  EdgePairClosestPoints
+//  IsEdgeBNearEdgeA
+//  WedgeRelation
+//  WedgeContains
+//  WedgeIntersects
+//  FaceSegments
+//  PointFromExact
+//  IntersectionExact
+//  intersectionExactError
