@@ -537,7 +537,7 @@ func NewEdgeCrosser(a, b Point) *EdgeCrosser {
 	return &EdgeCrosser{
 		a:        a,
 		b:        b,
-		aXb:      a.PointCross(b),
+		aXb:      Point{a.Cross(b.Vector)},
 		aTangent: Point{a.Cross(norm.Vector)},
 		bTangent: Point{norm.Cross(b.Vector)},
 	}
@@ -1112,7 +1112,7 @@ func ClipEdge(a, b r2.Point, clip r2.Rect) (aClip, bClip r2.Point, intersects bo
 //
 // This requires that all points are unit length.
 func ClosestPoint(x, a, b Point) Point {
-	aXb := Point{a.Cross(b.Vector)}
+	aXb := a.PointCross(b)
 	// Find the closest point to X along the great circle through AB.
 	p := x.Sub(aXb.Mul(x.Dot(aXb.Vector) / aXb.Vector.Norm2()))
 
