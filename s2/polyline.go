@@ -141,6 +141,29 @@ func (p Polyline) IntersectsCell(cell Cell) bool {
 	return false
 }
 
+// NumEdges returns the number of edges in this shape.
+func (p Polyline) NumEdges() int {
+	if len(p) == 0 {
+		return 0
+	}
+	return len(p) - 1
+}
+
+// Edge returns endpoints for the given edge index.
+func (p Polyline) Edge(i int) (a, b Point) {
+	return p[i], p[i+1]
+}
+
+// HasInterior returns false as Polylines are not closed.
+func (p Polyline) HasInterior() bool {
+	return false
+}
+
+// ContainsOrigin returns false because there is no interior to contain s2.Origin.
+func (p Polyline) ContainsOrigin() bool {
+	return false
+}
+
 // TODO(roberts): Differences from C++.
 // IsValid
 // Suffix
@@ -152,4 +175,3 @@ func (p Polyline) IntersectsCell(cell Cell) bool {
 // SubsampleVertices
 // ApproxEqual
 // NearlyCoversPolyline
-// implement Shape Interface

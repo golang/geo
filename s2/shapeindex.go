@@ -40,6 +40,7 @@ type Shape interface {
 // A minimal check for types that should satisfy the Shape interface.
 var (
 	_ Shape = Loop{}
+	_ Shape = Polyline{}
 )
 
 // CellRelation describes the possible relationships between a target cell

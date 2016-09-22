@@ -248,6 +248,11 @@ func makePolygon(s string, normalize bool) *Polygon {
 	return PolygonFromLoops(loops)
 }
 
+// makePolyline constructs a Polyline from the given string of lat:lng values.
+func makePolyline(s string) Polyline {
+	return Polyline(parsePoints(s))
+}
+
 // skewedInt returns a number in the range [0,2^max_log-1] with bias towards smaller numbers.
 func skewedInt(maxLog int) int {
 	base := uint32(rand.Int31n(int32(maxLog + 1)))

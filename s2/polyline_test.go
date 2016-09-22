@@ -52,6 +52,34 @@ func TestPolylineBasics(t *testing.T) {
 	}
 }
 
+func TestPolylineShape(t *testing.T) {
+	var shape Shape = makePolyline("0:0, 1:0, 1:1, 2:1")
+	if got, want := shape.NumEdges(), 3; got != want {
+		t.Errorf("%v.NumEdges() = %v, want %d", shape, got, want)
+	}
+
+	v2, v3 := shape.Edge(2)
+
+	if want := PointFromLatLng(LatLngFromDegrees(1, 1)); !v2.ApproxEqual(want) {
+		t.Errorf("%v.Edge(%d) point A = %v  want %v", shape, 2, v2, want)
+	}
+	if want := PointFromLatLng(LatLngFromDegrees(2, 1)); !v3.ApproxEqual(want) {
+		t.Errorf("%v.Edge(%d) point B = %v  want %v", shape, 2, v3, want)
+	}
+
+	if shape.HasInterior() {
+		t.Errorf("polylines should not have an interior")
+	}
+	if shape.ContainsOrigin() {
+		t.Errorf("polylines should not contain the origin")
+	}
+
+	empty := &Polyline{}
+	if got, want := empty.NumEdges(), 0; got != want {
+		t.Errorf("%v.NumEdges() = %d, want %d", shape, got, want)
+	}
+}
+
 func TestPolylineLengthAndCentroid(t *testing.T) {
 	// Construct random great circles and divide them randomly into segments.
 	// Then make sure that the length and centroid are correct.  Note that
