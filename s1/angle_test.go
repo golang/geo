@@ -23,7 +23,12 @@ import (
 
 // float64Eq reports whether the two values are within the default epsilon.
 func float64Eq(x, y float64) bool {
-	return math.Abs(x-y) <= 1e-15
+	return float64Near(x, y, epsilon)
+}
+
+// float64Near reports whether the two values are within the specified epsilon.
+func float64Near(x, y, eps float64) bool {
+	return math.Abs(x-y) <= eps
 }
 
 func TestEmptyValue(t *testing.T) {

@@ -54,7 +54,7 @@ func TestChordAngleBasics(t *testing.T) {
 	}
 }
 
-func TestChordIsFunctions(t *testing.T) {
+func TestChordAngleIsFunctions(t *testing.T) {
 	var zeroChord ChordAngle
 	tests := []struct {
 		have       ChordAngle
@@ -86,18 +86,141 @@ func TestChordIsFunctions(t *testing.T) {
 	}
 }
 
-func TestChordToChordFromAngle(t *testing.T) {
+func TestChordAngleFromAngle(t *testing.T) {
 	for _, angle := range []float64{0, 1, -1, math.Pi} {
-		if got := ChordFromAngle(Angle(angle)).Angle().Radians(); got != angle {
-			t.Errorf("ChordFromAngle(Angle(%v)) = %v, want %v", angle, got, angle)
+		if got := ChordAngleFromAngle(Angle(angle)).Angle().Radians(); got != angle {
+			t.Errorf("ChordAngleFromAngle(Angle(%v)) = %v, want %v", angle, got, angle)
 		}
 	}
 
-	if got := ChordFromAngle(Angle(math.Pi)); got != StraightChordAngle {
+	if got := ChordAngleFromAngle(Angle(math.Pi)); got != StraightChordAngle {
 		t.Errorf("a ChordAngle from an Angle of π = %v, want %v", got, StraightChordAngle)
 	}
 
-	if InfAngle() != ChordFromAngle(InfAngle()).Angle() {
+	if InfAngle() != ChordAngleFromAngle(InfAngle()).Angle() {
 		t.Errorf("converting infinite Angle to ChordAngle should yield infinite Angle")
+	}
+}
+
+func TestChordAngleArithmetic(t *testing.T) {
+	var (
+		zero      ChordAngle
+		degree30  = ChordAngleFromAngle(30 * Degree)
+		degree60  = ChordAngleFromAngle(60 * Degree)
+		degree90  = ChordAngleFromAngle(90 * Degree)
+		degree120 = ChordAngleFromAngle(120 * Degree)
+		degree180 = StraightChordAngle
+	)
+
+	addTests := []struct {
+		a, b ChordAngle
+		want ChordAngle
+	}{
+		{zero, zero, zero},
+		{degree60, zero, degree60},
+		{zero, degree60, degree60},
+		{degree30, degree60, degree90},
+		{degree60, degree30, degree90},
+		{degree180, zero, degree180},
+		{degree60, degree30, degree90},
+		{degree90, degree90, degree180},
+		{degree120, degree90, degree180},
+		{degree120, degree120, degree180},
+		{degree30, degree180, degree180},
+		{degree180, degree180, degree180},
+	}
+
+	subTests := []struct {
+		a, b ChordAngle
+		want ChordAngle
+	}{
+		{zero, zero, zero},
+		{degree60, degree60, zero},
+		{degree180, degree180, zero},
+		{zero, degree60, zero},
+		{degree30, degree90, zero},
+		{degree90, degree30, degree60},
+		{degree90, degree60, degree30},
+		{degree180, zero, degree180},
+	}
+
+	for _, test := range addTests {
+		if got := float64(test.a.Add(test.b)); !float64Eq(got, float64(test.want)) {
+			t.Errorf("%v.Add(%v) = %0.24f, want %0.24f", test.a.Angle().Degrees(), test.b.Angle().Degrees(), got, test.want)
+		}
+	}
+	for _, test := range subTests {
+		if got := float64(test.a.Sub(test.b)); !float64Eq(got, float64(test.want)) {
+			t.Errorf("%v.Sub(%v) = %0.24f, want %0.24f", test.a.Angle().Degrees(), test.b.Angle().Degrees(), got, test.want)
+		}
+	}
+}
+
+func TestChordAngleTrigonometry(t *testing.T) {
+	// Because of the way the math works out, the 9/10th's case has slightly more
+	// difference than all the other computations, so this gets a more generous
+	// epsilon to deal with that.
+	const epsilon = 1e-14
+	const iters = 40
+	for iter := 0; iter <= iters; iter++ {
+		radians := math.Pi * float64(iter) / float64(iters)
+		angle := ChordAngleFromAngle(Angle(radians))
+		if !float64Near(math.Sin(radians), angle.Sin(), epsilon) {
+			t.Errorf("(%d/%d)*π. %v.Sin() = %v, want %v", iter, iters, angle, angle.Sin(), math.Sin(radians))
+		}
+		if !float64Near(math.Cos(radians), angle.Cos(), epsilon) {
+			t.Errorf("(%d/%d)*π. %v.Cos() = %v, want %v", iter, iters, angle, angle.Cos(), math.Cos(radians))
+		}
+		// Since tan(x) is unbounded near pi/4, we map the result back to an
+		// angle before comparing. The assertion is that the result is equal to
+		// the tangent of a nearby angle.
+		if !float64Near(math.Atan(math.Tan(radians)), math.Atan(angle.Tan()), 1e-14) {
+			t.Errorf("(%d/%d)*π. %v.Tan() = %v, want %v", iter, iters, angle, angle.Tan(), math.Tan(radians))
+		}
+	}
+
+	// Unlike Angle, ChordAngle can represent 90 and 180 degrees exactly.
+	angle90 := ChordAngleFromSquaredLength(2)
+	angle180 := ChordAngleFromSquaredLength(4)
+	if !float64Eq(1, angle90.Sin()) {
+		t.Errorf("%v.Sin() = %v, want 1", angle90, angle90.Sin())
+	}
+	if !float64Eq(0, angle90.Cos()) {
+		t.Errorf("%v.Cos() = %v, want 0", angle90, angle90.Cos())
+	}
+	if !math.IsInf(angle90.Tan(), 0) {
+		t.Errorf("%v.Tan() should be infinite, but was not.", angle90)
+	}
+	if !float64Eq(0, angle180.Sin()) {
+		t.Errorf("%v.Sin() = %v, want 0", angle180, angle180.Sin())
+	}
+	if !float64Eq(-1, angle180.Cos()) {
+		t.Errorf("%v.Cos() = %v, want -1", angle180, angle180.Cos())
+	}
+	if !float64Eq(0, angle180.Tan()) {
+		t.Errorf("%v.Tan() = %v, want 0", angle180, angle180.Tan())
+	}
+}
+
+func TestChordAngleExpanded(t *testing.T) {
+	var zero ChordAngle
+
+	tests := []struct {
+		have ChordAngle
+		add  float64
+		want ChordAngle
+	}{
+		{NegativeChordAngle, 5, NegativeChordAngle.Expanded(5)},
+		{InfChordAngle(), -5, InfChordAngle()},
+		{StraightChordAngle, 5, ChordAngleFromSquaredLength(5)},
+		{zero, -5, zero},
+		{ChordAngleFromSquaredLength(1.25), 0.25, ChordAngleFromSquaredLength(1.5)},
+		{ChordAngleFromSquaredLength(0.75), 0.25, ChordAngleFromSquaredLength(1)},
+	}
+
+	for _, test := range tests {
+		if got := test.have.Expanded(test.add); got != test.want {
+			t.Errorf("%v.Expanded(%v) = %v, want %v", test.have, test.add, got, test.want)
+		}
 	}
 }
