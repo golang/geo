@@ -77,9 +77,10 @@ func CapFromCenterAngle(center Point, angle s1.Angle) Cap {
 
 // CapFromCenterHeight constructs a cap with the given center and height. A
 // negative height yields an empty cap; a height of 2 or more yields a full cap.
+// The center should be unit length.
 func CapFromCenterHeight(center Point, height float64) Cap {
 	return Cap{
-		center: Point{center.Normalize()},
+		center: center,
 		height: height,
 	}
 }
