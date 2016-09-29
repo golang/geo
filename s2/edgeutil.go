@@ -25,7 +25,7 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-var (
+const (
 	// edgeClipErrorUVCoord is the maximum error in a u- or v-coordinate
 	// compared to the exact result, assuming that the points A and B are in
 	// the rectangle [-1,1]x[1,1] or slightly outside it (by 1e-10 or less).
