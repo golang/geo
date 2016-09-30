@@ -1035,10 +1035,9 @@ func TestCheckDistance(t *testing.T) {
 		b := Point{test.b.Normalize()}
 		want := Point{test.want.Normalize()}
 
-		// Uncomment these once Distance / UpdateMinDistance are implemented.
-		//if !float64Near(test.distRad, Distance(x, a, b).radians(}, 1e-15) {
-		//	t.Errorf("Distance(%v, %v, %v) = %v, want %v", x, a, b, Distance(x, a, b).radians(}, test.distRad)
-		//}
+		if d := DistanceFromSegment(x, a, b).Radians(); !float64Near(d, test.distRad, 1e-15) {
+			t.Errorf("DistanceFromSegment(%v, %v, %v) = %v, want %v", x, a, b, d, test.distRad)
+		}
 
 		closest := ClosestPoint(x, a, b)
 		if !closest.ApproxEqual(want) {

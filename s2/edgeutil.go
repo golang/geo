@@ -1128,10 +1128,80 @@ func ClosestPoint(x, a, b Point) Point {
 	return b
 }
 
+// DistanceFromSegment returns the distance of point x from line segment ab.
+// The points are expected to be normalized.
+func DistanceFromSegment(x, a, b Point) s1.Angle {
+	if d, ok := interiorDist(x, a, b); ok {
+		return d.Angle()
+	}
+	// Chord distance of x to both end points a and b.
+	xa2, xb2 := (x.Sub(a.Vector)).Norm2(), x.Sub(b.Vector).Norm2()
+	return s1.ChordAngle(math.Min(xa2, xb2)).Angle()
+}
+
+// interiorDist returns the shortest distance from point x to edge ab,
+// assuming that the closest point to x is interior to ab.
+// If the closest point is not interior to ab, interiorDist returns (0, false).
+func interiorDist(x, a, b Point) (s1.ChordAngle, bool) {
+	// Chord distance of x to both end points a and b.
+	xa2, xb2 := (x.Sub(a.Vector)).Norm2(), x.Sub(b.Vector).Norm2()
+
+	// The closest point on AB could either be one of the two vertices (the
+	// vertex case) or in the interior (the interior case).  Let C = A x B.
+	// If X is in the spherical wedge extending from A to B around the axis
+	// through C, then we are in the interior case.  Otherwise we are in the
+	// vertex case.
+	//
+	// Check whether we might be in the interior case.  For this to be true, XAB
+	// and XBA must both be acute angles.  Checking this condition exactly is
+	// expensive, so instead we consider the planar triangle ABX (which passes
+	// through the sphere's interior).  The planar angles XAB and XBA are always
+	// less than the corresponding spherical angles, so if we are in the
+	// interior case then both of these angles must be acute.
+	//
+	// We check this by computing the squared edge lengths of the planar
+	// triangle ABX, and testing acuteness using the law of cosines:
+	//
+	//             max(XA^2, XB^2) < min(XA^2, XB^2) + AB^2
+	if math.Max(xa2, xb2) >= math.Min(xa2, xb2)+(a.Sub(b.Vector)).Norm2() {
+		return 0, false
+	}
+
+	// The minimum distance might be to a point on the edge interior.  Let R
+	// be closest point to X that lies on the great circle through AB.  Rather
+	// than computing the geodesic distance along the surface of the sphere,
+	// instead we compute the "chord length" through the sphere's interior.
+	//
+	// The squared chord length XR^2 can be expressed as XQ^2 + QR^2, where Q
+	// is the point X projected onto the plane through the great circle AB.
+	// The distance XQ^2 can be written as (X.C)^2 / |C|^2 where C = A x B.
+	// We ignore the QR^2 term and instead use XQ^2 as a lower bound, since it
+	// is faster and the corresponding distance on the Earth's surface is
+	// accurate to within 1% for distances up to about 1800km.
+
+	// Test for the interior case. This test is very likely to succeed because
+	// of the conservative planar test we did initially.
+	c := a.PointCross(b)
+	c2 := c.Norm2()
+	cx := c.Cross(x.Vector)
+	if a.Dot(cx) >= 0 || b.Dot(cx) <= 0 {
+		return 0, false
+	}
+
+	// Compute the squared chord length XR^2 = XQ^2 + QR^2 (see above).
+	// This calculation has good accuracy for all chord lengths since it
+	// is based on both the dot product and cross product (rather than
+	// deriving one from the other).  However, note that the chord length
+	// representation itself loses accuracy as the angle approaches π.
+	xDotC := x.Dot(c.Vector)
+	xDotC2 := xDotC * xDotC
+	qr := 1 - math.Sqrt(cx.Norm2()/c2)
+	return s1.ChordAngle((xDotC2 / c2) + (qr * qr)), true
+}
+
 // TODO(roberts): Differences from C++
 //  LongitudePruner
 //  updateMinDistanceMaxError
-//  Distance
 //  IsDistanceLess
 //  UpdateMinDistance
 //  IsInteriorDistanceLess
