@@ -742,13 +742,92 @@ func TestCellIDContinuity(t *testing.T) {
 			t.Errorf("uvToST(%v) = %v, want %v", v, uvToST(v), 0.5*cellSize)
 		}
 	}
+}
 
+func TestCellIDMaxTile(t *testing.T) {
+	// This method is also tested more thoroughly in s2cellunion_test.
+	for iter := 0; iter < 1000; iter++ {
+		id := randomCellIDForLevel(10)
+
+		// Check that limit is returned for tiles at or beyond limit.
+		if got, want := id, id.MaxTile(id); got != want {
+			t.Errorf("%v.MaxTile(%v) = %v, want %v", id, id, got, want)
+		}
+		if got, want := id, id.Children()[0].MaxTile(id); got != want {
+			t.Errorf("%v.Children()[0].MaxTile(%v) = %v, want %v", id, id, got, want)
+		}
+		if got, want := id, id.Children()[1].MaxTile(id); got != want {
+			t.Errorf("%v.Children()[1].MaxTile(%v) = %v, want %v", id, id, got, want)
+		}
+		if got, want := id, id.Next().MaxTile(id); got != want {
+			t.Errorf("%v.Next().MaxTile(%v) = %v, want %v", id, id, got, want)
+		}
+		if got, want := id.Children()[0], id.MaxTile(id.Children()[0]); got != want {
+			t.Errorf("%v.MaxTile(%v.Children()[0] = %v, want %v", id, id, got, want)
+		}
+
+		// Check that the tile size is increased when possible.
+		if got, want := id, id.Children()[0].MaxTile(id.Next()); got != want {
+			t.Errorf("%v.Children()[0].MaxTile(%v.Next()) = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id, id.Children()[0].MaxTile(id.Next().Children()[0]); got != want {
+			t.Errorf("%v.Children()[0].MaxTile(%v.Next()) = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id, id.Children()[0].MaxTile(id.Next().Children()[1].Children()[0]); got != want {
+			t.Errorf("%v.Children()[0].MaxTile(%v.Next().Children()[1].Children()[0] = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id, id.Children()[0].Children()[0].MaxTile(id.Next()); got != want {
+			t.Errorf("%v.Children()[0].Children()[0].MaxTile(%v.Next()) = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id, id.Children()[0].Children()[0].Children()[0].MaxTile(id.Next()); got != want {
+			t.Errorf("%v.Children()[0].Children()[0].Children()[0].MaxTile(%v.Next()) = %v, want %v", id, id, got, want)
+		}
+
+		// Check that the tile size is decreased when necessary.
+		if got, want := id.Children()[0], id.MaxTile(id.Children()[0].Next()); got != want {
+			t.Errorf("%v.Children()[0], id.MaxTile(%v.Children()[0].Next()) = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id.Children()[0], id.MaxTile(id.Children()[0].Next().Children()[0]); got != want {
+			t.Errorf("%v.Children()[0], id.MaxTile(%v.Children()[0].Next().Children()[0]) = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id.Children()[0], id.MaxTile(id.Children()[0].Next().Children()[1]); got != want {
+			t.Errorf("%v.Children()[0], id.MaxTile(%v.Children()[0].Next().Children()[1]) = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id.Children()[0].Children()[0], id.MaxTile(id.Children()[0].Children()[0].Next()); got != want {
+			t.Errorf("%v.Children()[0].Children()[0], id.MaxTile(%v.Children()[0].Children()[0].Next()) = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id.Children()[0].Children()[0].Children()[0],
+			id.MaxTile(id.Children()[0].Children()[0].Children()[0].Next()); got != want {
+			t.Errorf("%v.MaxTile(%v.Children()[0].Children()[0].Children()[0].Next()) = %v, want %v", id, id, got, want)
+		}
+
+		// Check that the tile size is otherwise unchanged.
+		if got, want := id, id.MaxTile(id.Next()); got != want {
+			t.Errorf("%v.MaxTile(%v.Next()) = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id, id.MaxTile(id.Next().Children()[0]); got != want {
+			t.Errorf("%v.MaxTile(%v.Next().Children()[0]) = %v, want %v", id, id, got, want)
+		}
+
+		if got, want := id, id.MaxTile(id.Next().Children()[1].Children()[0]); got != want {
+			t.Errorf("%v.MaxTile(%v.Next().Children()[1].Children()[0]) = %v, want %v", id, id, got, want)
+		}
+	}
 }
 
 // TODO(roberts): Remaining tests to convert.
 //
 // DistanceFromBegin
-// MaximumTile
 // Coverage
 // VertexNeighbors needs AppendAllNeighbors test.
 // ExpandedByDistanceUV
+// TraversalOrder

@@ -680,4 +680,50 @@ func (ci CellID) boundUV() r2.Rect {
 
 }
 
-// BUG(dsymonds): The major differences from the C++ version is that barely anything is implemented.
+// MaxTile returns the largest cell with the same RangeMin such that
+// RangeMax < limit.RangeMin. It returns limit if no such cell exists.
+// This method can be used to generate a small set of CellIDs that covers
+// a given range (a tiling). This example shows how to generate a tiling
+// for a semi-open range of leaf cells [start, limit):
+//
+//   for id := start.MaxTile(limit); id != limit; id = id.Next().MaxTile(limit)) { ... }
+//
+// Note that in general the cells in the tiling will be of different sizes;
+// they gradually get larger (near the middle of the range) and then
+// gradually get smaller as limit is approached.
+func (ci CellID) MaxTile(limit CellID) CellID {
+	start := ci.RangeMin()
+	if start >= limit.RangeMin() {
+		return limit
+	}
+
+	if ci.RangeMax() >= limit {
+		// The cell is too large, shrink it. Note that when generating coverings
+		// of CellID ranges, this loop usually executes only once. Also because
+		// ci.RangeMin() < limit.RangeMin(), we will always exit the loop by the
+		// time we reach a leaf cell.
+		for {
+			ci = ci.Children()[0]
+			if ci.RangeMax() < limit {
+				break
+			}
+		}
+		return ci
+	}
+
+	// The cell may be too small. Grow it if necessary. Note that generally
+	// this loop only iterates once.
+	for !ci.isFace() {
+		parent := ci.immediateParent()
+		if parent.RangeMin() != start || parent.RangeMax() >= limit {
+			break
+		}
+		ci = parent
+	}
+	return ci
+}
+
+// TODO: Differences from C++:
+// ExpandedByDistanceUV/ExpandEndpoint
+// CenterSiTi
+// AppendVertexNeighbors/AppendAllNeighbors
