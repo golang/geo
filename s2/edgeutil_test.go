@@ -1060,3 +1060,142 @@ func TestCheckDistance(t *testing.T) {
 		//}
 	}
 }
+
+func TestEdgeUtilWedges(t *testing.T) {
+	// For simplicity, all of these tests use an origin of (0, 0, 1).
+	// This shouldn't matter as long as the lower-level primitives are
+	// implemented correctly.
+	ab1 := PointFromCoords(0, 0, 1)
+
+	tests := []struct {
+		desc           string
+		a0, a1, b0, b1 Point
+		contains       bool
+		intersects     bool
+		relation       WedgeRel
+	}{
+		{
+			desc:       "Intersection in one wedge",
+			a0:         PointFromCoords(-1, 0, 10),
+			a1:         PointFromCoords(1, 2, 10),
+			b0:         PointFromCoords(0, 1, 10),
+			b1:         PointFromCoords(1, -2, 10),
+			contains:   false,
+			intersects: true,
+			relation:   WedgeProperlyOverlaps,
+		},
+		{
+			desc:       "Intersection in two wedges",
+			a0:         PointFromCoords(-1, -1, 10),
+			a1:         PointFromCoords(1, -1, 10),
+			b0:         PointFromCoords(1, 0, 10),
+			b1:         PointFromCoords(-1, 1, 10),
+			contains:   false,
+			intersects: true,
+			relation:   WedgeProperlyOverlaps,
+		},
+		{
+			desc:       "Normal containment",
+			a0:         PointFromCoords(-1, -1, 10),
+			a1:         PointFromCoords(1, -1, 10),
+			b0:         PointFromCoords(-1, 0, 10),
+			b1:         PointFromCoords(1, 0, 10),
+			contains:   true,
+			intersects: true,
+			relation:   WedgeProperlyContains,
+		},
+		{
+			desc:       "Containment with equality on one side",
+			a0:         PointFromCoords(2, 1, 10),
+			a1:         PointFromCoords(-1, -1, 10),
+			b0:         PointFromCoords(2, 1, 10),
+			b1:         PointFromCoords(1, -5, 10),
+			contains:   true,
+			intersects: true,
+			relation:   WedgeProperlyContains,
+		},
+		{
+			desc:       "Containment with equality on the other side",
+			a0:         PointFromCoords(2, 1, 10),
+			a1:         PointFromCoords(-1, -1, 10),
+			b0:         PointFromCoords(1, -2, 10),
+			b1:         PointFromCoords(-1, -1, 10),
+			contains:   true,
+			intersects: true,
+			relation:   WedgeProperlyContains,
+		},
+		{
+			desc:       "Containment with equality on both sides",
+			a0:         PointFromCoords(-2, 3, 10),
+			a1:         PointFromCoords(4, -5, 10),
+			b0:         PointFromCoords(-2, 3, 10),
+			b1:         PointFromCoords(4, -5, 10),
+			contains:   true,
+			intersects: true,
+			relation:   WedgeEquals,
+		},
+		{
+			desc:       "Disjoint with equality on one side",
+			a0:         PointFromCoords(-2, 3, 10),
+			a1:         PointFromCoords(4, -5, 10),
+			b0:         PointFromCoords(4, -5, 10),
+			b1:         PointFromCoords(-2, -3, 10),
+			contains:   false,
+			intersects: false,
+			relation:   WedgeIsDisjoint,
+		},
+		{
+			desc:       "Disjoint with equality on the other side",
+			a0:         PointFromCoords(-2, 3, 10),
+			a1:         PointFromCoords(0, 5, 10),
+			b0:         PointFromCoords(4, -5, 10),
+			b1:         PointFromCoords(-2, 3, 10),
+			contains:   false,
+			intersects: false,
+			relation:   WedgeIsDisjoint,
+		},
+		{
+			desc:       "Disjoint with equality on both sides",
+			a0:         PointFromCoords(-2, 3, 10),
+			a1:         PointFromCoords(4, -5, 10),
+			b0:         PointFromCoords(4, -5, 10),
+			b1:         PointFromCoords(-2, 3, 10),
+			contains:   false,
+			intersects: false,
+			relation:   WedgeIsDisjoint,
+		},
+		{
+			desc:       "B contains A with equality on one side",
+			a0:         PointFromCoords(2, 1, 10),
+			a1:         PointFromCoords(1, -5, 10),
+			b0:         PointFromCoords(2, 1, 10),
+			b1:         PointFromCoords(-1, -1, 10),
+			contains:   false,
+			intersects: true,
+			relation:   WedgeIsProperlyContained,
+		},
+
+		{
+			desc:       "B contains A with equality on the other side",
+			a0:         PointFromCoords(2, 1, 10),
+			a1:         PointFromCoords(1, -5, 10),
+			b0:         PointFromCoords(-2, 1, 10),
+			b1:         PointFromCoords(1, -5, 10),
+			contains:   false,
+			intersects: true,
+			relation:   WedgeIsProperlyContained,
+		},
+	}
+
+	for _, test := range tests {
+		if got := WedgeContains(test.a0, ab1, test.a1, test.b0, test.b1); got != test.contains {
+			t.Errorf("%s: WedgeContains(%v, %v, %v, %v, %v) = %t, want %t", test.desc, test.a0, ab1, test.a1, test.b0, test.b1, got, test.contains)
+		}
+		if got := WedgeIntersects(test.a0, ab1, test.a1, test.b0, test.b1); got != test.intersects {
+			t.Errorf("%s: WedgeIntersects(%v, %v, %v, %v, %v) = %t, want %t", test.desc, test.a0, ab1, test.a1, test.b0, test.b1, got, test.intersects)
+		}
+		if got := WedgeRelation(test.a0, ab1, test.a1, test.b0, test.b1); got != test.relation {
+			t.Errorf("%s: WedgeRelation(%v, %v, %v, %v, %v) = %v, want %v", test.desc, test.a0, ab1, test.a1, test.b0, test.b1, got, test.relation)
+		}
+	}
+}
