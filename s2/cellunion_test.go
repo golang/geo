@@ -659,3 +659,65 @@ func TestCellUnionLeafCellsCovered(t *testing.T) {
 		}
 	}
 }
+
+func TestCellUnionFromRange(t *testing.T) {
+	for iter := 0; iter < 100; iter++ {
+		min := randomCellIDForLevel(maxLevel)
+		max := randomCellIDForLevel(maxLevel)
+		if min > max {
+			min, max = max, min
+		}
+
+		cu := CellUnionFromRange(min, max.Next())
+		if len(cu) <= 0 {
+			t.Errorf("len(CellUnionFromRange(%v, %v)) = %d, want > 0", min, max.Next(), len(cu))
+		}
+		if min != cu[0].RangeMin() {
+			t.Errorf("%v.RangeMin of CellUnion should not be below the minimum value it was created from %v", cu[0], min)
+		}
+		if max != cu[len(cu)-1].RangeMax() {
+			t.Errorf("%v.RangeMax of CellUnion should not be above the maximum value it was created from %v", cu[len(cu)-1], max)
+		}
+		for i := 1; i < len(cu); i++ {
+			if got, want := cu[i].RangeMin(), cu[i-1].RangeMax().Next(); got != want {
+				t.Errorf("%v.RangeMin() = %v, want %v", cu[i], got, want)
+			}
+		}
+	}
+
+	// Focus on test cases that generate an empty or full range.
+
+	// Test an empty range before the minimum CellID.
+	idBegin := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
+	cu := CellUnionFromRange(idBegin, idBegin)
+	if len(cu) != 0 {
+		t.Errorf("CellUnionFromRange with begin and end as the first CellID should be empty, got %d", len(cu))
+	}
+
+	// Test an empty range after the maximum CellID.
+	idEnd := CellIDFromFace(5).ChildEndAtLevel(maxLevel)
+	cu = CellUnionFromRange(idEnd, idEnd)
+	if len(cu) != 0 {
+		t.Errorf("CellUnionFromRange with begin and end as the last CellID should be empty, got %d", len(cu))
+	}
+
+	// Test the full sphere.
+	cu = CellUnionFromRange(idBegin, idEnd)
+	if len(cu) != 6 {
+		t.Errorf("CellUnionFromRange from first CellID to last CellID should have 6 cells, got %d", len(cu))
+	}
+
+	for i := 0; i < len(cu); i++ {
+		if !cu[i].isFace() {
+			t.Errorf("CellUnionFromRange for full sphere cu[%d].isFace() = %t, want %t", i, cu[i].isFace(), true)
+		}
+	}
+}
+
+func BenchmarkCellUnionFromRange(b *testing.B) {
+	x := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
+	y := CellIDFromFace(5).ChildEndAtLevel(maxLevel)
+	for i := 0; i < b.N; i++ {
+		CellUnionFromRange(x, y)
+	}
+}

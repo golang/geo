@@ -23,9 +23,23 @@ import (
 // A CellUnion is a collection of CellIDs.
 //
 // It is normalized if it is sorted, and does not contain redundancy.
-// Specifically, it may not contain the same CellID twice, nor a CellID that is contained by another,
-// nor the four sibling CellIDs that are children of a single higher level CellID.
+// Specifically, it may not contain the same CellID twice, nor a CellID that
+// is contained by another, nor the four sibling CellIDs that are children of
+// a single higher level CellID.
 type CellUnion []CellID
+
+// CellUnionFromRange creates a CellUnion that covers the half-open range
+// of leaf cells [begin, end). If begin == end the resulting union is empty.
+// This requires that begin and end are both leaves, and begin <= end.
+// To create a closed-ended range, pass in end.Next().
+func CellUnionFromRange(begin, end CellID) CellUnion {
+	// We repeatedly add the largest cell we can.
+	var cu CellUnion
+	for id := begin.MaxTile(end); id != end; id = id.Next().MaxTile(end) {
+		cu = append(cu, id)
+	}
+	return cu
+}
 
 // Normalize normalizes the CellUnion.
 func (cu *CellUnion) Normalize() {
@@ -218,7 +232,5 @@ func (cu *CellUnion) LeafCellsCovered() int64 {
 //  Contains(CellUnion)/Intersects(CellUnion)
 //  Union(CellUnion)/Intersection(CellUnion)/Difference(CellUnion)
 //  Expand
-//  IntersectsCellID
-//  CapBound
 //  ContainsPoint
 //  AverageArea/ApproxArea/ExactArea
