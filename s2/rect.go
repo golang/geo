@@ -291,7 +291,7 @@ func (r Rect) ContainsPoint(p Point) bool {
 	return r.ContainsLatLng(LatLngFromPoint(p))
 }
 
-// intersectsLatEdge reports if the edge AB intersects the given edge of constant
+// intersectsLatEdge reports whether the edge AB intersects the given edge of constant
 // latitude. Requires the points to have unit length.
 func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
 	// Unfortunately, lines of constant latitude are curves on
@@ -348,7 +348,7 @@ func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
 	return false
 }
 
-// intersectsLngEdge reports if the edge AB intersects the given edge of constant
+// intersectsLngEdge reports whether the edge AB intersects the given edge of constant
 // longitude. Requires the points to have unit length.
 func intersectsLngEdge(a, b Point, lat r1.Interval, lng s1.Angle) bool {
 	// The nice thing about edges of constant longitude is that

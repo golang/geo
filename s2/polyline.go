@@ -101,13 +101,13 @@ func (p Polyline) RectBound() Rect {
 	return rb.RectBound()
 }
 
-// ContainsCell reports if this Polyline contains the given Cell. Always returns false
+// ContainsCell reports whether this Polyline contains the given Cell. Always returns false
 // because "containment" is not numerically well-defined except at the Polyline vertices.
 func (p Polyline) ContainsCell(cell Cell) bool {
 	return false
 }
 
-// IntersectsCell reports if this Polyline intersects the given Cell.
+// IntersectsCell reports whether this Polyline intersects the given Cell.
 func (p Polyline) IntersectsCell(cell Cell) bool {
 	if len(p) == 0 {
 		return false

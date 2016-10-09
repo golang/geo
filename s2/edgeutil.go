@@ -1257,7 +1257,7 @@ func WedgeRelation(a0, ab1, a2, b0, b2 Point) WedgeRel {
 	return WedgeProperlyOverlaps
 }
 
-// WedgeContains reports if non-empty wedge A=(a0, ab1, a2) contains B=(b0, ab1, b2).
+// WedgeContains reports whether non-empty wedge A=(a0, ab1, a2) contains B=(b0, ab1, b2).
 // Equivalent to WedgeRelation == WedgeProperlyContains || WedgeEquals.
 func WedgeContains(a0, ab1, a2, b0, b2 Point) bool {
 	// For A to contain B (where each loop interior is defined to be its left
@@ -1266,7 +1266,7 @@ func WedgeContains(a0, ab1, a2, b0, b2 Point) bool {
 	return OrderedCCW(a2, b2, b0, ab1) && OrderedCCW(b0, a0, a2, ab1)
 }
 
-// WedgeIntersects reports if non-empty wedge A=(a0, ab1, a2) intersects B=(b0, ab1, b2).
+// WedgeIntersects reports whether non-empty wedge A=(a0, ab1, a2) intersects B=(b0, ab1, b2).
 // Equivalent to WedgeRelation == WedgeIsDisjoint
 func WedgeIntersects(a0, ab1, a2, b0, b2 Point) bool {
 	// For A not to intersect B (where each loop interior is defined to be
