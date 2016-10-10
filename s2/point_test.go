@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
 
 func TestOriginPoint(t *testing.T) {
@@ -458,6 +459,62 @@ func TestTrueCentroid(t *testing.T) {
 		if got.Distance(want.Vector) >= 2e-8 {
 			t.Errorf("TrueCentroid(%v, %v, %v).Normalize() = %v, want %v", p0, p1, p2, got, want)
 		}
+	}
+}
+
+func TestPointRegularPoints(t *testing.T) {
+	// Conversion to/from degrees has a little more variability than the default epsilon.
+	const epsilon = 1e-13
+	center := PointFromLatLng(LatLngFromDegrees(80, 135))
+	radius := s1.Degree * 20
+	pts := regularPoints(center, radius, 4)
+
+	if len(pts) != 4 {
+		t.Errorf("regularPoints with 4 vertices should have 4 vertices, got %d", len(pts))
+	}
+
+	lls := []LatLng{
+		LatLngFromPoint(pts[0]),
+		LatLngFromPoint(pts[1]),
+		LatLngFromPoint(pts[2]),
+		LatLngFromPoint(pts[3]),
+	}
+	cll := LatLngFromPoint(center)
+
+	// Make sure that the radius is correct.
+	wantDist := 20.0
+	for i, ll := range lls {
+		if got := cll.Distance(ll).Degrees(); !float64Near(got, wantDist, epsilon) {
+			t.Errorf("Vertex %d distance from center = %v, want %v", i, got, wantDist)
+		}
+	}
+
+	// Make sure the angle between each point is correct.
+	wantAngle := math.Pi / 2
+	for i := 0; i < len(pts); i++ {
+		// Mod the index by 4 to wrap the values at each end.
+		v0, v1, v2 := pts[(4+i+1)%4], pts[(4+i)%4], pts[(4+i-1)%4]
+		if got := float64(v0.Sub(v1.Vector).Angle(v2.Sub(v1.Vector))); !float64Eq(got, wantAngle) {
+			t.Errorf("(%v-%v).Angle(%v-%v) = %v, want %v", v0, v1, v1, v2, got, wantAngle)
+		}
+	}
+
+	// Make sure that all edges of the polygon have the same length.
+	wantLength := 27.990890717782829
+	for i := 0; i < len(lls); i++ {
+		ll1, ll2 := lls[i], lls[(i+1)%4]
+		if got := ll1.Distance(ll2).Degrees(); !float64Near(got, wantLength, epsilon) {
+			t.Errorf("%v.Distance(%v) = %v, want %v", ll1, ll2, got, wantLength)
+		}
+	}
+
+	// Spot check an actual coordinate now that we know the points are spaced
+	// evenly apart at the same angles and radii.
+	if got, want := lls[0].Lat.Degrees(), 62.162880741097204; !float64Near(got, want, epsilon) {
+		t.Errorf("%v.Lat = %v, want %v", lls[0], got, want)
+	}
+	if got, want := lls[0].Lng.Degrees(), 103.11051028343407; !float64Near(got, want, epsilon) {
+		t.Errorf("%v.Lng = %v, want %v", lls[0], got, want)
 	}
 }
 

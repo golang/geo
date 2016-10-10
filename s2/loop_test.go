@@ -475,3 +475,11 @@ func TestLoopFromCell(t *testing.T) {
 		t.Errorf("loopFromCell's RectBound countains the original cells RectBound, but should not")
 	}
 }
+
+func TestLoopRegularLoop(t *testing.T) {
+	loop := RegularLoop(PointFromLatLng(LatLngFromDegrees(80, 135)), 20*s1.Degree, 4)
+	if len(loop.vertices) != 4 {
+		t.Errorf("RegularLoop with 4 vertices should have 4 vertices, got %d", len(loop.vertices))
+	}
+	// The actual Points values are already tested in the s2point_test method TestRegularPoints.
+}

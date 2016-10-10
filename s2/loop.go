@@ -269,4 +269,14 @@ func (l Loop) ContainsPoint(p Point) bool {
 	return inside
 }
 
-// BUG(): The major differences from the C++ version is pretty much everything.
+// RegularLoop creates a loop with the given number of vertices, all
+// located on a circle of the specified radius around the given center.
+func RegularLoop(center Point, radius s1.Angle, numVertices int) *Loop {
+	return RegularLoopForFrame(getFrame(center), radius, numVertices)
+}
+
+// RegularLoopForFrame creates a loop centered around the z-axis of the given
+// coordinate frame, with the first vertex in the direction of the positive x-axis.
+func RegularLoopForFrame(frame matrix3x3, radius s1.Angle, numVertices int) *Loop {
+	return LoopFromPoints(regularPointsForFrame(frame, radius, numVertices))
+}

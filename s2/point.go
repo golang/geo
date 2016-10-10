@@ -449,5 +449,31 @@ func PlanarCentroid(a, b, c Point) Point {
 	return Point{a.Add(b.Vector).Add(c.Vector).Mul(1. / 3)}
 }
 
-// TODO(dnadasi):
-//   - Maybe more Area methods?
+// regularPoints generates a slice of points shaped as a regular polygon with
+// the numVertices vertices, all located on a circle of the specified angular radius
+// around the center. The radius is the actual distance from center to each vertex.
+func regularPoints(center Point, radius s1.Angle, numVertices int) []Point {
+	return regularPointsForFrame(getFrame(center), radius, numVertices)
+}
+
+// regularPointsForFrame generates a slice of points shaped as a regular polygon
+// with numVertices vertices, all on a circle of the specified angular radius around
+// the center. The radius is the actual distance from the center to each vertex.
+func regularPointsForFrame(frame matrix3x3, radius s1.Angle, numVertices int) []Point {
+	// We construct the loop in the given frame coordinates, with the center at
+	// (0, 0, 1). For a loop of radius r, the loop vertices have the form
+	// (x, y, z) where x^2 + y^2 = sin(r) and z = cos(r). The distance on the
+	// sphere (arc length) from each vertex to the center is acos(cos(r)) = r.
+	z := math.Cos(radius.Radians())
+	r := math.Sin(radius.Radians())
+	radianStep := 2 * math.Pi / float64(numVertices)
+	var vertices []Point
+
+	for i := 0; i < numVertices; i++ {
+		angle := float64(i) * radianStep
+		p := PointFromCoords(r*math.Cos(angle), r*math.Sin(angle), z)
+		vertices = append(vertices, Point{fromFrame(frame, p).Normalize()})
+	}
+
+	return vertices
+}

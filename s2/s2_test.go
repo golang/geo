@@ -253,6 +253,17 @@ func makePolyline(s string) Polyline {
 	return Polyline(parsePoints(s))
 }
 
+// concentricLoopsPolygon constructs a polygon with the specified center as a
+// number of concentric loops and vertices per loop.
+func concentricLoopsPolygon(center Point, numLoops, verticesPerLoop int) *Polygon {
+	var loops []*Loop
+	for li := 0; li < numLoops; li++ {
+		radius := s1.Angle(0.005 * float64(li+1) / float64(numLoops))
+		loops = append(loops, RegularLoop(center, radius, verticesPerLoop))
+	}
+	return PolygonFromLoops(loops)
+}
+
 // skewedInt returns a number in the range [0,2^max_log-1] with bias towards smaller numbers.
 func skewedInt(maxLog int) int {
 	base := uint32(rand.Int31n(int32(maxLog + 1)))
