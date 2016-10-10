@@ -449,6 +449,12 @@ func PlanarCentroid(a, b, c Point) Point {
 	return Point{a.Add(b.Vector).Add(c.Vector).Mul(1. / 3)}
 }
 
+// ChordAngleBetweenPoints constructs a ChordAngle corresponding to the distance
+// between the two given points. The points must be unit length.
+func ChordAngleBetweenPoints(x, y Point) s1.ChordAngle {
+	return s1.ChordAngle(math.Min(4.0, x.Sub(y.Vector).Norm2()))
+}
+
 // regularPoints generates a slice of points shaped as a regular polygon with
 // the numVertices vertices, all located on a circle of the specified angular radius
 // around the center. The radius is the actual distance from center to each vertex.
@@ -477,3 +483,6 @@ func regularPointsForFrame(frame matrix3x3, radius s1.Angle, numVertices int) []
 
 	return vertices
 }
+
+// TODO: Differences from C++
+//   - Maybe more Area methods?

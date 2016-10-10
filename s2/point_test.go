@@ -296,6 +296,29 @@ func TestPointDistance(t *testing.T) {
 	}
 }
 
+func TestChordAngleBetweenPoints(t *testing.T) {
+	for iter := 0; iter < 10; iter++ {
+		m := randomFrame()
+		x := m.col(0)
+		y := m.col(1)
+		z := m.col(2)
+
+		if got := ChordAngleBetweenPoints(z, z).Angle(); got != 0 {
+			t.Errorf("ChordAngleBetweenPoints(%v, %v) = %v, want 0", z, z, got)
+		}
+		if got, want := ChordAngleBetweenPoints(Point{z.Mul(-1)}, z).Angle().Radians(), math.Pi; !float64Near(got, want, 1e-7) {
+			t.Errorf("ChordAngleBetweenPoints(%v, %v) = %v, want %v", z.Mul(-1), z, got, want)
+		}
+		if got, want := ChordAngleBetweenPoints(x, z).Angle().Radians(), math.Pi/2; !float64Eq(got, want) {
+			t.Errorf("ChordAngleBetweenPoints(%v, %v) = %v, want %v", x, z, got, want)
+		}
+		w := Point{y.Add(z.Vector).Normalize()}
+		if got, want := ChordAngleBetweenPoints(w, z).Angle().Radians(), math.Pi/4; !float64Eq(got, want) {
+			t.Errorf("ChordAngleBetweenPoints(%v, %v) = %v, want %v", w, z, got, want)
+		}
+	}
+}
+
 func TestPointApproxEqual(t *testing.T) {
 	tests := []struct {
 		x1, y1, z1 float64
