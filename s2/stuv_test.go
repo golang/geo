@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"math"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -42,6 +43,54 @@ func TestUVNorms(t *testing.T) {
 				t.Errorf("VNorm not orthogonal to the face(%d)", face)
 			}
 		}
+	}
+}
+
+func TestFaceUVToXYZ(t *testing.T) {
+	// Check that each face appears exactly once.
+	var sum r3.Vector
+	for face := 0; face < 6; face++ {
+		center := faceUVToXYZ(face, 0, 0)
+		if !center.ApproxEqual(unitNorm(face).Vector) {
+			t.Errorf("faceUVToXYZ(%d, 0, 0) != unitNorm(%d), should be equal", face, face)
+		}
+		switch center.LargestComponent() {
+		case r3.XAxis:
+			if math.Abs(center.X) != 1 {
+				t.Errorf("%v.X = %v, want %v", center, math.Abs(center.X), 1)
+			}
+		case r3.YAxis:
+			if math.Abs(center.Y) != 1 {
+				t.Errorf("%v.Y = %v, want %v", center, math.Abs(center.Y), 1)
+			}
+		default:
+			if math.Abs(center.Z) != 1 {
+				t.Errorf("%v.Z = %v, want %v", center, math.Abs(center.Z), 1)
+			}
+		}
+		sum = sum.Add(center.Abs())
+
+		// Check that each face has a right-handed coordinate system.
+		if got := uAxis(face).Vector.Cross(vAxis(face).Vector).Dot(unitNorm(face).Vector); got != 1 {
+			t.Errorf("right-handed check failed. uAxis(%d).Cross(vAxis(%d)).Dot(unitNorm%v) = %d, want 1", face, face, face, got)
+		}
+
+		// Check that the Hilbert curves on each face combine to form a
+		// continuous curve over the entire cube.
+		// The Hilbert curve on each face starts at (-1,-1) and terminates
+		// at either (1,-1) (if axes not swapped) or (-1,1) (if swapped).
+		var sign float64 = 1
+		if face&swapMask == 1 {
+			sign = -1
+		}
+		if faceUVToXYZ(face, sign, -sign) != faceUVToXYZ((face+1)%6, -1, -1) {
+			t.Errorf("faceUVToXYZ(%v, %v, %v) != faceUVToXYZ(%v, -1, -1)", face, sign, -sign, (face+1)%6)
+		}
+	}
+
+	// Adding up the absolute value all all the face normals should equal 2 on each axis.
+	if !sum.ApproxEqual(r3.Vector{2, 2, 2}) {
+		t.Errorf("sum of the abs of the 6 face norms should = %v, got %v", r3.Vector{2, 2, 2}, sum)
 	}
 }
 

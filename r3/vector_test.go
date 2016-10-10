@@ -291,3 +291,26 @@ func TestIdentities(t *testing.T) {
 		}
 	}
 }
+
+func TestLargestSmallestComponents(t *testing.T) {
+	tests := []struct {
+		v                 Vector
+		largest, smallest Axis
+	}{
+		{Vector{0, 0, 0}, ZAxis, ZAxis},
+		{Vector{1, 0, 0}, XAxis, ZAxis},
+		{Vector{1, -1, 0}, YAxis, ZAxis},
+		{Vector{-1, -1.1, -1.1}, ZAxis, XAxis},
+		{Vector{0.5, -0.4, -0.5}, ZAxis, YAxis},
+		{Vector{1e-15, 1e-14, 1e-13}, ZAxis, XAxis},
+	}
+
+	for _, test := range tests {
+		if got := test.v.LargestComponent(); got != test.largest {
+			t.Errorf("%v.LargestComponent() = %v, want %v", test.v, got, test.largest)
+		}
+		if got := test.v.SmallestComponent(); got != test.smallest {
+			t.Errorf("%v.SmallestComponent() = %v, want %v", test.v, got, test.smallest)
+		}
+	}
+}
