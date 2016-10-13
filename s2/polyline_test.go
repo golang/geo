@@ -76,7 +76,7 @@ func TestPolylineShape(t *testing.T) {
 
 	empty := &Polyline{}
 	if got, want := empty.NumEdges(), 0; got != want {
-		t.Errorf("%v.NumEdges() = %d, want %d", shape, got, want)
+		t.Errorf("%v.NumEdges() = %d, want %d", empty, got, want)
 	}
 }
 
