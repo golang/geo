@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"math"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -233,6 +234,54 @@ func TestPredicatesRobustSign(t *testing.T) {
 			t.Errorf("RobustSign(%v,%v,%v) = %v, want not Indeterminate", x1, x2, y1.Mul(-1), got)
 		}
 	*/
+}
+
+func TestPredicatesStableSignFailureRate(t *testing.T) {
+	const earthRadiusKm = 6371.01
+	const iters = 1000
+
+	// Verify that stableSign is able to handle most cases where the three
+	// points are as collinear as possible. (For reference, triageSign fails
+	// almost 100% of the time on this test.)
+	//
+	// Note that the failure rate *decreases* as the points get closer together,
+	// and the decrease is approximately linear. For example, the failure rate
+	// is 0.4% for collinear points spaced 1km apart, but only 0.0004% for
+	// collinear points spaced 1 meter apart.
+	//
+	//  1km spacing: <  1% (actual is closer to 0.4%)
+	// 10km spacing: < 10% (actual is closer to 4%)
+	want := 0.01
+	spacing := 1.0
+
+	// Estimate the probability that stableSign will not be able to compute
+	// the determinant sign of a triangle A, B, C consisting of three points
+	// that are as collinear as possible and spaced the given distance apart
+	// by counting up the times it returns Indeterminate.
+	failureCount := 0
+	m := math.Tan(spacing / earthRadiusKm)
+	for iter := 0; iter < iters; iter++ {
+		f := randomFrame()
+		a := f.col(0)
+		x := f.col(1)
+
+		b := Point{a.Sub(x.Mul(m)).Normalize()}
+		c := Point{a.Add(x.Mul(m)).Normalize()}
+		sign := stableSign(a, b, c)
+		if sign != Indeterminate {
+			// TODO(roberts): Once exactSign is implemented, uncomment this case.
+			//if got := exactSign(a, b, c, true); got != sign {
+			//	t.Errorf("exactSign(%v, %v, %v, true) = %v, want %v", a, b, c, got, sign)
+			//}
+		} else {
+			failureCount++
+		}
+	}
+
+	rate := float64(failureCount) / float64(iters)
+	if rate >= want {
+		t.Errorf("stableSign failure rate for spacing %v km = %v, want %v", spacing, rate, want)
+	}
 }
 
 func BenchmarkSign(b *testing.B) {

@@ -145,11 +145,11 @@ func RobustSign(a, b, c Point) Direction {
 // points are rare in practice so it seems better to simply fall back to
 // exact arithmetic in that case.
 func stableSign(a, b, c Point) Direction {
-	ab := a.Sub(b.Vector)
+	ab := b.Sub(a.Vector)
 	ab2 := ab.Norm2()
-	bc := b.Sub(c.Vector)
+	bc := c.Sub(b.Vector)
 	bc2 := bc.Norm2()
-	ca := c.Sub(a.Vector)
+	ca := a.Sub(c.Vector)
 	ca2 := ca.Norm2()
 
 	// Now compute the determinant ((A-C)x(B-C)).C, where the vertices have been
@@ -170,7 +170,7 @@ func stableSign(a, b, c Point) Direction {
 		e1, e2, op = bc, ab, b.Vector
 	}
 
-	det := e1.Cross(e2).Dot(op)
+	det := -e1.Cross(e2).Dot(op)
 	maxErr := detErrorMultiplier * math.Sqrt(e1.Norm2()*e2.Norm2())
 
 	// If the determinant isn't zero, within maxErr, we know definitively the point ordering.
