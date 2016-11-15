@@ -144,3 +144,41 @@ func (v Vector) SmallestComponent() Axis {
 	}
 	return ZAxis
 }
+
+// Cmp compares v and ov lexicographically and returns:
+//
+//   -1 if v <  ov
+//    0 if v == ov
+//   +1 if v >  ov
+//
+// This method is based on C++'s std::lexicographical_compare. Two entities
+// are compared element by element with the given operator. The first mismatch
+// defines which is less (or greater) than the other. If both have equivalent
+// values they are lexicographically equal.
+func (v Vector) Cmp(ov Vector) int {
+	if v.X < ov.X {
+		return -1
+	}
+	if v.X > ov.X {
+		return 1
+	}
+
+	// First elements were the same, try the next.
+	if v.Y < ov.Y {
+		return -1
+	}
+	if v.Y > ov.Y {
+		return 1
+	}
+
+	// Second elements were the same return the final compare.
+	if v.Z < ov.Z {
+		return -1
+	}
+	if v.Z > ov.Z {
+		return 1
+	}
+
+	// Both are equal
+	return 0
+}

@@ -23,7 +23,7 @@ import (
 
 func float64Eq(x, y float64) bool { return math.Abs(x-y) < 1e-14 }
 
-func TestNorm(t *testing.T) {
+func TestVectorNorm(t *testing.T) {
 	tests := []struct {
 		v    Vector
 		want float64
@@ -40,7 +40,7 @@ func TestNorm(t *testing.T) {
 	}
 }
 
-func TestNorm2(t *testing.T) {
+func TestVectorNorm2(t *testing.T) {
 	tests := []struct {
 		v    Vector
 		want float64
@@ -59,7 +59,7 @@ func TestNorm2(t *testing.T) {
 	}
 }
 
-func TestNormalize(t *testing.T) {
+func TestVectorNormalize(t *testing.T) {
 	vectors := []Vector{
 		{1, 0, 0},
 		{0, 1, 0},
@@ -79,7 +79,7 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
-func TestIsUnit(t *testing.T) {
+func TestVectorIsUnit(t *testing.T) {
 	const epsilon = 1e-14
 	tests := []struct {
 		v    Vector
@@ -98,7 +98,7 @@ func TestIsUnit(t *testing.T) {
 		}
 	}
 }
-func TestDot(t *testing.T) {
+func TestVectorDot(t *testing.T) {
 	tests := []struct {
 		v1, v2 Vector
 		want   float64
@@ -121,7 +121,7 @@ func TestDot(t *testing.T) {
 	}
 }
 
-func TestCross(t *testing.T) {
+func TestVectorCross(t *testing.T) {
 	tests := []struct {
 		v1, v2, want Vector
 	}{
@@ -137,7 +137,7 @@ func TestCross(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
+func TestVectorAdd(t *testing.T) {
 	tests := []struct {
 		v1, v2, want Vector
 	}{
@@ -153,7 +153,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func TestSub(t *testing.T) {
+func TestVectorSub(t *testing.T) {
 	tests := []struct {
 		v1, v2, want Vector
 	}{
@@ -169,7 +169,7 @@ func TestSub(t *testing.T) {
 	}
 }
 
-func TestDistance(t *testing.T) {
+func TestVectorDistance(t *testing.T) {
 	tests := []struct {
 		v1, v2 Vector
 		want   float64
@@ -192,7 +192,7 @@ func TestDistance(t *testing.T) {
 	}
 }
 
-func TestMul(t *testing.T) {
+func TestVectorMul(t *testing.T) {
 	tests := []struct {
 		v    Vector
 		m    float64
@@ -212,7 +212,7 @@ func TestMul(t *testing.T) {
 	}
 }
 
-func TestAngle(t *testing.T) {
+func TestVectorAngle(t *testing.T) {
 	tests := []struct {
 		v1, v2 Vector
 		want   float64 // radians
@@ -233,7 +233,7 @@ func TestAngle(t *testing.T) {
 	}
 }
 
-func TestOrtho(t *testing.T) {
+func TestVectorOrtho(t *testing.T) {
 	vectors := []Vector{
 		{1, 0, 0},
 		{1, 1, 0},
@@ -252,7 +252,7 @@ func TestOrtho(t *testing.T) {
 	}
 }
 
-func TestIdentities(t *testing.T) {
+func TestVectorIdentities(t *testing.T) {
 	tests := []struct {
 		v1, v2 Vector
 	}{
@@ -292,7 +292,7 @@ func TestIdentities(t *testing.T) {
 	}
 }
 
-func TestLargestSmallestComponents(t *testing.T) {
+func TestVectorLargestSmallestComponents(t *testing.T) {
 	tests := []struct {
 		v                 Vector
 		largest, smallest Axis
@@ -311,6 +311,29 @@ func TestLargestSmallestComponents(t *testing.T) {
 		}
 		if got := test.v.SmallestComponent(); got != test.smallest {
 			t.Errorf("%v.SmallestComponent() = %v, want %v", test.v, got, test.smallest)
+		}
+	}
+}
+
+func TestVectorCmp(t *testing.T) {
+	tests := []struct {
+		a, b Vector
+		want int
+	}{
+		{Vector{0, 0, 0}, Vector{0, 0, 0}, 0},
+		{Vector{0, 0, 0}, Vector{1, 0, 0}, -1},
+		{Vector{0, 1, 0}, Vector{0, 0, 0}, 1},
+		{Vector{1, 2, 3}, Vector{3, 2, 1}, -1},
+		{Vector{-1, 0, 0}, Vector{0, 0, -1}, -1},
+		{Vector{8, 6, 4}, Vector{7, 5, 3}, 1},
+		{Vector{-1, -0.5, 0}, Vector{0, 0, 0.1}, -1},
+		{Vector{1, 2, 3}, Vector{2, 3, 4}, -1},
+		{Vector{1.23, 4.56, 7.89}, Vector{1.23, 4.56, 7.89}, 0},
+	}
+
+	for _, test := range tests {
+		if got := test.a.Cmp(test.b); got != test.want {
+			t.Errorf("%v.Cmp(%v) = %d, want %d", test.a, test.b, got, test.want)
 		}
 	}
 }
