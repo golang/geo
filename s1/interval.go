@@ -48,6 +48,21 @@ func IntervalFromEndpoints(lo, hi float64) Interval {
 	return i
 }
 
+// IntervalFromPointPair returns the minimal interval containing the two given points.
+// Both arguments must be in [-π,π].
+func IntervalFromPointPair(a, b float64) Interval {
+	if a == -math.Pi {
+		a = math.Pi
+	}
+	if b == -math.Pi {
+		b = math.Pi
+	}
+	if positiveDistance(a, b) <= math.Pi {
+		return Interval{a, b}
+	}
+	return Interval{b, a}
+}
+
 // EmptyInterval returns an empty interval.
 func EmptyInterval() Interval { return Interval{math.Pi, -math.Pi} }
 

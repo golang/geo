@@ -69,6 +69,24 @@ func TestConstructors(t *testing.T) {
 	}
 }
 
+func TestIntervalFromPointPair(t *testing.T) {
+	tests := []struct {
+		a, b float64
+		want Interval
+	}{
+		{-math.Pi, math.Pi, pi},
+		{math.Pi, -math.Pi, pi},
+		{mid34.Hi, mid34.Lo, mid34},
+		{mid23.Lo, mid23.Hi, mid23},
+	}
+	for _, test := range tests {
+		got := IntervalFromPointPair(test.a, test.b)
+		if got != test.want {
+			t.Errorf("IntervalFromPointPair(%f, %f) = %v, want %v", test.a, test.b, got, test.want)
+		}
+	}
+}
+
 func TestSimplePredicates(t *testing.T) {
 	if !zero.IsValid() || zero.IsEmpty() || zero.IsFull() {
 		t.Errorf("Zero interval is invalid or empty or full")
