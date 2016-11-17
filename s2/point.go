@@ -24,7 +24,6 @@ import (
 )
 
 // Point represents a point on the unit sphere as a normalized 3D vector.
-// Points are guaranteed to be close to normalized.
 // Fields should be treated as read-only. Use one of the factory methods for creation.
 type Point struct {
 	r3.Vector
@@ -59,8 +58,7 @@ func OriginPoint() Point {
 // PointCross returns a Point that is orthogonal to both p and op. This is similar to
 // p.Cross(op) (the true cross product) except that it does a better job of
 // ensuring orthogonality when the Point is nearly parallel to op, it returns
-// a non-zero result even when p == op or p == -op and the result is a Point,
-// so it will have norm 1.
+// a non-zero result even when p == op or p == -op and the result is a Point.
 //
 // It satisfies the following properties (f == PointCross):
 //
@@ -79,7 +77,7 @@ func (p Point) PointCross(op Point) Point {
 		return Point{p.Ortho()}
 	}
 
-	return Point{x.Normalize()}
+	return Point{x}
 }
 
 // OrderedCCW returns true if the edges OA, OB, and OC are encountered in that

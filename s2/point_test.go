@@ -20,6 +20,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -45,24 +46,23 @@ func TestOriginPoint(t *testing.T) {
 	if dist := math.Acos(OriginPoint().Z) * earthRadiusKm; dist <= 50 {
 		t.Errorf("Origin point is to close to the North Pole. Got %v, want >= 50km", dist)
 	}
-
 }
 
 func TestPointCross(t *testing.T) {
 	tests := []struct {
-		p1x, p1y, p1z, p2x, p2y, p2z float64
+		p1x, p1y, p1z, p2x, p2y, p2z, norm float64
 	}{
-		{1, 0, 0, 1, 0, 0},
-		{1, 0, 0, 0, 1, 0},
-		{0, 1, 0, 1, 0, 0},
-		{1, 2, 3, -4, 5, -6},
+		{1, 0, 0, 1, 0, 0, 1},
+		{1, 0, 0, 0, 1, 0, 2},
+		{0, 1, 0, 1, 0, 0, 2},
+		{1, 2, 3, -4, 5, -6, 2 * math.Sqrt(934)},
 	}
 	for _, test := range tests {
-		p1 := PointFromCoords(test.p1x, test.p1y, test.p1z)
-		p2 := PointFromCoords(test.p2x, test.p2y, test.p2z)
+		p1 := Point{r3.Vector{test.p1x, test.p1y, test.p1z}}
+		p2 := Point{r3.Vector{test.p2x, test.p2y, test.p2z}}
 		result := p1.PointCross(p2)
-		if !float64Eq(result.Norm(), 1) {
-			t.Errorf("|%v ⨯ %v| = %v, want 1", p1, p2, result.Norm())
+		if !float64Eq(result.Norm(), test.norm) {
+			t.Errorf("|%v ⨯ %v| = %v, want %v", p1, p2, result.Norm(), test.norm)
 		}
 		if x := result.Dot(p1.Vector); !float64Eq(x, 0) {
 			t.Errorf("|(%v ⨯ %v) · %v| = %v, want 0", p1, p2, p1, x)
