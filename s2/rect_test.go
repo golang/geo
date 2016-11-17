@@ -656,15 +656,22 @@ func TestRectCellOps(t *testing.T) {
 			contains:   false,
 			intersects: true,
 		},
+		{
+			// from a bug report
+			r:          rectFromDegrees(34.2572864, 135.2673642, 34.2707907, 135.2995742),
+			c:          CellFromCellID(0x6007500000000000),
+			contains:   false,
+			intersects: true,
+		},
 	}
 
 	for _, test := range tests {
 		if got := test.r.ContainsCell(test.c); got != test.contains {
-			t.Errorf("%v.ContainsCell(%v) = %v, want %v", test.r, test.c, got, test.contains)
+			t.Errorf("%v.ContainsCell(%v) = %t, want %t", test.r, test.c, got, test.contains)
 		}
 
 		if got := test.r.IntersectsCell(test.c); got != test.intersects {
-			t.Errorf("%v.IntersectsCell(%v) = %v, want %v", test.r, test.c, got, test.intersects)
+			t.Errorf("%v.IntersectsCell(%v) = %t, want %t", test.r, test.c, got, test.intersects)
 		}
 	}
 
@@ -734,7 +741,7 @@ func TestRectIntersectsLatEdge(t *testing.T) {
 			lat:   44 * s1.Degree,
 			lngLo: 60 * s1.Degree,
 			lngHi: 177 * s1.Degree,
-			want:  true,
+			want:  false,
 		},
 		{
 			a:     PointFromCoords(0, 1, 1),
@@ -750,6 +757,15 @@ func TestRectIntersectsLatEdge(t *testing.T) {
 			lat:   -4 * s1.Degree,
 			lngLo: -152 * s1.Degree,
 			lngHi: 171 * s1.Degree,
+			want:  true,
+		},
+		// from a bug report
+		{
+			a:     PointFromCoords(-0.589375791872893683986945, 0.583248451588733285433364, 0.558978908075738245564423),
+			b:     PointFromCoords(-0.587388131301997518107783, 0.581281455376392863776402, 0.563104832905072516524569),
+			lat:   34.2572864 * s1.Degree,
+			lngLo: 2.3608609 * s1.Radian,
+			lngHi: 2.3614230 * s1.Radian,
 			want:  true,
 		},
 	}

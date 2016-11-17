@@ -326,7 +326,7 @@ func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
 	// also that it is contained within the given longitude interval "lng".
 
 	// Compute the range of theta values spanned by the edge AB.
-	abTheta := s1.IntervalFromEndpoints(
+	abTheta := s1.IntervalFromPointPair(
 		math.Atan2(a.Dot(y.Vector), a.Dot(x)),
 		math.Atan2(b.Dot(y.Vector), b.Dot(x)))
 
