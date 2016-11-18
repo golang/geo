@@ -71,7 +71,8 @@ func (p Point) PointCross(op Point) Point {
 	// but PointCross more accurately describes how this method is used.
 	x := p.Add(op.Vector).Cross(op.Sub(p.Vector))
 
-	if x.ApproxEqual(r3.Vector{0, 0, 0}) {
+	// Compare exactly to the 0 vector.
+	if x == (r3.Vector{}) {
 		// The only result that makes sense mathematically is to return zero, but
 		// we find it more convenient to return an arbitrary orthogonal vector.
 		return Point{p.Ortho()}
