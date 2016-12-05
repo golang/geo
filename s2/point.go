@@ -283,6 +283,27 @@ func regularPointsForFrame(frame matrix3x3, radius s1.Angle, numVertices int) []
 	return vertices
 }
 
+// CapBound returns a bounding cap for this point.
+func (p Point) CapBound() Cap {
+	return CapFromPoint(p)
+}
+
+// RectBound returns a bounding latitude-longitude rectangle from this point.
+func (p Point) RectBound() Rect {
+	return RectFromLatLng(LatLngFromPoint(p))
+}
+
+// ContainsCell returns false as Points do not contain any other S2 types.
+func (p Point) ContainsCell(c Cell) bool { return false }
+
+// IntersectsCell reports whether this Point intersects the given cell.
+func (p Point) IntersectsCell(c Cell) bool {
+	return c.ContainsPoint(p)
+}
+
+// Contains reports if this Point contains the other Point.
+func (p Point) Contains(other Point) bool { return p == other }
+
 // TODO: Differences from C++
 // Rotate
 // Angle

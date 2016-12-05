@@ -221,7 +221,7 @@ func TestPointAreaQuarterHemisphere(t *testing.T) {
 	}
 }
 
-func TestPlanarCentroid(t *testing.T) {
+func TestPointPlanarCentroid(t *testing.T) {
 	tests := []struct {
 		name             string
 		p0, p1, p2, want Point
@@ -250,7 +250,7 @@ func TestPlanarCentroid(t *testing.T) {
 	}
 }
 
-func TestTrueCentroid(t *testing.T) {
+func TestPointTrueCentroid(t *testing.T) {
 	// Test TrueCentroid with very small triangles. This test assumes that
 	// the triangle is small enough so that it is nearly planar.
 	// The centroid of a planar triangle is at the intersection of its
@@ -339,6 +339,35 @@ func TestPointRegularPoints(t *testing.T) {
 	}
 	if got, want := lls[0].Lng.Degrees(), 103.11051028343407; !float64Near(got, want, epsilon) {
 		t.Errorf("%v.Lng = %v, want %v", lls[0], got, want)
+	}
+}
+
+func TestPointRegion(t *testing.T) {
+	p := PointFromCoords(1, 0, 0)
+	r := PointFromCoords(1, 0, 0)
+	if !r.Contains(p) {
+		t.Errorf("%v.Contains(%v) = false, want true", r, p)
+	}
+	if !r.Contains(r) {
+		t.Errorf("%v.Contains(%v) = false, want true", r, r)
+	}
+	if s := PointFromCoords(1, 0, 1); r.Contains(s) {
+		t.Errorf("%v.Contains(%v) = true, want false", r, s)
+	}
+	if got, want := r.CapBound(), CapFromPoint(p); !got.ApproxEqual(want) {
+		t.Errorf("%v.CapBound() = %v, want %v", r, got, want)
+	}
+	if got, want := r.RectBound(), RectFromLatLng(LatLngFromPoint(p)); !rectsApproxEqual(got, want, epsilon, epsilon) {
+		t.Errorf("%v.RectBound() = %v, want %v", r, got, want)
+	}
+
+	// The leaf cell containing a point is still much larger than the point.
+	cell := CellFromPoint(p)
+	if r.ContainsCell(cell) {
+		t.Errorf("%v.ContainsCell(%v) = true, want false", r, cell)
+	}
+	if !r.IntersectsCell(cell) {
+		t.Errorf("%v.IntersectsCell(%v) = false, want true", r, cell)
 	}
 }
 
