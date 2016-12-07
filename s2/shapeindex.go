@@ -20,16 +20,22 @@ import (
 	"github.com/golang/geo/r2"
 )
 
-// Shape defines an interface for any s2 type that needs to be indexable.
+// Shape defines an interface for any S2 type that needs to be indexable. A shape
+// is a collection of edges that optionally defines an interior. It can be used to
+// represent a set of points, a set of polylines, or a set of polygons.
 type Shape interface {
 	// NumEdges returns the number of edges in this shape.
 	NumEdges() int
 
 	// Edge returns endpoints for the given edge index.
+	// Zero-length edges are allowed, and can be used to represent points.
 	Edge(i int) (a, b Point)
 
-	// HasInterior returns true if this shape has an interior.
-	// i.e. the Shape consists of one or more closed non-intersecting loops.
+	// HasInterior reports whether this shape has an interior. If so, it must be possible
+	// to assemble the edges into a collection of non-crossing loops.  Edges may
+	// be returned in any order, and edges may be oriented arbitrarily with
+	// respect to the shape interior.  (However, note that some Shape types
+	// may have stronger requirements.)
 	HasInterior() bool
 
 	// ContainsOrigin returns true if this shape contains s2.Origin.
@@ -147,10 +153,11 @@ type clippedEdge struct {
 	bound    r2.Rect   // Bounding box for the clipped portion
 }
 
-// ShapeIndex indexes a set of Shapes, where a Shape is some collection of
-// edges. A shape can be as simple as a single edge, or as complex as a set of loops.
-// For Shapes that have interiors, the index makes it very fast to determine which
-// Shape(s) contain a given point or region.
+// ShapeIndex indexes a set of Shapes, where a Shape is some collection of edges
+// that optionally defines an interior. It can be used to represent a set of
+// points, a set of polylines, or a set of polygons. For Shapes that have
+// interiors, the index makes it very fast to determine which Shape(s) contain
+// a given point or region.
 type ShapeIndex struct {
 	// shapes maps all shapes to their index.
 	shapes map[Shape]int32
