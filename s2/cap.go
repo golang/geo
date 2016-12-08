@@ -59,6 +59,15 @@ var (
 // (center, radius) representation. There is also support for "empty" and
 // "full" caps, which contain no points and all points respectively.
 //
+// Here are some useful relationships between the cap height (h), the cap
+// radius (r), the maximum chord length from the cap's center (d), and the
+// radius of cap's base (a).
+//
+//     h = 1 - cos(r)
+//       = 2 * sin^2(r/2)
+//   d^2 = 2 * h
+//       = a^2 + h^2
+//
 // The zero value of Cap is an invalid cap. Use EmptyCap to get a valid empty cap.
 type Cap struct {
 	center Point
@@ -402,5 +411,52 @@ func (c Cap) intersects(cell Cell, vertices [4]Point) bool {
 	return false
 }
 
-// TODO(roberts): Differences from C++
-// Centroid, Union
+// Centroid returns the true centroid of the cap multiplied by its surface area
+// The result lies on the ray from the origin through the cap's center, but it
+// is not unit length. Note that if you just want the "surface centroid", i.e.
+// the normalized result, then it is simpler to call Center.
+//
+// The reason for multiplying the result by the cap area is to make it
+// easier to compute the centroid of more complicated shapes. The centroid
+// of a union of disjoint regions can be computed simply by adding their
+// Centroid() results. Caveat: for caps that contain a single point
+// (i.e., zero radius), this method always returns the origin (0, 0, 0).
+// This is because shapes with no area don't affect the centroid of a
+// union whose total area is positive.
+func (c Cap) Centroid() Point {
+	// From symmetry, the centroid of the cap must be somewhere on the line
+	// from the origin to the center of the cap on the surface of the sphere.
+	// When a sphere is divided into slices of constant thickness by a set of
+	// parallel planes, all slices have the same surface area. This implies
+	// that the radial component of the centroid is simply the midpoint of the
+	// range of radial distances spanned by the cap. That is easily computed
+	// from the cap height.
+	if c.IsEmpty() {
+		return Point{}
+	}
+	r := (1 - c.height/2) * c.Area()
+	return Point{c.center.Mul(r)}
+
+}
+
+// Union returns the smallest cap which encloses this cap and other.
+func (c Cap) Union(other Cap) Cap {
+	// If the other cap is larger, swap c and other for the rest of the computations.
+	if c.height < other.height {
+		c, other = other, c
+	}
+
+	if c.IsFull() || other.IsEmpty() {
+		return c
+	}
+	cRadius := c.Radius()
+	otherRadius := other.Radius()
+	distance := c.center.Distance(other.center)
+	if cRadius >= distance+otherRadius {
+		return c
+	}
+
+	resRadius := 0.5 * (distance + cRadius + otherRadius)
+	resCenter := InterpolateAtDistance(0.5*(distance-cRadius+otherRadius), c.center, other.center)
+	return CapFromCenterAngle(resCenter, resRadius)
+}

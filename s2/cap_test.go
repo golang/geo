@@ -570,3 +570,121 @@ func TestCapIntersectsCell(t *testing.T) {
 		}
 	}
 }
+
+func TestCapCentroid(t *testing.T) {
+	// Empty and full caps.
+	if got, want := EmptyCap().Centroid(), (Point{}); !got.ApproxEqual(want) {
+		t.Errorf("Centroid of EmptyCap should be zero point, got %v", want)
+	}
+	if got, want := FullCap().Centroid().Norm(), 1e-15; got > want {
+		t.Errorf("Centroid of FullCap should have a Norm of 0, got %v", want)
+	}
+
+	// Random caps.
+	for i := 0; i < 100; i++ {
+		center := randomPoint()
+		height := randomUniformFloat64(0.0, 2.0)
+		c := CapFromCenterHeight(center, height)
+		got := c.Centroid()
+		want := center.Mul((1.0 - height/2.0) * c.Area())
+		if delta := got.Sub(want).Norm(); delta > 1e-15 {
+			t.Errorf("%v.Sub(%v).Norm() = %v, want %v", got, want, delta, 1e-15)
+		}
+	}
+}
+
+func TestCapUnion(t *testing.T) {
+	// Two caps which have the same center but one has a larger radius.
+	a := CapFromCenterAngle(PointFromLatLng(LatLngFromDegrees(50.0, 10.0)), s1.Degree*0.2)
+	b := CapFromCenterAngle(PointFromLatLng(LatLngFromDegrees(50.0, 10.0)), s1.Degree*0.3)
+	if !b.Contains(a) {
+		t.Errorf("%v.Contains(%v) = false, want true", b, a)
+	}
+	if got := b.ApproxEqual(a.Union(b)); !got {
+		t.Errorf("%v.ApproxEqual(%v) = %v, want true", b, a.Union(b), got)
+	}
+
+	// Two caps where one is the full cap.
+	if got := a.Union(FullCap()); !got.IsFull() {
+		t.Errorf("%v.Union(%v).IsFull() = %v, want true", a, got, got.IsFull())
+	}
+
+	// Two caps where one is the empty cap.
+	if got := a.Union(EmptyCap()); !a.ApproxEqual(got) {
+		t.Errorf("%v.Union(EmptyCap) = %v, want %v", a, got, a)
+	}
+
+	// Two caps which have different centers, one entirely encompasses the other.
+	c := CapFromCenterAngle(PointFromLatLng(LatLngFromDegrees(51.0, 11.0)), s1.Degree*1.5)
+	if !c.Contains(a) {
+		t.Errorf("%v.Contains(%v) = false, want true", c, a)
+	}
+	if got := a.Union(c).center; !got.ApproxEqual(c.center) {
+		t.Errorf("%v.Union(%v).center = %v, want %v", a, c, got, c.center)
+	}
+	if got := a.Union(c); !float64Eq(float64(got.Radius()), float64(c.Radius())) {
+		t.Errorf("%v.Union(%v).Radius = %v, want %v", a, c, got.Radius(), c.Radius())
+	}
+
+	// Two entirely disjoint caps.
+	d := CapFromCenterAngle(PointFromLatLng(LatLngFromDegrees(51.0, 11.0)), s1.Degree*0.1)
+	if d.Contains(a) {
+		t.Errorf("%v.Contains(%v) = true, want false", d, a)
+	}
+	if d.Intersects(a) {
+		t.Errorf("%v.Intersects(%v) = true, want false", d, a)
+	}
+
+	// Check union and reverse direction are the same.
+	aUnionD := a.Union(d)
+	if !aUnionD.ApproxEqual(d.Union(a)) {
+		t.Errorf("%v.Union(%v).ApproxEqual(%v.Union(%v)) = false, want true", a, d, d, a)
+	}
+	if got, want := LatLngFromPoint(aUnionD.center).Lat.Degrees(), 50.4588; !float64Near(got, want, 0.001) {
+		t.Errorf("%v.Center.Lat = %v, want %v", aUnionD, got, want)
+	}
+	if got, want := LatLngFromPoint(aUnionD.center).Lng.Degrees(), 10.4525; !float64Near(got, want, 0.001) {
+		t.Errorf("%v.Center.Lng = %v, want %v", aUnionD, got, want)
+	}
+	if got, want := aUnionD.Radius().Degrees(), 0.7425; !float64Near(got, want, 0.001) {
+		t.Errorf("%v.Radius = %v, want %v", aUnionD, got, want)
+	}
+
+	// Two partially overlapping caps.
+	e := CapFromCenterAngle(PointFromLatLng(LatLngFromDegrees(50.3, 10.3)), s1.Degree*0.2)
+	aUnionE := a.Union(e)
+	if e.Contains(a) {
+		t.Errorf("%v.Contains(%v) = false, want true", e, a)
+	}
+	if !e.Intersects(a) {
+		t.Errorf("%v.Intersects(%v) = false, want true", e, a)
+	}
+	if !aUnionE.ApproxEqual(e.Union(a)) {
+		t.Errorf("%v.Union(%v).ApproxEqual(%v.Union(%v)) = false, want true", a, e, e, a)
+	}
+	if got, want := LatLngFromPoint(aUnionE.center).Lat.Degrees(), 50.1500; !float64Near(got, want, 0.001) {
+		t.Errorf("%v.Center.Lat = %v, want %v", aUnionE, got, want)
+	}
+	if got, want := LatLngFromPoint(aUnionE.center).Lng.Degrees(), 10.1495; !float64Near(got, want, 0.001) {
+		t.Errorf("%v.Center.Lng = %v, want %v", aUnionE, got, want)
+	}
+	if got, want := aUnionE.Radius().Degrees(), 0.3781; !float64Near(got, want, 0.001) {
+		t.Errorf("%v.Radius = %v, want %v", aUnionE, got, want)
+	}
+
+	p1 := Point{PointFromCoords(0, 0, 1).Normalize()}
+	p2 := Point{PointFromCoords(0, 1, 0).Normalize()}
+	// Two very large caps, whose radius sums to in excess of 180 degrees, and
+	// whose centers are not antipodal.
+	f := CapFromCenterAngle(p1, s1.Degree*150)
+	g := CapFromCenterAngle(p2, s1.Degree*150)
+	if !f.Union(g).IsFull() {
+		t.Errorf("%v.Union(%v).IsFull() = false, want true", f, g)
+	}
+
+	// Two non-overlapping hemisphere caps with antipodal centers.
+	hemi := CapFromCenterHeight(p1, 1)
+	if !hemi.Union(hemi.Complement()).IsFull() {
+		t.Errorf("%v.Union(%v).Complement().IsFull() = false, want true", hemi, hemi.Complement())
+	}
+}
