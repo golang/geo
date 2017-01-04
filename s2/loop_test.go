@@ -195,7 +195,7 @@ func TestLoopRectBound(t *testing.T) {
 	// Create a loop that contains the complement of the arctic80 loop.
 	arctic80Inv := invert(arctic80)
 	// The highest latitude of each edge is attained at its midpoint.
-	mid := Point{arctic80Inv.vertices[0].Vector.Add(arctic80Inv.vertices[1].Vector).Mul(.5)}
+	mid := Point{arctic80Inv.Vertices[0].Vector.Add(arctic80Inv.Vertices[1].Vector).Mul(.5)}
 	if got, want := arctic80Inv.RectBound().Lat.Hi, float64(LatLngFromPoint(mid).Lat); math.Abs(got-want) > 10*dblEpsilon {
 		t.Errorf("arctic 80 inverse loop's RectBound should have a latutude hi of %v, got %v", got, want)
 	}
@@ -220,48 +220,48 @@ func TestLoopCapBound(t *testing.T) {
 }
 
 func invert(l *Loop) *Loop {
-	vertices := make([]Point, 0, len(l.vertices))
-	for i := len(l.vertices) - 1; i >= 0; i-- {
-		vertices = append(vertices, l.vertices[i])
+	vertices := make([]Point, 0, len(l.Vertices))
+	for i := len(l.Vertices) - 1; i >= 0; i-- {
+		vertices = append(vertices, l.Vertices[i])
 	}
 	return LoopFromPoints(vertices)
 }
 
 func TestLoopOriginInside(t *testing.T) {
-	if !northHemi.originInside {
+	if !northHemi.OriginInside {
 		t.Errorf("north hemisphere polygon should include origin")
 	}
-	if !northHemi3.originInside {
+	if !northHemi3.OriginInside {
 		t.Errorf("north hemisphere 3 polygon should include origin")
 	}
-	if southHemi.originInside {
+	if southHemi.OriginInside {
 		t.Errorf("south hemisphere polygon should not include origin")
 	}
-	if westHemi.originInside {
+	if westHemi.OriginInside {
 		t.Errorf("west hemisphere polygon should not include origin")
 	}
-	if !eastHemi.originInside {
+	if !eastHemi.OriginInside {
 		t.Errorf("east hemisphere polygon should include origin")
 	}
-	if nearHemi.originInside {
+	if nearHemi.OriginInside {
 		t.Errorf("near hemisphere polygon should not include origin")
 	}
-	if !farHemi.originInside {
+	if !farHemi.OriginInside {
 		t.Errorf("far hemisphere polygon should include origin")
 	}
-	if candyCane.originInside {
+	if candyCane.OriginInside {
 		t.Errorf("candy cane polygon should not include origin")
 	}
-	if !smallNECW.originInside {
+	if !smallNECW.OriginInside {
 		t.Errorf("smallNECW polygon should include origin")
 	}
-	if !arctic80.originInside {
+	if !arctic80.OriginInside {
 		t.Errorf("arctic 80 polygon should include origin")
 	}
-	if antarctic80.originInside {
+	if antarctic80.OriginInside {
 		t.Errorf("antarctic 80 polygon should not include origin")
 	}
-	if loopA.originInside {
+	if loopA.OriginInside {
 		t.Errorf("loop A polygon should not include origin")
 	}
 }
@@ -355,7 +355,7 @@ func TestLoopVertex(t *testing.T) {
 			arctic80, arctic80.Vertex(2), arctic80, arctic80.Vertex(5))
 	}
 
-	loopAroundThrice := 2 + 3*len(arctic80.vertices)
+	loopAroundThrice := 2 + 3*len(arctic80.Vertices)
 	if !pointsApproxEquals(arctic80.Vertex(2), arctic80.Vertex(loopAroundThrice), epsilon) {
 		t.Errorf("Vertex should wrap values. %v.Vertex(2) = %v != %v.Vertex(%d) = %v",
 			arctic80, arctic80.Vertex(2), arctic80, loopAroundThrice, arctic80.Vertex(loopAroundThrice))
@@ -457,11 +457,11 @@ func TestLoopEdge(t *testing.T) {
 }
 
 func rotate(l *Loop) *Loop {
-	vertices := make([]Point, 0, len(l.vertices))
-	for i := 1; i < len(l.vertices); i++ {
-		vertices = append(vertices, l.vertices[i])
+	vertices := make([]Point, 0, len(l.Vertices))
+	for i := 1; i < len(l.Vertices); i++ {
+		vertices = append(vertices, l.Vertices[i])
 	}
-	vertices = append(vertices, l.vertices[0])
+	vertices = append(vertices, l.Vertices[0])
 	return LoopFromPoints(vertices)
 }
 
@@ -478,8 +478,8 @@ func TestLoopFromCell(t *testing.T) {
 
 func TestLoopRegularLoop(t *testing.T) {
 	loop := RegularLoop(PointFromLatLng(LatLngFromDegrees(80, 135)), 20*s1.Degree, 4)
-	if len(loop.vertices) != 4 {
-		t.Errorf("RegularLoop with 4 vertices should have 4 vertices, got %d", len(loop.vertices))
+	if len(loop.Vertices) != 4 {
+		t.Errorf("RegularLoop with 4 vertices should have 4 vertices, got %d", len(loop.Vertices))
 	}
 	// The actual Points values are already tested in the s2point_test method TestRegularPoints.
 }
