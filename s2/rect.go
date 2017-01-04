@@ -31,7 +31,7 @@ type Rect struct {
 }
 
 var (
-	validRectLatRange = r1.Interval{-math.Pi / 2, math.Pi / 2}
+	validRectLatRange = r1.Interval{Lo: -math.Pi / 2, Hi: math.Pi / 2}
 	validRectLngRange = s1.FullInterval()
 )
 
@@ -44,8 +44,8 @@ func FullRect() Rect { return Rect{validRectLatRange, validRectLngRange} }
 // RectFromLatLng constructs a rectangle containing a single point p.
 func RectFromLatLng(p LatLng) Rect {
 	return Rect{
-		Lat: r1.Interval{p.Lat.Radians(), p.Lat.Radians()},
-		Lng: s1.Interval{p.Lng.Radians(), p.Lng.Radians()},
+		Lat: r1.Interval{Lo: p.Lat.Radians(), Hi: p.Lat.Radians()},
+		Lng: s1.Interval{Lo: p.Lng.Radians(), Hi: p.Lng.Radians()},
 	}
 }
 

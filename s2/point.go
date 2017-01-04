@@ -40,7 +40,7 @@ func PointFromCoords(x, y, z float64) Point {
 	if x == 0 && y == 0 && z == 0 {
 		return OriginPoint()
 	}
-	return Point{r3.Vector{x, y, z}.Normalize()}
+	return Point{r3.Vector{X: x, Y: y, Z: z}.Normalize()}
 }
 
 // OriginPoint returns a unique "origin" on the sphere for operations that need a fixed
@@ -52,7 +52,7 @@ func PointFromCoords(x, y, z float64) Point {
 // north and south poles). It should also not be on the boundary of any
 // low-level S2Cell for the same reason.
 func OriginPoint() Point {
-	return Point{r3.Vector{-0.0099994664350250197, 0.0025924542609324121, 0.99994664350250195}}
+	return Point{r3.Vector{X: -0.0099994664350250197, Y: 0.0025924542609324121, Z: 0.99994664350250195}}
 }
 
 // PointCross returns a Point that is orthogonal to both p and op. This is similar to
@@ -220,12 +220,12 @@ func TrueCentroid(a, b, c Point) Point {
 	// This code still isn't as numerically stable as it could be.
 	// The biggest potential improvement is to compute B-A and C-A more
 	// accurately so that (B-A)x(C-A) is always inside triangle ABC.
-	x := r3.Vector{a.X, b.X - a.X, c.X - a.X}
-	y := r3.Vector{a.Y, b.Y - a.Y, c.Y - a.Y}
-	z := r3.Vector{a.Z, b.Z - a.Z, c.Z - a.Z}
-	r := r3.Vector{ra, rb - ra, rc - ra}
+	x := r3.Vector{X: a.X, Y: b.X - a.X, Z: c.X - a.X}
+	y := r3.Vector{X: a.Y, Y: b.Y - a.Y, Z: c.Y - a.Y}
+	z := r3.Vector{X: a.Z, Y: b.Z - a.Z, Z: c.Z - a.Z}
+	r := r3.Vector{X: ra, Y: rb - ra, Z: rc - ra}
 
-	return Point{r3.Vector{y.Cross(z).Dot(r), z.Cross(x).Dot(r), x.Cross(y).Dot(r)}.Mul(0.5)}
+	return Point{r3.Vector{X: y.Cross(z).Dot(r), Y: z.Cross(x).Dot(r), Z: x.Cross(y).Dot(r)}.Mul(0.5)}
 }
 
 // PlanarCentroid returns the centroid of the planar triangle ABC, which is not normalized.

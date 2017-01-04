@@ -202,9 +202,29 @@ func (p *Polygon) CapBound() Cap { return p.bound.CapBound() }
 // RectBound returns a bounding latitude-longitude rectangle.
 func (p *Polygon) RectBound() Rect { return p.bound }
 
+/* CPP
+bool S2Polygon::Contains(S2Cell const& cell) const {
+  if (num_loops() == 1) {
+    return loop(0)->Contains(cell);
+  }
+
+  // We can't check bound_.Contains(cell.GetRectBound()) because S2Cell's
+  // GetRectBound() calculation is not precise.
+  if (!bound_.Contains(cell.GetCenter())) return false;
+
+  S2Loop cell_loop(cell);
+  S2Polygon cell_poly(&cell_loop);
+  bool contains = Contains(&cell_poly);
+  if (contains) DCHECK(Contains(cell.GetCenter()));
+  return contains;
+}
+*/
+
 // ContainsCell reports whether the polygon contains the given cell.
-// TODO(roberts)
-//func (p *Polygon) ContainsCell(c Cell) bool { ... }
+func (p *Polygon) ContainsCell(c Cell) bool {
+
+	return false
+}
 
 // IntersectsCell reports whether the polygon intersects the given cell.
 // TODO(roberts)

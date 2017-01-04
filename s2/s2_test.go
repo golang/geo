@@ -364,9 +364,9 @@ func perturbATowardsB(a, b Point) Point {
 		// Return a point that is exactly proportional to A and that still
 		// satisfies IsUnitLength().
 		for {
-			b := Point{a.Mul(2 - a.Norm() + 5*(randomFloat64()-0.5)*dblEpsilon)}
-			if !b.ApproxEqual(a) && b.IsUnit() {
-				return b
+			c := Point{a.Mul(2 - a.Norm() + 5*(randomFloat64()-0.5)*dblEpsilon)}
+			if !c.ApproxEqual(a) && c.IsUnit() {
+				return c
 			}
 		}
 	}

@@ -493,7 +493,7 @@ func stToIJ(s float64) int {
 //
 // is always true.
 func cellIDFromPoint(p Point) CellID {
-	f, u, v := xyzToFaceUV(r3.Vector{p.X, p.Y, p.Z})
+	f, u, v := xyzToFaceUV(r3.Vector{X: p.X, Y: p.Y, Z: p.Z})
 	i := stToIJ(uvToST(u))
 	j := stToIJ(uvToST(v))
 	return cellIDFromFaceIJ(f, i, j)
@@ -650,7 +650,7 @@ func (ci CellID) Advance(steps int64) CellID {
 // centerST return the center of the CellID in (s,t)-space.
 func (ci CellID) centerST() r2.Point {
 	_, si, ti := ci.faceSiTi()
-	return r2.Point{siTiToST(uint64(si)), siTiToST(uint64(ti))}
+	return r2.Point{X: siTiToST(uint64(si)), Y: siTiToST(uint64(ti))}
 }
 
 // sizeST returns the edge length of this CellID in (s,t)-space at the given level.
@@ -661,7 +661,7 @@ func (ci CellID) sizeST(level int) float64 {
 // boundST returns the bound of this CellID in (s,t)-space.
 func (ci CellID) boundST() r2.Rect {
 	s := ci.sizeST(ci.Level())
-	return r2.RectFromCenterSize(ci.centerST(), r2.Point{s, s})
+	return r2.RectFromCenterSize(ci.centerST(), r2.Point{X: s, Y: s})
 }
 
 // centerUV returns the center of this CellID in (u,v)-space. Note that
@@ -670,7 +670,7 @@ func (ci CellID) boundST() r2.Rect {
 // the (u,v) rectangle covered by the cell.
 func (ci CellID) centerUV() r2.Point {
 	_, si, ti := ci.faceSiTi()
-	return r2.Point{stToUV(siTiToST(uint64(si))), stToUV(siTiToST(uint64(ti)))}
+	return r2.Point{X: stToUV(siTiToST(uint64(si))), Y: stToUV(siTiToST(uint64(ti)))}
 }
 
 // boundUV returns the bound of this CellID in (u,v)-space.

@@ -337,81 +337,81 @@ func TestIJLevelToBoundUV(t *testing.T) {
 		// What should be out of bounds values, but passes the C++ code as well.
 		{
 			-1, -1, 0,
-			r2.RectFromPoints(r2.Point{-5, -5}, r2.Point{-1, -1}),
+			r2.RectFromPoints(r2.Point{X: -5, Y: -5}, r2.Point{X: -1, Y: -1}),
 		},
 		{
 			-1 * maxIJ, -1 * maxIJ, 0,
-			r2.RectFromPoints(r2.Point{-5, -5}, r2.Point{-1, -1}),
+			r2.RectFromPoints(r2.Point{X: -5, Y: -5}, r2.Point{X: -1, Y: -1}),
 		},
 		{
 			-1, -1, maxLevel,
-			r2.RectFromPoints(r2.Point{-1.0000000024835267, -1.0000000024835267},
-				r2.Point{-1, -1}),
+			r2.RectFromPoints(r2.Point{X: -1.0000000024835267, Y: -1.0000000024835267},
+				r2.Point{X: -1, Y: -1}),
 		},
 		{
 			0, 0, maxLevel + 1,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{-1, -1}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: -1, Y: -1}),
 		},
 
 		// Minimum i,j at different levels
 		{
 			0, 0, 0,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: 1, Y: 1}),
 		},
 		{
 			0, 0, maxLevel / 2,
-			r2.RectFromPoints(r2.Point{-1, -1},
-				r2.Point{-0.999918621033430099, -0.999918621033430099}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1},
+				r2.Point{X: -0.999918621033430099, Y: -0.999918621033430099}),
 		},
 		{
 			0, 0, maxLevel,
-			r2.RectFromPoints(r2.Point{-1, -1},
-				r2.Point{-0.999999997516473060, -0.999999997516473060}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1},
+				r2.Point{X: -0.999999997516473060, Y: -0.999999997516473060}),
 		},
 
 		// Just a hair off the outer bounds at different levels.
 		{
 			1, 1, 0,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: 1, Y: 1}),
 		},
 		{
 			1, 1, maxLevel / 2,
-			r2.RectFromPoints(r2.Point{-1, -1},
-				r2.Point{-0.999918621033430099, -0.999918621033430099}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1},
+				r2.Point{X: -0.999918621033430099, Y: -0.999918621033430099}),
 		},
 		{
 			1, 1, maxLevel,
-			r2.RectFromPoints(r2.Point{-0.9999999975164731, -0.9999999975164731},
-				r2.Point{-0.9999999950329462, -0.9999999950329462}),
+			r2.RectFromPoints(r2.Point{X: -0.9999999975164731, Y: -0.9999999975164731},
+				r2.Point{X: -0.9999999950329462, Y: -0.9999999950329462}),
 		},
 
 		// Center point of the i,j space at different levels.
 		{
 			maxIJ / 2, maxIJ / 2, 0,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1})},
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: 1, Y: 1})},
 		{
 			maxIJ / 2, maxIJ / 2, maxLevel / 2,
-			r2.RectFromPoints(r2.Point{-0.000040691345930099, -0.000040691345930099},
-				r2.Point{0, 0})},
+			r2.RectFromPoints(r2.Point{X: -0.000040691345930099, Y: -0.000040691345930099},
+				r2.Point{X: 0, Y: 0})},
 		{
 			maxIJ / 2, maxIJ / 2, maxLevel,
-			r2.RectFromPoints(r2.Point{-0.000000001241763433, -0.000000001241763433},
-				r2.Point{0, 0})},
+			r2.RectFromPoints(r2.Point{X: -0.000000001241763433, Y: -0.000000001241763433},
+				r2.Point{X: 0, Y: 0})},
 
 		// Maximum i, j at different levels.
 		{
 			maxIJ, maxIJ, 0,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: 1, Y: 1}),
 		},
 		{
 			maxIJ, maxIJ, maxLevel / 2,
-			r2.RectFromPoints(r2.Point{0.999918621033430099, 0.999918621033430099},
-				r2.Point{1, 1}),
+			r2.RectFromPoints(r2.Point{X: 0.999918621033430099, Y: 0.999918621033430099},
+				r2.Point{X: 1, Y: 1}),
 		},
 		{
 			maxIJ, maxIJ, maxLevel,
-			r2.RectFromPoints(r2.Point{0.999999997516473060, 0.999999997516473060},
-				r2.Point{1, 1}),
+			r2.RectFromPoints(r2.Point{X: 0.999999997516473060, Y: 0.999999997516473060},
+				r2.Point{X: 1, Y: 1}),
 		},
 	}
 

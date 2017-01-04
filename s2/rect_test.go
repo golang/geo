@@ -59,7 +59,7 @@ func TestRectArea(t *testing.T) {
 	}{
 		{Rect{}, 0},
 		{FullRect(), 4 * math.Pi},
-		{Rect{r1.Interval{0, math.Pi / 2}, s1.Interval{0, math.Pi / 2}}, math.Pi / 2},
+		{Rect{r1.Interval{Lo: 0, Hi: math.Pi / 2}, s1.Interval{Lo: 0, Hi: math.Pi / 2}}, math.Pi / 2},
 	}
 	for _, test := range tests {
 		if got := test.rect.Area(); !float64Eq(got, test.want) {
@@ -164,7 +164,7 @@ func TestRectAddPoint(t *testing.T) {
 	}
 }
 func TestRectVertex(t *testing.T) {
-	r1 := Rect{r1.Interval{0, math.Pi / 2}, s1.IntervalFromEndpoints(-math.Pi, 0)}
+	r1 := Rect{r1.Interval{Lo: 0, Hi: math.Pi / 2}, s1.IntervalFromEndpoints(-math.Pi, 0)}
 	tests := []struct {
 		r    Rect
 		i    int
@@ -187,10 +187,10 @@ func TestRectVertexCCWOrder(t *testing.T) {
 		lat := math.Pi / 4 * float64(i-2)
 		lng := math.Pi/2*float64(i-2) + 0.2
 		r := Rect{
-			r1.Interval{lat, lat + math.Pi/4},
+			r1.Interval{Lo: lat, Hi: lat + math.Pi/4},
 			s1.Interval{
-				math.Remainder(lng, 2*math.Pi),
-				math.Remainder(lng+math.Pi/2, 2*math.Pi),
+				Lo: math.Remainder(lng, 2*math.Pi),
+				Hi: math.Remainder(lng+math.Pi/2, 2*math.Pi),
 			},
 		}
 
@@ -771,7 +771,7 @@ func TestRectIntersectsLatEdge(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := intersectsLatEdge(test.a, test.b, test.lat, s1.Interval{float64(test.lngLo), float64(test.lngHi)}); got != test.want {
+		if got := intersectsLatEdge(test.a, test.b, test.lat, s1.Interval{Lo: float64(test.lngLo), Hi: float64(test.lngHi)}); got != test.want {
 			t.Errorf("intersectsLatEdge(%v, %v, %v, {%v, %v}) = %t, want %t",
 				test.a, test.b, test.lat, test.lngLo, test.lngHi, got, test.want)
 		}
@@ -853,7 +853,7 @@ func TestRectIntersectsLngEdge(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := intersectsLngEdge(test.a, test.b, r1.Interval{float64(test.latLo), float64(test.latHi)}, test.lng); got != test.want {
+		if got := intersectsLngEdge(test.a, test.b, r1.Interval{Lo: float64(test.latLo), Hi: float64(test.latHi)}, test.lng); got != test.want {
 			t.Errorf("intersectsLngEdge(%v, %v, {%v, %v}, %v) = %v, want %v",
 				test.a, test.b, test.latLo, test.latHi, test.lng, got, test.want)
 		}
