@@ -41,10 +41,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 	}{
 		{
 			"two regular edges that cross",
-			PointFromCoords(1, 2, 1),
-			PointFromCoords(1, -3, 0.5),
-			PointFromCoords(1, -0.5, -3),
-			PointFromCoords(0.1, 0.5, 3),
+			Point{r3.Vector{1, 2, 1}},
+			Point{r3.Vector{1, -3, 0.5}},
+			Point{r3.Vector{1, -0.5, -3}},
+			Point{r3.Vector{0.1, 0.5, 3}},
 			true,
 			Cross,
 			true,
@@ -52,10 +52,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 		},
 		{
 			"two regular edges that cross antipodal points",
-			PointFromCoords(1, 2, 1),
-			PointFromCoords(1, -3, 0.5),
-			PointFromCoords(-1, 0.5, 3),
-			PointFromCoords(-0.1, -0.5, -3),
+			Point{r3.Vector{1, 2, 1}},
+			Point{r3.Vector{1, -3, 0.5}},
+			Point{r3.Vector{-1, 0.5, 3}},
+			Point{r3.Vector{-0.1, -0.5, -3}},
 			true,
 			DoNotCross,
 			true,
@@ -63,10 +63,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 		},
 		{
 			"two edges on the same great circle",
-			PointFromCoords(0, 0, -1),
-			PointFromCoords(0, 1, 0),
-			PointFromCoords(0, 1, 1),
-			PointFromCoords(0, 0, 1),
+			Point{r3.Vector{0, 0, -1}},
+			Point{r3.Vector{0, 1, 0}},
+			Point{r3.Vector{0, 1, 1}},
+			Point{r3.Vector{0, 0, 1}},
 			true,
 			DoNotCross,
 			false,
@@ -74,10 +74,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 		},
 		{
 			"two edges that cross where one vertex is the OriginPoint",
-			PointFromCoords(1, 0, 0),
+			Point{r3.Vector{1, 0, 0}},
 			OriginPoint(),
-			PointFromCoords(1, -0.1, 1),
-			PointFromCoords(1, 1, -0.1),
+			Point{r3.Vector{1, -0.1, 1}},
+			Point{r3.Vector{1, 1, -0.1}},
 			true,
 			Cross,
 			true,
@@ -85,10 +85,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 		},
 		{
 			"two edges that cross antipodal points",
-			PointFromCoords(1, 0, 0),
-			PointFromCoords(0, 1, 0),
-			PointFromCoords(0, 0, -1),
-			PointFromCoords(-1, -1, 1),
+			Point{r3.Vector{1, 0, 0}},
+			Point{r3.Vector{0, 1, 0}},
+			Point{r3.Vector{0, 0, -1}},
+			Point{r3.Vector{-1, -1, 1}},
 			true,
 			DoNotCross,
 			true,
@@ -98,10 +98,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 			"two edges that share an endpoint",
 			// The Ortho() direction is (-4,0,2) and edge CD
 			// is further CCW around (2,3,4) than AB.
-			PointFromCoords(2, 3, 4),
-			PointFromCoords(-1, 2, 5),
-			PointFromCoords(7, -2, 3),
-			PointFromCoords(2, 3, 4),
+			Point{r3.Vector{2, 3, 4}},
+			Point{r3.Vector{-1, 2, 5}},
+			Point{r3.Vector{7, -2, 3}},
+			Point{r3.Vector{2, 3, 4}},
 			true,
 			MaybeCross,
 			true,
@@ -111,10 +111,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 			"two edges that barely cross near the middle of one edge",
 			// The edge AB is approximately in the x=y plane, while CD is approximately
 			// perpendicular to it and ends exactly at the x=y plane.
-			PointFromCoords(1, 1, 1),
-			PointFromCoords(1, na1, -1),
-			PointFromCoords(11, -12, -1),
-			PointFromCoords(10, 10, 1),
+			Point{r3.Vector{1, 1, 1}},
+			Point{r3.Vector{1, na1, -1}},
+			Point{r3.Vector{11, -12, -1}},
+			Point{r3.Vector{10, 10, 1}},
 			false,
 			DoNotCross, // TODO(sbeckman): Should be 1, fix once exactSign is implemented.
 			true,
@@ -122,10 +122,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 		},
 		{
 			"two edges that barely cross near the middle separated by a distance of about 1e-15",
-			PointFromCoords(1, 1, 1),
-			PointFromCoords(1, na2, -1),
-			PointFromCoords(1, -1, 0),
-			PointFromCoords(1, 1, 0),
+			Point{r3.Vector{1, 1, 1}},
+			Point{r3.Vector{1, na2, -1}},
+			Point{r3.Vector{1, -1, 0}},
+			Point{r3.Vector{1, 1, 0}},
 			false,
 			DoNotCross,
 			false,
@@ -135,10 +135,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 			"two edges that barely cross each other near the end of both edges",
 			// This example cannot be handled using regular double-precision
 			// arithmetic due to floating-point underflow.
-			PointFromCoords(0, 0, 1),
-			PointFromCoords(2, -1e-323, 1),
-			PointFromCoords(1, -1, 1),
-			PointFromCoords(1e-323, 0, 1),
+			Point{r3.Vector{0, 0, 1}},
+			Point{r3.Vector{2, -1e-323, 1}},
+			Point{r3.Vector{1, -1, 1}},
+			Point{r3.Vector{1e-323, 0, 1}},
 			false,
 			DoNotCross, // TODO(sbeckman): Should be 1, fix once exactSign is implemented.
 			false,
@@ -146,10 +146,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 		},
 		{
 			"two edges that barely cross each other near the end separated by a distance of about 1e-640",
-			PointFromCoords(0, 0, 1),
-			PointFromCoords(2, 1e-323, 1),
-			PointFromCoords(1, -1, 1),
-			PointFromCoords(1e-323, 0, 1),
+			Point{r3.Vector{0, 0, 1}},
+			Point{r3.Vector{2, 1e-323, 1}},
+			Point{r3.Vector{1, -1, 1}},
+			Point{r3.Vector{1e-323, 0, 1}},
 			false,
 			DoNotCross,
 			false,
@@ -159,10 +159,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 			"two edges that barely cross each other near the middle of one edge",
 			// Computing the exact determinant of some of the triangles in this test
 			// requires more than 2000 bits of precision.
-			PointFromCoords(1, -1e-323, -1e-323),
-			PointFromCoords(1e-323, 1, 1e-323),
-			PointFromCoords(1, -1, 1e-323),
-			PointFromCoords(1, 1, 0),
+			Point{r3.Vector{1, -1e-323, -1e-323}},
+			Point{r3.Vector{1e-323, 1, 1e-323}},
+			Point{r3.Vector{1, -1, 1e-323}},
+			Point{r3.Vector{1, 1, 0}},
 			false,
 			Cross,
 			true,
@@ -170,10 +170,10 @@ func TestEdgeutilCrossings(t *testing.T) {
 		},
 		{
 			"two edges that barely cross each other near the middle separated by a distance of about 1e-640",
-			PointFromCoords(1, 1e-323, -1e-323),
-			PointFromCoords(-1e-323, 1, 1e-323),
-			PointFromCoords(1, -1, 1e-323),
-			PointFromCoords(1, 1, 0),
+			Point{r3.Vector{1, 1e-323, -1e-323}},
+			Point{r3.Vector{-1e-323, 1, 1e-323}},
+			Point{r3.Vector{1, -1, 1e-323}},
+			Point{r3.Vector{1, 1, 0}},
 			false,
 			Cross, // TODO(sbeckman): Should be -1, fix once exactSign is implemented.
 			true,
@@ -245,8 +245,8 @@ func testCrossing(a, b, c, d Point, robust Crossing, vertex, edgeOrVertex, simpl
 
 func TestEdgeutilInterpolate(t *testing.T) {
 	// Choose test points designed to expose floating-point errors.
-	p1 := Point{PointFromCoords(0.1, 1e-30, 0.3).Normalize()}
-	p2 := Point{PointFromCoords(-0.7, -0.55, -1e30).Normalize()}
+	p1 := PointFromCoords(0.1, 1e-30, 0.3)
+	p2 := PointFromCoords(-0.7, -0.55, -1e30)
 
 	tests := []struct {
 		a, b Point
@@ -259,21 +259,21 @@ func TestEdgeutilInterpolate(t *testing.T) {
 		// Start, end, and middle of a medium-length edge.
 		{p1, p2, 0, p1},
 		{p1, p2, 1, p2},
-		{p1, p2, 0.5, Point{(p1.Add(p2.Vector)).Mul(0.5).Normalize()}},
+		{p1, p2, 0.5, Point{(p1.Add(p2.Vector)).Mul(0.5)}},
 
 		// Test that interpolation is done using distances on the sphere
 		// rather than linear distances.
 		{
-			Point{PointFromCoords(1, 0, 0).Normalize()},
-			Point{PointFromCoords(0, 1, 0).Normalize()},
+			Point{r3.Vector{1, 0, 0}},
+			Point{r3.Vector{0, 1, 0}},
 			1.0 / 3.0,
-			Point{PointFromCoords(math.Sqrt(3), 1, 0).Normalize()},
+			Point{r3.Vector{math.Sqrt(3), 1, 0}},
 		},
 		{
-			Point{PointFromCoords(1, 0, 0).Normalize()},
-			Point{PointFromCoords(0, 1, 0).Normalize()},
+			Point{r3.Vector{1, 0, 0}},
+			Point{r3.Vector{0, 1, 0}},
 			2.0 / 3.0,
-			Point{PointFromCoords(1, math.Sqrt(3), 0).Normalize()},
+			Point{r3.Vector{1, math.Sqrt(3), 0}},
 		},
 	}
 
@@ -308,7 +308,7 @@ func TestEdgeutilInterpolateOverLongEdge(t *testing.T) {
 }
 
 func TestEdgeutilInterpolateAntipodal(t *testing.T) {
-	p1 := Point{PointFromCoords(0.1, 1e-30, 0.3).Normalize()}
+	p1 := PointFromCoords(0.1, 1e-30, 0.3)
 
 	// Test that interpolation on a 180 degree edge (antipodal endpoints) yields
 	// a result with the correct distance from each endpoint.
@@ -353,13 +353,13 @@ func TestEdgeutilRectBounderMaxLatitudeSimple(t *testing.T) {
 	}{
 		// Check cases where the min/max latitude is attained at a vertex.
 		{
-			a:    PointFromCoords(1, 1, 1),
-			b:    PointFromCoords(1, -1, -1),
+			a:    Point{r3.Vector{1, 1, 1}},
+			b:    Point{r3.Vector{1, -1, -1}},
 			want: cubeLatRect,
 		},
 		{
-			a:    PointFromCoords(1, -1, 1),
-			b:    PointFromCoords(1, 1, -1),
+			a:    Point{r3.Vector{1, -1, 1}},
+			b:    Point{r3.Vector{1, 1, -1}},
 			want: cubeLatRect,
 		},
 	}
@@ -383,32 +383,32 @@ func TestEdgeutilRectBounderMaxLatitudeEdgeInterior(t *testing.T) {
 		// Max latitude, CW edge
 		{
 			math.Pi/4 + 0.5*rectErrorLat,
-			rectBoundForPoints(PointFromCoords(1, 1, 1), PointFromCoords(1, -1, 1)).Lat.Hi,
+			rectBoundForPoints(Point{r3.Vector{1, 1, 1}}, Point{r3.Vector{1, -1, 1}}).Lat.Hi,
 		},
 		// Min latitude, CW edge
 		{
 			-math.Pi/4 - 0.5*rectErrorLat,
-			rectBoundForPoints(PointFromCoords(1, -1, -1), PointFromCoords(-1, -1, -1)).Lat.Lo,
+			rectBoundForPoints(Point{r3.Vector{1, -1, -1}}, Point{r3.Vector{-1, -1, -1}}).Lat.Lo,
 		},
 		// Max latitude, CCW edge
 		{
 			math.Pi/4 + 0.5*rectErrorLat,
-			rectBoundForPoints(PointFromCoords(1, -1, 1), PointFromCoords(1, 1, 1)).Lat.Hi,
+			rectBoundForPoints(Point{r3.Vector{1, -1, 1}}, Point{r3.Vector{1, 1, 1}}).Lat.Hi,
 		},
 		// Min latitude, CCW edge
 		{
 			-math.Pi/4 - 0.5*rectErrorLat,
-			rectBoundForPoints(PointFromCoords(-1, 1, -1), PointFromCoords(-1, -1, -1)).Lat.Lo,
+			rectBoundForPoints(Point{r3.Vector{-1, 1, -1}}, Point{r3.Vector{-1, -1, -1}}).Lat.Lo,
 		},
 
 		// Check cases where the edge passes through one of the poles.
 		{
 			math.Pi / 2,
-			rectBoundForPoints(PointFromCoords(.3, .4, 1), PointFromCoords(-.3, -.4, 1)).Lat.Hi,
+			rectBoundForPoints(Point{r3.Vector{.3, .4, 1}}, Point{r3.Vector{-.3, -.4, 1}}).Lat.Hi,
 		},
 		{
 			-math.Pi / 2,
-			rectBoundForPoints(PointFromCoords(.3, .4, -1), PointFromCoords(-.3, -.4, -1)).Lat.Lo,
+			rectBoundForPoints(Point{r3.Vector{.3, .4, -1}}, Point{r3.Vector{-.3, -.4, -1}}).Lat.Lo,
 		},
 	}
 
@@ -712,20 +712,20 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 func TestEdgeutilFaceClipping(t *testing.T) {
 	// Start with a few simple cases.
 	// An edge that is entirely contained within one cube face:
-	testClipToPaddedFace(t, PointFromCoords(1, -0.5, -0.5), PointFromCoords(1, 0.5, 0.5))
-	testClipToPaddedFace(t, PointFromCoords(1, 0.5, 0.5), PointFromCoords(1, -0.5, -0.5))
+	testClipToPaddedFace(t, Point{r3.Vector{1, -0.5, -0.5}}, Point{r3.Vector{1, 0.5, 0.5}})
+	testClipToPaddedFace(t, Point{r3.Vector{1, 0.5, 0.5}}, Point{r3.Vector{1, -0.5, -0.5}})
 	// An edge that crosses one cube edge:
-	testClipToPaddedFace(t, PointFromCoords(1, 0, 0), PointFromCoords(0, 1, 0))
-	testClipToPaddedFace(t, PointFromCoords(0, 1, 0), PointFromCoords(1, 0, 0))
+	testClipToPaddedFace(t, Point{r3.Vector{1, 0, 0}}, Point{r3.Vector{0, 1, 0}})
+	testClipToPaddedFace(t, Point{r3.Vector{0, 1, 0}}, Point{r3.Vector{1, 0, 0}})
 	// An edge that crosses two opposite edges of face 0:
-	testClipToPaddedFace(t, PointFromCoords(0.75, 0, -1), PointFromCoords(0.75, 0, 1))
-	testClipToPaddedFace(t, PointFromCoords(0.75, 0, 1), PointFromCoords(0.75, 0, -1))
+	testClipToPaddedFace(t, Point{r3.Vector{0.75, 0, -1}}, Point{r3.Vector{0.75, 0, 1}})
+	testClipToPaddedFace(t, Point{r3.Vector{0.75, 0, 1}}, Point{r3.Vector{0.75, 0, -1}})
 	// An edge that crosses two adjacent edges of face 2:
-	testClipToPaddedFace(t, PointFromCoords(1, 0, 0.75), PointFromCoords(0, 1, 0.75))
-	testClipToPaddedFace(t, PointFromCoords(0, 1, 0.75), PointFromCoords(1, 0, 0.75))
+	testClipToPaddedFace(t, Point{r3.Vector{1, 0, 0.75}}, Point{r3.Vector{0, 1, 0.75}})
+	testClipToPaddedFace(t, Point{r3.Vector{0, 1, 0.75}}, Point{r3.Vector{1, 0, 0.75}})
 	// An edges that crosses three cube edges (four faces):
-	testClipToPaddedFace(t, PointFromCoords(1, 0.9, 0.95), PointFromCoords(-1, 0.95, 0.9))
-	testClipToPaddedFace(t, PointFromCoords(-1, 0.95, 0.9), PointFromCoords(1, 0.9, 0.95))
+	testClipToPaddedFace(t, Point{r3.Vector{1, 0.9, 0.95}}, Point{r3.Vector{-1, 0.95, 0.9}})
+	testClipToPaddedFace(t, Point{r3.Vector{-1, 0.95, 0.9}}, Point{r3.Vector{1, 0.9, 0.95}})
 
 	// Comprehensively test edges that are difficult to handle, especially those
 	// that nearly follow one of the 12 cube edges.
@@ -1065,7 +1065,7 @@ func TestEdgeUtilWedges(t *testing.T) {
 	// For simplicity, all of these tests use an origin of (0, 0, 1).
 	// This shouldn't matter as long as the lower-level primitives are
 	// implemented correctly.
-	ab1 := PointFromCoords(0, 0, 1)
+	ab1 := Point{r3.Vector{0, 0, 1}}
 
 	tests := []struct {
 		desc           string
@@ -1076,100 +1076,100 @@ func TestEdgeUtilWedges(t *testing.T) {
 	}{
 		{
 			desc:       "Intersection in one wedge",
-			a0:         PointFromCoords(-1, 0, 10),
-			a1:         PointFromCoords(1, 2, 10),
-			b0:         PointFromCoords(0, 1, 10),
-			b1:         PointFromCoords(1, -2, 10),
+			a0:         Point{r3.Vector{-1, 0, 10}},
+			a1:         Point{r3.Vector{1, 2, 10}},
+			b0:         Point{r3.Vector{0, 1, 10}},
+			b1:         Point{r3.Vector{1, -2, 10}},
 			contains:   false,
 			intersects: true,
 			relation:   WedgeProperlyOverlaps,
 		},
 		{
 			desc:       "Intersection in two wedges",
-			a0:         PointFromCoords(-1, -1, 10),
-			a1:         PointFromCoords(1, -1, 10),
-			b0:         PointFromCoords(1, 0, 10),
-			b1:         PointFromCoords(-1, 1, 10),
+			a0:         Point{r3.Vector{-1, -1, 10}},
+			a1:         Point{r3.Vector{1, -1, 10}},
+			b0:         Point{r3.Vector{1, 0, 10}},
+			b1:         Point{r3.Vector{-1, 1, 10}},
 			contains:   false,
 			intersects: true,
 			relation:   WedgeProperlyOverlaps,
 		},
 		{
 			desc:       "Normal containment",
-			a0:         PointFromCoords(-1, -1, 10),
-			a1:         PointFromCoords(1, -1, 10),
-			b0:         PointFromCoords(-1, 0, 10),
-			b1:         PointFromCoords(1, 0, 10),
+			a0:         Point{r3.Vector{-1, -1, 10}},
+			a1:         Point{r3.Vector{1, -1, 10}},
+			b0:         Point{r3.Vector{-1, 0, 10}},
+			b1:         Point{r3.Vector{1, 0, 10}},
 			contains:   true,
 			intersects: true,
 			relation:   WedgeProperlyContains,
 		},
 		{
 			desc:       "Containment with equality on one side",
-			a0:         PointFromCoords(2, 1, 10),
-			a1:         PointFromCoords(-1, -1, 10),
-			b0:         PointFromCoords(2, 1, 10),
-			b1:         PointFromCoords(1, -5, 10),
+			a0:         Point{r3.Vector{2, 1, 10}},
+			a1:         Point{r3.Vector{-1, -1, 10}},
+			b0:         Point{r3.Vector{2, 1, 10}},
+			b1:         Point{r3.Vector{1, -5, 10}},
 			contains:   true,
 			intersects: true,
 			relation:   WedgeProperlyContains,
 		},
 		{
 			desc:       "Containment with equality on the other side",
-			a0:         PointFromCoords(2, 1, 10),
-			a1:         PointFromCoords(-1, -1, 10),
-			b0:         PointFromCoords(1, -2, 10),
-			b1:         PointFromCoords(-1, -1, 10),
+			a0:         Point{r3.Vector{2, 1, 10}},
+			a1:         Point{r3.Vector{-1, -1, 10}},
+			b0:         Point{r3.Vector{1, -2, 10}},
+			b1:         Point{r3.Vector{-1, -1, 10}},
 			contains:   true,
 			intersects: true,
 			relation:   WedgeProperlyContains,
 		},
 		{
 			desc:       "Containment with equality on both sides",
-			a0:         PointFromCoords(-2, 3, 10),
-			a1:         PointFromCoords(4, -5, 10),
-			b0:         PointFromCoords(-2, 3, 10),
-			b1:         PointFromCoords(4, -5, 10),
+			a0:         Point{r3.Vector{-2, 3, 10}},
+			a1:         Point{r3.Vector{4, -5, 10}},
+			b0:         Point{r3.Vector{-2, 3, 10}},
+			b1:         Point{r3.Vector{4, -5, 10}},
 			contains:   true,
 			intersects: true,
 			relation:   WedgeEquals,
 		},
 		{
 			desc:       "Disjoint with equality on one side",
-			a0:         PointFromCoords(-2, 3, 10),
-			a1:         PointFromCoords(4, -5, 10),
-			b0:         PointFromCoords(4, -5, 10),
-			b1:         PointFromCoords(-2, -3, 10),
+			a0:         Point{r3.Vector{-2, 3, 10}},
+			a1:         Point{r3.Vector{4, -5, 10}},
+			b0:         Point{r3.Vector{4, -5, 10}},
+			b1:         Point{r3.Vector{-2, -3, 10}},
 			contains:   false,
 			intersects: false,
 			relation:   WedgeIsDisjoint,
 		},
 		{
 			desc:       "Disjoint with equality on the other side",
-			a0:         PointFromCoords(-2, 3, 10),
-			a1:         PointFromCoords(0, 5, 10),
-			b0:         PointFromCoords(4, -5, 10),
-			b1:         PointFromCoords(-2, 3, 10),
+			a0:         Point{r3.Vector{-2, 3, 10}},
+			a1:         Point{r3.Vector{0, 5, 10}},
+			b0:         Point{r3.Vector{4, -5, 10}},
+			b1:         Point{r3.Vector{-2, 3, 10}},
 			contains:   false,
 			intersects: false,
 			relation:   WedgeIsDisjoint,
 		},
 		{
 			desc:       "Disjoint with equality on both sides",
-			a0:         PointFromCoords(-2, 3, 10),
-			a1:         PointFromCoords(4, -5, 10),
-			b0:         PointFromCoords(4, -5, 10),
-			b1:         PointFromCoords(-2, 3, 10),
+			a0:         Point{r3.Vector{-2, 3, 10}},
+			a1:         Point{r3.Vector{4, -5, 10}},
+			b0:         Point{r3.Vector{4, -5, 10}},
+			b1:         Point{r3.Vector{-2, 3, 10}},
 			contains:   false,
 			intersects: false,
 			relation:   WedgeIsDisjoint,
 		},
 		{
 			desc:       "B contains A with equality on one side",
-			a0:         PointFromCoords(2, 1, 10),
-			a1:         PointFromCoords(1, -5, 10),
-			b0:         PointFromCoords(2, 1, 10),
-			b1:         PointFromCoords(-1, -1, 10),
+			a0:         Point{r3.Vector{2, 1, 10}},
+			a1:         Point{r3.Vector{1, -5, 10}},
+			b0:         Point{r3.Vector{2, 1, 10}},
+			b1:         Point{r3.Vector{-1, -1, 10}},
 			contains:   false,
 			intersects: true,
 			relation:   WedgeIsProperlyContained,
@@ -1177,10 +1177,10 @@ func TestEdgeUtilWedges(t *testing.T) {
 
 		{
 			desc:       "B contains A with equality on the other side",
-			a0:         PointFromCoords(2, 1, 10),
-			a1:         PointFromCoords(1, -5, 10),
-			b0:         PointFromCoords(-2, 1, 10),
-			b1:         PointFromCoords(1, -5, 10),
+			a0:         Point{r3.Vector{2, 1, 10}},
+			a1:         Point{r3.Vector{1, -5, 10}},
+			b0:         Point{r3.Vector{-2, 1, 10}},
+			b1:         Point{r3.Vector{1, -5, 10}},
 			contains:   false,
 			intersects: true,
 			relation:   WedgeIsProperlyContained,

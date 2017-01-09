@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/golang/geo/r1"
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -385,15 +386,15 @@ func TestRectCapBound(t *testing.T) {
 	}{
 		{ // Bounding cap at center is smaller.
 			rectFromDegrees(-45, -45, 45, 45),
-			CapFromCenterHeight(PointFromCoords(1, 0, 0), 0.5),
+			CapFromCenterHeight(Point{r3.Vector{1, 0, 0}}, 0.5),
 		},
 		{ // Bounding cap at north pole is smaller.
 			rectFromDegrees(88, -80, 89, 80),
-			CapFromCenterAngle(PointFromCoords(0, 0, 1), s1.Angle(2)*s1.Degree),
+			CapFromCenterAngle(Point{r3.Vector{0, 0, 1}}, s1.Angle(2)*s1.Degree),
 		},
 		{ // Longitude span > 180 degrees.
 			rectFromDegrees(-30, -150, -10, 50),
-			CapFromCenterAngle(PointFromCoords(0, 0, -1), s1.Angle(80)*s1.Degree),
+			CapFromCenterAngle(Point{r3.Vector{0, 0, -1}}, s1.Angle(80)*s1.Degree),
 		},
 	}
 	for _, test := range tests {
@@ -535,7 +536,7 @@ func TestRectIntervalOps(t *testing.T) {
 }
 
 func TestRectCellOps(t *testing.T) {
-	cell0 := CellFromPoint(PointFromCoords(1+1e-12, 1, 1))
+	cell0 := CellFromPoint(Point{r3.Vector{1 + 1e-12, 1, 1}})
 	v0 := LatLngFromPoint(cell0.Vertex(0))
 
 	cell202 := CellFromCellID(CellIDFromFacePosLevel(2, 0, 2))
@@ -685,8 +686,8 @@ func TestRectContainsPoint(t *testing.T) {
 		p    Point
 		want bool
 	}{
-		{r1, PointFromCoords(0.5, -0.3, 0.1), true},
-		{r1, PointFromCoords(0.5, 0.2, 0.1), false},
+		{r1, Point{r3.Vector{0.5, -0.3, 0.1}}, true},
+		{r1, Point{r3.Vector{0.5, 0.2, 0.1}}, false},
 	}
 	for _, test := range tests {
 		if got, want := test.r.ContainsPoint(test.p), test.want; got != want {
@@ -704,56 +705,56 @@ func TestRectIntersectsLatEdge(t *testing.T) {
 		want  bool
 	}{
 		{
-			a:     PointFromCoords(-1, -1, 1),
-			b:     PointFromCoords(1, -1, 1),
+			a:     Point{r3.Vector{-1, -1, 1}},
+			b:     Point{r3.Vector{1, -1, 1}},
 			lat:   41 * s1.Degree,
 			lngLo: -87 * s1.Degree,
 			lngHi: -79 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     PointFromCoords(-1, -1, 1),
-			b:     PointFromCoords(1, -1, 1),
+			a:     Point{r3.Vector{-1, -1, 1}},
+			b:     Point{r3.Vector{1, -1, 1}},
 			lat:   42 * s1.Degree,
 			lngLo: -87 * s1.Degree,
 			lngHi: -79 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     PointFromCoords(-1, -1, -1),
-			b:     PointFromCoords(1, 1, 0),
+			a:     Point{r3.Vector{-1, -1, -1}},
+			b:     Point{r3.Vector{1, 1, 0}},
 			lat:   -3 * s1.Degree,
 			lngLo: -1 * s1.Degree,
 			lngHi: 23 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     PointFromCoords(1, 0, 1),
-			b:     PointFromCoords(1, -1, 0),
+			a:     Point{r3.Vector{1, 0, 1}},
+			b:     Point{r3.Vector{1, -1, 0}},
 			lat:   -28 * s1.Degree,
 			lngLo: 69 * s1.Degree,
 			lngHi: 115 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     PointFromCoords(0, 1, 0),
-			b:     PointFromCoords(1, -1, -1),
+			a:     Point{r3.Vector{0, 1, 0}},
+			b:     Point{r3.Vector{1, -1, -1}},
 			lat:   44 * s1.Degree,
 			lngLo: 60 * s1.Degree,
 			lngHi: 177 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     PointFromCoords(0, 1, 1),
-			b:     PointFromCoords(0, 1, -1),
+			a:     Point{r3.Vector{0, 1, 1}},
+			b:     Point{r3.Vector{0, 1, -1}},
 			lat:   -25 * s1.Degree,
 			lngLo: -74 * s1.Degree,
 			lngHi: -165 * s1.Degree,
 			want:  true,
 		},
 		{
-			a:     PointFromCoords(1, 0, 0),
-			b:     PointFromCoords(0, 0, -1),
+			a:     Point{r3.Vector{1, 0, 0}},
+			b:     Point{r3.Vector{0, 0, -1}},
 			lat:   -4 * s1.Degree,
 			lngLo: -152 * s1.Degree,
 			lngHi: 171 * s1.Degree,
@@ -761,8 +762,8 @@ func TestRectIntersectsLatEdge(t *testing.T) {
 		},
 		// from a bug report
 		{
-			a:     PointFromCoords(-0.589375791872893683986945, 0.583248451588733285433364, 0.558978908075738245564423),
-			b:     PointFromCoords(-0.587388131301997518107783, 0.581281455376392863776402, 0.563104832905072516524569),
+			a:     Point{r3.Vector{-0.589375791872893683986945, 0.583248451588733285433364, 0.558978908075738245564423}},
+			b:     Point{r3.Vector{-0.587388131301997518107783, 0.581281455376392863776402, 0.563104832905072516524569}},
 			lat:   34.2572864 * s1.Degree,
 			lngLo: 2.3608609 * s1.Radian,
 			lngHi: 2.3614230 * s1.Radian,
@@ -787,64 +788,64 @@ func TestRectIntersectsLngEdge(t *testing.T) {
 		want  bool
 	}{
 		{
-			a:     PointFromCoords(-1, -1, 1),
-			b:     PointFromCoords(1, -1, 1),
+			a:     Point{r3.Vector{-1, -1, 1}},
+			b:     Point{r3.Vector{1, -1, 1}},
 			latLo: 41 * s1.Degree,
 			latHi: 42 * s1.Degree,
 			lng:   -79 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     PointFromCoords(-1, -1, 1),
-			b:     PointFromCoords(1, -1, 1),
+			a:     Point{r3.Vector{-1, -1, 1}},
+			b:     Point{r3.Vector{1, -1, 1}},
 			latLo: 41 * s1.Degree,
 			latHi: 42 * s1.Degree,
 			lng:   -87 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     PointFromCoords(-1, -1, 1),
-			b:     PointFromCoords(1, -1, 1),
+			a:     Point{r3.Vector{-1, -1, 1}},
+			b:     Point{r3.Vector{1, -1, 1}},
 			latLo: 42 * s1.Degree,
 			latHi: 41 * s1.Degree,
 			lng:   79 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     PointFromCoords(-1, -1, 1),
-			b:     PointFromCoords(1, -1, 1),
+			a:     Point{r3.Vector{-1, -1, 1}},
+			b:     Point{r3.Vector{1, -1, 1}},
 			latLo: 41 * s1.Degree,
 			latHi: 42 * s1.Degree,
 			lng:   87 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     PointFromCoords(0, -1, -1),
-			b:     PointFromCoords(-1, 0, -1),
+			a:     Point{r3.Vector{0, -1, -1}},
+			b:     Point{r3.Vector{-1, 0, -1}},
 			latLo: -87 * s1.Degree,
 			latHi: 13 * s1.Degree,
 			lng:   -143 * s1.Degree,
 			want:  true,
 		},
 		{
-			a:     PointFromCoords(1, 1, -1),
-			b:     PointFromCoords(1, -1, 1),
+			a:     Point{r3.Vector{1, 1, -1}},
+			b:     Point{r3.Vector{1, -1, 1}},
 			latLo: -64 * s1.Degree,
 			latHi: 13 * s1.Degree,
 			lng:   40 * s1.Degree,
 			want:  true,
 		},
 		{
-			a:     PointFromCoords(1, 1, 0),
-			b:     PointFromCoords(-1, 0, -1),
+			a:     Point{r3.Vector{1, 1, 0}},
+			b:     Point{r3.Vector{-1, 0, -1}},
 			latLo: -64 * s1.Degree,
 			latHi: 56 * s1.Degree,
 			lng:   151 * s1.Degree,
 			want:  true,
 		},
 		{
-			a:     PointFromCoords(-1, -1, 0),
-			b:     PointFromCoords(1, -1, -1),
+			a:     Point{r3.Vector{-1, -1, 0}},
+			b:     Point{r3.Vector{1, -1, -1}},
 			latLo: -50 * s1.Degree,
 			latHi: 18 * s1.Degree,
 			lng:   -84 * s1.Degree,

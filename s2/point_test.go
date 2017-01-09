@@ -35,7 +35,7 @@ func TestOriginPoint(t *testing.T) {
 	// Cells. (The line of longitude through the chosen point is always 1/3
 	// or 2/3 of the way across any Cell with longitudinal edges that it
 	// passes through.)
-	p := PointFromCoords(-0.01, 0.01*stToUV(2.0/3), 1)
+	p := Point{r3.Vector{-0.01, 0.01 * stToUV(2.0/3), 1}}
 	if !p.ApproxEqual(OriginPoint()) {
 		t.Errorf("Origin point should fall in the Siberian Sea, but does not.")
 	}
@@ -86,8 +86,8 @@ func TestPointDistance(t *testing.T) {
 		{1, 2, 3, 2, 3, -1, 1.2055891055045298},
 	}
 	for _, test := range tests {
-		p1 := PointFromCoords(test.x1, test.y1, test.z1)
-		p2 := PointFromCoords(test.x2, test.y2, test.z2)
+		p1 := Point{r3.Vector{test.x1, test.y1, test.z1}}
+		p2 := Point{r3.Vector{test.x2, test.y2, test.z2}}
 		if a := p1.Distance(p2).Radians(); !float64Eq(a, test.want) {
 			t.Errorf("%v.Distance(%v) = %v, want %v", p1, p2, a, test.want)
 		}
@@ -140,8 +140,8 @@ func TestPointApproxEqual(t *testing.T) {
 		{1, epsilon, 0, 1, -epsilon, epsilon, false},
 	}
 	for _, test := range tests {
-		p1 := PointFromCoords(test.x1, test.y1, test.z1)
-		p2 := PointFromCoords(test.x2, test.y2, test.z2)
+		p1 := Point{r3.Vector{test.x1, test.y1, test.z1}}
+		p2 := Point{r3.Vector{test.x2, test.y2, test.z2}}
 		if got := p1.ApproxEqual(p2); got != test.want {
 			t.Errorf("%v.ApproxEqual(%v), got %v want %v", p1, p2, got, test.want)
 		}
@@ -149,17 +149,17 @@ func TestPointApproxEqual(t *testing.T) {
 }
 
 var (
-	pz   = PointFromCoords(0, 0, 1)
-	p000 = PointFromCoords(1, 0, 0)
-	p045 = PointFromCoords(1, 1, 0)
-	p090 = PointFromCoords(0, 1, 0)
-	p180 = PointFromCoords(-1, 0, 0)
+	pz   = Point{r3.Vector{0, 0, 1}}
+	p000 = Point{r3.Vector{1, 0, 0}}
+	p045 = Point{r3.Vector{1, 1, 0}}
+	p090 = Point{r3.Vector{0, 1, 0}}
+	p180 = Point{r3.Vector{-1, 0, 0}}
 	// Degenerate triangles.
-	pr = PointFromCoords(0.257, -0.5723, 0.112)
-	pq = PointFromCoords(-0.747, 0.401, 0.2235)
+	pr = Point{r3.Vector{0.257, -0.5723, 0.112}}
+	pq = Point{r3.Vector{-0.747, 0.401, 0.2235}}
 
 	// For testing the Girard area fall through case.
-	g1 = PointFromCoords(1, 1, 1)
+	g1 = Point{r3.Vector{1, 1, 1}}
 	g2 = Point{g1.Add(pr.Mul(1e-15)).Normalize()}
 	g3 = Point{g1.Add(pq.Mul(1e-15)).Normalize()}
 )
@@ -177,13 +177,13 @@ func TestPointArea(t *testing.T) {
 		// places into the result, so it is not quite a difference of 0.
 		{p045, pz, p180, 3.0 * math.Pi / 4.0, 1e-14},
 		// Make sure that Area has good *relative* accuracy even for very small areas.
-		{PointFromCoords(epsilon, 0, 1), PointFromCoords(0, epsilon, 1), pz, 0.5 * epsilon * epsilon, 1e-14},
+		{Point{r3.Vector{epsilon, 0, 1}}, Point{r3.Vector{0, epsilon, 1}}, pz, 0.5 * epsilon * epsilon, 1e-14},
 		// Make sure that it can handle degenerate triangles.
 		{pr, pr, pr, 0.0, 0},
 		{pr, pq, pr, 0.0, 1e-15},
 		{p000, p045, p090, 0.0, 0},
 		// Try a very long and skinny triangle.
-		{p000, PointFromCoords(1, 1, epsilon), p090, 5.8578643762690495119753e-11, 1e-9},
+		{p000, Point{r3.Vector{1, 1, epsilon}}, p090, 5.8578643762690495119753e-11, 1e-9},
 		// TODO(roberts):
 		// C++ includes a 10,000 loop of perterbations to test out the Girard area
 		// computation is less than some noise threshold.
@@ -203,9 +203,9 @@ func TestPointAreaQuarterHemisphere(t *testing.T) {
 		want          float64
 	}{
 		// Triangles with near-180 degree edges that sum to a quarter-sphere.
-		{PointFromCoords(1, 0.1*epsilon, epsilon), p000, p045, p180, pz, math.Pi},
+		{Point{r3.Vector{1, 0.1 * epsilon, epsilon}}, p000, p045, p180, pz, math.Pi},
 		// Four other triangles that sum to a quarter-sphere.
-		{PointFromCoords(1, 1, epsilon), p000, p045, p180, pz, math.Pi},
+		{Point{r3.Vector{1, 1, epsilon}}, p000, p045, p180, pz, math.Pi},
 		// TODO(roberts):
 		// C++ Includes a loop of 100 perturbations on a hemisphere for more tests.
 	}
@@ -228,17 +228,17 @@ func TestPointPlanarCentroid(t *testing.T) {
 	}{
 		{
 			name: "xyz axis",
-			p0:   PointFromCoords(0, 0, 1),
-			p1:   PointFromCoords(0, 1, 0),
-			p2:   PointFromCoords(1, 0, 0),
-			want: PointFromCoords(1./3, 1./3, 1./3),
+			p0:   Point{r3.Vector{0, 0, 1}},
+			p1:   Point{r3.Vector{0, 1, 0}},
+			p2:   Point{r3.Vector{1, 0, 0}},
+			want: Point{r3.Vector{1. / 3, 1. / 3, 1. / 3}},
 		},
 		{
 			name: "Same point",
-			p0:   PointFromCoords(1, 0, 0),
-			p1:   PointFromCoords(1, 0, 0),
-			p2:   PointFromCoords(1, 0, 0),
-			want: PointFromCoords(1, 0, 0),
+			p0:   Point{r3.Vector{1, 0, 0}},
+			p1:   Point{r3.Vector{1, 0, 0}},
+			p2:   Point{r3.Vector{1, 0, 0}},
+			want: Point{r3.Vector{1, 0, 0}},
 		},
 	}
 
@@ -343,15 +343,15 @@ func TestPointRegularPoints(t *testing.T) {
 }
 
 func TestPointRegion(t *testing.T) {
-	p := PointFromCoords(1, 0, 0)
-	r := PointFromCoords(1, 0, 0)
+	p := Point{r3.Vector{1, 0, 0}}
+	r := Point{r3.Vector{1, 0, 0}}
 	if !r.Contains(p) {
 		t.Errorf("%v.Contains(%v) = false, want true", r, p)
 	}
 	if !r.Contains(r) {
 		t.Errorf("%v.Contains(%v) = false, want true", r, r)
 	}
-	if s := PointFromCoords(1, 0, 1); r.Contains(s) {
+	if s := (Point{r3.Vector{1, 0, 1}}); r.Contains(s) {
 		t.Errorf("%v.Contains(%v) = true, want false", r, s)
 	}
 	if got, want := r.CapBound(), CapFromPoint(p); !got.ApproxEqual(want) {

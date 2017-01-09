@@ -33,8 +33,8 @@ const (
 )
 
 var (
-	// centerPoint is the default center for S2Caps
-	centerPoint = Point{PointFromCoords(1.0, 0, 0).Normalize()}
+	// centerPoint is the default center for Caps
+	centerPoint = PointFromCoords(1.0, 0, 0)
 )
 
 // Cap represents a disc-shaped region defined by a center and radius.

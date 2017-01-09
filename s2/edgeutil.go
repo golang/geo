@@ -292,7 +292,7 @@ func (r *RectBounder) AddPoint(b Point) {
 	// and B attains its minimum and maximum latitudes). To test whether AB
 	// crosses this plane, we compute a vector M perpendicular to this
 	// plane and then project A and B onto it.
-	m := n.Cross(PointFromCoords(0, 0, 1).Vector)
+	m := n.Cross(r3.Vector{0, 0, 1})
 	mA := m.Dot(r.a.Vector)
 	mB := m.Dot(b.Vector)
 
@@ -845,7 +845,7 @@ func clipDestination(a, b, scaledN, aTan, bTan pointUVW, scaleUV float64) (r2.Po
 	// Otherwise find the point B' where the line AB exits the face.
 	uv = scaledN.exitPoint(scaledN.exitAxis()).Mul(scaleUV)
 
-	p := pointUVW(PointFromCoords(uv.X, uv.Y, 1.0))
+	p := pointUVW(Point{r3.Vector{uv.X, uv.Y, 1.0}})
 
 	// Determine if the exit point B' is contained within the segment. We do this
 	// by computing the dot products with two inward-facing tangent vectors at A

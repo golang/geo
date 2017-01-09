@@ -62,9 +62,9 @@ func TestPredicatesSign(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		p1 := PointFromCoords(test.p1x, test.p1y, test.p1z)
-		p2 := PointFromCoords(test.p2x, test.p2y, test.p2z)
-		p3 := PointFromCoords(test.p3x, test.p3y, test.p3z)
+		p1 := Point{r3.Vector{test.p1x, test.p1y, test.p1z}}
+		p2 := Point{r3.Vector{test.p2x, test.p2y, test.p2z}}
+		p3 := Point{r3.Vector{test.p3x, test.p3y, test.p3z}}
 		result := Sign(p1, p2, p3)
 		if result != test.want {
 			t.Errorf("Sign(%v, %v, %v) = %v, want %v", p1, p2, p3, result, test.want)
@@ -285,9 +285,9 @@ func TestPredicatesStableSignFailureRate(t *testing.T) {
 }
 
 func BenchmarkSign(b *testing.B) {
-	p1 := PointFromCoords(-3, -1, 4)
-	p2 := PointFromCoords(2, -1, -3)
-	p3 := PointFromCoords(1, -2, 0)
+	p1 := Point{r3.Vector{-3, -1, 4}}
+	p2 := Point{r3.Vector{2, -1, -3}}
+	p3 := Point{r3.Vector{1, -2, 0}}
 	for i := 0; i < b.N; i++ {
 		Sign(p1, p2, p3)
 	}
@@ -296,9 +296,9 @@ func BenchmarkSign(b *testing.B) {
 // BenchmarkRobustSignSimple runs the benchmark for points that satisfy the first
 // checks in RobustSign to compare the performance to that of Sign().
 func BenchmarkRobustSignSimple(b *testing.B) {
-	p1 := PointFromCoords(-3, -1, 4)
-	p2 := PointFromCoords(2, -1, -3)
-	p3 := PointFromCoords(1, -2, 0)
+	p1 := Point{r3.Vector{-3, -1, 4}}
+	p2 := Point{r3.Vector{2, -1, -3}}
+	p3 := Point{r3.Vector{1, -2, 0}}
 	for i := 0; i < b.N; i++ {
 		RobustSign(p1, p2, p3)
 	}

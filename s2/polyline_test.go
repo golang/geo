@@ -43,11 +43,11 @@ func TestPolylineBasics(t *testing.T) {
 	}
 
 	semiEquator := PolylineFromLatLngs(latlngs)
-	//if got, want := semiEquator.Interpolate(0.5), PointFromCoords(0, 1, 0); !got.ApproxEqual(want) {
+	//if got, want := semiEquator.Interpolate(0.5), Point{r3.Vector{0, 1, 0}}; !got.ApproxEqual(want) {
 	//	t.Errorf("semiEquator.Interpolate(0.5) = %v, want %v", got, want)
 	//}
 	semiEquator.Reverse()
-	if got, want := semiEquator[2], PointFromCoords(1, 0, 0); !got.ApproxEqual(want) {
+	if got, want := semiEquator[2], (Point{r3.Vector{1, 0, 0}}); !got.ApproxEqual(want) {
 		t.Errorf("semiEquator[2] = %v, want %v", got, want)
 	}
 }

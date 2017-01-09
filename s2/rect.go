@@ -21,6 +21,7 @@ import (
 	"math"
 
 	"github.com/golang/geo/r1"
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -239,7 +240,7 @@ func (r Rect) CapBound() Cap {
 		poleZ = 1
 		poleAngle = math.Pi/2 - r.Lat.Lo
 	}
-	poleCap := CapFromCenterAngle(PointFromCoords(0, 0, poleZ), s1.Angle(poleAngle)*s1.Radian)
+	poleCap := CapFromCenterAngle(Point{r3.Vector{0, 0, poleZ}}, s1.Angle(poleAngle)*s1.Radian)
 
 	// For bounding rectangles that span 180 degrees or less in longitude, the
 	// maximum cap size is achieved at one of the rectangle vertices.  For

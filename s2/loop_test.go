@@ -267,8 +267,8 @@ func TestLoopOriginInside(t *testing.T) {
 }
 
 func TestLoopContainsPoint(t *testing.T) {
-	north := PointFromCoords(0, 0, 1)
-	south := PointFromCoords(0, 0, -1)
+	north := Point{r3.Vector{0, 0, 1}}
+	south := Point{r3.Vector{0, 0, -1}}
 
 	if EmptyLoop().ContainsPoint(north) {
 		t.Errorf("empty loop should not not have any points")
@@ -286,26 +286,26 @@ func TestLoopContainsPoint(t *testing.T) {
 		{
 			"north hemisphere",
 			northHemi,
-			PointFromCoords(0, 0, 1),
-			PointFromCoords(0, 0, -1),
+			Point{r3.Vector{0, 0, 1}},
+			Point{r3.Vector{0, 0, -1}},
 		},
 		{
 			"south hemisphere",
 			southHemi,
-			PointFromCoords(0, 0, -1),
-			PointFromCoords(0, 0, 1),
+			Point{r3.Vector{0, 0, -1}},
+			Point{r3.Vector{0, 0, 1}},
 		},
 		{
 			"west hemisphere",
 			westHemi,
-			PointFromCoords(0, -1, 0),
-			PointFromCoords(0, 1, 0),
+			Point{r3.Vector{0, -1, 0}},
+			Point{r3.Vector{0, 1, 0}},
 		},
 		{
 			"east hemisphere",
 			eastHemi,
-			PointFromCoords(0, 1, 0),
-			PointFromCoords(0, -1, 0),
+			Point{r3.Vector{0, 1, 0}},
+			Point{r3.Vector{0, -1, 0}},
 		},
 		{
 			"candy cane",
@@ -333,10 +333,10 @@ func TestLoopVertex(t *testing.T) {
 		vertex int
 		want   Point
 	}{
-		{EmptyLoop(), 0, PointFromCoords(0, 0, 1)},
-		{EmptyLoop(), 1, PointFromCoords(0, 0, 1)},
-		{FullLoop(), 0, PointFromCoords(0, 0, -1)},
-		{FullLoop(), 1, PointFromCoords(0, 0, -1)},
+		{EmptyLoop(), 0, Point{r3.Vector{0, 0, 1}}},
+		{EmptyLoop(), 1, Point{r3.Vector{0, 0, 1}}},
+		{FullLoop(), 0, Point{r3.Vector{0, 0, -1}}},
+		{FullLoop(), 1, Point{r3.Vector{0, 0, -1}}},
 		{arctic80, 0, parsePoint("80:-150")},
 		{arctic80, 1, parsePoint("80:-30")},
 		{arctic80, 2, parsePoint("80:90")},

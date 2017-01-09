@@ -19,6 +19,8 @@ package s2
 import (
 	"math"
 	"testing"
+
+	"github.com/golang/geo/r3"
 )
 
 func TestCol(t *testing.T) {
@@ -35,7 +37,7 @@ func TestCol(t *testing.T) {
 				{7, 8, 9},
 			},
 			0,
-			PointFromCoords(1, 4, 7),
+			Point{r3.Vector{1, 4, 7}},
 		},
 		{
 			&matrix3x3{
@@ -44,7 +46,7 @@ func TestCol(t *testing.T) {
 				{7, 8, 9},
 			},
 			2,
-			PointFromCoords(3, 6, 9),
+			Point{r3.Vector{3, 6, 9}},
 		},
 	}
 
@@ -69,7 +71,7 @@ func TestRow(t *testing.T) {
 				{7, 8, 9},
 			},
 			0,
-			PointFromCoords(1, 2, 3),
+			Point{r3.Vector{1, 2, 3}},
 		},
 		{
 			&matrix3x3{
@@ -78,7 +80,7 @@ func TestRow(t *testing.T) {
 				{7, 8, 9},
 			},
 			2,
-			PointFromCoords(7, 8, 9),
+			Point{r3.Vector{7, 8, 9}},
 		},
 	}
 
@@ -99,10 +101,10 @@ func TestSetCol(t *testing.T) {
 		{
 			&matrix3x3{},
 			0,
-			PointFromCoords(1, 1, 0),
+			Point{r3.Vector{1, 1, 0}},
 			&matrix3x3{
-				{math.Sqrt(2) / 2, 0, 0},
-				{math.Sqrt(2) / 2, 0, 0},
+				{1, 0, 0},
+				{1, 0, 0},
 				{0, 0, 0},
 			},
 		},
@@ -113,10 +115,10 @@ func TestSetCol(t *testing.T) {
 				{7, 8, 9},
 			},
 			2,
-			PointFromCoords(1, 1, 0),
+			Point{r3.Vector{1, 1, 0}},
 			&matrix3x3{
-				{1, 2, math.Sqrt(2) / 2},
-				{4, 5, math.Sqrt(2) / 2},
+				{1, 2, 1},
+				{4, 5, 1},
 				{7, 8, 0},
 			},
 		},
@@ -139,9 +141,9 @@ func TestSetRow(t *testing.T) {
 		{
 			&matrix3x3{},
 			0,
-			PointFromCoords(1, 1, 0),
+			Point{r3.Vector{1, 1, 0}},
 			&matrix3x3{
-				{math.Sqrt(2) / 2, math.Sqrt(2) / 2, 0},
+				{1, 1, 0},
 				{0, 0, 0},
 				{0, 0, 0},
 			},
@@ -153,11 +155,11 @@ func TestSetRow(t *testing.T) {
 				{7, 8, 9},
 			},
 			2,
-			PointFromCoords(1, 1, 0),
+			Point{r3.Vector{1, 1, 0}},
 			&matrix3x3{
 				{1, 2, 3},
 				{4, 5, 6},
-				{math.Sqrt(2) / 2, math.Sqrt(2) / 2, 0},
+				{1, 1, 0},
 			},
 		},
 	}
@@ -269,8 +271,8 @@ func TestMul(t *testing.T) {
 				{0, 1, 0},
 				{0, 0, 1},
 			},
-			PointFromCoords(1, 2, 3),
-			PointFromCoords(1, 2, 3),
+			Point{r3.Vector{1, 2, 3}},
+			Point{r3.Vector{1, 2, 3}},
 		},
 		{
 			&matrix3x3{
@@ -278,8 +280,8 @@ func TestMul(t *testing.T) {
 				{4, 5, 6},
 				{7, 8, 9},
 			},
-			PointFromCoords(1, 1, 1),
-			PointFromCoords(6, 15, 24),
+			Point{r3.Vector{1, 1, 1}},
+			Point{r3.Vector{6, 15, 24}},
 		},
 	}
 	for _, test := range tests {
@@ -475,13 +477,13 @@ func TestFrames(t *testing.T) {
 	}{
 		{m.col(2), z},
 
-		{toFrame(m, m.col(0)), PointFromCoords(1, 0, 0)},
-		{toFrame(m, m.col(1)), PointFromCoords(0, 1, 0)},
-		{toFrame(m, m.col(2)), PointFromCoords(0, 0, 1)},
+		{toFrame(m, m.col(0)), Point{r3.Vector{1, 0, 0}}},
+		{toFrame(m, m.col(1)), Point{r3.Vector{0, 1, 0}}},
+		{toFrame(m, m.col(2)), Point{r3.Vector{0, 0, 1}}},
 
-		{fromFrame(m, PointFromCoords(1, 0, 0)), m.col(0)},
-		{fromFrame(m, PointFromCoords(0, 1, 0)), m.col(1)},
-		{fromFrame(m, PointFromCoords(0, 0, 1)), m.col(2)},
+		{fromFrame(m, Point{r3.Vector{1, 0, 0}}), m.col(0)},
+		{fromFrame(m, Point{r3.Vector{0, 1, 0}}), m.col(1)},
+		{fromFrame(m, Point{r3.Vector{0, 0, 1}}), m.col(2)},
 	}
 
 	for _, test := range tests {

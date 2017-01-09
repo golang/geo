@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/golang/geo/r2"
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -91,8 +92,8 @@ func oneIn(n int) bool {
 
 // randomPoint returns a random unit-length vector.
 func randomPoint() Point {
-	return Point{PointFromCoords(randomUniformFloat64(-1, 1),
-		randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)).Normalize()}
+	return PointFromCoords(randomUniformFloat64(-1, 1),
+		randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1))
 }
 
 // randomFrame returns a right-handed coordinate frame (three orthonormal vectors) for
@@ -140,7 +141,7 @@ func parsePoint(s string) Point {
 		return p[0]
 	}
 
-	return PointFromCoords(0, 0, 0)
+	return Point{r3.Vector{0, 0, 0}}
 }
 
 // parseRect returns the minimal bounding Rect that contains the one or more
