@@ -18,6 +18,7 @@ package s2
 
 import (
 	"math"
+	"reflect"
 	"sort"
 	"testing"
 
@@ -242,6 +243,58 @@ func TestCellIDVertexNeighbors(t *testing.T) {
 	}
 	if neighbors[1] != CellIDFromFace(4) {
 		t.Errorf("CellID(%d).VertexNeighbors()[1] = %d, wanted %d", id, neighbors[1], CellIDFromFace(4))
+	}
+}
+
+// dedupCellIDs returns the unique slice of CellIDs from the sorted input list.
+func dedupCellIDs(ids []CellID) []CellID {
+	var out []CellID
+	var prev CellID
+	for _, id := range ids {
+		if id != prev {
+			out = append(out, id)
+		}
+		prev = id
+	}
+
+	return out
+}
+
+func TestCellIDAllNeighbors(t *testing.T) {
+	// Check that AllNeighbors produces results that are consistent
+	// with VertexNeighbors for a bunch of random cells.
+	for i := 0; i < 1000; i++ {
+		id := randomCellID()
+		if id.IsLeaf() {
+			id = id.immediateParent()
+		}
+
+		// testAllNeighbors computes approximately 2**(2*(diff+1)) cell ids,
+		// so it's not reasonable to use large values of diff.
+		maxDiff := min(6, maxLevel-id.Level()-1)
+		level := id.Level() + randomUniformInt(maxDiff)
+
+		// We compute AllNeighbors, and then add in all the children of id
+		// at the given level. We then compare this against the result of finding
+		// all the vertex neighbors of all the vertices of children of id at the
+		// given level. These should give the same result.
+		var want []CellID
+		all := id.AllNeighbors(level)
+		end := id.ChildEndAtLevel(level + 1)
+		for c := id.ChildBeginAtLevel(level + 1); c != end; c = c.Next() {
+			all = append(all, c.immediateParent())
+			want = append(want, c.VertexNeighbors(level)...)
+		}
+
+		// Sort the results and eliminate duplicates.
+		sort.Sort(byCellID(all))
+		sort.Sort(byCellID(want))
+		all = dedupCellIDs(all)
+		want = dedupCellIDs(want)
+
+		if !reflect.DeepEqual(all, want) {
+			t.Errorf("%v.AllNeighbors(%d) = %v, want %v", id, level, all, want)
+		}
 	}
 }
 
@@ -491,6 +544,49 @@ func TestCellIDCommonAncestorLevel(t *testing.T) {
 		if got, ok := test.ci.CommonAncestorLevel(test.other); ok != test.wantOk || got != test.want {
 			t.Errorf("CellID(%v).VertexNeighbors(%v) = %d, %t; want %d, %t", test.ci, test.other, got, ok, test.want, test.wantOk)
 		}
+	}
+}
+
+func TestCellIDDistanceToBegin(t *testing.T) {
+	tests := []struct {
+		id   CellID
+		want int64
+	}{
+		{
+			// at level 0 (i.e. full faces), there are only 6 cells from
+			// the last face to the beginning of the Hilbert curve.
+			id:   CellIDFromFace(5).ChildEndAtLevel(0),
+			want: 6,
+		},
+		{
+			// from the last cell on the last face at the smallest cell size,
+			// there are the maximum number of possible cells.
+			id:   CellIDFromFace(5).ChildEndAtLevel(maxLevel),
+			want: 6 * (1 << uint(2*maxLevel)),
+		},
+		{
+			// from the first cell on the first face.
+			id:   CellIDFromFace(0).ChildBeginAtLevel(0),
+			want: 0,
+		},
+		{
+			// from the first cell at the smallest level on the first face.
+			id:   CellIDFromFace(0).ChildBeginAtLevel(maxLevel),
+			want: 0,
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.id.distanceFromBegin(); got != test.want {
+			t.Errorf("%v.distanceToBegin() = %v, want %v", test.id, got, test.want)
+		}
+	}
+
+	// Test that advancing from the beginning by the distance from a cell gets
+	// us back to that cell.
+	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)
+	if got := CellIDFromFace(0).ChildBeginAtLevel(id.Level()).Advance(id.distanceFromBegin()); got != id {
+		t.Errorf("advancing from the beginning by the distance of a cell should return us to that cell. got %v, want %v", got, id)
 	}
 }
 
@@ -744,6 +840,96 @@ func TestCellIDContinuity(t *testing.T) {
 	}
 }
 
+// sampleBoundary returns a random point on the boundary of the given rectangle.
+func sampleBoundary(rect r2.Rect) (u, v float64) {
+	if oneIn(2) {
+		v = randomUniformFloat64(rect.Y.Lo, rect.Y.Hi)
+		if oneIn(2) {
+			u = rect.X.Lo
+		} else {
+			u = rect.X.Hi
+		}
+	} else {
+		u = randomUniformFloat64(rect.X.Lo, rect.X.Hi)
+		if oneIn(2) {
+			v = rect.Y.Lo
+		} else {
+			v = rect.Y.Hi
+		}
+	}
+	return u, v
+}
+
+// projectToBoundary returns the closest point to uv on the boundary of rect.
+func projectToBoundary(u, v float64, rect r2.Rect) r2.Point {
+	du0 := math.Abs(u - rect.X.Lo)
+	du1 := math.Abs(u - rect.X.Hi)
+	dv0 := math.Abs(v - rect.Y.Lo)
+	dv1 := math.Abs(v - rect.Y.Hi)
+
+	dmin := math.Min(math.Min(du0, du1), math.Min(dv0, dv1))
+	if du0 == dmin {
+		return r2.Point{rect.X.Lo, rect.Y.ClampPoint(v)}
+	}
+	if du1 == dmin {
+		return r2.Point{rect.X.Hi, rect.Y.ClampPoint(v)}
+	}
+	if dv0 == dmin {
+		return r2.Point{rect.X.ClampPoint(u), rect.Y.Lo}
+	}
+
+	return r2.Point{rect.X.ClampPoint(u), rect.Y.Hi}
+}
+
+func TestCellIDExpandedByDistanceUV(t *testing.T) {
+	const maxDistDegrees = 10
+	for i := 0; i < 1000; i++ {
+		id := randomCellID()
+		distance := s1.Degree * s1.Angle(randomUniformFloat64(-maxDistDegrees, maxDistDegrees))
+
+		bound := id.boundUV()
+		expanded := expandedByDistanceUV(bound, distance)
+		for iter := 0; iter < 10; iter++ {
+			// Choose a point on the boundary of the rectangle.
+			face := randomUniformInt(6)
+			centerU, centerV := sampleBoundary(bound)
+			center := Point{faceUVToXYZ(face, centerU, centerV).Normalize()}
+
+			// Now sample a point from a disc of radius (2 * distance).
+			p := samplePointFromCap(CapFromCenterHeight(center, 2*math.Abs(float64(distance))))
+
+			// Find the closest point on the boundary to the sampled point.
+			u, v, ok := faceXYZToUV(face, p)
+			if !ok {
+				continue
+			}
+
+			uv := r2.Point{u, v}
+			closestUV := projectToBoundary(u, v, bound)
+			closest := faceUVToXYZ(face, closestUV.X, closestUV.Y).Normalize()
+			actualDist := p.Distance(Point{closest})
+
+			if distance >= 0 {
+				// expanded should contain all points in the original bound,
+				// and also all points within distance of the boundary.
+				if bound.ContainsPoint(uv) || actualDist < distance {
+					if !expanded.ContainsPoint(uv) {
+						t.Errorf("expandedByDistanceUV(%v, %v).ContainsPoint(%v) = false, want true", bound, distance, uv)
+					}
+				}
+			} else {
+				// expanded should not contain any points within distance
+				// of the original boundary.
+				if actualDist < -distance {
+					if expanded.ContainsPoint(uv) {
+						t.Errorf("negatively expandedByDistanceUV(%v, %v).ContainsPoint(%v) = true, want false", bound, distance, uv)
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestCellIDMaxTile(t *testing.T) {
 	// This method is also tested more thoroughly in s2cellunion_test.
 	for iter := 0; iter < 1000; iter++ {
@@ -824,10 +1010,43 @@ func TestCellIDMaxTile(t *testing.T) {
 	}
 }
 
+func TestCellIDCenterFaceSiTi(t *testing.T) {
+	// Check that the (si, ti) coordinates of the center end in a
+	// 1 followed by (30 - level) 0s.
+
+	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel)
+
+	tests := []struct {
+		id          CellID
+		levelOffset uint
+	}{
+		// Leaf level, 30.
+		{id, 0},
+		// Level 29.
+		{id.Parent(maxLevel - 1), 1},
+		// Level 28.
+		{id.Parent(maxLevel - 2), 2},
+		// Level 20.
+		{id.Parent(maxLevel - 10), 10},
+		// Level 10.
+		{id.Parent(maxLevel - 20), 20},
+		// Level 0.
+		{id.Parent(0), maxLevel},
+	}
+
+	for _, test := range tests {
+		_, si, ti := test.id.centerFaceSiTi()
+		want := 1 << test.levelOffset
+		mask := (1 << (test.levelOffset + 1)) - 1
+		if want != si&mask {
+			t.Errorf("Level Offset %d. %b != %b", test.levelOffset, want, si&mask)
+		}
+		if want != ti&mask {
+			t.Errorf("Level Offset: %d. %b != %b", test.levelOffset, want, ti&mask)
+		}
+	}
+}
+
 // TODO(roberts): Remaining tests to convert.
-//
-// DistanceFromBegin
 // Coverage
-// VertexNeighbors needs AppendAllNeighbors test.
-// ExpandedByDistanceUV
 // TraversalOrder

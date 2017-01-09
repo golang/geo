@@ -77,9 +77,10 @@ Approximately ~40% complete.
 
 **Complete** These files have full parity with the C++ implementation.
 
-*   matrix3x3
 *   Cap
+*   CellID
 *   LatLng
+*   matrix3x3
 *   Metric
 *   PaddedCell
 *   Region
@@ -91,8 +92,6 @@ C++ code, and are reasonably complete enough to use in live code. Up to date
 listing of the incomplete methods are documented at the end of each file.
 
 *   Cell - Missing Subdivide, BoundUV, DistanceToEdge, ChordDistance.
-*   CellID - Missing ExpandedBy{Distance,UV,Endpoint}, CenterSiTi,
-    AppendNeighbors.
 *   CellUnion - Missing Union, Intersection, etc.
 *   Edgeutil - Missing Distance methods, LongitudePruner, FaceSegments,
     ClosestPair.
