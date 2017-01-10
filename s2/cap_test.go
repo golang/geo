@@ -33,6 +33,10 @@ var (
 	fullCap    = FullCap()
 	defaultCap = EmptyCap()
 
+	zeroHeight  = 0.0
+	fullHeight  = 2.0
+	emptyHeight = -1.0
+
 	xAxisPt = Point{r3.Vector{1, 0, 0}}
 	yAxisPt = Point{r3.Vector{0, 1, 0}}
 
@@ -80,12 +84,12 @@ func TestCapBasicEmptyFullValid(t *testing.T) {
 }
 
 func TestCapCenterHeightRadius(t *testing.T) {
-	if !xAxis.ApproxEqual(xAxis.Complement().Complement()) {
-		t.Errorf("the double complement should equal itself, %v == %v",
+	if xAxis == xAxis.Complement().Complement() {
+		t.Errorf("the complement of the complement is not the original. %v == %v",
 			xAxis, xAxis.Complement().Complement())
 	}
 
-	if fullCap.height != fullHeight {
+	if fullCap.Height() != fullHeight {
 		t.Error("full Caps should be full height")
 	}
 	if fullCap.Radius().Degrees() != 180.0 {
@@ -95,15 +99,15 @@ func TestCapCenterHeightRadius(t *testing.T) {
 	if emptyCap.center != defaultCap.center {
 		t.Error("empty Caps should be have the same center as the default")
 	}
-	if emptyCap.height != defaultCap.height {
+	if emptyCap.Height() != defaultCap.Height() {
 		t.Error("empty Caps should be have the same height as the default")
 	}
 
-	if yAxis.height != zeroHeight {
+	if yAxis.Height() != zeroHeight {
 		t.Error("y-axis cap should not be empty height")
 	}
 
-	if xAxis.height != zeroHeight {
+	if xAxis.Height() != zeroHeight {
 		t.Error("x-axis cap should not be empty height")
 	}
 	if xAxis.Radius().Radians() != zeroHeight {
@@ -114,7 +118,7 @@ func TestCapCenterHeightRadius(t *testing.T) {
 	if hc != hemi.Complement().center {
 		t.Error("hemi center and its complement should have the same center")
 	}
-	if hemi.height != 1.0 {
+	if hemi.Height() != 1.0 {
 		t.Error("hemi cap should be 1.0 in height")
 	}
 }
@@ -685,5 +689,30 @@ func TestCapUnion(t *testing.T) {
 	hemi := CapFromCenterHeight(p1, 1)
 	if !hemi.Union(hemi.Complement()).IsFull() {
 		t.Errorf("%v.Union(%v).Complement().IsFull() = false, want true", hemi, hemi.Complement())
+	}
+}
+
+func TestCapEqual(t *testing.T) {
+	tests := []struct {
+		a, b Cap
+		want bool
+	}{
+		{EmptyCap(), EmptyCap(), true},
+		{EmptyCap(), FullCap(), false},
+		{FullCap(), FullCap(), true},
+		{
+			CapFromCenterAngle(PointFromCoords(0, 0, 1), s1.Degree*150),
+			CapFromCenterAngle(PointFromCoords(0, 0, 1), s1.Degree*151),
+			false,
+		},
+		{xAxis, xAxis, true},
+		{xAxis, yAxis, false},
+		{xComp, xAxis.Complement(), true},
+	}
+
+	for _, test := range tests {
+		if got := test.a.Equal(test.b); got != test.want {
+			t.Errorf("%v.Equal(%v) = %t, want %t", test.a, test.b, got, test.want)
+		}
 	}
 }

@@ -164,8 +164,8 @@ func (c ChordAngle) Add(other ChordAngle) ChordAngle {
 	return ChordAngle(math.Min(4.0, x+y+2*math.Sqrt(x*y)))
 }
 
-// Sub subtracts the other ChordAngle from this one and returns the resulting value.
-// This method assumes the ChordAngles are not special.
+// Sub subtracts the other ChordAngle from this one and returns the resulting
+// value. This method assumes the ChordAngles are not special.
 func (c ChordAngle) Sub(other ChordAngle) ChordAngle {
 	if other == 0 {
 		return c
@@ -181,12 +181,18 @@ func (c ChordAngle) Sub(other ChordAngle) ChordAngle {
 // Sin returns the sine of this chord angle. This method is more efficient
 // than converting to Angle and performing the computation.
 func (c ChordAngle) Sin() float64 {
+	return math.Sqrt(c.Sin2())
+}
+
+// Sin2 returns the square of the sine of this chord angle.
+// It is more efficient than Sin.
+func (c ChordAngle) Sin2() float64 {
 	// Let a be the (non-squared) chord length, and let A be the corresponding
 	// half-angle (a = 2*sin(A)).  The formula below can be derived from:
 	//   sin(2*A) = 2 * sin(A) * cos(A)
 	//   cos^2(A) = 1 - sin^2(A)
 	// This is much faster than converting to an angle and computing its sine.
-	return math.Sqrt(float64(c * (1 - 0.25*c)))
+	return float64(c * (1 - 0.25*c))
 }
 
 // Cos returns the cosine of this chord angle. This method is more efficient
