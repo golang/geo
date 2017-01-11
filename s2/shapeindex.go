@@ -159,33 +159,38 @@ type clippedEdge struct {
 // interiors, the index makes it very fast to determine which Shape(s) contain
 // a given point or region.
 type ShapeIndex struct {
-	// shapes maps all shapes to their index.
-	shapes map[Shape]int32
+	// shapes is a map of shape ID to shape.
+	shapes map[int]Shape
 
 	maxEdgesPerCell int
 
 	// nextID tracks the next ID to hand out. IDs are not reused when shapes
 	// are removed from the index.
-	nextID int32
+	nextID int
 }
 
 // NewShapeIndex creates a new ShapeIndex.
 func NewShapeIndex() *ShapeIndex {
 	return &ShapeIndex{
 		maxEdgesPerCell: 10,
-		shapes:          make(map[Shape]int32),
+		shapes:          make(map[int]Shape),
 	}
 }
 
 // Add adds the given shape to the index and assign an ID to it.
 func (s *ShapeIndex) Add(shape Shape) {
-	s.shapes[shape] = s.nextID
+	s.shapes[s.nextID] = shape
 	s.nextID++
 }
 
 // Remove removes the given shape from the index.
 func (s *ShapeIndex) Remove(shape Shape) {
-	delete(s.shapes, shape)
+	for k, v := range s.shapes {
+		if v == shape {
+			delete(s.shapes, k)
+			return
+		}
+	}
 }
 
 // Len reports the number of Shapes in this index.
@@ -195,14 +200,14 @@ func (s *ShapeIndex) Len() int {
 
 // Reset clears the contents of the index and resets it to its original state.
 func (s *ShapeIndex) Reset() {
-	s.shapes = make(map[Shape]int32)
+	s.shapes = make(map[int]Shape)
 	s.nextID = 0
 }
 
 // NumEdges returns the number of edges in this index.
 func (s *ShapeIndex) NumEdges() int {
 	numEdges := 0
-	for shape := range s.shapes {
+	for _, shape := range s.shapes {
 		numEdges += shape.NumEdges()
 	}
 	return numEdges
