@@ -46,15 +46,20 @@ https://github.com/google/s2-geometry-library-java
 
 # Status of the Go Library
 
-## [ℝ¹](https://godoc.org/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates.
+This library is principally a port of
+[the C++ S2 library](https://code.google.com/archive/p/s2-geometry-library),
+adapting to Go idioms where it makes sense. We detail the progress of this port
+below relative to that C++ library.
+
+## [ℝ¹](https://godoc.org/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
 
 Full parity with C++.
 
-## [ℝ²](https://godoc.org/github.com/golang/geo/r2) - Two-dimensional Cartesian coordinates.
+## [ℝ²](https://godoc.org/github.com/golang/geo/r2) - Two-dimensional Cartesian coordinates
 
 Full parity with C++.
 
-## [ℝ³](https://godoc.org/github.com/golang/geo/r3) - Three-dimensional Cartesian coordinates.
+## [ℝ³](https://godoc.org/github.com/golang/geo/r3) - Three-dimensional Cartesian coordinates
 
 Full parity with C++.
 
