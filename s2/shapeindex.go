@@ -20,6 +20,15 @@ import (
 	"github.com/golang/geo/r2"
 )
 
+// dimension defines the types of geometry dimensions that a Shape supports.
+type dimension int
+
+const (
+	pointGeometry dimension = iota
+	polylineGeometry
+	polygonGeometry
+)
+
 // Shape defines an interface for any S2 type that needs to be indexable. A shape
 // is a collection of edges that optionally defines an interior. It can be used to
 // represent a set of points, a set of polylines, or a set of polygons.
@@ -30,6 +39,33 @@ type Shape interface {
 	// Edge returns endpoints for the given edge index.
 	// Zero-length edges are allowed, and can be used to represent points.
 	Edge(i int) (a, b Point)
+
+	// numChains reports the number of contiguous edge chains in the shape.
+	// For example, a shape whose edges are [AB, BC, CD, AE, EF] would consist
+	// of two chains (AB,BC,CD and AE,EF). This method allows some algorithms
+	// to be optimized by skipping over edge chains that do not affect the output.
+	//
+	// Note that it is always acceptable to implement this method by returning
+	// NumEdges, i.e. every chain consists of a single edge.
+	numChains() int
+
+	// chainStart returns the id of the first edge in the i-th edge chain,
+	// and returns NumEdges when i == numChains. For example, if there are
+	// two chains AB,BC,CD and AE,EF, the chain starts would be [0, 3, 5].
+	//
+	// This requires the following:
+	// 0 <= i <= numChains()
+	// chainStart(0) == 0
+	// chainStart(i) < chainStart(i+1)
+	// chainStart(numChains()) == NumEdges()
+	chainStart(i int) int
+
+	// dimension returns the dimension of the geometry represented by this shape.
+	//
+	// Note that this method allows degenerate geometry of different dimensions
+	// to be distinguished, e.g. it allows a point to be distinguished from a
+	// polyline or polygon that has been simplified to a single point.
+	dimension() dimension
 
 	// HasInterior reports whether this shape has an interior. If so, it must be possible
 	// to assemble the edges into a collection of non-crossing loops.  Edges may
@@ -45,7 +81,7 @@ type Shape interface {
 
 // A minimal check for types that should satisfy the Shape interface.
 var (
-	_ Shape = Loop{}
+	_ Shape = &Loop{}
 	_ Shape = Polyline{}
 )
 

@@ -154,6 +154,26 @@ func (p Polyline) Edge(i int) (a, b Point) {
 	return p[i], p[i+1]
 }
 
+// dimension returns the dimension of the geometry represented by this Polyline.
+func (p Polyline) dimension() dimension { return polylineGeometry }
+
+// numChains reports the number of contiguous edge chains in this Polyline.
+func (p Polyline) numChains() int {
+	if p.NumEdges() >= 1 {
+		return 1
+	}
+	return 0
+}
+
+// chainStart returns the id of the first edge in the i-th edge chain in this Polyline.
+func (p Polyline) chainStart(i int) int {
+	if i == 0 {
+		return 0
+	}
+
+	return p.NumEdges()
+}
+
 // HasInterior returns false as Polylines are not closed.
 func (p Polyline) HasInterior() bool {
 	return false

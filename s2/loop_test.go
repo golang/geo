@@ -157,6 +157,54 @@ func TestLoopEmptyAndFull(t *testing.T) {
 	if !fullLoop.isEmptyOrFull() {
 		t.Errorf("full loop should pass IsEmptyOrFull")
 	}
+	if emptyLoop.NumEdges() != 0 {
+		t.Errorf("empty loops should have no edges")
+	}
+	if emptyLoop.numChains() != 0 {
+		t.Errorf("empty loops should have no edge chains")
+	}
+	if fullLoop.NumEdges() != 0 {
+		t.Errorf("full loops should have no edges")
+	}
+	if fullLoop.numChains() != 0 {
+		t.Errorf("full loops should have no edge chains")
+	}
+}
+
+func TestLoopBasic(t *testing.T) {
+	shape := Shape(makeLoop("0:0, 0:1, 1:0"))
+
+	if got := shape.NumEdges(); got != 3 {
+		t.Errorf("shape.NumEdges = %d, want 3", got)
+	}
+	if got := shape.numChains(); got != 1 {
+		t.Errorf("shape.numChains = %d, want 1", got)
+	}
+	if got := shape.chainStart(0); got != 0 {
+		t.Errorf("shape.chainStart(0) = %d, want 3", got)
+	}
+	if got := shape.chainStart(1); got != 3 {
+		t.Errorf("shape.chainStart(1) = %d, want 3", got)
+	}
+
+	v2, v3 := shape.Edge(2)
+	if want := PointFromLatLng(LatLngFromDegrees(1, 0)); !v2.ApproxEqual(want) {
+		t.Errorf("shape.Edge(2) end A = %v, want %v", v2, want)
+	}
+	if want := PointFromLatLng(LatLngFromDegrees(0, 0)); !v3.ApproxEqual(want) {
+
+		t.Errorf("shape.Edge(2) end B = %v, want %v", v3, want)
+	}
+
+	if got := shape.dimension(); got != polygonGeometry {
+		t.Errorf("shape.dimension() = %d, want %v", got, polygonGeometry)
+	}
+	if !shape.HasInterior() {
+		t.Errorf("shape.HasInterior() = false, want true")
+	}
+	if shape.ContainsOrigin() {
+		t.Errorf("shape.ContainsOrigin() = true, want false")
+	}
 }
 
 func TestLoopRectBound(t *testing.T) {

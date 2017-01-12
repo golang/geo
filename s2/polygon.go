@@ -62,6 +62,9 @@ type Polygon struct {
 	// numVertices keeps the running total of all of the vertices of the contained loops.
 	numVertices int
 
+	// numEdges tracks the total number of edges in all the loops in this polygon.
+	numEdges int
+
 	// bound is a conservative bound on all points contained by this loop.
 	// If l.ContainsPoint(P), then l.bound.ContainsPoint(P).
 	bound Rect
@@ -71,6 +74,11 @@ type Polygon struct {
 	// has been expanded sufficiently to account for this error, i.e.
 	// if A.Contains(B), then A.subregionBound.Contains(B.bound).
 	subregionBound Rect
+
+	// A slice where element i is the cumulative number of edges in the
+	// preceding loops in the polygon.
+	// This field is used for polygons that have a large number of loops.
+	cumulativeEdges []int
 }
 
 // PolygonFromLoops constructs a polygon from the given hierarchically nested
@@ -87,15 +95,25 @@ func PolygonFromLoops(loops []*Loop) *Polygon {
 	if len(loops) > 1 {
 		panic("s2.PolygonFromLoops for multiple loops is not yet implemented")
 	}
-	return &Polygon{
+
+	p := &Polygon{
 		loops: loops,
 		// TODO(roberts): This is explicitly set as depth of 0 for the one loop in
 		// the polygon. When multiple loops are supported, fix this to set the depths.
-		loopDepths:     []int{0},
-		numVertices:    len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
-		bound:          EmptyRect(),
-		subregionBound: EmptyRect(),
+		loopDepths:  []int{0},
+		numVertices: len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
+		// TODO(roberts): Compute these bounds.
+		bound:           loops[0].RectBound(),
+		subregionBound:  EmptyRect(),
+		cumulativeEdges: make([]int, len(loops)),
 	}
+
+	for i, l := range loops {
+		p.cumulativeEdges[i] = p.numEdges
+		p.numEdges += len(l.Vertices())
+	}
+
+	return p
 }
 
 // FullPolygon returns a special "full" polygon.
@@ -104,10 +122,11 @@ func FullPolygon() *Polygon {
 		loops: []*Loop{
 			FullLoop(),
 		},
-		loopDepths:     []int{0},
-		numVertices:    len(FullLoop().Vertices()),
-		bound:          FullRect(),
-		subregionBound: FullRect(),
+		loopDepths:      []int{0},
+		numVertices:     len(FullLoop().Vertices()),
+		bound:           FullRect(),
+		subregionBound:  FullRect(),
+		cumulativeEdges: []int{0},
 	}
 }
 
@@ -209,3 +228,23 @@ func (p *Polygon) RectBound() Rect { return p.bound }
 // IntersectsCell reports whether the polygon intersects the given cell.
 // TODO(roberts)
 //func (p *Polygon) IntersectsCell(c Cell) bool { ... }
+
+// dimension returns the dimension of the geometry represented by this Polygon.
+func (p *Polygon) dimension() dimension { return polygonGeometry }
+
+// numChains reports the number of contiguous edge chains in the Polygon.
+func (p *Polygon) numChains() int {
+	if p.IsFull() {
+		return 0
+	}
+
+	return p.NumLoops()
+}
+
+// chainStart returns the id of the first edge in the i-th edge chain in this Polygon.
+func (p *Polygon) chainStart(i int) int {
+	if i == p.NumLoops() {
+		return p.numEdges
+	}
+	return p.cumulativeEdges[i]
+}

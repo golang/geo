@@ -211,6 +211,26 @@ func (l Loop) Edge(i int) (a, b Point) {
 	return l.Vertex(i), l.Vertex(i + 1)
 }
 
+// dimension returns the dimension of the geometry represented by this Loop.
+func (l Loop) dimension() dimension { return polygonGeometry }
+
+// numChains reports the number of contiguous edge chains in the Loop.
+func (l Loop) numChains() int {
+	if l.isEmptyOrFull() {
+		return 0
+	}
+	return 1
+}
+
+// chainStart returns the id of the first edge in the i-th edge chain in this Loop.
+func (l Loop) chainStart(i int) int {
+	if i == 0 {
+		return 0
+	}
+
+	return l.NumEdges()
+}
+
 // IsEmpty reports true if this is the special "empty" loop that contains no points.
 func (l Loop) IsEmpty() bool {
 	return l.isEmptyOrFull() && !l.ContainsOrigin()

@@ -58,8 +58,17 @@ func TestPolylineShape(t *testing.T) {
 		t.Errorf("%v.NumEdges() = %v, want %d", shape, got, want)
 	}
 
-	v2, v3 := shape.Edge(2)
+	if got, want := shape.numChains(), 1; got != want {
+		t.Errorf("%v.numChains() = %d, want %d", shape, got, want)
+	}
+	if got, want := shape.chainStart(0), 0; got != want {
+		t.Errorf("%v.chainStart(0) = %d, want %d", shape, got, want)
+	}
+	if got, want := shape.chainStart(1), 3; got != want {
+		t.Errorf("%v.chainStart(1) = %d, want %d", shape, got, want)
+	}
 
+	v2, v3 := shape.Edge(2)
 	if want := PointFromLatLng(LatLngFromDegrees(1, 1)); !v2.ApproxEqual(want) {
 		t.Errorf("%v.Edge(%d) point A = %v  want %v", shape, 2, v2, want)
 	}
@@ -74,9 +83,16 @@ func TestPolylineShape(t *testing.T) {
 		t.Errorf("polylines should not contain the origin")
 	}
 
+	if shape.dimension() != polylineGeometry {
+		t.Errorf("polylines should have PolylineGeometry")
+	}
+
 	empty := &Polyline{}
 	if got, want := empty.NumEdges(), 0; got != want {
 		t.Errorf("%v.NumEdges() = %d, want %d", empty, got, want)
+	}
+	if got, want := empty.numChains(), 0; got != want {
+		t.Errorf("%v.numChains() = %d, want %d", empty, got, want)
 	}
 }
 

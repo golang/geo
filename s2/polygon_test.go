@@ -29,15 +29,87 @@ func TestPolygonEmptyAndFull(t *testing.T) {
 	if emptyPolygon.IsFull() {
 		t.Errorf("empty polygon should not be full")
 	}
+	/*
+		// TODO(roberts): Uncomment when Polygon finishes the Shape interface.
+		if emptyPolygon.ContainsOrigin() {
+			t.Errorf("emptyPolygon.ContainsOrigin() = true, want false")
+		}
+		if got, want := emptyPolygon.NumEdges(), 0; got != want {
+			t.Errorf("emptyPolygon.NumEdges() = %v, want %v", got, want)
+		}
+	*/
+	if got := emptyPolygon.dimension(); got != polygonGeometry {
+		t.Errorf("emptyPolygon.dimension() = %v, want %v", got, polygonGeometry)
+	}
+	if got, want := emptyPolygon.numChains(), 0; got != want {
+		t.Errorf("emptyPolygon.numChains() = %v, want %v", got, want)
+	}
 
 	fullPolygon := FullPolygon()
-
 	if fullPolygon.IsEmpty() {
 		t.Errorf("full polygon should not be emtpy")
 	}
 	if !fullPolygon.IsFull() {
 		t.Errorf("full polygon should be full")
 	}
+	/*
+		// TODO(roberts): Uncomment when Polygon finishes the Shape interface.
+		if !fullPolygon.ContainsOrigin() {
+			t.Errorf("fullPolygon.ContainsOrigin() = false, want true")
+		}
+		if got, want := fullPolygon.NumEdges(), 0; got != want {
+			t.Errorf("fullPolygon.NumEdges() = %v, want %v", got, want)
+		}
+	*/
+	if got := fullPolygon.dimension(); got != polygonGeometry {
+		t.Errorf("emptyPolygon.dimension() = %v, want %v", got, polygonGeometry)
+	}
+	if got, want := fullPolygon.numChains(), 0; got != want {
+		t.Errorf("emptyPolygon.numChains() = %v, want %v", got, want)
+	}
+}
+
+func TestPolygonShape(t *testing.T) {
+	// TODO(roberts): Once Polygon implements Shape uncomment this test.
+	/*
+		p := &Polygon{}
+		shape := Shape(p)
+		if p.NumVertices() != shape.NumEdges() {
+			t.Errorf("the number of vertices in a polygon should equal the number of edges")
+		}
+		if p.NumLoops() != shape.numChains() {
+			t.Errorf("the number of loops in a polygon should equal the number of chains")
+		}
+		e := 0
+		for i, l := range p.loops {
+			if e != shape.chainStart(i) {
+				t.Errorf("the edge if of the start of loop(%d) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.chainStart(i), e)
+			}
+			for j := 0; j < len(l.Vertices()); j++ {
+				v0, v1 := shape.Edge(e)
+				// TODO(roberts): Update once Loop implements orientedVertex.
+				//if l.orientedVertex(j) != v0 {
+				if l.Vertex(j) != v0 {
+					t.Errorf("l.Vertex(%d) = %v, want %v", j, l.Vertex(j), v0)
+				}
+				// TODO(roberts): Update once Loop implements orientedVertex.
+				//if l.orientedVertex(j+1) != v1 {
+				if l.Vertex(j+1) != v1 {
+					t.Errorf("l.Vertex(%d) = %v, want %v", j+1, l.Vertex(j+1), v1)
+				}
+				e++
+			}
+			if e != shape.chainStart(i+1) {
+				t.Errorf("the edge id of the start of the next loop(%d+1) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.chainStart(i+1), e)
+			}
+		}
+		if shape.dimension() != polygonGeometry {
+			t.Errorf("polygon.dimension() = %v, want %v", shape.dimension() , polygonGeometry)
+		}
+		if !shape.HasInterior() {
+			t.Errorf("polygons should always have interiors")
+		}
+	*/
 }
 
 func TestPolygonLoop(t *testing.T) {

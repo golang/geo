@@ -27,25 +27,14 @@ type testShape struct {
 	edges int
 }
 
-func newTestShape() *testShape {
-	return &testShape{}
-}
-
-func (s *testShape) NumEdges() int {
-	return s.edges
-}
-
-func (s *testShape) Edge(id int) (a, b Point) {
-	return s.a, s.b
-}
-
-func (s *testShape) HasInterior() bool {
-	return false
-}
-
-func (s *testShape) ContainsOrigin() bool {
-	return false
-}
+func newTestShape() *testShape                { return &testShape{} }
+func (s *testShape) NumEdges() int            { return s.edges }
+func (s *testShape) Edge(id int) (a, b Point) { return s.a, s.b }
+func (s *testShape) dimension() dimension     { return pointGeometry }
+func (s *testShape) numChains() int           { return 0 }
+func (s *testShape) chainStart(i int) int     { return 0 }
+func (s *testShape) HasInterior() bool        { return false }
+func (s *testShape) ContainsOrigin() bool     { return false }
 
 func TestShapeIndexBasics(t *testing.T) {
 	si := NewShapeIndex()
