@@ -189,17 +189,17 @@ func (l *Loop) initBound() {
 }
 
 // ContainsOrigin reports true if this loop contains s2.OriginPoint().
-func (l Loop) ContainsOrigin() bool {
+func (l *Loop) ContainsOrigin() bool {
 	return l.originInside
 }
 
 // HasInterior returns true because all loops have an interior.
-func (l Loop) HasInterior() bool {
+func (l *Loop) HasInterior() bool {
 	return true
 }
 
 // NumEdges returns the number of edges in this shape.
-func (l Loop) NumEdges() int {
+func (l *Loop) NumEdges() int {
 	if l.isEmptyOrFull() {
 		return 0
 	}
@@ -207,15 +207,15 @@ func (l Loop) NumEdges() int {
 }
 
 // Edge returns the endpoints for the given edge index.
-func (l Loop) Edge(i int) (a, b Point) {
+func (l *Loop) Edge(i int) (a, b Point) {
 	return l.Vertex(i), l.Vertex(i + 1)
 }
 
 // dimension returns the dimension of the geometry represented by this Loop.
-func (l Loop) dimension() dimension { return polygonGeometry }
+func (l *Loop) dimension() dimension { return polygonGeometry }
 
 // numChains reports the number of contiguous edge chains in the Loop.
-func (l Loop) numChains() int {
+func (l *Loop) numChains() int {
 	if l.isEmptyOrFull() {
 		return 0
 	}
@@ -223,7 +223,7 @@ func (l Loop) numChains() int {
 }
 
 // chainStart returns the id of the first edge in the i-th edge chain in this Loop.
-func (l Loop) chainStart(i int) int {
+func (l *Loop) chainStart(i int) int {
 	if i == 0 {
 		return 0
 	}
@@ -232,47 +232,47 @@ func (l Loop) chainStart(i int) int {
 }
 
 // IsEmpty reports true if this is the special "empty" loop that contains no points.
-func (l Loop) IsEmpty() bool {
+func (l *Loop) IsEmpty() bool {
 	return l.isEmptyOrFull() && !l.ContainsOrigin()
 }
 
 // IsFull reports true if this is the special "full" loop that contains all points.
-func (l Loop) IsFull() bool {
+func (l *Loop) IsFull() bool {
 	return l.isEmptyOrFull() && l.ContainsOrigin()
 }
 
 // isEmptyOrFull reports true if this loop is either the "empty" or "full" special loops.
-func (l Loop) isEmptyOrFull() bool {
+func (l *Loop) isEmptyOrFull() bool {
 	return len(l.vertices) == 1
 }
 
 // RectBound returns a tight bounding rectangle. If the loop contains the point,
 // the bound also contains it.
-func (l Loop) RectBound() Rect {
+func (l *Loop) RectBound() Rect {
 	return l.bound
 }
 
 // CapBound returns a bounding cap that may have more padding than the corresponding
 // RectBound. The bound is conservative such that if the loop contains a point P,
 // the bound also contains it.
-func (l Loop) CapBound() Cap {
+func (l *Loop) CapBound() Cap {
 	return l.bound.CapBound()
 }
 
 // Vertex returns the vertex for the given index. For convenience, the vertex indices
 // wrap automatically for methods that do index math such as Edge.
 // i.e., Vertex(NumEdges() + n) is the same as Vertex(n).
-func (l Loop) Vertex(i int) Point {
+func (l *Loop) Vertex(i int) Point {
 	return l.vertices[i%len(l.vertices)]
 }
 
 // Vertices returns the vertices in the loop.
-func (l Loop) Vertices() []Point {
+func (l *Loop) Vertices() []Point {
 	return l.vertices
 }
 
 // ContainsPoint returns true if the loop contains the point.
-func (l Loop) ContainsPoint(p Point) bool {
+func (l *Loop) ContainsPoint(p Point) bool {
 	// TODO(sbeckman): Move to bruteForceContains and update with ShapeIndex when available.
 	// Empty and full loops don't need a special case, but invalid loops with
 	// zero vertices do, so we might as well handle them all at once.
