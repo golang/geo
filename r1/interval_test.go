@@ -190,6 +190,14 @@ func TestIntervalOperations(t *testing.T) {
 			intersects:         true,
 			interiorIntersects: false,
 		},
+		{
+			have:               Interval{1, 2.1},
+			other:              Interval{2, 1.9},
+			contains:           true,
+			interiorContains:   true,
+			intersects:         false,
+			interiorIntersects: false,
+		},
 	}
 
 	for _, test := range tests {
