@@ -194,6 +194,10 @@ func (c *coverer) expandChildren(cand *candidate, cell Cell, numLevels int) int 
 // otherwise expands its children and inserts it into the priority queue.
 // Passing an argument of nil does nothing.
 func (c *coverer) addCandidate(cand *candidate) {
+	if cand == nil {
+		return
+	}
+
 	if cand.terminal {
 		c.result = append(c.result, cand.cell.id)
 		return
@@ -274,9 +278,7 @@ func (c *coverer) initialCandidates() {
 	cells := temp.FastCovering(c.region.CapBound())
 	c.adjustCellLevels(&cells)
 	for _, ci := range cells {
-		if cand := c.newCandidate(CellFromCellID(ci)); cand != nil {
-			c.addCandidate(cand)
-		}
+		c.addCandidate(c.newCandidate(CellFromCellID(ci)))
 	}
 }
 
