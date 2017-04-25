@@ -542,7 +542,7 @@ func TestCellIDCommonAncestorLevel(t *testing.T) {
 	}
 	for _, test := range tests {
 		if got, ok := test.ci.CommonAncestorLevel(test.other); ok != test.wantOk || got != test.want {
-			t.Errorf("CellID(%v).VertexNeighbors(%v) = %d, %t; want %d, %t", test.ci, test.other, got, ok, test.want, test.wantOk)
+			t.Errorf("CellID(%v).CommonAncestorLevel(%v) = %d, %t; want %d, %t", test.ci, test.other, got, ok, test.want, test.wantOk)
 		}
 	}
 }
