@@ -20,24 +20,158 @@ import (
 	"testing"
 )
 
-func TestPolygonEmptyAndFull(t *testing.T) {
-	emptyPolygon := &Polygon{}
+const (
+	// A set of nested loops around the LatLng point 0:0.
+	// Every vertex of nearLoop0 is also a vertex of nearLoop1.
+	nearPoint    = "0:0"
+	nearLoop0    = "-1:0, 0:1, 1:0, 0:-1;"
+	nearLoop1    = "-1:-1, -1:0, -1:1, 0:1, 1:1, 1:0, 1:-1, 0:-1;"
+	nearLoop2    = "-1:-2, -2:5, 5:-2;"
+	nearLoop3    = "-2:-2, -3:6, 6:-3;"
+	nearLoopHemi = "0:-90, -90:0, 0:90, 90:0;"
 
+	// A set of nested loops around the LatLng point 0:180. Every vertex of
+	// farLoop0 and farLoop2 belongs to farLoop1, and all the loops except
+	// farLoop2 are non-convex.
+	farPoint    = "0:180"
+	farLoop0    = "0:179, 1:180, 0:-179, 2:-180;"
+	farLoop1    = "0:179, -1:179, 1:180, -1:-179, 0:-179, 3:-178, 2:-180, 3:178;"
+	farLoop2    = "3:-178, 3:178, -1:179, -1:-179;"
+	farLoop3    = "-3:-178, 4:-177, 4:177, -3:178, -2:179;"
+	farLoopHemi = "0:-90, 60:90, -60:90;"
+
+	// A set of nested loops around the LatLng point -90:0.
+	southLoopPoint = "-89.9999:0.001"
+	southLoop0a    = "-90:0, -89.99:0.01, -89.99:0;"
+	southLoop0b    = "-90:0, -89.99:0.03, -89.99:0.02;"
+	southLoop0c    = "-90:0, -89.99:0.05, -89.99:0.04;"
+	southLoop1     = "-90:0, -89.9:0.1, -89.9:-0.1;"
+	southLoop2     = "-90:0, -89.8:0.2, -89.8:-0.2;"
+	southLoopHemi  = "0:-180, 0:60, 0:-60;"
+
+	// Two different loops that surround all the near and far loops except
+	// for the hemispheres.
+	nearFarLoop1 = "-1:-9, -9:-9, -9:9, 9:9, 9:-9, 1:-9, " +
+		"1:-175, 9:-175, 9:175, -9:175, -9:-175, -1:-175;"
+	nearFarLoop2 = "-2:15, -2:170, -8:-175, 8:-175, " +
+		"2:170, 2:15, 8:-4, -8:-4;"
+
+	// Loop that results from intersection of other loops.
+	farHemiSouthHemiLoop = "0:-180, 0:90, -60:90, 0:-90;"
+
+	// Rectangles that form a cross, with only shared vertices, no crossing edges.
+	// Optional holes outside the intersecting region. 1 is the horizontal rectangle,
+	// and 2 is the vertical. The intersections are shared vertices.
+	//       x---x
+	//       | 2 |
+	//   +---*---*---+
+	//   | 1 |1+2| 1 |
+	//   +---*---*---+
+	//       | 2 |
+	//       x---x
+	loopCross1          = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1;"
+	loopCross1SideHole  = "-1.5:0.5, -1.2:0.5, -1.2:-0.5, -1.5:-0.5;"
+	loopCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;"
+	loopCross2SideHole  = "0.5:-1.5, 0.5:-1.2, -0.5:-1.2, -0.5:-1.5;"
+	loopCross2          = "1:-2, 1:-1, 1:1, 1:2, -1:2, -1:1, -1:-1, -1:-2;"
+
+	// Two rectangles that intersect, but no edges cross and there's always
+	// local containment (rather than crossing) at each shared vertex.
+	// In this ugly ASCII art, 1 is A+B, 2 is B+C:
+	//   +---+---+---+
+	//   | A | B | C |
+	//   +---+---+---+
+	loopOverlap1          = "0:1, 1:1, 2:1, 2:0, 1:0, 0:0;"
+	loopOverlap1SideHole  = "0.2:0.8, 0.8:0.8, 0.8:0.2, 0.2:0.2;"
+	loopOverlapCenterHole = "1.2:0.8, 1.8:0.8, 1.8:0.2, 1.2:0.2;"
+	loopOverlap2SideHole  = "2.2:0.8, 2.8:0.8, 2.8:0.2, 2.2:0.2;"
+	loopOverlap2          = "1:1, 2:1, 3:1, 3:0, 2:0, 1:0;"
+
+	// By symmetry, the intersection of the two polygons has almost half the area
+	// of either polygon.
+	//   +---+
+	//   | 3 |
+	//   +---+---+
+	//   |3+4| 4 |
+	//   +---+---+
+	loopOverlap3 = "-10:10, 0:10, 0:-10, -10:-10, -10:0"
+	loopOverlap4 = "-10:0, 10:0, 10:-10, -10:-10"
+)
+
+// Some shared polygons used in the tests.
+var (
+	emptyPolygon = &Polygon{}
+	fullPolygon  = FullPolygon()
+
+	// TODO(roberts): Uncomment once Polygons with multiple loops are supported.
+	/*
+		near0Polygon     = makePolygon(nearLoop0, true)
+		near01Polygon    = makePolygon(nearLoop0+nearLoop1, true)
+		near30Polygon    = makePolygon(nearLoop3+nearLoop0, true)
+		near23Polygon    = makePolygon(nearLoop2+nearLoop3, true)
+		near0231Polygon  = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoop1, true)
+		near023H1Polygon = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoopHemi+nearLoop1, true)
+
+		far01Polygon    = makePolygon(farLoop0+farLoop1, true)
+		far21Polygon    = makePolygon(farLoop2+farLoop1, true)
+		far231Polygon   = makePolygon(farLoop2+farLoop3+farLoop1, true)
+		far2H0Polygon   = makePolygon(farLoop2+farLoopHemi+farLoop0, true)
+		far2H013Polygon = makePolygon(farLoop2+farLoopHemi+farLoop0+farLoop1+farLoop3, true)
+
+		south0abPolygon     = makePolygon(southLoop0a+southLoop0b, true)
+		south2Polygon       = makePolygon(southLoop2, true)
+		south20b1Polygon    = makePolygon(southLoop2+southLoop0b+southLoop1, true)
+		south2H1Polygon     = makePolygon(southLoop2+southLoopHemi+southLoop1, true)
+		south20bH0acPolygon = makePolygon(southLoop2+southLoop0b+southLoopHemi+
+			southLoop0a+southLoop0c, true)
+
+		nf1N10F2S10abcPolygon = makePolygon(southLoop0c+farLoop2+nearLoop1+
+			nearFarLoop1+nearLoop0+southLoop1+southLoop0b+southLoop0a, true)
+
+		nf2N2F210S210abPolygon = makePolygon(farLoop2+southLoop0a+farLoop1+
+			southLoop1+farLoop0+southLoop0b+nearFarLoop2+southLoop2+nearLoop2, true)
+
+		f32n0Polygon  = makePolygon(farLoop2+nearLoop0+farLoop3, true)
+		n32s0bPolygon = makePolygon(nearLoop3+southLoop0b+nearLoop2, true)
+
+		cross1Polygon           = makePolygon(loopCross1, true)
+		cross1SideHolePolygon   = makePolygon(loopCross1+loopCross1SideHole, true)
+		cross1CenterHolePolygon = makePolygon(loopCross1+loopCrossCenterHole, true)
+		cross2Polygon           = makePolygon(loopCross2, true)
+		cross2SideHolePolygon   = makePolygon(loopCross2+loopCross2SideHole, true)
+		cross2CenterHolePolygon = makePolygon(loopCross2+loopCrossCenterHole, true)
+
+		overlap1Polygon           = makePolygon(loopOverlap1, true)
+		overlap1SideHolePolygon   = makePolygon(loopOverlap1+loopOverlap1SideHole, true)
+		overlap1CenterHolePolygon = makePolygon(loopOverlap1+loopOverlapCenterHole, true)
+		overlap2Polygon           = makePolygon(loopOverlap2, true)
+		overlap2SideHolePolygon   = makePolygon(loopOverlap2+loopOverlap2SideHole, true)
+		overlap2CenterHolePolygon = makePolygon(loopOverlap2+loopOverlapCenterHole, true)
+
+		overlap3Polygon = makePolygon(loopOverlap3, true)
+		overlap4Polygon = makePolygon(loopOverlap4, true)
+
+		farHemiPolygon      = makePolygon(farLoopHemi, true)
+		southHemiPolygon    = makePolygon(southLoopHemi, true)
+		farSouthHemiPolygon = makePolygon(farHemiSouthHemiLoop, true)
+	*/
+)
+
+func TestPolygonEmptyAndFull(t *testing.T) {
 	if !emptyPolygon.IsEmpty() {
 		t.Errorf("empty polygon should be empty")
 	}
 	if emptyPolygon.IsFull() {
 		t.Errorf("empty polygon should not be full")
 	}
-	/*
-		// TODO(roberts): Uncomment when Polygon finishes the Shape interface.
-		if emptyPolygon.ContainsOrigin() {
-			t.Errorf("emptyPolygon.ContainsOrigin() = true, want false")
-		}
-		if got, want := emptyPolygon.NumEdges(), 0; got != want {
-			t.Errorf("emptyPolygon.NumEdges() = %v, want %v", got, want)
-		}
-	*/
+
+	if emptyPolygon.ContainsOrigin() {
+		t.Errorf("emptyPolygon.ContainsOrigin() = true, want false")
+	}
+	if got, want := emptyPolygon.NumEdges(), 0; got != want {
+		t.Errorf("emptyPolygon.NumEdges() = %v, want %v", got, want)
+	}
+
 	if got := emptyPolygon.dimension(); got != polygonGeometry {
 		t.Errorf("emptyPolygon.dimension() = %v, want %v", got, polygonGeometry)
 	}
@@ -45,22 +179,20 @@ func TestPolygonEmptyAndFull(t *testing.T) {
 		t.Errorf("emptyPolygon.numChains() = %v, want %v", got, want)
 	}
 
-	fullPolygon := FullPolygon()
 	if fullPolygon.IsEmpty() {
 		t.Errorf("full polygon should not be emtpy")
 	}
 	if !fullPolygon.IsFull() {
 		t.Errorf("full polygon should be full")
 	}
-	/*
-		// TODO(roberts): Uncomment when Polygon finishes the Shape interface.
-		if !fullPolygon.ContainsOrigin() {
-			t.Errorf("fullPolygon.ContainsOrigin() = false, want true")
-		}
-		if got, want := fullPolygon.NumEdges(), 0; got != want {
-			t.Errorf("fullPolygon.NumEdges() = %v, want %v", got, want)
-		}
-	*/
+
+	if !fullPolygon.ContainsOrigin() {
+		t.Errorf("fullPolygon.ContainsOrigin() = false, want true")
+	}
+	if got, want := fullPolygon.NumEdges(), 0; got != want {
+		t.Errorf("fullPolygon.NumEdges() = %v, want %v", got, want)
+	}
+
 	if got := fullPolygon.dimension(); got != polygonGeometry {
 		t.Errorf("emptyPolygon.dimension() = %v, want %v", got, polygonGeometry)
 	}
@@ -70,51 +202,62 @@ func TestPolygonEmptyAndFull(t *testing.T) {
 }
 
 func TestPolygonShape(t *testing.T) {
-	// TODO(roberts): Once Polygon implements Shape uncomment this test.
-	/*
-		p := &Polygon{}
-		shape := Shape(p)
-		if p.NumVertices() != shape.NumEdges() {
-			t.Errorf("the number of vertices in a polygon should equal the number of edges")
+	p := makePolygon("0:0, 1:0, 1:1, 2:1", true)
+	shape := Shape(p)
+
+	if got, want := shape.NumEdges(), 4; got != want {
+		t.Errorf("%v.NumEdges() = %v, want %d", shape, got, want)
+	}
+
+	if p.numVertices != shape.NumEdges() {
+		t.Errorf("the number of vertices in a polygon should equal the number of edges")
+	}
+	if p.NumLoops() != shape.numChains() {
+		t.Errorf("the number of loops in a polygon should equal the number of chains")
+	}
+	e := 0
+	v2, v3 := shape.Edge(2)
+	if want := PointFromLatLng(LatLngFromDegrees(1, 1)); !v2.ApproxEqual(want) {
+		t.Errorf("%v.Edge(%d) point A = %v  want %v", shape, 2, v2, want)
+	}
+	if want := PointFromLatLng(LatLngFromDegrees(2, 1)); !v3.ApproxEqual(want) {
+		t.Errorf("%v.Edge(%d) point B = %v  want %v", shape, 2, v3, want)
+	}
+	for i, l := range p.loops {
+		if e != shape.chainStart(i) {
+			t.Errorf("the edge id of the start of loop(%d) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.chainStart(i), e)
 		}
-		if p.NumLoops() != shape.numChains() {
-			t.Errorf("the number of loops in a polygon should equal the number of chains")
-		}
-		e := 0
-		for i, l := range p.loops {
-			if e != shape.chainStart(i) {
-				t.Errorf("the edge if of the start of loop(%d) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.chainStart(i), e)
+		for j := 0; j < len(l.Vertices()); j++ {
+			v0, v1 := shape.Edge(e)
+			// TODO(roberts): Update once Loop implements orientedVertex.
+			//if l.orientedVertex(j) != v0 {
+			if l.Vertex(j) != v0 {
+				t.Errorf("l.Vertex(%d) = %v, want %v", j, l.Vertex(j), v0)
 			}
-			for j := 0; j < len(l.Vertices()); j++ {
-				v0, v1 := shape.Edge(e)
-				// TODO(roberts): Update once Loop implements orientedVertex.
-				//if l.orientedVertex(j) != v0 {
-				if l.Vertex(j) != v0 {
-					t.Errorf("l.Vertex(%d) = %v, want %v", j, l.Vertex(j), v0)
-				}
-				// TODO(roberts): Update once Loop implements orientedVertex.
-				//if l.orientedVertex(j+1) != v1 {
-				if l.Vertex(j+1) != v1 {
-					t.Errorf("l.Vertex(%d) = %v, want %v", j+1, l.Vertex(j+1), v1)
-				}
-				e++
+			// TODO(roberts): Update once Loop implements orientedVertex.
+			//if l.orientedVertex(j+1) != v1 {
+			if l.Vertex(j+1) != v1 {
+				t.Errorf("l.Vertex(%d) = %v, want %v", j+1, l.Vertex(j+1), v1)
 			}
-			if e != shape.chainStart(i+1) {
-				t.Errorf("the edge id of the start of the next loop(%d+1) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.chainStart(i+1), e)
-			}
+			e++
 		}
-		if shape.dimension() != polygonGeometry {
-			t.Errorf("polygon.dimension() = %v, want %v", shape.dimension() , polygonGeometry)
+		if e != shape.chainStart(i+1) {
+			t.Errorf("the edge id of the start of the next loop(%d+1) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.chainStart(i+1), e)
 		}
-		if !shape.HasInterior() {
-			t.Errorf("polygons should always have interiors")
-		}
-	*/
+	}
+	if shape.dimension() != polygonGeometry {
+		t.Errorf("polygon.dimension() = %v, want %v", shape.dimension(), polygonGeometry)
+	}
+	if !shape.HasInterior() {
+		t.Errorf("polygons should always have interiors")
+	}
+	if !shape.ContainsOrigin() {
+		t.Errorf("polygon %v should contain the origin", shape)
+	}
 }
 
 func TestPolygonLoop(t *testing.T) {
-	full := FullPolygon()
-	if full.NumLoops() != 1 {
+	if fullPolygon.NumLoops() != 1 {
 		t.Errorf("full polygon should have one loop")
 	}
 
@@ -138,7 +281,7 @@ func TestPolygonParent(t *testing.T) {
 		want int
 		ok   bool
 	}{
-		{FullPolygon(), 0, -1, false},
+		{fullPolygon, 0, -1, false},
 		{p1, 0, -1, false},
 
 		// TODO: When multiple loops are supported, add more test cases to
@@ -160,8 +303,8 @@ func TestPolygonLastDescendant(t *testing.T) {
 		have int
 		want int
 	}{
-		{FullPolygon(), 0, 0},
-		{FullPolygon(), -1, 0},
+		{fullPolygon, 0, 0},
+		{fullPolygon, -1, 0},
 
 		{p1, 0, 0},
 		{p1, -1, 0},
@@ -177,10 +320,10 @@ func TestPolygonLastDescendant(t *testing.T) {
 }
 
 func TestPolygonLoopIsHoleAndLoopSign(t *testing.T) {
-	if FullPolygon().loopIsHole(0) {
+	if fullPolygon.loopIsHole(0) {
 		t.Errorf("the full polygons only loop should not be a hole")
 	}
-	if FullPolygon().loopSign(0) != 1 {
+	if fullPolygon.loopSign(0) != 1 {
 		t.Errorf("the full polygons only loop should be postitive")
 	}
 
