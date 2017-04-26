@@ -47,7 +47,7 @@ func TestPolylineBasics(t *testing.T) {
 	//	t.Errorf("semiEquator.Interpolate(0.5) = %v, want %v", got, want)
 	//}
 	semiEquator.Reverse()
-	if got, want := semiEquator[2], (Point{r3.Vector{1, 0, 0}}); !got.ApproxEqual(want) {
+	if got, want := (*semiEquator)[2], (Point{r3.Vector{1, 0, 0}}); !got.ApproxEqual(want) {
 		t.Errorf("semiEquator[2] = %v, want %v", got, want)
 	}
 }

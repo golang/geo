@@ -83,7 +83,7 @@ type Shape interface {
 var (
 	_ Shape = &Loop{}
 	_ Shape = &Polygon{}
-	_ Shape = Polyline{}
+	_ Shape = &Polyline{}
 )
 
 // CellRelation describes the possible relationships between a target cell

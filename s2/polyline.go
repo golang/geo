@@ -28,27 +28,27 @@ import (
 type Polyline []Point
 
 // PolylineFromLatLngs creates a new Polyline from the given LatLngs.
-func PolylineFromLatLngs(points []LatLng) Polyline {
+func PolylineFromLatLngs(points []LatLng) *Polyline {
 	p := make(Polyline, len(points))
 	for k, v := range points {
 		p[k] = PointFromLatLng(v)
 	}
-	return p
+	return &p
 }
 
 // Reverse reverses the order of the Polyline vertices.
-func (p Polyline) Reverse() {
-	for i := 0; i < len(p)/2; i++ {
-		p[i], p[len(p)-i-1] = p[len(p)-i-1], p[i]
+func (p *Polyline) Reverse() {
+	for i := 0; i < len(*p)/2; i++ {
+		(*p)[i], (*p)[len(*p)-i-1] = (*p)[len(*p)-i-1], (*p)[i]
 	}
 }
 
 // Length returns the length of this Polyline.
-func (p Polyline) Length() s1.Angle {
+func (p *Polyline) Length() s1.Angle {
 	var length s1.Angle
 
-	for i := 1; i < len(p); i++ {
-		length += p[i-1].Distance(p[i])
+	for i := 1; i < len(*p); i++ {
+		length += (*p)[i-1].Distance((*p)[i])
 	}
 	return length
 }
@@ -58,14 +58,14 @@ func (p Polyline) Length() s1.Angle {
 //
 // Scaling by the Polyline length makes it easy to compute the centroid
 // of several Polylines (by simply adding up their centroids).
-func (p Polyline) Centroid() Point {
+func (p *Polyline) Centroid() Point {
 	var centroid Point
-	for i := 1; i < len(p); i++ {
+	for i := 1; i < len(*p); i++ {
 		// The centroid (multiplied by length) is a vector toward the midpoint
 		// of the edge, whose length is twice the sin of half the angle between
 		// the two vertices. Defining theta to be this angle, we have:
-		vSum := p[i-1].Add(p[i].Vector)  // Length == 2*cos(theta)
-		vDiff := p[i-1].Sub(p[i].Vector) // Length == 2*sin(theta)
+		vSum := (*p)[i-1].Add((*p)[i].Vector)  // Length == 2*cos(theta)
+		vDiff := (*p)[i-1].Sub((*p)[i].Vector) // Length == 2*sin(theta)
 
 		// Length == 2*sin(theta)
 		centroid = Point{centroid.Add(vSum.Mul(math.Sqrt(vDiff.Norm2() / vSum.Norm2())))}
@@ -74,12 +74,12 @@ func (p Polyline) Centroid() Point {
 }
 
 // Equals reports whether the given Polyline is exactly the same as this one.
-func (p Polyline) Equals(b Polyline) bool {
-	if len(p) != len(b) {
+func (p *Polyline) Equals(b *Polyline) bool {
+	if len(*p) != len(*b) {
 		return false
 	}
-	for i, v := range p {
-		if v != b[i] {
+	for i, v := range *p {
+		if v != (*b)[i] {
 			return false
 		}
 	}
@@ -88,14 +88,14 @@ func (p Polyline) Equals(b Polyline) bool {
 }
 
 // CapBound returns the bounding Cap for this Polyline.
-func (p Polyline) CapBound() Cap {
+func (p *Polyline) CapBound() Cap {
 	return p.RectBound().CapBound()
 }
 
 // RectBound returns the bounding Rect for this Polyline.
-func (p Polyline) RectBound() Rect {
+func (p *Polyline) RectBound() Rect {
 	rb := NewRectBounder()
-	for _, v := range p {
+	for _, v := range *p {
 		rb.AddPoint(v)
 	}
 	return rb.RectBound()
@@ -103,20 +103,20 @@ func (p Polyline) RectBound() Rect {
 
 // ContainsCell reports whether this Polyline contains the given Cell. Always returns false
 // because "containment" is not numerically well-defined except at the Polyline vertices.
-func (p Polyline) ContainsCell(cell Cell) bool {
+func (p *Polyline) ContainsCell(cell Cell) bool {
 	return false
 }
 
 // IntersectsCell reports whether this Polyline intersects the given Cell.
-func (p Polyline) IntersectsCell(cell Cell) bool {
-	if len(p) == 0 {
+func (p *Polyline) IntersectsCell(cell Cell) bool {
+	if len(*p) == 0 {
 		return false
 	}
 
 	// We only need to check whether the cell contains vertex 0 for correctness,
 	// but these tests are cheap compared to edge crossings so we might as well
 	// check all the vertices.
-	for _, v := range p {
+	for _, v := range *p {
 		if cell.ContainsPoint(v) {
 			return true
 		}
@@ -130,9 +130,9 @@ func (p Polyline) IntersectsCell(cell Cell) bool {
 	}
 
 	for j := 0; j < 4; j++ {
-		crosser := NewChainEdgeCrosser(cellVertices[j], cellVertices[(j+1)&3], p[0])
-		for i := 1; i < len(p); i++ {
-			if crosser.ChainCrossingSign(p[i]) != DoNotCross {
+		crosser := NewChainEdgeCrosser(cellVertices[j], cellVertices[(j+1)&3], (*p)[0])
+		for i := 1; i < len(*p); i++ {
+			if crosser.ChainCrossingSign((*p)[i]) != DoNotCross {
 				// There is a proper crossing, or two vertices were the same.
 				return true
 			}
@@ -142,23 +142,23 @@ func (p Polyline) IntersectsCell(cell Cell) bool {
 }
 
 // NumEdges returns the number of edges in this shape.
-func (p Polyline) NumEdges() int {
-	if len(p) == 0 {
+func (p *Polyline) NumEdges() int {
+	if len(*p) == 0 {
 		return 0
 	}
-	return len(p) - 1
+	return len(*p) - 1
 }
 
 // Edge returns endpoints for the given edge index.
-func (p Polyline) Edge(i int) (a, b Point) {
-	return p[i], p[i+1]
+func (p *Polyline) Edge(i int) (a, b Point) {
+	return (*p)[i], (*p)[i+1]
 }
 
 // dimension returns the dimension of the geometry represented by this Polyline.
-func (p Polyline) dimension() dimension { return polylineGeometry }
+func (p *Polyline) dimension() dimension { return polylineGeometry }
 
 // numChains reports the number of contiguous edge chains in this Polyline.
-func (p Polyline) numChains() int {
+func (p *Polyline) numChains() int {
 	if p.NumEdges() >= 1 {
 		return 1
 	}
@@ -166,7 +166,7 @@ func (p Polyline) numChains() int {
 }
 
 // chainStart returns the id of the first edge in the i-th edge chain in this Polyline.
-func (p Polyline) chainStart(i int) int {
+func (p *Polyline) chainStart(i int) int {
 	if i == 0 {
 		return 0
 	}
@@ -175,12 +175,12 @@ func (p Polyline) chainStart(i int) int {
 }
 
 // HasInterior returns false as Polylines are not closed.
-func (p Polyline) HasInterior() bool {
+func (p *Polyline) HasInterior() bool {
 	return false
 }
 
 // ContainsOrigin returns false because there is no interior to contain s2.Origin.
-func (p Polyline) ContainsOrigin() bool {
+func (p *Polyline) ContainsOrigin() bool {
 	return false
 }
 

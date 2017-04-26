@@ -250,8 +250,9 @@ func makePolygon(s string, normalize bool) *Polygon {
 }
 
 // makePolyline constructs a Polyline from the given string of lat:lng values.
-func makePolyline(s string) Polyline {
-	return Polyline(parsePoints(s))
+func makePolyline(s string) *Polyline {
+	p := Polyline(parsePoints(s))
+	return &p
 }
 
 // concentricLoopsPolygon constructs a polygon with the specified center as a

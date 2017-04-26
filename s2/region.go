@@ -46,6 +46,6 @@ var (
 	_ Region = (*CellUnion)(nil)
 	_ Region = Point{}
 	//_ Region = (*Polygon)(nil)
-	_ Region = Polyline{}
+	_ Region = (*Polyline)(nil)
 	_ Region = Rect{}
 )
