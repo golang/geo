@@ -270,7 +270,8 @@ func TestXYZToFaceSiTi(t *testing.T) {
 			// Finally, test some random (si,ti) values that may be at different
 			// levels, or not at a valid level at all (for example, si == 0).
 			faceRandom := randomUniformInt(numFaces)
-			var siRandom, tiRandom uint64
+			siRandom := uint64(maxSiTi)
+			tiRandom := uint64(maxSiTi)
 			mask := -1 << uint64(maxLevel-level)
 			for siRandom > maxSiTi || tiRandom > maxSiTi {
 				siRandom = uint64(randomUint32() & uint32(mask))
