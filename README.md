@@ -46,10 +46,10 @@ https://github.com/google/s2-geometry-library-java
 
 # Status of the Go Library
 
-This library is principally a port of
-[the C++ S2 library](https://code.google.com/archive/p/s2-geometry-library),
-adapting to Go idioms where it makes sense. We detail the progress of this port
-below relative to that C++ library.
+This library is principally a port of [the C++ S2
+library](https://code.google.com/archive/p/s2-geometry-library), adapting to Go
+idioms where it makes sense. We detail the progress of this port below relative
+to that C++ library.
 
 ## [ℝ¹](https://godoc.org/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
 
@@ -89,8 +89,8 @@ Approximately ~40% complete.
 *   Metric
 *   PaddedCell
 *   Region
-*   s2stuv.go (AKA half of s2.h in C++) - This file is a collection of helper
-    and conversion methods to and from ST-space, UV-space, and XYZ-space.
+*   s2stuv.go (s2coords.h in C++) - This file is a collection of helper and
+    conversion methods to and from ST-space, UV-space, and XYZ-space.
 
 **Mostly Complete** Files that have almost all of the features of the original
 C++ code, and are reasonably complete enough to use in live code. Up to date
@@ -120,8 +120,8 @@ enough for general use in production code.
     Init with multiple loops, Area, Centroid, Distance, Projection,
     Intersection, Union, Contains, Normalized, etc.
 *   PolylineSimplifier - Initial work has begun on this.
-*   s2predicates.go - Initial work has begun on this. This file is a collection
-    of helper methods used by other parts of the library.
+*   s2predicates.go - This file is a collection of helper methods used by other
+    parts of the library.
 *   ShapeIndex - Currently has only the minimal skeleton pieces submitted, but
     changes are out for review for the remainder of it.
 
@@ -129,24 +129,23 @@ enough for general use in production code.
 dependencies on most of the In Progress files before they can begin to be
 started.
 
-*   Builder - Next on the list. This is a robust tool for creating the various
-    Shape types from collection of simpler S2 types.
-*   BuilderGraph - Next on the list.
-*   BuilderLayers - Next on the list.
-*   BuilderSnapFunctions - Next on the list.
+*   BoundaryOperation
+*   Builder - This is a robust tool for creating the various Shape types from
+    collection of simpler S2 types.
+*   BuilderGraph
+*   BuilderLayers
+*   BuilderSnapFunctions
 *   ClosestEdgeQuery
 *   ClosestPointQuery
 *   ConvexHullQuery
 *   CrossingEdgeQuery
-*   Error - May not be needed as it's just declaring a number of predefined
-    Errors.
+*   EdgeTesselator
 *   PointCompression
 *   PointIndex
 *   PolygonBuilder
 *   RegionIntersection
 *   RegionUnion
+*   Projections
 *   ShapeUtil - Most of this will end up in s2_test.
-*   idSetLexicon
+*   lexicon
 *   priorityqueuesequence
-*   sequenceLexicon
-*   valueLexicon
