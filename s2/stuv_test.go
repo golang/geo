@@ -270,8 +270,9 @@ func TestXYZToFaceSiTi(t *testing.T) {
 			// Finally, test some random (si,ti) values that may be at different
 			// levels, or not at a valid level at all (for example, si == 0).
 			faceRandom := randomUniformInt(numFaces)
-			var siRandom, tiRandom uint64
 			mask := -1 << uint64(maxLevel-level)
+			siRandom := uint64(randomUint32() & uint32(mask))
+			tiRandom := uint64(randomUint32() & uint32(mask))
 			for siRandom > maxSiTi || tiRandom > maxSiTi {
 				siRandom = uint64(randomUint32() & uint32(mask))
 				tiRandom = uint64(randomUint32() & uint32(mask))
@@ -285,8 +286,8 @@ func TestXYZToFaceSiTi(t *testing.T) {
 				if gotLevel != -1 {
 					t.Errorf("level of random CellID = %v, want %v", gotLevel, -1)
 				}
-				if got := si == 0 || si == maxSiTi || ti == 0 || ti == maxSiTi; !got {
-					t.Errorf("%v face %d, si = %v, want 0 || %v, ti = %v, want 0 || %v", f, faceRandom, si, maxSiTi, ti, maxSiTi)
+				if !(si == 0 || si == maxSiTi || ti == 0 || ti == maxSiTi) {
+					t.Errorf("face %d, si = %v, ti = %v, want 0 or %v for both", f, si, ti, maxSiTi)
 				}
 				continue
 			}
@@ -298,8 +299,8 @@ func TestXYZToFaceSiTi(t *testing.T) {
 				t.Errorf("xyzToFaceSiTi(%v).ti = %v, want %v", pRandom, tiRandom, ti)
 			}
 			if gotLevel >= 0 {
-				if got := cellIDFromFaceIJ(f, int(si/2), int(ti/2)).Parent(gotLevel).Point(); pRandom.ApproxEqual(got) {
-					t.Errorf("cellIDFromFaceIJ(%d, %d, %d, %d) = %v, want %v", f, int(si/2), int(ti/2), gotLevel, got, pRandom)
+				if got := cellIDFromFaceIJ(f, int(si/2), int(ti/2)).Parent(gotLevel).Point(); !pRandom.ApproxEqual(got) {
+					t.Errorf("cellIDFromFaceIJ(%d, %d, %d).Parent(%d) = %v, want %v", f, si/2, ti/2, gotLevel, got, pRandom)
 				}
 			}
 		}
