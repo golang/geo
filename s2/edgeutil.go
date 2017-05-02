@@ -224,6 +224,22 @@ func NewRectBounder() *RectBounder {
 	}
 }
 
+// maxErrorForTests returns the maximum error in RectBound provided that the
+// result does not include either pole. It is only used for testing purposes
+func (r *RectBounder) maxErrorForTests() LatLng {
+	// The maximum error in the latitude calculation is
+	//    3.84 * dblEpsilon   for the PointCross calculation
+	//    0.96 * dblEpsilon   for the Latitude calculation
+	//    5    * dblEpsilon   added by AddPoint/RectBound to compensate for error
+	//    -----------------
+	//    9.80 * dblEpsilon   maximum error in result
+	//
+	// The maximum error in the longitude calculation is dblEpsilon. RectBound
+	// does not do any expansion because this isn't necessary in order to
+	// bound the *rounded* longitudes of contained points.
+	return LatLng{10 * dblEpsilon * s1.Radian, 1 * dblEpsilon * s1.Radian}
+}
+
 // AddPoint adds the given point to the chain. The Point must be unit length.
 func (r *RectBounder) AddPoint(b Point) {
 	bLL := LatLngFromPoint(b)
