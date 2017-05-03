@@ -98,8 +98,7 @@ listing of the incomplete methods are documented at the end of each file.
 
 *   Cell - Missing Subdivide, BoundUV, DistanceToEdge, ChordDistance.
 *   CellUnion - Missing Union, Intersection, etc.
-*   Edgeutil - Missing Distance methods, LongitudePruner, FaceSegments,
-    ClosestPair.
+*   Edgeutil - Missing LongitudePruner, FaceSegments, Intersection, ClosestPair.
 *   Point - Missing TurningAngle, Rotate, some Area methods.
 *   Polyline - Missing Projection, Intersects, Interpolate, etc.
 *   Rect (AKA s2latlngrect in C++) - Missing Centroid, Distance,

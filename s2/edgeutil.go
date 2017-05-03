@@ -1156,47 +1156,128 @@ func ClosestPoint(x, a, b Point) Point {
 	return b
 }
 
-// DistanceFromSegment returns the distance of point x from line segment ab.
-// The points are expected to be normalized.
-func DistanceFromSegment(x, a, b Point) s1.Angle {
-	if d, ok := interiorDist(x, a, b); ok {
-		return d.Angle()
-	}
-	// Chord distance of x to both end points a and b.
-	xa2, xb2 := (x.Sub(a.Vector)).Norm2(), x.Sub(b.Vector).Norm2()
-	return s1.ChordAngle(math.Min(xa2, xb2)).Angle()
+// minUpdateDistanceMaxError returns the maximum error in the result of
+// MaybeUpdateMinDistance (and the associated functions such as
+// MaybeUpdateMinInteriorDistance, IsDistanceLess, etc), assuming that all
+// input points are normalized to within the bounds guaranteed by r3.Vector's
+// Normalize. The error can be added or subtracted from an s1.ChordAngle
+// using its Expanded method.
+func minUpdateDistanceMaxError(dist s1.ChordAngle) float64 {
+	// There are two cases for the maximum error in MaybeUpdateMinDistance(),
+	// depending on whether the closest point is interior to the edge.
+	return math.Max(minUpdateInteriorDistanceMaxError(dist), dist.MaxPointError())
 }
 
-// interiorDist returns the shortest distance from point x to edge ab,
-// assuming that the closest point to x is interior to ab.
-// If the closest point is not interior to ab, interiorDist returns (0, false).
-func interiorDist(x, a, b Point) (s1.ChordAngle, bool) {
+// minUpdateInteriorDistanceMaxError returns the maximum error in the result of
+// MaybeUpdateMinInteriorDistance, assuming that all input points are normalized
+// to within the bounds guaranteed by Point's Normalize. The error can be added
+// or subtracted from an s1.ChordAngle using its Expanded method.
+func minUpdateInteriorDistanceMaxError(dist s1.ChordAngle) float64 {
+	// This bound includes all source of error, assuming that the input points
+	// are normalized. a and b are components of chord length that are
+	// perpendicular and parallel to a plane containing the edge respectively.
+	b := 0.5 * float64(dist) * float64(dist)
+	a := float64(dist) * math.Sqrt(1-0.5*b)
+	return ((2.5+2*math.Sqrt(3)+8.5*a)*a +
+		(2+2*math.Sqrt(3)/3+6.5*(1-b))*b +
+		(23+16/math.Sqrt(3))*dblEpsilon) * dblEpsilon
+}
+
+// DistanceFromSegment returns the distance of point X from line segment AB.
+// The points are expected to be normalized.
+func DistanceFromSegment(x, a, b Point) s1.Angle {
+	var c s1.ChordAngle
+	d, _ := updateMinDistance(x, a, b, c, true)
+	return d.Angle()
+}
+
+// IsDistanceLess reports whether the distance from X to the edge AB is less
+// than limit. This method is faster than DistanceFromSegment(). If you want to
+// compare against a fixed s1.Angle, you should convert it to an s1.ChordAngle
+// once and save the value, since this conversion is relatively expensive.
+func IsDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
+	_, less := MaybeUpdateMinDistance(x, a, b, limit)
+	return less
+}
+
+// MaybeUpdateMinDistance checks if the distance from X to the edge AB is less
+// then minDist, and if returns the possibly updated value and whether it was updated.
+// The case A == B is handled correctly.
+//
+// Use this method when you want to compute many distances and keep track of
+// the minimum. It is significantly faster than using DistanceFromSegment
+// because (1) using s1.ChordAngle is much faster than s1.Angle, and (2) it
+// can save a lot of work by not actually computing the distance when it is
+// obviously larger than the current minimum.
+func MaybeUpdateMinDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
+	return updateMinDistance(x, a, b, minDist, false)
+}
+
+// IsInteriorDistanceLess reports whether the minimum distance from X to the
+// edge AB is attained at an interior point of AB (i.e., not an endpoint), and
+// that distance is less than limit.
+func IsInteriorDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
+	_, less := MaybeUpdateMinInteriorDistance(x, a, b, limit)
+	return less
+}
+
+// MaybeUpdateMinInteriorDistance reports whether the minimum distance from X to AB
+// is attained at an interior point of AB (i.e., not an endpoint), and that distance
+// is less than minDist. If so, the value of minDist is updated and returns true.
+// Otherwise it is unchanged and returns false.
+func MaybeUpdateMinInteriorDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
+	return interiorDist(x, a, b, minDist, false)
+}
+
+// updateMinDistance computes the distance from a point X to a line segment AB,
+// and if either the distance was less than the given minDist, or alwaysUpdate is
+// true, the value and whether it was updated are returned.
+func updateMinDistance(x, a, b Point, minDist s1.ChordAngle, alwaysUpdate bool) (s1.ChordAngle, bool) {
+	if d, ok := interiorDist(x, a, b, minDist, alwaysUpdate); ok {
+		// Minimum distance is attained along the edge interior.
+		return d, true
+	}
+
+	// Otherwise the minimum distance is to one of the endpoints.
+	xa2, xb2 := (x.Sub(a.Vector)).Norm2(), x.Sub(b.Vector).Norm2()
+	dist := s1.ChordAngle(math.Min(xa2, xb2))
+	if !alwaysUpdate && dist >= minDist {
+		return minDist, false
+	}
+	return dist, true
+}
+
+// interiorDist returns the shortest distance from point x to edge ab, assuming
+// that the closest point to X is interior to AB. If the closest point is not
+// interior to AB, interiorDist returns (minDist, false). If alwaysUpdate is set to
+// false, the distance is only updated when the value exceeds certain the given minDist.
+func interiorDist(x, a, b Point, minDist s1.ChordAngle, alwaysUpdate bool) (s1.ChordAngle, bool) {
 	// Chord distance of x to both end points a and b.
 	xa2, xb2 := (x.Sub(a.Vector)).Norm2(), x.Sub(b.Vector).Norm2()
 
 	// The closest point on AB could either be one of the two vertices (the
-	// vertex case) or in the interior (the interior case).  Let C = A x B.
+	// vertex case) or in the interior (the interior case). Let C = A x B.
 	// If X is in the spherical wedge extending from A to B around the axis
-	// through C, then we are in the interior case.  Otherwise we are in the
+	// through C, then we are in the interior case. Otherwise we are in the
 	// vertex case.
 	//
-	// Check whether we might be in the interior case.  For this to be true, XAB
-	// and XBA must both be acute angles.  Checking this condition exactly is
+	// Check whether we might be in the interior case. For this to be true, XAB
+	// and XBA must both be acute angles. Checking this condition exactly is
 	// expensive, so instead we consider the planar triangle ABX (which passes
-	// through the sphere's interior).  The planar angles XAB and XBA are always
+	// through the sphere's interior). The planar angles XAB and XBA are always
 	// less than the corresponding spherical angles, so if we are in the
 	// interior case then both of these angles must be acute.
 	//
 	// We check this by computing the squared edge lengths of the planar
 	// triangle ABX, and testing acuteness using the law of cosines:
 	//
-	//             max(XA^2, XB^2) < min(XA^2, XB^2) + AB^2
+	//   max(XA^2, XB^2) < min(XA^2, XB^2) + AB^2
 	if math.Max(xa2, xb2) >= math.Min(xa2, xb2)+(a.Sub(b.Vector)).Norm2() {
-		return 0, false
+		return minDist, false
 	}
 
-	// The minimum distance might be to a point on the edge interior.  Let R
-	// be closest point to X that lies on the great circle through AB.  Rather
+	// The minimum distance might be to a point on the edge interior. Let R
+	// be closest point to X that lies on the great circle through AB. Rather
 	// than computing the geodesic distance along the surface of the sphere,
 	// instead we compute the "chord length" through the sphere's interior.
 	//
@@ -1206,25 +1287,36 @@ func interiorDist(x, a, b Point) (s1.ChordAngle, bool) {
 	// We ignore the QR^2 term and instead use XQ^2 as a lower bound, since it
 	// is faster and the corresponding distance on the Earth's surface is
 	// accurate to within 1% for distances up to about 1800km.
-
-	// Test for the interior case. This test is very likely to succeed because
-	// of the conservative planar test we did initially.
 	c := a.PointCross(b)
 	c2 := c.Norm2()
+	xDotC := x.Dot(c.Vector)
+	xDotC2 := xDotC * xDotC
+	if !alwaysUpdate && xDotC2 >= c2*float64(minDist) {
+		// The closest point on the great circle AB is too far away.
+		return minDist, false
+	}
+
+	// Otherwise we do the exact, more expensive test for the interior case.
+	// This test is very likely to succeed because of the conservative planar
+	// test we did initially.
 	cx := c.Cross(x.Vector)
 	if a.Dot(cx) >= 0 || b.Dot(cx) <= 0 {
-		return 0, false
+		return minDist, false
 	}
 
 	// Compute the squared chord length XR^2 = XQ^2 + QR^2 (see above).
 	// This calculation has good accuracy for all chord lengths since it
 	// is based on both the dot product and cross product (rather than
-	// deriving one from the other).  However, note that the chord length
+	// deriving one from the other). However, note that the chord length
 	// representation itself loses accuracy as the angle approaches π.
-	xDotC := x.Dot(c.Vector)
-	xDotC2 := xDotC * xDotC
 	qr := 1 - math.Sqrt(cx.Norm2()/c2)
-	return s1.ChordAngle((xDotC2 / c2) + (qr * qr)), true
+	dist := s1.ChordAngle((xDotC2 / c2) + (qr * qr))
+
+	if !alwaysUpdate && dist >= minDist {
+		return minDist, false
+	}
+
+	return dist, true
 }
 
 // WedgeRel enumerates the possible relation between two wedges A and B.
@@ -1307,14 +1399,6 @@ func WedgeIntersects(a0, ab1, a2, b0, b2 Point) bool {
 
 // TODO(roberts): Differences from C++
 //  LongitudePruner
-//  updateMinDistanceMaxError
-//  IsDistanceLess
-//  UpdateMinDistance
-//  IsInteriorDistanceLess
-//  UpdateMinInteriorDistance
-//  UpdateEdgePairMinDistance
-//  EdgePairClosestPoints
-//  IsEdgeBNearEdgeA
 //  FaceSegments
 //  PointFromExact
 //  IntersectionExact

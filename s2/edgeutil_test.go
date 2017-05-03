@@ -325,6 +325,8 @@ func TestEdgeutilInterpolateAntipodal(t *testing.T) {
 	}
 }
 
+// TODO(roberts): TestEdgeUtilInterpolateCanExtrapolate(t *testing.T)
+
 func TestEdgeutilRepeatedInterpolation(t *testing.T) {
 	// Check that points do not drift away from unit length when repeated
 	// interpolations are done.
@@ -461,6 +463,8 @@ func TestEdgeutilRectBounderMaxLatitudeRandom(t *testing.T) {
 		}
 	}
 }
+
+// TODO(roberts): TestRectBounderNearlyIdenticalOrAntipodalPoints(t *testing.T)
 
 func TestEdgeutilExpandForSubregions(t *testing.T) {
 	// Test the full and empty bounds.
@@ -921,8 +925,6 @@ func TestEdgeutilEdgeClipping(t *testing.T) {
 }
 
 func TestCheckDistance(t *testing.T) {
-	// Uncomment once Distance / UpdateMinDistance are implemented.
-	//var zeroChordAngle s1.ChordAngle
 	tests := []struct {
 		x, a, b r3.Vector
 		distRad float64
@@ -1049,20 +1051,18 @@ func TestCheckDistance(t *testing.T) {
 			t.Errorf("ClosestPoint(%v, %v, %v) = %v, want %v", x, a, b, closest, want)
 		}
 
-		// Uncomment these once Distance / UpdateMinDistance are implemented.
-		//minDistance := zeroChordAngle
-		//if minDistance, ok := UpdateMinDistance(x, a, b, minDistance); ok {
-		//	t.Errorf("UpdateMinDistance(%x, %v, %v, %v) = %v, want %v", x, a, b, zeroChordAngle, minDistance, zeroChordAngle)
-		//}
-		//
-		//minDistance = s1.InfChordAngle()
-		//if minDistance, ok := UpdateMinDistance(x, a, b, minDistance); !ok {
-		//	t.Errorf("UpdateMinDistance(%x, %v, %v, %v) = %v, want %v", x, a, b, s1.InfChordAngle(), minDistance, s1.InfChordAngle())
-		//}
-		//
-		//if !float64Near(test.distRad, minDistance.Angle().Radians(), 1e-15) {
-		//	t.Errorf("%v != %v", minDistance.Angle().Radians(), test.distRad)
-		//}
+		if minDistance, ok := MaybeUpdateMinDistance(x, a, b, 0); ok {
+			t.Errorf("MaybeUpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, 0, minDistance, 0)
+		}
+
+		minDistance, ok := MaybeUpdateMinDistance(x, a, b, s1.InfChordAngle())
+		if !ok {
+			t.Errorf("MaybeUpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, s1.InfChordAngle(), minDistance, s1.InfChordAngle())
+		}
+
+		if !float64Near(test.distRad, minDistance.Angle().Radians(), 1e-15) {
+			t.Errorf("MinDistance between %v and %v,%v = %v, want %v within %v", x, a, b, minDistance.Angle().Radians(), test.distRad, 1e-15)
+		}
 	}
 }
 
@@ -1204,3 +1204,14 @@ func TestEdgeUtilWedges(t *testing.T) {
 		}
 	}
 }
+
+// TODO(roberts):
+// TestLongitudePruner
+// IntersectionError
+// GrazingIntersections
+// IntersectionInvariants
+// EdgePairDistance
+// EdgeBNearEdgeA
+// CollinearEdgesThatDontTouch
+// CoincidentZeroLengthEdgesThatDontTouch
+// FaceClipping test is not complete
