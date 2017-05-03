@@ -27,6 +27,8 @@ import (
 	"github.com/golang/geo/s1"
 )
 
+const degenerate = Crossing(99) // means DoNotCross and MaybeCross are both acceptable.
+
 func TestEdgeutilCrossings(t *testing.T) {
 	na1 := math.Nextafter(1, 0)
 	na2 := math.Nextafter(1, 2)
@@ -34,213 +36,216 @@ func TestEdgeutilCrossings(t *testing.T) {
 	tests := []struct {
 		msg          string
 		a, b, c, d   Point
-		simpleTest   bool
 		robust       Crossing
-		vertex       bool
 		edgeOrVertex bool
+		simple       bool
 	}{
 		{
-			"two regular edges that cross",
-			Point{r3.Vector{1, 2, 1}},
-			Point{r3.Vector{1, -3, 0.5}},
-			Point{r3.Vector{1, -0.5, -3}},
-			Point{r3.Vector{0.1, 0.5, 3}},
-			true,
-			Cross,
-			true,
-			true,
+			msg:          "two regular edges that cross",
+			a:            Point{r3.Vector{1, 2, 1}},
+			b:            Point{r3.Vector{1, -3, 0.5}},
+			c:            Point{r3.Vector{1, -0.5, -3}},
+			d:            Point{r3.Vector{0.1, 0.5, 3}},
+			robust:       Cross,
+			edgeOrVertex: true,
+			simple:       true,
 		},
 		{
-			"two regular edges that cross antipodal points",
-			Point{r3.Vector{1, 2, 1}},
-			Point{r3.Vector{1, -3, 0.5}},
-			Point{r3.Vector{-1, 0.5, 3}},
-			Point{r3.Vector{-0.1, -0.5, -3}},
-			true,
-			DoNotCross,
-			true,
-			false,
+			msg:          "two regular edges that intersect antipodal points",
+			a:            Point{r3.Vector{1, 2, 1}},
+			b:            Point{r3.Vector{1, -3, 0.5}},
+			c:            Point{r3.Vector{-1, 0.5, 3}},
+			d:            Point{r3.Vector{-0.1, -0.5, -3}},
+			robust:       DoNotCross,
+			edgeOrVertex: false,
+			simple:       true,
 		},
 		{
-			"two edges on the same great circle",
-			Point{r3.Vector{0, 0, -1}},
-			Point{r3.Vector{0, 1, 0}},
-			Point{r3.Vector{0, 1, 1}},
-			Point{r3.Vector{0, 0, 1}},
-			true,
-			DoNotCross,
-			false,
-			false,
+			msg:          "two edges on the same great circle that start at antipodal points",
+			a:            Point{r3.Vector{0, 0, -1}},
+			b:            Point{r3.Vector{0, 1, 0}},
+			c:            Point{r3.Vector{0, 0, 1}},
+			d:            Point{r3.Vector{0, 1, 1}},
+			robust:       DoNotCross,
+			edgeOrVertex: false,
+			simple:       true,
 		},
 		{
-			"two edges that cross where one vertex is the OriginPoint",
-			Point{r3.Vector{1, 0, 0}},
-			OriginPoint(),
-			Point{r3.Vector{1, -0.1, 1}},
-			Point{r3.Vector{1, 1, -0.1}},
-			true,
-			Cross,
-			true,
-			true,
+			msg:          "two edges that cross where one vertex is the OriginPoint",
+			a:            Point{r3.Vector{1, 0, 0}},
+			b:            OriginPoint(),
+			c:            Point{r3.Vector{1, -0.1, 1}},
+			d:            Point{r3.Vector{1, 1, -0.1}},
+			robust:       Cross,
+			edgeOrVertex: true,
+			simple:       true,
 		},
 		{
-			"two edges that cross antipodal points",
-			Point{r3.Vector{1, 0, 0}},
-			Point{r3.Vector{0, 1, 0}},
-			Point{r3.Vector{0, 0, -1}},
-			Point{r3.Vector{-1, -1, 1}},
-			true,
-			DoNotCross,
-			true,
-			false,
+			msg:          "two edges that intersect antipodal points where one vertex is the OriginPoint",
+			a:            Point{r3.Vector{1, 0, 0}},
+			b:            OriginPoint(),
+			c:            Point{r3.Vector{1, 0.1, -1}},
+			d:            Point{r3.Vector{1, 1, -0.1}},
+			robust:       DoNotCross,
+			edgeOrVertex: false,
+			simple:       true,
 		},
 		{
-			"two edges that share an endpoint",
+			msg:          "two edges that cross antipodal points",
+			a:            Point{r3.Vector{1, 0, 0}},
+			b:            Point{r3.Vector{0, 1, 0}},
+			c:            Point{r3.Vector{0, 0, -1}},
+			d:            Point{r3.Vector{-1, -1, 1}},
+			robust:       DoNotCross,
+			edgeOrVertex: false,
+			simple:       true,
+		},
+		{
 			// The Ortho() direction is (-4,0,2) and edge CD
 			// is further CCW around (2,3,4) than AB.
-			Point{r3.Vector{2, 3, 4}},
-			Point{r3.Vector{-1, 2, 5}},
-			Point{r3.Vector{7, -2, 3}},
-			Point{r3.Vector{2, 3, 4}},
-			true,
-			MaybeCross,
-			true,
-			false,
+			msg:          "two edges that share an endpoint",
+			a:            Point{r3.Vector{2, 3, 4}},
+			b:            Point{r3.Vector{-1, 2, 5}},
+			c:            Point{r3.Vector{7, -2, 3}},
+			d:            Point{r3.Vector{2, 3, 4}},
+			robust:       MaybeCross,
+			edgeOrVertex: false,
+			simple:       true,
 		},
 		{
-			"two edges that barely cross near the middle of one edge",
 			// The edge AB is approximately in the x=y plane, while CD is approximately
 			// perpendicular to it and ends exactly at the x=y plane.
-			Point{r3.Vector{1, 1, 1}},
-			Point{r3.Vector{1, na1, -1}},
-			Point{r3.Vector{11, -12, -1}},
-			Point{r3.Vector{10, 10, 1}},
-			false,
-			DoNotCross, // TODO(sbeckman): Should be 1, fix once exactSign is implemented.
-			true,
-			false, // TODO(sbeckman): Should be true, fix once exactSign is implemented.
+			msg:          "two edges that barely cross near the middle of one edge",
+			a:            Point{r3.Vector{1, 1, 1}},
+			b:            Point{r3.Vector{1, na1, -1}},
+			c:            Point{r3.Vector{11, -12, -1}},
+			d:            Point{r3.Vector{10, 10, 1}},
+			robust:       DoNotCross, // TODO(roberts): Should be Cross, fix once exactSign is implemented.
+			edgeOrVertex: false,      // TODO(roberts): Should be true, fix once exactSign is implemented.
+			simple:       false,
 		},
 		{
-			"two edges that barely cross near the middle separated by a distance of about 1e-15",
-			Point{r3.Vector{1, 1, 1}},
-			Point{r3.Vector{1, na2, -1}},
-			Point{r3.Vector{1, -1, 0}},
-			Point{r3.Vector{1, 1, 0}},
-			false,
-			DoNotCross,
-			false,
-			false,
+			msg:          "two edges that barely cross near the middle separated by a distance of about 1e-15",
+			a:            Point{r3.Vector{1, 1, 1}},
+			b:            Point{r3.Vector{1, na2, -1}},
+			c:            Point{r3.Vector{1, -1, 0}},
+			d:            Point{r3.Vector{1, 1, 0}},
+			robust:       DoNotCross,
+			edgeOrVertex: false,
+			simple:       false,
 		},
 		{
-			"two edges that barely cross each other near the end of both edges",
 			// This example cannot be handled using regular double-precision
 			// arithmetic due to floating-point underflow.
-			Point{r3.Vector{0, 0, 1}},
-			Point{r3.Vector{2, -1e-323, 1}},
-			Point{r3.Vector{1, -1, 1}},
-			Point{r3.Vector{1e-323, 0, 1}},
-			false,
-			DoNotCross, // TODO(sbeckman): Should be 1, fix once exactSign is implemented.
-			false,
-			false, // TODO(sbeckman): Should be true, fix once exactSign is implemented.
+			msg:          "two edges that barely cross each other near the end of both edges",
+			a:            Point{r3.Vector{0, 0, 1}},
+			b:            Point{r3.Vector{2, -1e-323, 1}},
+			c:            Point{r3.Vector{1, -1, 1}},
+			d:            Point{r3.Vector{1e-323, 0, 1}},
+			robust:       DoNotCross, // TODO(roberts): Should be Cross, fix once exactSign is implemented.
+			edgeOrVertex: false,      // TODO(roberts): Should be true, fix once exactSign is implemented.
+			simple:       false,
 		},
 		{
-			"two edges that barely cross each other near the end separated by a distance of about 1e-640",
-			Point{r3.Vector{0, 0, 1}},
-			Point{r3.Vector{2, 1e-323, 1}},
-			Point{r3.Vector{1, -1, 1}},
-			Point{r3.Vector{1e-323, 0, 1}},
-			false,
-			DoNotCross,
-			false,
-			false,
+			msg:          "two edges that barely cross each other near the end separated by a distance of about 1e-640",
+			a:            Point{r3.Vector{0, 0, 1}},
+			b:            Point{r3.Vector{2, 1e-323, 1}},
+			c:            Point{r3.Vector{1, -1, 1}},
+			d:            Point{r3.Vector{1e-323, 0, 1}},
+			robust:       DoNotCross,
+			edgeOrVertex: false,
+			simple:       false,
 		},
 		{
-			"two edges that barely cross each other near the middle of one edge",
+			msg: "two edges that barely cross each other near the middle of one edge",
 			// Computing the exact determinant of some of the triangles in this test
 			// requires more than 2000 bits of precision.
-			Point{r3.Vector{1, -1e-323, -1e-323}},
-			Point{r3.Vector{1e-323, 1, 1e-323}},
-			Point{r3.Vector{1, -1, 1e-323}},
-			Point{r3.Vector{1, 1, 0}},
-			false,
-			Cross,
-			true,
-			true,
+			a:            Point{r3.Vector{1, -1e-323, -1e-323}},
+			b:            Point{r3.Vector{1e-323, 1, 1e-323}},
+			c:            Point{r3.Vector{1, -1, 1e-323}},
+			d:            Point{r3.Vector{1, 1, 0}},
+			robust:       Cross,
+			edgeOrVertex: true,
+			simple:       false,
 		},
 		{
-			"two edges that barely cross each other near the middle separated by a distance of about 1e-640",
-			Point{r3.Vector{1, 1e-323, -1e-323}},
-			Point{r3.Vector{-1e-323, 1, 1e-323}},
-			Point{r3.Vector{1, -1, 1e-323}},
-			Point{r3.Vector{1, 1, 0}},
-			false,
-			Cross, // TODO(sbeckman): Should be -1, fix once exactSign is implemented.
-			true,
-			true, // TODO(sbeckman): Should be false, fix once exactSign is implemented.
+			msg:          "two edges that barely cross each other near the middle separated by a distance of about 1e-640",
+			a:            Point{r3.Vector{1, 1e-323, -1e-323}},
+			b:            Point{r3.Vector{-1e-323, 1, 1e-323}},
+			c:            Point{r3.Vector{1, -1, 1e-323}},
+			d:            Point{r3.Vector{1, 1, 0}},
+			robust:       Cross, // TODO(roberts): Should be DoNotCross, fix once exactSign is implemented.
+			edgeOrVertex: true,  // TODO(roberts): Should be false, fix once exactSign is implemented.
+			simple:       false,
 		},
 	}
 
 	for _, test := range tests {
-		if err := testCrossing(test.a, test.b, test.c, test.d, test.robust, test.vertex, test.edgeOrVertex, test.simpleTest); err != nil {
-			t.Errorf("%s: %v", test.msg, err)
-		}
-		if err := testCrossing(test.b, test.a, test.c, test.d, test.robust, test.vertex, test.edgeOrVertex, test.simpleTest); err != nil {
-			t.Errorf("%s: %v", test.msg, err)
-		}
-		if err := testCrossing(test.a, test.b, test.d, test.c, test.robust, test.vertex, test.edgeOrVertex, test.simpleTest); err != nil {
-			t.Errorf("%s: %v", test.msg, err)
-		}
-		if err := testCrossing(test.b, test.a, test.c, test.d, test.robust, test.vertex, test.edgeOrVertex, test.simpleTest); err != nil {
-			t.Errorf("%s: %v", test.msg, err)
-		}
-		if err := testCrossing(test.a, test.b, test.a, test.b, MaybeCross, true, true, false); err != nil {
-			t.Errorf("%s: %v", test.msg, err)
-		}
-		if err := testCrossing(test.c, test.d, test.a, test.b, test.robust, test.vertex, test.edgeOrVertex != (test.robust == MaybeCross), test.simpleTest); err != nil {
-			t.Errorf("%s: %v", test.msg, err)
-		}
+		testCrossing(t, test.msg, test.a, test.b, test.c, test.d, test.robust, test.edgeOrVertex, test.simple)
+		testCrossing(t, test.msg, test.b, test.a, test.c, test.d, test.robust, test.edgeOrVertex, test.simple)
+		testCrossing(t, test.msg, test.a, test.b, test.d, test.c, test.robust, test.edgeOrVertex, test.simple)
+		testCrossing(t, test.msg, test.b, test.a, test.d, test.c, test.robust, test.edgeOrVertex, test.simple)
 
-		if got := VertexCrossing(test.a, test.b, test.c, test.b); got != test.vertex {
-			t.Errorf("%s: VertexCrossing(%v,%v,%v,%v) = %t, want %t", test.msg, test.a, test.b, test.c, test.d, got, test.vertex)
-		}
+		// test degenerate cases
+		testCrossing(t, test.msg, test.a, test.a, test.c, test.d, degenerate, false, false)
+		testCrossing(t, test.msg, test.a, test.b, test.c, test.c, degenerate, false, false)
+		testCrossing(t, test.msg, test.a, test.a, test.c, test.c, degenerate, false, false)
+
+		testCrossing(t, test.msg, test.a, test.b, test.a, test.b, MaybeCross, true, false)
+		testCrossing(t, test.msg, test.c, test.d, test.a, test.b, test.robust, test.edgeOrVertex != (test.robust == MaybeCross), test.simple)
 	}
 }
 
-func testCrossing(a, b, c, d Point, robust Crossing, vertex, edgeOrVertex, simple bool) error {
-	input := fmt.Sprintf("a: %v, b: %v, c: %v, d: %v", a, b, c, d)
-	if got, want := SimpleCrossing(a, b, c, d), robust == Cross; simple && got != want {
-		return fmt.Errorf("%v, SimpleCrossing(a, b, c, d) = %t, want %t", input, got, want)
+func compareCrossingResults(got, want Crossing) bool {
+	// HACK ALERT: CrossingSign/ChainCrossingSign() is allowed to return i
+	// MaybeCross or DoNotCross if either edge is degenerate. If this is the case
+	// change the check from == to the ||.
+	if want == degenerate {
+		return got == MaybeCross || got == DoNotCross
+	}
+	return got == want
+}
+
+func testCrossing(t *testing.T, msg string, a, b, c, d Point, robust Crossing, edgeOrVertex, simple bool) {
+	a = Point{a.Normalize()}
+	b = Point{b.Normalize()}
+	c = Point{c.Normalize()}
+	d = Point{d.Normalize()}
+
+	input := fmt.Sprintf("%s: a: %v, b: %v, c: %v, d: %v", msg, a, b, c, d)
+	if simple {
+		if got, want := SimpleCrossing(a, b, c, d), robust == Cross; got != want {
+			t.Errorf("%v, SimpleCrossing(a, b, c, d) = %t, want %t", input, got, want)
+		}
 	}
 
 	crosser := NewChainEdgeCrosser(a, b, c)
-	if got, want := crosser.ChainCrossingSign(d), robust; got != want {
-		return fmt.Errorf("%v, ChainCrossingSign(d) = %d, want %d", input, got, want)
+	if got, want := crosser.ChainCrossingSign(d), robust; !compareCrossingResults(got, want) {
+		t.Errorf("%v, ChainCrossingSign(d) = %d, want %d", input, got, want)
 	}
-	if got, want := crosser.ChainCrossingSign(c), robust; got != want {
-		return fmt.Errorf("%v, ChainCrossingSign(c) = %d, want %d", input, got, want)
+	if got, want := crosser.ChainCrossingSign(c), robust; !compareCrossingResults(got, want) {
+		t.Errorf("%v, ChainCrossingSign(c) = %d, want %d", input, got, want)
 	}
-	if got, want := crosser.CrossingSign(d, c), robust; got != want {
-		return fmt.Errorf("%v, CrossingSign(d, c) = %d, want %d", input, got, want)
+	if got, want := crosser.CrossingSign(d, c), robust; !compareCrossingResults(got, want) {
+		t.Errorf("%v, CrossingSign(d, c) = %d, want %d", input, got, want)
 	}
-	if got, want := crosser.CrossingSign(c, d), robust; got != want {
-		return fmt.Errorf("%v, CrossingSign(c, d) = %d, want %d", input, got, want)
+	if got, want := crosser.CrossingSign(c, d), robust; !compareCrossingResults(got, want) {
+		t.Errorf("%v, CrossingSign(c, d) = %d, want %d", input, got, want)
 	}
 
 	crosser.RestartAt(c)
 	if got, want := crosser.EdgeOrVertexChainCrossing(d), edgeOrVertex; got != want {
-		return fmt.Errorf("%v, EdgeOrVertexChainCrossing(d) = %t, want %t", input, got, want)
+		t.Errorf("%v, EdgeOrVertexChainCrossing(d) = %t, want %t", input, got, want)
 	}
 	if got, want := crosser.EdgeOrVertexChainCrossing(c), edgeOrVertex; got != want {
-		return fmt.Errorf("%v, EdgeOrVertexChainCrossing(c) = %t, want %t", input, got, want)
+		t.Errorf("%v, EdgeOrVertexChainCrossing(c) = %t, want %t", input, got, want)
 	}
 	if got, want := crosser.EdgeOrVertexCrossing(d, c), edgeOrVertex; got != want {
-		return fmt.Errorf("%v, EdgeOrVertexCrossing(d, c) = %t, want %t", input, got, want)
+		t.Errorf("%v, EdgeOrVertexCrossing(d, c) = %t, want %t", input, got, want)
 	}
 	if got, want := crosser.EdgeOrVertexCrossing(c, d), edgeOrVertex; got != want {
-		return fmt.Errorf("%v, EdgeOrVertexCrossing(c, d) = %t, want %t", input, got, want)
+		t.Errorf("%v, EdgeOrVertexCrossing(c, d) = %t, want %t", input, got, want)
 	}
-	return nil
 }
 
 func TestEdgeutilInterpolate(t *testing.T) {

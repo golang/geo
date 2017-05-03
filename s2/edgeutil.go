@@ -571,9 +571,9 @@ const (
 	DoNotCross
 )
 
-// CrossingSign reports whether the edge AB intersects the edge CD.
-// If any two vertices from different edges are the same, returns MaybeCross.
-// If either edge is degenerate (A == B or C == D), returns DoNotCross or MaybeCross.
+// CrossingSign reports whether the edge AB intersects the edge CD. If any two
+// vertices from different edges are the same, returns MaybeCross. If either edge
+// is degenerate (A == B or C == D), returns either DoNotCross or MaybeCross.
 //
 // Properties of CrossingSign:
 //
@@ -676,12 +676,6 @@ func (e *EdgeCrosser) crossingSign(d Point, bda Direction) Crossing {
 		e.acb = -bda
 	}()
 
-	// RobustSign is very expensive, so we avoid calling it if at all possible.
-	// First eliminate the cases where two vertices are equal.
-	if e.a == e.c || e.a == d || e.b == e.c || e.b == d {
-		return MaybeCross
-	}
-
 	// At this point, a very common situation is that A,B,C,D are four points on
 	// a line such that AB does not overlap CD. (For example, this happens when
 	// a line or curve is sampled finely, or when geometry is constructed by
@@ -702,6 +696,24 @@ func (e *EdgeCrosser) crossingSign(d Point, bda Direction) Crossing {
 		return DoNotCross
 	}
 
+	// Otherwise, eliminate the cases where any two vertices are equal. (These
+	// cases could be handled in the code below, but since ExpensiveSign lives
+	// up to its name we would rather avoid calling it if possible.)
+	//
+	// These are the cases where two vertices from different edges are equal.
+	if e.a == e.c || e.a == d || e.b == e.c || e.b == d {
+		return MaybeCross
+	}
+
+	// These are the cases where an input edge is degenerate. (Note that in
+	// most cases, if CD is degenerate then this method is not even called
+	// because acb and bda have different signs. That's why this method is
+	// documented to return either MaybeCross or DoNotCross when an input
+	// edge is degenerate.)
+	if e.a == e.b || e.c == d {
+		return MaybeCross
+	}
+
 	// Otherwise it's time to break out the big guns.
 	if e.acb == Indeterminate {
 		e.acb = -expensiveSign(e.a, e.b, e.c)
@@ -719,10 +731,10 @@ func (e *EdgeCrosser) crossingSign(d Point, bda Direction) Crossing {
 		return DoNotCross
 	}
 	dac := RobustSign(e.c, d, e.a)
-	if dac == e.acb {
-		return Cross
+	if dac != e.acb {
+		return DoNotCross
 	}
-	return DoNotCross
+	return Cross
 }
 
 // pointUVW represents a Point in (u,v,w) coordinate space of a cube face.
