@@ -319,3 +319,44 @@ func TestXYZFaceSiTiRoundtrip(t *testing.T) {
 		}
 	}
 }
+
+func TestSTUVFace(t *testing.T) {
+	tests := []struct {
+		v    r3.Vector
+		want int
+	}{
+		{r3.Vector{-1, -1, -1}, 5},
+		{r3.Vector{-1, -1, 0}, 4},
+		{r3.Vector{-1, -1, 1}, 2},
+		{r3.Vector{-1, 0, -1}, 5},
+		{r3.Vector{-1, 0, 0}, 3},
+		{r3.Vector{-1, 0, 1}, 2},
+		{r3.Vector{-1, 1, -1}, 5},
+		{r3.Vector{-1, 1, 0}, 1},
+		{r3.Vector{-1, 1, 1}, 2},
+		{r3.Vector{0, -1, -1}, 5},
+		{r3.Vector{0, -1, 0}, 4},
+		{r3.Vector{0, -1, 1}, 2},
+		{r3.Vector{0, 0, -1}, 5},
+		{r3.Vector{0, 0, 0}, 2},
+		{r3.Vector{0, 0, 1}, 2},
+		{r3.Vector{0, 1, -1}, 5},
+		{r3.Vector{0, 1, 0}, 1},
+		{r3.Vector{0, 1, 1}, 2},
+		{r3.Vector{1, -1, -1}, 5},
+		{r3.Vector{1, -1, 0}, 4},
+		{r3.Vector{1, -1, 1}, 2},
+		{r3.Vector{1, 0, -1}, 5},
+		{r3.Vector{1, 0, 0}, 0},
+		{r3.Vector{1, 0, 1}, 2},
+		{r3.Vector{1, 1, -1}, 5},
+		{r3.Vector{1, 1, 0}, 1},
+		{r3.Vector{1, 1, 1}, 2},
+	}
+
+	for _, test := range tests {
+		if got := face(test.v); got != test.want {
+			t.Errorf("face(%v) = %d, want %d", test.v, got, test.want)
+		}
+	}
+}

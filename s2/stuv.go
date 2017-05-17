@@ -71,21 +71,16 @@ func uvToST(u float64) float64 {
 // face returns face ID from 0 to 5 containing the r. For points on the
 // boundary between faces, the result is arbitrary but deterministic.
 func face(r r3.Vector) int {
-	abs := r.Abs()
-	id := 0
-	value := r.X
-	if abs.Y > abs.X {
-		id = 1
-		value = r.Y
+	f := r.LargestComponent()
+	switch {
+	case f == r3.XAxis && r.X < 0:
+		f += 3
+	case f == r3.YAxis && r.Y < 0:
+		f += 3
+	case f == r3.ZAxis && r.Z < 0:
+		f += 3
 	}
-	if abs.Z > math.Abs(value) {
-		id = 2
-		value = r.Z
-	}
-	if value < 0 {
-		id += 3
-	}
-	return id
+	return int(f)
 }
 
 // validFaceXYZToUV given a valid face for the given point r (meaning that
