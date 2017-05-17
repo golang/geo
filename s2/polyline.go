@@ -141,6 +141,11 @@ func (p *Polyline) IntersectsCell(cell Cell) bool {
 	return false
 }
 
+// ContainsPoint returns false since Polylines are not closed.
+func (p *Polyline) ContainsPoint(point Point) bool {
+	return false
+}
+
 // NumEdges returns the number of edges in this shape.
 func (p *Polyline) NumEdges() int {
 	if len(*p) == 0 {

@@ -37,6 +37,10 @@ type Region interface {
 	// if intersection could not be determined. It returns false if the region
 	// does not intersect.
 	IntersectsCell(c Cell) bool
+
+	// ContainsPoint reports whether the region contains the given point or not.
+	// The point should be unit length, although some implementations may relax this restriction.
+	ContainsPoint(p Point) bool
 }
 
 // Enforce interface satisfaction.

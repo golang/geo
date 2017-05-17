@@ -348,8 +348,14 @@ func TestPointRegion(t *testing.T) {
 	if !r.Contains(p) {
 		t.Errorf("%v.Contains(%v) = false, want true", r, p)
 	}
+	if !r.ContainsPoint(p) {
+		t.Errorf("%v.ContainsPoint(%v) = false, want true", r, p)
+	}
 	if !r.Contains(r) {
 		t.Errorf("%v.Contains(%v) = false, want true", r, r)
+	}
+	if !r.ContainsPoint(r) {
+		t.Errorf("%v.ContainsPoint(%v) = false, want true", r, r)
 	}
 	if s := (Point{r3.Vector{1, 0, 1}}); r.Contains(s) {
 		t.Errorf("%v.Contains(%v) = true, want false", r, s)
@@ -369,6 +375,7 @@ func TestPointRegion(t *testing.T) {
 	if !r.IntersectsCell(cell) {
 		t.Errorf("%v.IntersectsCell(%v) = false, want true", r, cell)
 	}
+
 }
 
 func BenchmarkPointArea(b *testing.B) {

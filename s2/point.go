@@ -301,7 +301,15 @@ func (p Point) IntersectsCell(c Cell) bool {
 	return c.ContainsPoint(p)
 }
 
+// ContainsPoint reports if this Point contains the other Point.
+// (This method is named to satisfy the Region interface.)
+func (p Point) ContainsPoint(other Point) bool {
+	return p.Contains(other)
+}
+
 // Contains reports if this Point contains the other Point.
+// (This method matches all other s2 types where the reflexive Contains
+// method does not contain the type's name.)
 func (p Point) Contains(other Point) bool { return p == other }
 
 // TODO: Differences from C++
