@@ -41,7 +41,7 @@ func TestChordAngleBasics(t *testing.T) {
 		{StraightChordAngle, InfChordAngle(), true, false},
 
 		{InfChordAngle(), InfChordAngle(), false, true},
-		{InfChordAngle(), InfChordAngle(), false, true},
+		{InfChordAngle(), StraightChordAngle, false, false},
 	}
 
 	for _, test := range tests {
@@ -52,6 +52,30 @@ func TestChordAngleBasics(t *testing.T) {
 			t.Errorf("%v should be equal to %v", test.a, test.b)
 		}
 	}
+}
+
+func TestChordAngleAngleEquality(t *testing.T) {
+	var zeroAngle Angle
+	var zeroChord ChordAngle
+
+	if InfAngle() != InfChordAngle().Angle() {
+		t.Errorf("Infinite ChordAngle to Angle = %v, want %v", InfChordAngle().Angle(), InfAngle())
+	}
+
+	oneEighty := 180 * Degree
+	if oneEighty != StraightChordAngle.Angle() {
+		t.Errorf("Right ChordAngle to degrees = %v, want %v", StraightChordAngle.Angle(), oneEighty)
+	}
+
+	if zeroAngle != zeroChord.Angle() {
+		t.Errorf("Zero ChordAngle to Angle = %v, want %v", zeroChord.Angle(), zeroAngle)
+	}
+
+	d := RightChordAngle.Angle().Degrees()
+	if !float64Near(90, d, 1e-13) {
+		t.Errorf("Right ChordAngle to degrees = %v, want %v", d, 90)
+	}
+
 }
 
 func TestChordAngleIsFunctions(t *testing.T) {
@@ -65,7 +89,6 @@ func TestChordAngleIsFunctions(t *testing.T) {
 	}{
 		{zeroChord, false, true, false, false},
 		{NegativeChordAngle, true, false, false, true},
-		{zeroChord, false, true, false, false},
 		{StraightChordAngle, false, false, false, false},
 		{InfChordAngle(), false, false, true, true},
 	}
@@ -174,7 +197,7 @@ func TestChordAngleTrigonometry(t *testing.T) {
 		// Since tan(x) is unbounded near pi/4, we map the result back to an
 		// angle before comparing. The assertion is that the result is equal to
 		// the tangent of a nearby angle.
-		if !float64Near(math.Atan(math.Tan(radians)), math.Atan(angle.Tan()), 1e-14) {
+		if !float64Near(math.Atan(math.Tan(radians)), math.Atan(angle.Tan()), epsilon) {
 			t.Errorf("(%d/%d)*π. %v.Tan() = %v, want %v", iter, iters, angle, angle.Tan(), math.Tan(radians))
 		}
 	}
