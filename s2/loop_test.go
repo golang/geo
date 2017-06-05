@@ -235,7 +235,7 @@ func TestLoopRectBound(t *testing.T) {
 	if !southHemi.RectBound().Lng.IsFull() {
 		t.Errorf("south hemi loop's RectBound should have a full longitude range")
 	}
-	got, want := southHemi.RectBound().Lat, r1.Interval{-math.Pi / 2, 0}
+	got, want := southHemi.RectBound().Lat, r1.Interval{Lo: -math.Pi / 2, Hi: 0}
 	if !got.ApproxEqual(want) {
 		t.Errorf("south hemi loop's RectBound latitude interval (%v) should be %v", got, want)
 	}
@@ -443,8 +443,8 @@ func TestLoopEdge(t *testing.T) {
 		{
 			loop:  farHemi,
 			edge:  2,
-			wantA: Point{r3.Vector{0, 0, -1}},
-			wantB: Point{r3.Vector{0, -1, 0}},
+			wantA: Point{r3.Vector{X: 0, Y: 0, Z: -1}},
+			wantB: Point{r3.Vector{X: 0, Y: -1, Z: 0}},
 		},
 		{
 			loop: candyCane,

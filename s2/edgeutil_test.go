@@ -533,11 +533,11 @@ func TestEdgeutilExpandForSubregions(t *testing.T) {
 		xLat, xLng, yLat, yLng float64
 		wantRect               Rect
 	}{
-		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 2e-16, Rect{r1.Interval{1.5, 1.5}, s1.FullInterval()}},
-		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 7e-16, Rect{r1.Interval{1.5, 1.5}, s1.Interval{-math.Pi / 2, math.Pi/2 - 7e-16}}},
+		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 2e-16, Rect{r1.Interval{Lo: 1.5, Hi: 1.5}, s1.FullInterval()}},
+		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 7e-16, Rect{r1.Interval{Lo: 1.5, Hi: 1.5}, s1.Interval{Lo: -math.Pi / 2, Hi: math.Pi/2 - 7e-16}}},
 		// Check for cases where the bound is expanded to include one of the poles
-		{-math.Pi/2 + 1e-15, 0, -math.Pi/2 + 1e-15, 0, Rect{r1.Interval{-math.Pi / 2, -math.Pi/2 + 1e-15}, s1.FullInterval()}},
-		{math.Pi/2 - 1e-15, 0, math.Pi/2 - 1e-15, 0, Rect{r1.Interval{math.Pi/2 - 1e-15, math.Pi / 2}, s1.FullInterval()}},
+		{-math.Pi/2 + 1e-15, 0, -math.Pi/2 + 1e-15, 0, Rect{r1.Interval{Lo: -math.Pi / 2, Hi: -math.Pi/2 + 1e-15}, s1.FullInterval()}},
+		{math.Pi/2 - 1e-15, 0, math.Pi/2 - 1e-15, 0, Rect{r1.Interval{Lo: math.Pi/2 - 1e-15, Hi: math.Pi / 2}, s1.FullInterval()}},
 	}
 
 	for _, tc := range rectTests {
@@ -545,6 +545,7 @@ func TestEdgeutilExpandForSubregions(t *testing.T) {
 		// points, but it does contain points that are approximately 180 degrees
 		// apart in latitude.
 		in := RectFromLatLng(LatLng{s1.Angle(tc.xLat), s1.Angle(tc.xLng)})
+
 		in = in.AddPoint(LatLng{s1.Angle(tc.yLat), s1.Angle(tc.yLng)})
 		got := ExpandForSubregions(in)
 		if !rectsApproxEqual(got, tc.wantRect, rectErrorLat, rectErrorLng) {
@@ -558,12 +559,12 @@ func TestEdgeutilIntersectsFace(t *testing.T) {
 		a    pointUVW
 		want bool
 	}{
-		{pointUVW{r3.Vector{2.05335e-06, 3.91604e-22, 2.90553e-06}}, false},
-		{pointUVW{r3.Vector{-3.91604e-22, -2.05335e-06, -2.90553e-06}}, false},
-		{pointUVW{r3.Vector{0.169258, -0.169258, 0.664013}}, false},
-		{pointUVW{r3.Vector{0.169258, -0.169258, -0.664013}}, false},
-		{pointUVW{r3.Vector{math.Sqrt(2.0 / 3.0), -math.Sqrt(2.0 / 3.0), 3.88578e-16}}, true},
-		{pointUVW{r3.Vector{-3.88578e-16, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, true},
+		{pointUVW{r3.Vector{X: 2.05335e-06, Y: 3.91604e-22, Z: 2.90553e-06}}, false},
+		{pointUVW{r3.Vector{X: -3.91604e-22, Y: -2.05335e-06, Z: -2.90553e-06}}, false},
+		{pointUVW{r3.Vector{X: 0.169258, Y: -0.169258, Z: 0.664013}}, false},
+		{pointUVW{r3.Vector{X: 0.169258, Y: -0.169258, Z: -0.664013}}, false},
+		{pointUVW{r3.Vector{X: math.Sqrt(2.0 / 3.0), Y: -math.Sqrt(2.0 / 3.0), Z: 3.88578e-16}}, true},
+		{pointUVW{r3.Vector{X: -3.88578e-16, Y: -math.Sqrt(2.0 / 3.0), Z: math.Sqrt(2.0 / 3.0)}}, true},
 	}
 
 	for _, test := range tests {
@@ -578,14 +579,14 @@ func TestEdgeutilIntersectsOppositeEdges(t *testing.T) {
 		a    pointUVW
 		want bool
 	}{
-		{pointUVW{r3.Vector{0.169258, -0.169258, 0.664013}}, false},
-		{pointUVW{r3.Vector{0.169258, -0.169258, -0.664013}}, false},
+		{pointUVW{r3.Vector{X: 0.169258, Y: -0.169258, Z: 0.664013}}, false},
+		{pointUVW{r3.Vector{X: 0.169258, Y: -0.169258, Z: -0.664013}}, false},
 
-		{pointUVW{r3.Vector{-math.Sqrt(4.0 / 3.0), 0, -math.Sqrt(4.0 / 3.0)}}, true},
-		{pointUVW{r3.Vector{math.Sqrt(4.0 / 3.0), 0, math.Sqrt(4.0 / 3.0)}}, true},
+		{pointUVW{r3.Vector{X: -math.Sqrt(4.0 / 3.0), Y: 0, Z: -math.Sqrt(4.0 / 3.0)}}, true},
+		{pointUVW{r3.Vector{X: math.Sqrt(4.0 / 3.0), Y: 0, Z: math.Sqrt(4.0 / 3.0)}}, true},
 
-		{pointUVW{r3.Vector{-math.Sqrt(2.0 / 3.0), -math.Sqrt(2.0 / 3.0), 1.66533453694e-16}}, false},
-		{pointUVW{r3.Vector{math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0), -1.66533453694e-16}}, false},
+		{pointUVW{r3.Vector{X: -math.Sqrt(2.0 / 3.0), Y: -math.Sqrt(2.0 / 3.0), Z: 1.66533453694e-16}}, false},
+		{pointUVW{r3.Vector{X: math.Sqrt(2.0 / 3.0), Y: math.Sqrt(2.0 / 3.0), Z: -1.66533453694e-16}}, false},
 	}
 	for _, test := range tests {
 		if got := test.a.intersectsOppositeEdges(); got != test.want {
@@ -599,13 +600,13 @@ func TestEdgeutilExitAxis(t *testing.T) {
 		a    pointUVW
 		want axis
 	}{
-		{pointUVW{r3.Vector{0, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, axisU},
-		{pointUVW{r3.Vector{0, math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0)}}, axisU},
-		{pointUVW{r3.Vector{-math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0), 0}}, axisV},
-		{pointUVW{r3.Vector{math.Sqrt(4.0 / 3.0), math.Sqrt(4.0 / 3.0), 0}}, axisV},
-		{pointUVW{r3.Vector{math.Sqrt(2.0 / 3.0), -math.Sqrt(2.0 / 3.0), 0}}, axisV},
-		{pointUVW{r3.Vector{1.67968702783622, 0, 0.870988820096491}}, axisV},
-		{pointUVW{r3.Vector{0, math.Sqrt2, math.Sqrt2}}, axisU},
+		{pointUVW{r3.Vector{X: 0, Y: -math.Sqrt(2.0 / 3.0), Z: math.Sqrt(2.0 / 3.0)}}, axisU},
+		{pointUVW{r3.Vector{X: 0, Y: math.Sqrt(4.0 / 3.0), Z: -math.Sqrt(4.0 / 3.0)}}, axisU},
+		{pointUVW{r3.Vector{X: -math.Sqrt(4.0 / 3.0), Y: -math.Sqrt(4.0 / 3.0), Z: 0}}, axisV},
+		{pointUVW{r3.Vector{X: math.Sqrt(4.0 / 3.0), Y: math.Sqrt(4.0 / 3.0), Z: 0}}, axisV},
+		{pointUVW{r3.Vector{X: math.Sqrt(2.0 / 3.0), Y: -math.Sqrt(2.0 / 3.0), Z: 0}}, axisV},
+		{pointUVW{r3.Vector{X: 1.67968702783622, Y: 0, Z: 0.870988820096491}}, axisV},
+		{pointUVW{r3.Vector{X: 0, Y: math.Sqrt2, Z: math.Sqrt2}}, axisU},
 	}
 
 	for _, test := range tests {
@@ -621,10 +622,10 @@ func TestEdgeutilExitPoint(t *testing.T) {
 		exitAxis axis
 		want     r2.Point
 	}{
-		{pointUVW{r3.Vector{-3.88578058618805e-16, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, axisU, r2.Point{-1, 1}},
-		{pointUVW{r3.Vector{math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0), 0}}, axisV, r2.Point{-1, -1}},
-		{pointUVW{r3.Vector{-math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0), 0}}, axisV, r2.Point{-1, 1}},
-		{pointUVW{r3.Vector{-6.66134e-16, math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0)}}, axisU, r2.Point{1, 1}},
+		{pointUVW{r3.Vector{X: -3.88578058618805e-16, Y: -math.Sqrt(2.0 / 3.0), Z: math.Sqrt(2.0 / 3.0)}}, axisU, r2.Point{X: -1, Y: 1}},
+		{pointUVW{r3.Vector{X: math.Sqrt(4.0 / 3.0), Y: -math.Sqrt(4.0 / 3.0), Z: 0}}, axisV, r2.Point{X: -1, Y: -1}},
+		{pointUVW{r3.Vector{X: -math.Sqrt(4.0 / 3.0), Y: -math.Sqrt(4.0 / 3.0), Z: 0}}, axisV, r2.Point{X: -1, Y: 1}},
+		{pointUVW{r3.Vector{X: -6.66134e-16, Y: math.Sqrt(4.0 / 3.0), Z: -math.Sqrt(4.0 / 3.0)}}, axisU, r2.Point{X: 1, Y: 1}},
 	}
 
 	for _, test := range tests {
@@ -662,9 +663,9 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 
 	// Given the points A and B, we expect all angles generated from the clipping
 	// to fall within this range.
-	expectedAngles := s1.Interval{0, float64(a.Angle(b.Vector))}
+	expectedAngles := s1.Interval{Lo: 0, Hi: float64(a.Angle(b.Vector))}
 	if expectedAngles.IsInverted() {
-		expectedAngles = s1.Interval{expectedAngles.Hi, expectedAngles.Lo}
+		expectedAngles = s1.Interval{Lo: expectedAngles.Hi, Hi: expectedAngles.Lo}
 	}
 	maxAngles := expectedAngles.Expanded(faceClipErrorRadians)
 	var actualAngles s1.Interval
@@ -706,7 +707,7 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 		// which is okay since the interval length is much less than math.Pi.
 		faceAngles := s1.IntervalFromEndpoints(aAngle, bAngle)
 		if faceAngles.IsInverted() {
-			faceAngles = s1.Interval{faceAngles.Hi, faceAngles.Lo}
+			faceAngles = s1.Interval{Lo: faceAngles.Hi, Hi: faceAngles.Lo}
 		}
 		if !maxAngles.ContainsInterval(faceAngles) {
 			t.Errorf("%s %v.ContainsInterval(%v) = false, but should have contained this interval", desc, maxAngles, faceAngles)
@@ -738,7 +739,7 @@ func TestEdgeutilFaceClipping(t *testing.T) {
 
 	// Comprehensively test edges that are difficult to handle, especially those
 	// that nearly follow one of the 12 cube edges.
-	biunit := r2.Rect{r1.Interval{-1, 1}, r1.Interval{-1, 1}}
+	biunit := r2.Rect{X: r1.Interval{Lo: -1, Hi: 1}, Y: r1.Interval{Lo: -1, Hi: 1}}
 
 	for i := 0; i < 1000; i++ {
 		// Choose two adjacent cube corners P and Q.
@@ -802,7 +803,7 @@ func chooseRectEndpoint(clip r2.Rect) r2.Point {
 		t := randomUniformFloat64(-1, 2)
 		return clip.Vertices()[diag].Mul(1 - t).Add(clip.Vertices()[diag+2].Mul(t))
 	}
-	return r2.Point{randomPointFromInterval(clip.X), randomPointFromInterval(clip.Y)}
+	return r2.Point{X: randomPointFromInterval(clip.X), Y: randomPointFromInterval(clip.Y)}
 }
 
 // Choose a random point in the rectangle defined by points A and B, sometimes
@@ -818,7 +819,7 @@ func choosePointInRect(a, b r2.Point) r2.Point {
 	if oneIn(3) {
 		return a.Add(b.Sub(a).Mul(randomFloat64()))
 	}
-	return r2.Point{randomUniformFloat64(a.X, b.X), randomUniformFloat64(a.Y, b.Y)}
+	return r2.Point{X: randomUniformFloat64(a.X, b.X), Y: randomUniformFloat64(a.Y, b.Y)}
 }
 
 // Given a point P representing a possibly clipped endpoint A of an edge AB,
@@ -829,7 +830,7 @@ func checkPointOnBoundary(t *testing.T, p, a r2.Point, clip r2.Rect) {
 		t.Errorf("%v.ContainsPoint(%v) = %v, want true", clip, p, got)
 	}
 	if p != a {
-		p1 := r2.Point{math.Nextafter(p.X, a.X), math.Nextafter(p.Y, a.Y)}
+		p1 := r2.Point{X: math.Nextafter(p.X, a.X), Y: math.Nextafter(p.Y, a.Y)}
 		if got := clip.ContainsPoint(p1); got {
 			t.Errorf("%v.ContainsPoint(%v) = %v, want false", clip, p1, got)
 		}
@@ -843,26 +844,26 @@ func TestEdgeutilEdgeClipping(t *testing.T) {
 	testRects := []r2.Rect{
 		// Test clipping against random rectangles.
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 
 		// Also clip against one-dimensional, singleton, and empty rectangles.
-		r2.Rect{r1.Interval{-0.7, -0.7}, r1.Interval{0.3, 0.35}},
-		r2.Rect{r1.Interval{0.2, 0.5}, r1.Interval{0.3, 0.3}},
-		r2.Rect{r1.Interval{-0.7, 0.3}, r1.Interval{0, 0}},
-		r2.RectFromPoints(r2.Point{0.3, 0.8}),
+		r2.Rect{X: r1.Interval{Lo: -0.7, Hi: -0.7}, Y: r1.Interval{Lo: 0.3, Hi: 0.35}},
+		r2.Rect{X: r1.Interval{Lo: 0.2, Hi: 0.5}, Y: r1.Interval{Lo: 0.3, Hi: 0.3}},
+		r2.Rect{X: r1.Interval{Lo: -0.7, Hi: 0.3}, Y: r1.Interval{Lo: 0, Hi: 0}},
+		r2.RectFromPoints(r2.Point{X: 0.3, Y: 0.8}),
 		r2.EmptyRect(),
 	}
 
@@ -900,7 +901,7 @@ func TestEdgeutilEdgeClipping(t *testing.T) {
 				continue
 			}
 			maxBound := bound.Intersection(r)
-			if bound, intersects := clipEdgeBound(a, b, r, bound); !intersects {
+			if bound, intersects = clipEdgeBound(a, b, r, bound); !intersects {
 				if edgeIntersectsRect(a, b, maxBound.ExpandedByMargin(-errorDist)) {
 					t.Errorf("edgeIntersectsRect(%v, %v, %v.ExpandedByMargin(%v) = true, want false", a, b, maxBound.ExpandedByMargin(-errorDist), -errorDist)
 				}
@@ -931,108 +932,108 @@ func TestCheckDistance(t *testing.T) {
 		want    r3.Vector
 	}{
 		{
-			x:       r3.Vector{1, 0, 0},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{0, 1, 0},
+			x:       r3.Vector{X: 1, Y: 0, Z: 0},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 0, Y: 1, Z: 0},
 			distRad: 0,
-			want:    r3.Vector{1, 0, 0},
+			want:    r3.Vector{X: 1, Y: 0, Z: 0},
 		},
 		{
-			x:       r3.Vector{0, 1, 0},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{0, 1, 0},
+			x:       r3.Vector{X: 0, Y: 1, Z: 0},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 0, Y: 1, Z: 0},
 			distRad: 0,
-			want:    r3.Vector{0, 1, 0},
+			want:    r3.Vector{X: 0, Y: 1, Z: 0},
 		},
 		{
-			x:       r3.Vector{1, 3, 0},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{0, 1, 0},
+			x:       r3.Vector{X: 1, Y: 3, Z: 0},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 0, Y: 1, Z: 0},
 			distRad: 0,
-			want:    r3.Vector{1, 3, 0},
+			want:    r3.Vector{X: 1, Y: 3, Z: 0},
 		},
 		{
-			x:       r3.Vector{0, 0, 1},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{0, 1, 0},
+			x:       r3.Vector{X: 0, Y: 0, Z: 1},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 0, Y: 1, Z: 0},
 			distRad: math.Pi / 2,
-			want:    r3.Vector{1, 0, 0},
+			want:    r3.Vector{X: 1, Y: 0, Z: 0},
 		},
 		{
-			x:       r3.Vector{0, 0, -1},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{0, 1, 0},
+			x:       r3.Vector{X: 0, Y: 0, Z: -1},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 0, Y: 1, Z: 0},
 			distRad: math.Pi / 2,
-			want:    r3.Vector{1, 0, 0},
+			want:    r3.Vector{X: 1, Y: 0, Z: 0},
 		},
 		{
-			x:       r3.Vector{-1, -1, 0},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{0, 1, 0},
+			x:       r3.Vector{X: -1, Y: -1, Z: 0},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 0, Y: 1, Z: 0},
 			distRad: 0.75 * math.Pi,
-			want:    r3.Vector{1, 0, 0},
+			want:    r3.Vector{X: 1, Y: 0, Z: 0},
 		},
 		{
-			x:       r3.Vector{0, 1, 0},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{1, 1, 0},
+			x:       r3.Vector{X: 0, Y: 1, Z: 0},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 1, Y: 1, Z: 0},
 			distRad: math.Pi / 4,
-			want:    r3.Vector{1, 1, 0},
+			want:    r3.Vector{X: 1, Y: 1, Z: 0},
 		},
 		{
-			x:       r3.Vector{0, -1, 0},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{1, 1, 0},
+			x:       r3.Vector{X: 0, Y: -1, Z: 0},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 1, Y: 1, Z: 0},
 			distRad: math.Pi / 2,
-			want:    r3.Vector{1, 0, 0},
+			want:    r3.Vector{X: 1, Y: 0, Z: 0},
 		},
 		{
-			x:       r3.Vector{0, -1, 0},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{-1, 1, 0},
+			x:       r3.Vector{X: 0, Y: -1, Z: 0},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: -1, Y: 1, Z: 0},
 			distRad: math.Pi / 2,
-			want:    r3.Vector{1, 0, 0},
+			want:    r3.Vector{X: 1, Y: 0, Z: 0},
 		},
 		{
-			x:       r3.Vector{-1, -1, 0},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{-1, 1, 0},
+			x:       r3.Vector{X: -1, Y: -1, Z: 0},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: -1, Y: 1, Z: 0},
 			distRad: math.Pi / 2,
-			want:    r3.Vector{-1, 1, 0},
+			want:    r3.Vector{X: -1, Y: 1, Z: 0},
 		},
 		{
-			x:       r3.Vector{1, 1, 1},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{0, 1, 0},
+			x:       r3.Vector{X: 1, Y: 1, Z: 1},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 0, Y: 1, Z: 0},
 			distRad: math.Asin(math.Sqrt(1.0 / 3.0)),
-			want:    r3.Vector{1, 1, 0},
+			want:    r3.Vector{X: 1, Y: 1, Z: 0},
 		},
 		{
-			x:       r3.Vector{1, 1, -1},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{0, 1, 0},
+			x:       r3.Vector{X: 1, Y: 1, Z: -1},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 0, Y: 1, Z: 0},
 			distRad: math.Asin(math.Sqrt(1.0 / 3.0)),
-			want:    r3.Vector{1, 1, 0}},
+			want:    r3.Vector{X: 1, Y: 1, Z: 0}},
 		{
-			x:       r3.Vector{-1, 0, 0},
-			a:       r3.Vector{1, 1, 0},
-			b:       r3.Vector{1, 1, 0},
+			x:       r3.Vector{X: -1, Y: 0, Z: 0},
+			a:       r3.Vector{X: 1, Y: 1, Z: 0},
+			b:       r3.Vector{X: 1, Y: 1, Z: 0},
 			distRad: 0.75 * math.Pi,
-			want:    r3.Vector{1, 1, 0},
+			want:    r3.Vector{X: 1, Y: 1, Z: 0},
 		},
 		{
-			x:       r3.Vector{0, 0, -1},
-			a:       r3.Vector{1, 1, 0},
-			b:       r3.Vector{1, 1, 0},
+			x:       r3.Vector{X: 0, Y: 0, Z: -1},
+			a:       r3.Vector{X: 1, Y: 1, Z: 0},
+			b:       r3.Vector{X: 1, Y: 1, Z: 0},
 			distRad: math.Pi / 2,
-			want:    r3.Vector{1, 1, 0},
+			want:    r3.Vector{X: 1, Y: 1, Z: 0},
 		},
 		{
-			x:       r3.Vector{-1, 0, 0},
-			a:       r3.Vector{1, 0, 0},
-			b:       r3.Vector{1, 0, 0},
+			x:       r3.Vector{X: -1, Y: 0, Z: 0},
+			a:       r3.Vector{X: 1, Y: 0, Z: 0},
+			b:       r3.Vector{X: 1, Y: 0, Z: 0},
 			distRad: math.Pi,
-			want:    r3.Vector{1, 0, 0},
+			want:    r3.Vector{X: 1, Y: 0, Z: 0},
 		},
 	}
 

@@ -114,17 +114,17 @@ func xyzToFaceUV(r r3.Vector) (f int, u, v float64) {
 func faceUVToXYZ(face int, u, v float64) r3.Vector {
 	switch face {
 	case 0:
-		return r3.Vector{1, u, v}
+		return r3.Vector{X: 1, Y: u, Z: v}
 	case 1:
-		return r3.Vector{-u, 1, v}
+		return r3.Vector{X: -u, Y: 1, Z: v}
 	case 2:
-		return r3.Vector{-u, -v, 1}
+		return r3.Vector{X: -u, Y: -v, Z: 1}
 	case 3:
-		return r3.Vector{-1, -v, -u}
+		return r3.Vector{X: -1, Y: -v, Z: -u}
 	case 4:
-		return r3.Vector{v, -1, -u}
+		return r3.Vector{X: v, Y: -1, Z: -u}
 	default:
-		return r3.Vector{v, u, -1}
+		return r3.Vector{X: v, Y: u, Z: -1}
 	}
 }
 
@@ -169,17 +169,17 @@ func faceXYZtoUVW(face int, p Point) Point {
 	// axes for the given face (see faceUVWAxes).
 	switch face {
 	case 0:
-		return Point{r3.Vector{p.Y, p.Z, p.X}}
+		return Point{r3.Vector{X: p.Y, Y: p.Z, Z: p.X}}
 	case 1:
-		return Point{r3.Vector{-p.X, p.Z, p.Y}}
+		return Point{r3.Vector{X: -p.X, Y: p.Z, Z: p.Y}}
 	case 2:
-		return Point{r3.Vector{-p.X, -p.Y, p.Z}}
+		return Point{r3.Vector{X: -p.X, Y: -p.Y, Z: p.Z}}
 	case 3:
-		return Point{r3.Vector{-p.Z, -p.Y, -p.X}}
+		return Point{r3.Vector{X: -p.Z, Y: -p.Y, Z: -p.X}}
 	case 4:
-		return Point{r3.Vector{-p.Z, p.X, -p.Y}}
+		return Point{r3.Vector{X: -p.Z, Y: p.X, Z: -p.Y}}
 	default:
-		return Point{r3.Vector{p.Y, p.X, -p.Z}}
+		return Point{r3.Vector{X: p.Y, Y: p.X, Z: -p.Z}}
 	}
 }
 
@@ -224,17 +224,17 @@ func xyzToFaceSiTi(p Point) (face int, si, ti uint64, level int) {
 func uNorm(face int, u float64) r3.Vector {
 	switch face {
 	case 0:
-		return r3.Vector{u, -1, 0}
+		return r3.Vector{X: u, Y: -1, Z: 0}
 	case 1:
-		return r3.Vector{1, u, 0}
+		return r3.Vector{X: 1, Y: u, Z: 0}
 	case 2:
-		return r3.Vector{1, 0, u}
+		return r3.Vector{X: 1, Y: 0, Z: u}
 	case 3:
-		return r3.Vector{-u, 0, 1}
+		return r3.Vector{X: -u, Y: 0, Z: 1}
 	case 4:
-		return r3.Vector{0, -u, 1}
+		return r3.Vector{X: 0, Y: -u, Z: 1}
 	default:
-		return r3.Vector{0, -1, -u}
+		return r3.Vector{X: 0, Y: -1, Z: -u}
 	}
 }
 
@@ -244,28 +244,28 @@ func uNorm(face int, u float64) r3.Vector {
 func vNorm(face int, v float64) r3.Vector {
 	switch face {
 	case 0:
-		return r3.Vector{-v, 0, 1}
+		return r3.Vector{X: -v, Y: 0, Z: 1}
 	case 1:
-		return r3.Vector{0, -v, 1}
+		return r3.Vector{X: 0, Y: -v, Z: 1}
 	case 2:
-		return r3.Vector{0, -1, -v}
+		return r3.Vector{X: 0, Y: -1, Z: -v}
 	case 3:
-		return r3.Vector{v, -1, 0}
+		return r3.Vector{X: v, Y: -1, Z: 0}
 	case 4:
-		return r3.Vector{1, v, 0}
+		return r3.Vector{X: 1, Y: v, Z: 0}
 	default:
-		return r3.Vector{1, 0, v}
+		return r3.Vector{X: 1, Y: 0, Z: v}
 	}
 }
 
 // faceUVWAxes are the U, V, and W axes for each face.
 var faceUVWAxes = [6][3]Point{
-	{Point{r3.Vector{0, 1, 0}}, Point{r3.Vector{0, 0, 1}}, Point{r3.Vector{1, 0, 0}}},
-	{Point{r3.Vector{-1, 0, 0}}, Point{r3.Vector{0, 0, 1}}, Point{r3.Vector{0, 1, 0}}},
-	{Point{r3.Vector{-1, 0, 0}}, Point{r3.Vector{0, -1, 0}}, Point{r3.Vector{0, 0, 1}}},
-	{Point{r3.Vector{0, 0, -1}}, Point{r3.Vector{0, -1, 0}}, Point{r3.Vector{-1, 0, 0}}},
-	{Point{r3.Vector{0, 0, -1}}, Point{r3.Vector{1, 0, 0}}, Point{r3.Vector{0, -1, 0}}},
-	{Point{r3.Vector{0, 1, 0}}, Point{r3.Vector{1, 0, 0}}, Point{r3.Vector{0, 0, -1}}},
+	{Point{r3.Vector{X: 0, Y: 1, Z: 0}}, Point{r3.Vector{X: 0, Y: 0, Z: 1}}, Point{r3.Vector{X: 1, Y: 0, Z: 0}}},
+	{Point{r3.Vector{X: -1, Y: 0, Z: 0}}, Point{r3.Vector{X: 0, Y: 0, Z: 1}}, Point{r3.Vector{X: 0, Y: 1, Z: 0}}},
+	{Point{r3.Vector{X: -1, Y: 0, Z: 0}}, Point{r3.Vector{X: 0, Y: -1, Z: 0}}, Point{r3.Vector{X: 0, Y: 0, Z: 1}}},
+	{Point{r3.Vector{X: 0, Y: 0, Z: -1}}, Point{r3.Vector{X: 0, Y: -1, Z: 0}}, Point{r3.Vector{X: -1, Y: 0, Z: 0}}},
+	{Point{r3.Vector{X: 0, Y: 0, Z: -1}}, Point{r3.Vector{X: 1, Y: 0, Z: 0}}, Point{r3.Vector{X: 0, Y: -1, Z: 0}}},
+	{Point{r3.Vector{X: 0, Y: 1, Z: 0}}, Point{r3.Vector{X: 1, Y: 0, Z: 0}}, Point{r3.Vector{X: 0, Y: 0, Z: -1}}},
 }
 
 // faceUVWFaces are the precomputed neighbors of each face.

@@ -304,7 +304,7 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 		// We also make sure that we do not recurse on all 4 children, since
 		// then we might include all 4 children in the input case by accident
 		// (in which case the expected output would not be correct).
-		recurse := false
+		var recurse bool
 		if selected {
 			recurse = oneIn(12)
 		} else {
@@ -540,8 +540,8 @@ func TestCellUnionRectBound(t *testing.T) {
 		{
 			&CellUnion{CellIDFromFace(1)},
 			Rect{
-				r1.Interval{-math.Pi / 4, math.Pi / 4},
-				s1.Interval{math.Pi / 4, 3 * math.Pi / 4},
+				r1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4},
+				s1.Interval{Lo: math.Pi / 4, Hi: 3 * math.Pi / 4},
 			},
 		},
 		{
@@ -550,12 +550,12 @@ func TestCellUnionRectBound(t *testing.T) {
 			},
 			Rect{
 				r1.Interval{
-					float64(s1.Degree * 34.644220547108482),
-					float64(s1.Degree * 38.011928357226651),
+					Lo: float64(s1.Degree * 34.644220547108482),
+					Hi: float64(s1.Degree * 38.011928357226651),
 				},
 				s1.Interval{
-					float64(s1.Degree * -124.508522987668428),
-					float64(s1.Degree * -121.628309835221216),
+					Lo: float64(s1.Degree * -124.508522987668428),
+					Hi: float64(s1.Degree * -121.628309835221216),
 				},
 			},
 		},
@@ -565,12 +565,12 @@ func TestCellUnionRectBound(t *testing.T) {
 			},
 			Rect{
 				r1.Interval{
-					float64(s1.Degree * 38.794595155857657),
-					float64(s1.Degree * 41.747046884651063),
+					Lo: float64(s1.Degree * 38.794595155857657),
+					Hi: float64(s1.Degree * 41.747046884651063),
 				},
 				s1.Interval{
-					float64(s1.Degree * -76.456308667788633),
-					float64(s1.Degree * -73.465162142654819),
+					Lo: float64(s1.Degree * -76.456308667788633),
+					Hi: float64(s1.Degree * -73.465162142654819),
 				},
 			},
 		},
@@ -581,12 +581,12 @@ func TestCellUnionRectBound(t *testing.T) {
 			},
 			Rect{
 				r1.Interval{
-					float64(s1.Degree * 34.644220547108482),
-					float64(s1.Degree * 41.747046884651063),
+					Lo: float64(s1.Degree * 34.644220547108482),
+					Hi: float64(s1.Degree * 41.747046884651063),
 				},
 				s1.Interval{
-					float64(s1.Degree * -124.508522987668428),
-					float64(s1.Degree * -73.465162142654819),
+					Lo: float64(s1.Degree * -124.508522987668428),
+					Hi: float64(s1.Degree * -73.465162142654819),
 				},
 			},
 		},

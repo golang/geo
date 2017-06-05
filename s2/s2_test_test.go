@@ -84,50 +84,50 @@ func TestParseRect(t *testing.T) {
 		{
 			"1:1",
 			Rect{
-				r1.Interval{float64(s1.Degree), float64(s1.Degree)},
-				s1.Interval{float64(s1.Degree), float64(s1.Degree)},
+				r1.Interval{Lo: float64(s1.Degree), Hi: float64(s1.Degree)},
+				s1.Interval{Lo: float64(s1.Degree), Hi: float64(s1.Degree)},
 			},
 		},
 		{
 			"1:1, 2:2, 3:3",
 			Rect{
-				r1.Interval{float64(s1.Degree), 3 * float64(s1.Degree)},
-				s1.Interval{float64(s1.Degree), 3 * float64(s1.Degree)},
+				r1.Interval{Lo: float64(s1.Degree), Hi: 3 * float64(s1.Degree)},
+				s1.Interval{Lo: float64(s1.Degree), Hi: 3 * float64(s1.Degree)},
 			},
 		},
 		{
 			"-90:-180, 90:180",
 			Rect{
-				r1.Interval{-90 * float64(s1.Degree), 90 * float64(s1.Degree)},
-				s1.Interval{180 * float64(s1.Degree), -180 * float64(s1.Degree)},
+				r1.Interval{Lo: -90 * float64(s1.Degree), Hi: 90 * float64(s1.Degree)},
+				s1.Interval{Lo: 180 * float64(s1.Degree), Hi: -180 * float64(s1.Degree)},
 			},
 		},
 		{
 			"-89.99:0, 89.99:179.99",
 			Rect{
-				r1.Interval{-89.99 * float64(s1.Degree), 89.99 * float64(s1.Degree)},
-				s1.Interval{0, 179.99 * float64(s1.Degree)},
+				r1.Interval{Lo: -89.99 * float64(s1.Degree), Hi: 89.99 * float64(s1.Degree)},
+				s1.Interval{Lo: 0, Hi: 179.99 * float64(s1.Degree)},
 			},
 		},
 		{
 			"-89.99:-179.99, 89.99:179.99",
 			Rect{
-				r1.Interval{-89.99 * float64(s1.Degree), 89.99 * float64(s1.Degree)},
-				s1.Interval{179.99 * float64(s1.Degree), -179.99 * float64(s1.Degree)},
+				r1.Interval{Lo: -89.99 * float64(s1.Degree), Hi: 89.99 * float64(s1.Degree)},
+				s1.Interval{Lo: 179.99 * float64(s1.Degree), Hi: -179.99 * float64(s1.Degree)},
 			},
 		},
 		{
 			"37.4210:-122.0866, 37.4231:-122.0819",
 			Rect{
-				r1.Interval{float64(s1.Degree * 37.4210), float64(s1.Degree * 37.4231)},
-				s1.Interval{float64(s1.Degree * -122.0866), float64(s1.Degree * -122.0819)},
+				r1.Interval{Lo: float64(s1.Degree * 37.4210), Hi: float64(s1.Degree * 37.4231)},
+				s1.Interval{Lo: float64(s1.Degree * -122.0866), Hi: float64(s1.Degree * -122.0819)},
 			},
 		},
 		{
 			"-876.54:-654.43, 963.84:2468.35",
 			Rect{
-				r1.Interval{-876.54 * float64(s1.Degree), -876.54 * float64(s1.Degree)},
-				s1.Interval{-654.43 * float64(s1.Degree), -654.43 * float64(s1.Degree)},
+				r1.Interval{Lo: -876.54 * float64(s1.Degree), Hi: -876.54 * float64(s1.Degree)},
+				s1.Interval{Lo: -654.43 * float64(s1.Degree), Hi: -654.43 * float64(s1.Degree)},
 			},
 		},
 	}

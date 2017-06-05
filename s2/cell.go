@@ -320,17 +320,17 @@ func (c Cell) RectBound() Rect {
 	var bound Rect
 	switch c.face {
 	case 0:
-		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{-math.Pi / 4, math.Pi / 4}}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}, s1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}}
 	case 1:
-		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{math.Pi / 4, 3 * math.Pi / 4}}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}, s1.Interval{Lo: math.Pi / 4, Hi: 3 * math.Pi / 4}}
 	case 2:
-		bound = Rect{r1.Interval{poleMinLat, math.Pi / 2}, s1.FullInterval()}
+		bound = Rect{r1.Interval{Lo: poleMinLat, Hi: math.Pi / 2}, s1.FullInterval()}
 	case 3:
-		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{3 * math.Pi / 4, -3 * math.Pi / 4}}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}, s1.Interval{Lo: 3 * math.Pi / 4, Hi: -3 * math.Pi / 4}}
 	case 4:
-		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{-3 * math.Pi / 4, -math.Pi / 4}}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}, s1.Interval{Lo: -3 * math.Pi / 4, Hi: -math.Pi / 4}}
 	default:
-		bound = Rect{r1.Interval{-math.Pi / 2, -poleMinLat}, s1.FullInterval()}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 2, Hi: -poleMinLat}, s1.FullInterval()}
 	}
 
 	// Finally, we expand the bound to account for the error when a point P is

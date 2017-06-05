@@ -131,8 +131,8 @@ func TestPolylineLengthAndCentroid(t *testing.T) {
 
 func TestPolylineIntersectsCell(t *testing.T) {
 	pline := Polyline{
-		Point{r3.Vector{1, -1.1, 0.8}.Normalize()},
-		Point{r3.Vector{1, -0.8, 1.1}.Normalize()},
+		Point{r3.Vector{X: 1, Y: -1.1, Z: 0.8}.Normalize()},
+		Point{r3.Vector{X: 1, Y: -0.8, Z: 1.1}.Normalize()},
 	}
 
 	for face := 0; face < 6; face++ {

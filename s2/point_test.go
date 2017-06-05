@@ -58,8 +58,8 @@ func TestPointCross(t *testing.T) {
 		{1, 2, 3, -4, 5, -6, 2 * math.Sqrt(934)},
 	}
 	for _, test := range tests {
-		p1 := Point{r3.Vector{test.p1x, test.p1y, test.p1z}}
-		p2 := Point{r3.Vector{test.p2x, test.p2y, test.p2z}}
+		p1 := Point{r3.Vector{X: test.p1x, Y: test.p1y, Z: test.p1z}}
+		p2 := Point{r3.Vector{X: test.p2x, Y: test.p2y, Z: test.p2z}}
 		result := p1.PointCross(p2)
 		if !float64Eq(result.Norm(), test.norm) {
 			t.Errorf("|%v ⨯ %v| = %v, want %v", p1, p2, result.Norm(), test.norm)

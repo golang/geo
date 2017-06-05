@@ -72,7 +72,7 @@ func TestFaceUVToXYZ(t *testing.T) {
 
 		// Check that each face has a right-handed coordinate system.
 		if got := uAxis(face).Vector.Cross(vAxis(face).Vector).Dot(unitNorm(face).Vector); got != 1 {
-			t.Errorf("right-handed check failed. uAxis(%d).Cross(vAxis(%d)).Dot(unitNorm%v) = %d, want 1", face, face, face, got)
+			t.Errorf("right-handed check failed. uAxis(%v).Cross(vAxis(%v)).Dot(unitNorm%v) = %v, want 1", face, face, face, got)
 		}
 
 		// Check that the Hilbert curves on each face combine to form a
@@ -89,15 +89,15 @@ func TestFaceUVToXYZ(t *testing.T) {
 	}
 
 	// Adding up the absolute value all all the face normals should equal 2 on each axis.
-	if !sum.ApproxEqual(r3.Vector{2, 2, 2}) {
-		t.Errorf("sum of the abs of the 6 face norms should = %v, got %v", r3.Vector{2, 2, 2}, sum)
+	if !sum.ApproxEqual(r3.Vector{X: 2, Y: 2, Z: 2}) {
+		t.Errorf("sum of the abs of the 6 face norms should = %v, got %v", r3.Vector{X: 2, Y: 2, Z: 2}, sum)
 	}
 }
 
 func TestFaceXYZToUV(t *testing.T) {
 	var (
-		point    = Point{r3.Vector{1.1, 1.2, 1.3}}
-		pointNeg = Point{r3.Vector{-1.1, -1.2, -1.3}}
+		point    = Point{r3.Vector{X: 1.1, Y: 1.2, Z: 1.3}}
+		pointNeg = Point{r3.Vector{X: -1.1, Y: -1.2, Z: -1.3}}
 	)
 
 	tests := []struct {
@@ -130,13 +130,13 @@ func TestFaceXYZToUV(t *testing.T) {
 
 func TestFaceXYZtoUVW(t *testing.T) {
 	var (
-		origin = Point{r3.Vector{0, 0, 0}}
-		posX   = Point{r3.Vector{1, 0, 0}}
-		negX   = Point{r3.Vector{-1, 0, 0}}
-		posY   = Point{r3.Vector{0, 1, 0}}
-		negY   = Point{r3.Vector{0, -1, 0}}
-		posZ   = Point{r3.Vector{0, 0, 1}}
-		negZ   = Point{r3.Vector{0, 0, -1}}
+		origin = Point{r3.Vector{X: 0, Y: 0, Z: 0}}
+		posX   = Point{r3.Vector{X: 1, Y: 0, Z: 0}}
+		negX   = Point{r3.Vector{X: -1, Y: 0, Z: 0}}
+		posY   = Point{r3.Vector{X: 0, Y: 1, Z: 0}}
+		negY   = Point{r3.Vector{X: 0, Y: -1, Z: 0}}
+		posZ   = Point{r3.Vector{X: 0, Y: 0, Z: 1}}
+		negZ   = Point{r3.Vector{X: 0, Y: 0, Z: -1}}
 	)
 
 	for face := 0; face < 6; face++ {
@@ -185,7 +185,7 @@ func TestUVWAxis(t *testing.T) {
 
 		// Check that every face coordinate frame is right-handed.
 		if got := uAxis(face).Vector.Cross(vAxis(face).Vector).Dot(unitNorm(face).Vector); got != 1 {
-			t.Errorf("right-handed check failed. got %d, want 1", got)
+			t.Errorf("right-handed check failed. got %v, want 1", got)
 		}
 
 		// Check that GetUVWAxis is consistent with GetUAxis, GetVAxis, GetNorm.
@@ -248,7 +248,7 @@ func TestXYZToFaceSiTi(t *testing.T) {
 			}
 
 			// Test a point near the cell center but not equal to it.
-			pMoved := ci.Point().Add(r3.Vector{1e-13, 1e-13, 1e-13})
+			pMoved := ci.Point().Add(r3.Vector{X: 1e-13, Y: 1e-13, Z: 1e-13})
 			fMoved, siMoved, tiMoved, gotLevel := xyzToFaceSiTi(Point{pMoved})
 
 			if gotLevel != -1 {
