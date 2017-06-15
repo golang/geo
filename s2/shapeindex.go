@@ -149,7 +149,7 @@ type clippedShape struct {
 func newClippedShape(id int32, numEdges int) *clippedShape {
 	return &clippedShape{
 		shapeID: id,
-		edges:   make([]int, numEdges),
+		edges:   make([]int, 0, numEdges),
 	}
 }
 
@@ -173,6 +173,13 @@ func (c *clippedShape) containsEdge(id int) bool {
 // ShapeIndexCell stores the index contents for a particular CellID.
 type ShapeIndexCell struct {
 	shapes []*clippedShape
+}
+
+// NewShapeIndexCell creates a new cell that is sized to hold the given number of shapes.
+func NewShapeIndexCell(numShapes int) *ShapeIndexCell {
+	return &ShapeIndexCell{
+		shapes: make([]*clippedShape, 0, numShapes),
+	}
 }
 
 // add adds the given clipped shape to this index cell.
@@ -310,6 +317,60 @@ func (s *ShapeIndexIterator) seekForward(target CellID) {
 	if !s.Done() && s.CellID() < target {
 		s.seek(target)
 	}
+}
+
+// LocatePoint positions the iterator at the cell that contains the given Point.
+// If no such cell exists, the iterator position is unspecified, and false is returned.
+// The cell at the matched position is guaranteed to contain all edges that might
+// intersect the line segment between target and the cell's center.
+func (s *ShapeIndexIterator) LocatePoint(p Point) bool {
+	// Let I = cellMap.LowerBound(T), where T is the leaf cell containing
+	// point P. Then if T is contained by an index cell, then the
+	// containing cell is either I or I'. We test for containment by comparing
+	// the ranges of leaf cells spanned by T, I, and I'.
+	target := cellIDFromPoint(p)
+	s.seek(target)
+	if !s.Done() && s.CellID().RangeMin() <= target {
+		return true
+	}
+
+	if !s.AtBegin() {
+		s.Prev()
+		if s.CellID().RangeMax() >= target {
+			return true
+		}
+	}
+	return false
+}
+
+// LocateCellID attempts to position the iterator at the first matching indexCell
+// in the index that has some relation to the given CellID. Let T be the target CellID.
+// If T is contained by (or equal to) some index cell I, then the iterator is positioned
+// at I and returns Indexed. Otherwise if T contains one or more (smaller) index cells,
+// then position the iterator at the first such cell I and return Subdivided.
+// Otherwise Disjoint is returned and the iterator position is undefined.
+func (s *ShapeIndexIterator) LocateCellID(target CellID) CellRelation {
+	// Let T be the target, let I = cellMap.LowerBound(T.RangeMin()), and
+	// let I' be the predecessor of I. If T contains any index cells, then T
+	// contains I. Similarly, if T is contained by an index cell, then the
+	// containing cell is either I or I'. We test for containment by comparing
+	// the ranges of leaf cells spanned by T, I, and I'.
+	s.seek(target.RangeMin())
+	if !s.Done() {
+		if s.CellID() >= target && s.CellID().RangeMin() <= target {
+			return Indexed
+		}
+		if s.CellID() <= target.RangeMax() {
+			return Subdivided
+		}
+	}
+	if !s.AtBegin() {
+		s.Prev()
+		if s.CellID().RangeMax() >= target {
+			return Indexed
+		}
+	}
+	return Disjoint
 }
 
 // indexStatus is an enumeration of states the index can be in.

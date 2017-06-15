@@ -138,11 +138,25 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 	}
 
 	var ids []CellID
+	// "minCellID" is the first CellID in a complete traversal.
+	minCellID := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
+
 	for it.Reset(); !it.Done(); it.Next() {
 		// Get the next cell in the iterator.
 		ci := it.CellID()
+		skipped := CellUnionFromRange(minCellID, ci.RangeMin())
 
 		it2 := index.Iterator()
+		for i := 0; i < len(skipped); i++ {
+			if it2.LocatePoint(skipped[i].Point()) {
+				t.Errorf("iterator should not have been able to find the cell %v wihich was not in the index", skipped[i].Point())
+			}
+
+			if got := it2.LocateCellID(skipped[i]); got != Disjoint {
+				t.Errorf("CellID location should be Disjoint for non-existent entry, got %v", got)
+			}
+		}
+
 		if len(ids) != 0 {
 			if it.AtBegin() {
 				t.Errorf("an iterator from a non-empty set of cells should not be positioned at the beginning")
@@ -181,8 +195,54 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 			t.Errorf("point at center of current position should equal center of the crrent CellID")
 		}
 
+		if !it2.LocatePoint(it.Center()) {
+			t.Fatalf("it.LocatePoint(it.Center()) should have been able to locate the point it is currently at")
+		}
+
+		if ci != it2.CellID() {
+			t.Errorf("CellID of the Point we just located should be equal. got %v, want %v", it2.CellID(), ci)
+		}
+
+		it2.Reset()
+		if got := it2.LocateCellID(ci); got != Indexed {
+			t.Errorf("it.LocateCellID(%v) = %v, want %v", ci, got, Indexed)
+		}
+
+		if ci != it2.CellID() {
+			t.Errorf("CellID of the CellID we just located should match. got %v, want %v", it2.CellID(), ci)
+		}
+
+		if !ci.isFace() {
+			it2.Reset()
+			if got := it2.LocateCellID(ci.immediateParent()); Subdivided != got {
+				t.Errorf("it2.LocateCellID(%v) = %v, want %v", ci.immediateParent(), got, Subdivided)
+			}
+
+			if it2.CellID() > ci {
+				t.Errorf("CellID of the immediate parent should be above the current cell, got %v, want %v", it2.CellID(), ci)
+			}
+
+			if it2.CellID() < ci.immediateParent().RangeMin() {
+				t.Errorf("CellID of the current position should fall below the RangeMin of the parent. got %v, want %v", it2.CellID(), ci.immediateParent().RangeMin())
+			}
+		}
+
+		if !ci.IsLeaf() {
+			for i := 0; i < 4; i++ {
+				it2.Reset()
+				if got, want := it2.LocateCellID(ci.Children()[i]), Indexed; got != want {
+					t.Errorf("it2.LocateCellID(%v.Children[%d]) = %v, want %v", ci, i, got, want)
+				}
+
+				if ci != it2.CellID() {
+					t.Errorf("it2.CellID() = %v, want %v", it2.CellID(), ci)
+				}
+			}
+		}
 		// Add this cellID to the set of cells to examine.
 		ids = append(ids, ci)
+		// Move the minimal CellID to the next CellID past our current position.
+		minCellID = ci.RangeMax().Next()
 	}
 }
 
