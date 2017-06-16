@@ -48,6 +48,11 @@ type Loop struct {
 	// versus computing from the set of vertices every time.
 	originInside bool
 
+	// depth is the nesting depth of this Loop if it is contained by a Polygon
+	// or other shape and is used to determine if this loop represents a hole
+	// or a filled in portion.
+	depth int
+
 	// bound is a conservative bound on all points contained by this loop.
 	// If l.ContainsPoint(P), then l.bound.ContainsPoint(P).
 	bound Rect
@@ -57,6 +62,9 @@ type Loop struct {
 	// has been expanded sufficiently to account for this error, i.e.
 	// if A.Contains(B), then A.subregionBound.Contains(B.bound).
 	subregionBound Rect
+
+	// index is the spatial index for this Loop.
+	index *ShapeIndex
 }
 
 // LoopFromPoints constructs a loop from the given points.
@@ -144,8 +152,9 @@ func (l *Loop) initOriginAndBound() {
 	// index has not been updated yet).
 	l.initBound()
 
-	// TODO(roberts): Depends on s2shapeindex being implemented.
-	// l.initIndex()
+	// Create a new index and add us to it.
+	l.index = NewShapeIndex()
+	l.index.Add(l)
 }
 
 // initBound sets up the approximate bounding Rects for this loop.
@@ -246,6 +255,11 @@ func (l *Loop) isEmptyOrFull() bool {
 	return len(l.vertices) == 1
 }
 
+// Vertices returns the vertices in the loop.
+func (l *Loop) Vertices() []Point {
+	return l.vertices
+}
+
 // RectBound returns a tight bounding rectangle. If the loop contains the point,
 // the bound also contains it.
 func (l *Loop) RectBound() Rect {
@@ -266,25 +280,142 @@ func (l *Loop) Vertex(i int) Point {
 	return l.vertices[i%len(l.vertices)]
 }
 
-// Vertices returns the vertices in the loop.
-func (l *Loop) Vertices() []Point {
-	return l.vertices
+// bruteForceContainsPoint reports if the given point is contained by this loop.
+// This method does not use the ShapeIndex, so it is only preferable below a certain
+// size of loop.
+func (l *Loop) bruteForceContainsPoint(p Point) bool {
+	origin := OriginPoint()
+	inside := l.originInside
+	crosser := NewChainEdgeCrosser(origin, p, l.Vertex(0))
+	for i := 1; i <= len(l.vertices); i++ { // add vertex 0 twice
+		inside = inside != crosser.EdgeOrVertexChainCrossing(l.Vertex(i))
+	}
+	return inside
 }
 
 // ContainsPoint returns true if the loop contains the point.
 func (l *Loop) ContainsPoint(p Point) bool {
-	// TODO(sbeckman): Move to bruteForceContains and update with ShapeIndex when available.
 	// Empty and full loops don't need a special case, but invalid loops with
 	// zero vertices do, so we might as well handle them all at once.
 	if len(l.vertices) < 3 {
 		return l.originInside
 	}
 
-	origin := OriginPoint()
-	inside := l.originInside
-	crosser := NewChainEdgeCrosser(origin, p, l.Vertex(0))
-	for i := 1; i <= len(l.vertices); i++ { // add vertex 0 twice
-		inside = inside != crosser.EdgeOrVertexChainCrossing(l.Vertex(i))
+	// For small loops, and during initial construction, it is faster to just
+	// check all the crossing.
+	const maxBruteForceVertices = 32
+	if len(l.vertices) < maxBruteForceVertices || l.index == nil {
+		return l.bruteForceContainsPoint(p)
+	}
+
+	// Otherwise, look up the point in the index.
+	it := l.index.Iterator()
+	if !it.LocatePoint(p) {
+		return false
+	}
+	return l.iteratorContainsPoint(it, p)
+}
+
+// ContainsCell reports whether the given Cell is contained by this Loop.
+func (l *Loop) ContainsCell(target Cell) bool {
+	it := l.index.Iterator()
+	relation := it.LocateCellID(target.ID())
+
+	// If "target" is disjoint from all index cells, it is not contained.
+	// Similarly, if "target" is subdivided into one or more index cells then it
+	// is not contained, since index cells are subdivided only if they (nearly)
+	// intersect a sufficient number of edges.  (But note that if "target" itself
+	// is an index cell then it may be contained, since it could be a cell with
+	// no edges in the loop interior.)
+	if relation != Indexed {
+		return false
+	}
+
+	// Otherwise check if any edges intersect "target".
+	if l.boundaryApproxIntersects(it, target) {
+		return false
+	}
+
+	// Otherwise check if the loop contains the center of "target".
+	return l.iteratorContainsPoint(it, target.Center())
+}
+
+// IntersectsCell reports whether this Loop intersects the given cell.
+func (l *Loop) IntersectsCell(target Cell) bool {
+	it := l.index.Iterator()
+	relation := it.LocateCellID(target.ID())
+
+	// If target does not overlap any index cell, there is no intersection.
+	if relation == Disjoint {
+		return false
+	}
+	// If target is subdivided into one or more index cells, there is an
+	// intersection to within the S2ShapeIndex error bound (see Contains).
+	if relation == Subdivided {
+		return true
+	}
+	// If target is an index cell, there is an intersection because index cells
+	// are created only if they have at least one edge or they are entirely
+	// contained by the loop.
+	if it.CellID() == target.id {
+		return true
+	}
+	// Otherwise check if any edges intersect target.
+	if l.boundaryApproxIntersects(it, target) {
+		return true
+	}
+	// Otherwise check if the loop contains the center of target.
+	return l.iteratorContainsPoint(it, target.Center())
+}
+
+// boundaryApproxIntersects reports if the loop's boundary intersects target.
+// It may also return true when the loop boundary does not intersect target but
+// some edge comes within the worst-case error tolerance.
+//
+// This requires that it.Locate(target) returned Indexed.
+func (l *Loop) boundaryApproxIntersects(it *ShapeIndexIterator, target Cell) bool {
+	aClipped := it.IndexCell().findByShapeID(0)
+
+	// If there are no edges, there is no intersection.
+	if len(aClipped.edges) == 0 {
+		return false
+	}
+
+	// We can save some work if target is the index cell itself.
+	if it.CellID() == target.ID() {
+		return true
+	}
+
+	// Otherwise check whether any of the edges intersect target.
+	maxError := (faceClipErrorUVCoord + intersectsRectErrorUVDist)
+	bound := target.BoundUV().ExpandedByMargin(maxError)
+	for _, ai := range aClipped.edges {
+		v0, v1, ok := ClipToPaddedFace(l.Vertex(ai), l.Vertex(ai+1), target.Face(), maxError)
+		if ok && edgeIntersectsRect(v0, v1, bound) {
+			return true
+		}
+	}
+	return false
+}
+
+// iteratorContainsPoint reports if the iterator that is positioned at the ShapeIndexCell
+// that may contain p, contains the point p.
+func (l *Loop) iteratorContainsPoint(it *ShapeIndexIterator, p Point) bool {
+	// Test containment by drawing a line segment from the cell center to the
+	// given point and counting edge crossings.
+	aClipped := it.IndexCell().findByShapeID(0)
+	inside := aClipped.containsCenter
+	if len(aClipped.edges) > 0 {
+		center := it.Center()
+		crosser := NewEdgeCrosser(center, p)
+		aiPrev := -2
+		for _, ai := range aClipped.edges {
+			if ai != aiPrev+1 {
+				crosser.RestartAt(l.Vertex(ai))
+			}
+			aiPrev = ai
+			inside = inside != crosser.EdgeOrVertexChainCrossing(l.Vertex(ai+1))
+		}
 	}
 	return inside
 }
@@ -300,3 +431,28 @@ func RegularLoop(center Point, radius s1.Angle, numVertices int) *Loop {
 func RegularLoopForFrame(frame matrix3x3, radius s1.Angle, numVertices int) *Loop {
 	return LoopFromPoints(regularPointsForFrame(frame, radius, numVertices))
 }
+
+// TODO(roberts): Differences from the C++ version:
+// IsNormalized
+// Normalize
+// Invert
+// Area
+// Centroid
+// TurningAngle
+// TurningAngleMaxError
+// DistanceToPoint
+// DistanceToBoundary
+// Project
+// ProjectToBoundary
+// LoopRelations
+// FindVertex
+// ContainsNested
+// Contains/Intersects/Equals Loop
+// BoundaryEquals/ApproxEquals
+// BoundaryNear
+// SurfaceIntegral
+// CompareBoundary
+// ContainsNonCrossingBoundary
+// getXYZFaceSiTiVertices
+// canonicalFirstVertex
+// encode/decodeCompressed

@@ -314,9 +314,20 @@ func TestLoopOriginInside(t *testing.T) {
 	}
 }
 
+func rotate(l *Loop) *Loop {
+	vertices := make([]Point, 0, len(l.vertices))
+	for i := 1; i < len(l.vertices); i++ {
+		vertices = append(vertices, l.vertices[i])
+	}
+	vertices = append(vertices, l.vertices[0])
+	return LoopFromPoints(vertices)
+}
+
 func TestLoopContainsPoint(t *testing.T) {
 	north := Point{r3.Vector{0, 0, 1}}
 	south := Point{r3.Vector{0, 0, -1}}
+	east := PointFromCoords(0, 1, 0)
+	west := PointFromCoords(0, -1, 0)
 
 	if EmptyLoop().ContainsPoint(north) {
 		t.Errorf("empty loop should not not have any points")
@@ -334,26 +345,26 @@ func TestLoopContainsPoint(t *testing.T) {
 		{
 			"north hemisphere",
 			northHemi,
-			Point{r3.Vector{0, 0, 1}},
-			Point{r3.Vector{0, 0, -1}},
+			north,
+			south,
 		},
 		{
 			"south hemisphere",
 			southHemi,
-			Point{r3.Vector{0, 0, -1}},
-			Point{r3.Vector{0, 0, 1}},
+			south,
+			north,
 		},
 		{
 			"west hemisphere",
 			westHemi,
-			Point{r3.Vector{0, -1, 0}},
-			Point{r3.Vector{0, 1, 0}},
+			west,
+			east,
 		},
 		{
 			"east hemisphere",
 			eastHemi,
-			Point{r3.Vector{0, 1, 0}},
-			Point{r3.Vector{0, -1, 0}},
+			east,
+			west,
 		},
 		{
 			"candy cane",
@@ -371,6 +382,36 @@ func TestLoopContainsPoint(t *testing.T) {
 				t.Errorf("%s loop shouldn't contain %v at rotation %d", tc.name, tc.out, i)
 			}
 			l = rotate(l)
+		}
+	}
+
+	// This code checks each cell vertex is contained by exactly one of
+	// the adjacent cells.
+	for level := 0; level < 3; level++ {
+		// set of unique points across all loops at this level.
+		points := make(map[Point]bool)
+		var loops []*Loop
+		for id := CellIDFromFace(0).ChildBeginAtLevel(level); id != CellIDFromFace(5).ChildEndAtLevel(level); id = id.Next() {
+			var vertices []Point
+			cell := CellFromCellID(id)
+			points[cell.Center()] = true
+			for k := 0; k < 4; k++ {
+				vertices = append(vertices, cell.Vertex(k))
+				points[cell.Vertex(k)] = true
+			}
+			loops = append(loops, LoopFromPoints(vertices))
+		}
+
+		for point := range points {
+			count := 0
+			for _, loop := range loops {
+				if loop.ContainsPoint(point) {
+					count++
+				}
+			}
+			if count != 1 {
+				t.Errorf("point %v should only be contained by one loop at level %d, got %d", point, level, count)
+			}
 		}
 	}
 }
@@ -504,15 +545,6 @@ func TestLoopEdge(t *testing.T) {
 	}
 }
 
-func rotate(l *Loop) *Loop {
-	vertices := make([]Point, 0, len(l.vertices))
-	for i := 1; i < len(l.vertices); i++ {
-		vertices = append(vertices, l.vertices[i])
-	}
-	vertices = append(vertices, l.vertices[0])
-	return LoopFromPoints(vertices)
-}
-
 func TestLoopFromCell(t *testing.T) {
 	cell := CellFromCellID(CellIDFromLatLng(LatLng{40.565459 * s1.Degree, -74.645276 * s1.Degree}))
 	loopFromCell := LoopFromCell(cell)
@@ -530,4 +562,110 @@ func TestLoopRegularLoop(t *testing.T) {
 		t.Errorf("RegularLoop with 4 vertices should have 4 vertices, got %d", len(loop.vertices))
 	}
 	// The actual Points values are already tested in the s2point_test method TestRegularPoints.
+}
+
+// cloneLoop creates a new copy of the given loop including all of its vertices
+// so that when tests modify vertices in it, it won't ruin the original loop.
+func cloneLoop(l *Loop) *Loop {
+	c := &Loop{
+		vertices:       make([]Point, len(l.vertices)),
+		originInside:   l.originInside,
+		bound:          l.bound,
+		subregionBound: l.subregionBound,
+		index:          NewShapeIndex(),
+	}
+	copy(c.vertices, l.vertices)
+	c.index.Add(c)
+
+	return c
+}
+
+func TestLoopContainsMatchesCrossingSign(t *testing.T) {
+	// This test demonstrates a former incompatibility between CrossingSign
+	// and ContainsPoint. It constructs a Cell-based loop L and
+	// an edge E from Origin to a0 that crosses exactly one edge of L.  Yet
+	// previously, Contains() returned false for both endpoints of E.
+	//
+	// The reason for the bug was that the loop bound was sometimes too tight.
+	// The Contains() code for a0 bailed out early because a0 was found not to
+	// be inside the bound of L.
+
+	// Start with a cell that ends up producing the problem.
+	cellID := cellIDFromPoint(Point{r3.Vector{1, 1, 1}}).Parent(21)
+	children, ok := CellFromCellID(cellID).Children()
+	if !ok {
+		t.Fatalf("error subdividing cell")
+	}
+
+	points := make([]Point, 4)
+	for i := 0; i < 4; i++ {
+		// Note extra normalization. Center() is already normalized.
+		// The test results will no longer be inconsistent if the extra
+		// Normalize() is removed.
+		points[i] = Point{children[i].Center().Normalize()}
+	}
+
+	// Get a vertex from a grandchild cell.
+	// +---------------+---------------+
+	// |               |               |
+	// |    points[3]  |   points[2]   |
+	// |       v       |       v       |
+	// |       +-------+------ +       |
+	// |       |       |       |       |
+	// |       |       |       |       |
+	// |       |       |       |       |
+	// +-------+-------+-------+-------+
+	// |       |       |       |       |
+	// |       |    <----------------------- grandchild_cell
+	// |       |       |       |       |
+	// |       +-------+------ +       |
+	// |       ^       |       ^       | <-- cell
+	// | points[0]/a0  |     points[1] |
+	// |               |               |
+	// +---------------+---------------+
+	loop := LoopFromPoints(points)
+	grandchildren, ok := children[0].Children()
+	if !ok {
+		t.Fatalf("error subdividing cell")
+	}
+
+	grandchildCell := grandchildren[2]
+
+	a0 := grandchildCell.Vertex(0)
+
+	// This test depends on rounding errors that should make a0 slightly different from points[0]
+	if points[0] == a0 {
+		t.Errorf("%v not different enough from %v to successfully test", points[0], a0)
+	}
+
+	// The edge from a0 to the origin crosses one boundary.
+	if got, want := NewChainEdgeCrosser(a0, OriginPoint(), loop.Vertex(0)).ChainCrossingSign(loop.Vertex(1)), DoNotCross; got != want {
+		t.Errorf("crossingSign(%v, %v, %v, %v) = %v, want %v", a0, OriginPoint(), loop.Vertex(0), loop.Vertex(1), got, want)
+	}
+
+	if got, want := NewChainEdgeCrosser(a0, OriginPoint(), loop.Vertex(1)).ChainCrossingSign(loop.Vertex(2)), Cross; got != want {
+		t.Errorf("crossingSign(%v, %v, %v, %v) = %v, want %v", a0, OriginPoint(), loop.Vertex(1), loop.Vertex(2), got, want)
+	}
+
+	if got, want := NewChainEdgeCrosser(a0, OriginPoint(), loop.Vertex(2)).ChainCrossingSign(loop.Vertex(3)), DoNotCross; got != want {
+		t.Errorf("crossingSign(%v, %v, %v, %v) = %v, want %v", a0, OriginPoint(), loop.Vertex(2), loop.Vertex(3), got, want)
+	}
+
+	if got, want := NewChainEdgeCrosser(a0, OriginPoint(), loop.Vertex(3)).ChainCrossingSign(loop.Vertex(4)), DoNotCross; got != want {
+		t.Errorf("crossingSign(%v, %v, %v, %v) = %v, want %v", a0, OriginPoint(), loop.Vertex(3), loop.Vertex(4), got, want)
+	}
+
+	// Contains should return false for the origin, and true for a0.
+	if loop.ContainsPoint(OriginPoint()) {
+		t.Errorf("%v.ContainsPoint(%v) = true, want false", loop, OriginPoint())
+	}
+	if !loop.ContainsPoint(a0) {
+		t.Errorf("%v.ContainsPoint(%v) = false, want true", loop, a0)
+	}
+
+	// Since a0 is inside the loop, it should be inside the bound.
+	bound := loop.RectBound()
+	if !bound.ContainsPoint(a0) {
+		t.Errorf("%v.RectBound().ContainsPoint(%v) = false, want true", loop, a0)
+	}
 }

@@ -48,6 +48,7 @@ var (
 	_ Region = Cap{}
 	_ Region = Cell{}
 	_ Region = (*CellUnion)(nil)
+	_ Region = (*Loop)(nil)
 	_ Region = Point{}
 	//_ Region = (*Polygon)(nil)
 	_ Region = (*Polyline)(nil)
