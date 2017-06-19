@@ -43,7 +43,7 @@ type Region interface {
 	ContainsPoint(p Point) bool
 }
 
-// Enforce interface satisfaction.
+// Enforce Region interface satisfaction.
 var (
 	_ Region = Cap{}
 	_ Region = Cell{}

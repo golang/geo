@@ -18,6 +18,7 @@ package s2
 
 import (
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/golang/geo/r1"
@@ -465,4 +466,18 @@ func (c Cap) Union(other Cap) Cap {
 	resRadius := 0.5 * (distance + cRadius + otherRadius)
 	resCenter := InterpolateAtDistance(0.5*(distance-cRadius+otherRadius), c.center, other.center)
 	return CapFromCenterAngle(resCenter, resRadius)
+}
+
+// Encode encodes the Cap.
+func (c Cap) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	c.encode(e)
+	return e.err
+}
+
+func (c Cap) encode(e *encoder) {
+	e.writeFloat64(c.center.X)
+	e.writeFloat64(c.center.Y)
+	e.writeFloat64(c.center.Z)
+	e.writeFloat64(float64(c.radius))
 }

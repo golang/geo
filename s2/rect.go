@@ -18,6 +18,7 @@ package s2
 
 import (
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/golang/geo/r1"
@@ -421,6 +422,21 @@ func (r Rect) IntersectsCell(c Cell) bool {
 		}
 	}
 	return false
+}
+
+// Encode encodes the Rect.
+func (r Rect) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	r.encode(e)
+	return e.err
+}
+
+func (r Rect) encode(e *encoder) {
+	e.writeInt8(encodingVersion)
+	e.writeFloat64(r.Lat.Lo)
+	e.writeFloat64(r.Lat.Hi)
+	e.writeFloat64(r.Lng.Lo)
+	e.writeFloat64(r.Lng.Hi)
 }
 
 // BUG: The major differences from the C++ version are:

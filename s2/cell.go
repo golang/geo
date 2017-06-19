@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"io"
 	"math"
 
 	"github.com/golang/geo/r1"
@@ -376,6 +377,17 @@ func (c Cell) ContainsPoint(p Point) bool {
 	// converting from (u,v) coordinates to (s,t) coordinates. In the
 	// normal case the total error is at most dblEpsilon.
 	return c.uv.ExpandedByMargin(dblEpsilon).ContainsPoint(uv)
+}
+
+// Encode encodes the Cell.
+func (c Cell) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	c.encode(e)
+	return e.err
+}
+
+func (c Cell) encode(e *encoder) {
+	c.id.encode(e)
 }
 
 // BUG(roberts): Differences from C++:

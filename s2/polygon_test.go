@@ -16,9 +16,7 @@ limitations under the License.
 
 package s2
 
-import (
-	"testing"
-)
+import "testing"
 
 const (
 	// A set of nested loops around the LatLng point 0:0.

@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"io"
 	"sort"
 )
 
@@ -231,6 +232,21 @@ func (cu *CellUnion) LeafCellsCovered() int64 {
 		numLeaves += 1 << uint64((maxLevel-int64(c.Level()))<<1)
 	}
 	return numLeaves
+}
+
+// Encode encodes the CellUnion.
+func (cu *CellUnion) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	cu.encode(e)
+	return e.err
+}
+
+func (cu *CellUnion) encode(e *encoder) {
+	e.writeInt8(encodingVersion)
+	e.writeInt64(int64(len(*cu)))
+	for _, ci := range *cu {
+		ci.encode(e)
+	}
 }
 
 // BUG: Differences from C++:

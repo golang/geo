@@ -16,6 +16,11 @@ limitations under the License.
 
 package s2
 
+import (
+	"fmt"
+	"io"
+)
+
 // Polygon represents a sequence of zero or more loops; recall that the
 // interior of a loop is defined to be its left-hand side (see Loop).
 //
@@ -306,6 +311,43 @@ func (p *Polygon) chainStart(i int) int {
 
 	}
 	return e
+}
+
+// Encode encodes the Polygon
+func (p *Polygon) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	p.encode(e)
+	return e.err
+}
+
+// encode only supports lossless encoding and not compressed format.
+func (p *Polygon) encode(e *encoder) {
+	if p.numVertices == 0 {
+		//p.encodeCompressed(e, nil, maxLevel)
+		e.err = fmt.Errorf("compressed encoding not yet implemented")
+		return
+	}
+
+	// TODO(roberts): C++ computes a heurstic at encoding time to decide between
+	// using compressed and lossless format. Add that calculation once XYZFaceSiTi
+	// type is implemented.
+
+	p.encodeLossless(e)
+}
+
+// encodeLossless encodes the polygon's Points as float64s.
+func (p *Polygon) encodeLossless(e *encoder) {
+	e.writeInt8(encodingVersion)
+	e.writeBool(true) // a legacy c++ value. must be true.
+	e.writeBool(p.hasHoles)
+	e.writeUint32(uint32(len(p.loops)))
+
+	for _, l := range p.loops {
+		l.encode(e)
+	}
+
+	// Encode the bound.
+	p.bound.encode(e)
 }
 
 // TODO(roberts): Differences from C++

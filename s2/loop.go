@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"io"
 	"math"
 
 	"github.com/golang/geo/r1"
@@ -430,6 +431,30 @@ func RegularLoop(center Point, radius s1.Angle, numVertices int) *Loop {
 // coordinate frame, with the first vertex in the direction of the positive x-axis.
 func RegularLoopForFrame(frame matrix3x3, radius s1.Angle, numVertices int) *Loop {
 	return LoopFromPoints(regularPointsForFrame(frame, radius, numVertices))
+}
+
+// Encode encodes the Loop.
+func (l Loop) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	l.encode(e)
+	return e.err
+}
+
+func (l Loop) encode(e *encoder) {
+	e.writeInt8(encodingVersion)
+	e.writeUint32(uint32(len(l.vertices)))
+	for _, v := range l.vertices {
+		e.writeFloat64(v.X)
+		e.writeFloat64(v.Y)
+		e.writeFloat64(v.Z)
+	}
+
+	e.writeBool(l.originInside)
+	// The depth of this loop within a polygon. Go does not currently track this value.
+	e.writeInt32(0)
+
+	// Encode the bound.
+	l.bound.encode(e)
 }
 
 // TODO(roberts): Differences from the C++ version:

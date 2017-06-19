@@ -19,6 +19,7 @@ package s2
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"math"
 	"strconv"
 	"strings"
@@ -422,6 +423,17 @@ func (ci CellID) AdvanceWrap(steps int64) CellID {
 	// If steps is negative, then shifting it left has undefined behavior.
 	// Cast to uint64 for a 2's complement answer.
 	return CellID(uint64(ci) + (uint64(steps) << shift))
+}
+
+// Encode encodes the CellID.
+func (ci CellID) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	ci.encode(e)
+	return e.err
+}
+
+func (ci CellID) encode(e *encoder) {
+	e.writeUint64(uint64(ci))
 }
 
 // TODO: the methods below are not exported yet.  Settle on the entire API design

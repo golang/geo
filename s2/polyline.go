@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"io"
 	"math"
 
 	"github.com/golang/geo/s1"
@@ -187,6 +188,23 @@ func (p *Polyline) HasInterior() bool {
 // ContainsOrigin returns false because there is no interior to contain s2.Origin.
 func (p *Polyline) ContainsOrigin() bool {
 	return false
+}
+
+// Encode encodes the Polyline.
+func (p Polyline) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	p.encode(e)
+	return e.err
+}
+
+func (p Polyline) encode(e *encoder) {
+	e.writeInt8(encodingVersion)
+	e.writeUint32(uint32(len(p)))
+	for _, v := range p {
+		e.writeFloat64(v.X)
+		e.writeFloat64(v.Y)
+		e.writeFloat64(v.Z)
+	}
 }
 
 // TODO(roberts): Differences from C++.

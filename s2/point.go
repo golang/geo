@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"io"
 	"math"
 
 	"github.com/golang/geo/r3"
@@ -311,6 +312,20 @@ func (p Point) ContainsPoint(other Point) bool {
 // (This method matches all other s2 types where the reflexive Contains
 // method does not contain the type's name.)
 func (p Point) Contains(other Point) bool { return p == other }
+
+// Encode encodes the Point.
+func (p Point) Encode(w io.Writer) error {
+	e := &encoder{w: w}
+	p.encode(e)
+	return e.err
+}
+
+func (p Point) encode(e *encoder) {
+	e.writeInt8(encodingVersion)
+	e.writeFloat64(p.X)
+	e.writeFloat64(p.Y)
+	e.writeFloat64(p.Z)
+}
 
 // TODO: Differences from C++
 // Rotate
