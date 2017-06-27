@@ -89,8 +89,13 @@ Approximately ~40% complete.
 *   Metric
 *   PaddedCell
 *   Region
+*   s2edge_clipping
+*   s2edge_crosser
+*   s2edge_crossings
+*   s2rect_bounder
 *   s2stuv.go (s2coords.h in C++) - This file is a collection of helper and
     conversion methods to and from ST-space, UV-space, and XYZ-space.
+*   s2wedge_relations
 
 **Mostly Complete** Files that have almost all of the features of the original
 C++ code, and are reasonably complete enough to use in live code. Up to date
@@ -98,7 +103,6 @@ listing of the incomplete methods are documented at the end of each file.
 
 *   Cell - Missing Subdivide, BoundUV, DistanceToEdge, ChordDistance.
 *   CellUnion - Missing Union, Intersection, etc.
-*   Edgeutil - Missing LongitudePruner, FaceSegments, Intersection, ClosestPair.
 *   Point - Missing TurningAngle, Rotate, some Area methods.
 *   Polyline - Missing Projection, Intersects, Interpolate, etc.
 *   Rect (AKA s2latlngrect in C++) - Missing Centroid, Distance,
@@ -107,6 +111,7 @@ listing of the incomplete methods are documented at the end of each file.
 *   s2_test.go (AKA s2testing and s2textformat in C++) - Missing
     ConcentricLoopsPolygon and Fractal test shape generation. This file is a
     collection of testing helper methods.
+*   s2edge_distances - Missing Intersection, ClosestPair.
 
 **In Progress** Files that have some work done, but are probably not complete
 enough for general use in production code.
