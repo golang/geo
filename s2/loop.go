@@ -309,6 +309,10 @@ func (l *Loop) ContainsPoint(p Point) bool {
 		return l.bruteForceContainsPoint(p)
 	}
 
+	// TODO(roberts): Remove this when the following code is fixed.
+	// See also https://github.com/golang/geo/issues/25.
+	return l.bruteForceContainsPoint(p)
+
 	// Otherwise, look up the point in the index.
 	it := l.index.Iterator()
 	if !it.LocatePoint(p) {
