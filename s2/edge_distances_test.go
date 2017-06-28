@@ -146,18 +146,18 @@ func TestEdgeDistancesCheckDistance(t *testing.T) {
 			t.Errorf("DistanceFromSegment(%v, %v, %v) = %v, want %v", x, a, b, d, test.distRad)
 		}
 
-		closest := ClosestPoint(x, a, b)
+		closest := Project(x, a, b)
 		if !closest.ApproxEqual(want) {
 			t.Errorf("ClosestPoint(%v, %v, %v) = %v, want %v", x, a, b, closest, want)
 		}
 
-		if minDistance, ok := MaybeUpdateMinDistance(x, a, b, 0); ok {
-			t.Errorf("MaybeUpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, 0, minDistance, 0)
+		if minDistance, ok := UpdateMinDistance(x, a, b, 0); ok {
+			t.Errorf("UpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, 0, minDistance, 0)
 		}
 
-		minDistance, ok := MaybeUpdateMinDistance(x, a, b, s1.InfChordAngle())
+		minDistance, ok := UpdateMinDistance(x, a, b, s1.InfChordAngle())
 		if !ok {
-			t.Errorf("MaybeUpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, s1.InfChordAngle(), minDistance, s1.InfChordAngle())
+			t.Errorf("UpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, s1.InfChordAngle(), minDistance, s1.InfChordAngle())
 		}
 
 		if !float64Near(test.distRad, minDistance.Angle().Radians(), 1e-15) {
@@ -200,6 +200,10 @@ func TestEdgeDistancesInterpolate(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test.a = Point{test.a.Normalize()}
+		test.b = Point{test.b.Normalize()}
+		test.want = Point{test.want.Normalize()}
+
 		// We allow a bit more than the usual 1e-15 error tolerance because
 		// Interpolate() uses trig functions.
 		if got := Interpolate(test.dist, test.a, test.b); !pointsApproxEquals(got, test.want, 3e-15) {

@@ -372,7 +372,7 @@ func clipBoundAxis(a0, b0 float64, bound0 r1.Interval, a1, b1 float64, bound1 r1
 		}
 		// narrow the intervals lower bound to the clip bound.
 		bound0.Lo = clip.Lo
-		if bound1, updated = updateEndpoint(bound1, negSlope, interpolateDouble(clip.Lo, a0, b0, a1, b1)); !updated {
+		if bound1, updated = updateEndpoint(bound1, negSlope, interpolateFloat64(clip.Lo, a0, b0, a1, b1)); !updated {
 			return bound0, bound1, false
 		}
 	}
@@ -384,7 +384,7 @@ func clipBoundAxis(a0, b0 float64, bound0 r1.Interval, a1, b1 float64, bound1 r1
 		}
 		// narrow the intervals upper bound to the clip bound.
 		bound0.Hi = clip.Hi
-		if bound1, updated = updateEndpoint(bound1, !negSlope, interpolateDouble(clip.Hi, a0, b0, a1, b1)); !updated {
+		if bound1, updated = updateEndpoint(bound1, !negSlope, interpolateFloat64(clip.Hi, a0, b0, a1, b1)); !updated {
 			return bound0, bound1, false
 		}
 	}
@@ -455,13 +455,13 @@ func clipEdgeBound(a, b r2.Point, clip, bound r2.Rect) (r2.Rect, bool) {
 	return r2.Rect{X: b1x, Y: b1y}, true
 }
 
-// interpolateDouble returns a value with the same combination of a1 and b1 as the
+// interpolateFloat64 returns a value with the same combination of a1 and b1 as the
 // given value x is of a and b. This function makes the following guarantees:
 //  - If x == a, then x1 = a1 (exactly).
 //  - If x == b, then x1 = b1 (exactly).
 //  - If a <= x <= b, then a1 <= x1 <= b1 (even if a1 == b1).
 // This requires a != b.
-func interpolateDouble(x, a, b, a1, b1 float64) float64 {
+func interpolateFloat64(x, a, b, a1, b1 float64) float64 {
 	// To get results that are accurate near both A and B, we interpolate
 	// starting from the closer of the two points.
 	if math.Abs(a-x) <= math.Abs(b-x) {

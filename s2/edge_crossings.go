@@ -27,7 +27,7 @@ const (
 	// radians. However, using a larger error tolerance makes the algorithm more
 	// efficient because it reduces the number of cases where exact arithmetic is
 	// needed.
-	intersectionError = s1.Angle(4 * dblEpsilon)
+	intersectionError = s1.Angle(8 * dblEpsilon)
 
 	// intersectionMergeRadius is used to ensure that intersection points that
 	// are supposed to be coincident are merged back together into a single
@@ -55,11 +55,12 @@ const (
 //
 //  (1) SimpleCrossing(b,a,c,d) == SimpleCrossing(a,b,c,d)
 //  (2) SimpleCrossing(c,d,a,b) == SimpleCrossing(a,b,c,d)
+//
+// DEPRECATED: Use CrossingSign(a,b,c,d) == Cross instead.
 func SimpleCrossing(a, b, c, d Point) bool {
 	// We compute the equivalent of Sign for triangles ACB, CBD, BDA,
 	// and DAC. All of these triangles need to have the same orientation
 	// (CW or CCW) for an intersection to exist.
-
 	ab := a.Vector.Cross(b.Vector)
 	acb := -(ab.Dot(c.Vector))
 	bda := ab.Dot(d.Vector)
@@ -71,6 +72,31 @@ func SimpleCrossing(a, b, c, d Point) bool {
 	cbd := -(cd.Dot(b.Vector))
 	dac := cd.Dot(a.Vector)
 	return (acb*cbd > 0) && (acb*dac > 0)
+}
+
+// CrossingSign reports whether the edge AB intersects the edge CD.
+// If AB crosses CD at a point that is interior to both edges, Cross is returned.
+// If any two vertices from different edges are the same it returns MaybeCross.
+// Otherwise it returns DoNotCross.
+// If either edge is degenerate (A == B or C == D), the return value is MaybeCross
+// if two vertices from different edges are the same and DoNotCross otherwise.
+//
+// Properties of CrossingSign:
+//
+//  (1) CrossingSign(b,a,c,d) == CrossingSign(a,b,c,d)
+//  (2) CrossingSign(c,d,a,b) == CrossingSign(a,b,c,d)
+//  (3) CrossingSign(a,b,c,d) == MaybeCross if a==c, a==d, b==c, b==d
+//  (3) CrossingSign(a,b,c,d) == DoNotCross or MaybeCross if a==b or c==d
+//
+// This method implements an exact, consistent perturbation model such
+// that no three points are ever considered to be collinear. This means
+// that even if you have 4 points A, B, C, D that lie exactly in a line
+// (say, around the equator), C and D will be treated as being slightly to
+// one side or the other of AB. This is done in a way such that the
+// results are always consistent (see RobustSign).
+func CrossingSign(a, b, c, d Point) Crossing {
+	crosser := NewChainEdgeCrosser(a, b, c)
+	return crosser.ChainCrossingSign(d)
 }
 
 // VertexCrossing reports whether two edges "cross" in such a way that point-in-polygon
@@ -100,7 +126,7 @@ func SimpleCrossing(a, b, c, d Point) bool {
 func VertexCrossing(a, b, c, d Point) bool {
 	// If A == B or C == D there is no intersection. We need to check this
 	// case first in case 3 or more input points are identical.
-	if a.ApproxEqual(b) || c.ApproxEqual(d) {
+	if a == b || c == d {
 		return false
 	}
 
@@ -109,17 +135,33 @@ func VertexCrossing(a, b, c, d Point) bool {
 	// shared vertex O (either A or B) than the edge CD, starting from an
 	// arbitrary fixed reference point.
 	switch {
-	case a.ApproxEqual(d):
+	case a == d:
 		return OrderedCCW(Point{a.Ortho()}, c, b, a)
-	case b.ApproxEqual(c):
+	case b == c:
 		return OrderedCCW(Point{b.Ortho()}, d, a, b)
-	case a.ApproxEqual(c):
+	case a == c:
 		return OrderedCCW(Point{a.Ortho()}, d, b, a)
-	case b.ApproxEqual(d):
+	case b == d:
 		return OrderedCCW(Point{b.Ortho()}, c, a, b)
 	}
 
 	return false
+}
+
+// EdgeOrVertexCrossing is a convenience function that calls CrossingSign to
+// handle cases where all four vertices are distinct, and VertexCrossing to
+// handle cases where two or more vertices are the same. This defines a crossing
+// function such that point-in-polygon containment tests can be implemented
+// by simply counting edge crossings.
+func EdgeOrVertexCrossing(a, b, c, d Point) bool {
+	switch CrossingSign(a, b, c, d) {
+	case DoNotCross:
+		return false
+	case Cross:
+		return true
+	default:
+		return VertexCrossing(a, b, c, d)
+	}
 }
 
 // TODO(roberts): Differences from C++

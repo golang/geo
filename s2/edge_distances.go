@@ -40,11 +40,11 @@ func DistanceFromSegment(x, a, b Point) s1.Angle {
 // compare against a fixed s1.Angle, you should convert it to an s1.ChordAngle
 // once and save the value, since this conversion is relatively expensive.
 func IsDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
-	_, less := MaybeUpdateMinDistance(x, a, b, limit)
+	_, less := UpdateMinDistance(x, a, b, limit)
 	return less
 }
 
-// MaybeUpdateMinDistance checks if the distance from X to the edge AB is less
+// UpdateMinDistance checks if the distance from X to the edge AB is less
 // then minDist, and if so, returns the updated value and true.
 // The case A == B is handled correctly.
 //
@@ -53,7 +53,7 @@ func IsDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
 // because (1) using s1.ChordAngle is much faster than s1.Angle, and (2) it
 // can save a lot of work by not actually computing the distance when it is
 // obviously larger than the current minimum.
-func MaybeUpdateMinDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
+func UpdateMinDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
 	return updateMinDistance(x, a, b, minDist, false)
 }
 
@@ -61,24 +61,24 @@ func MaybeUpdateMinDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle
 // edge AB is attained at an interior point of AB (i.e., not an endpoint), and
 // that distance is less than limit.
 func IsInteriorDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
-	_, less := MaybeUpdateMinInteriorDistance(x, a, b, limit)
+	_, less := UpdateMinInteriorDistance(x, a, b, limit)
 	return less
 }
 
-// MaybeUpdateMinInteriorDistance reports whether the minimum distance from X to AB
+// UpdateMinInteriorDistance reports whether the minimum distance from X to AB
 // is attained at an interior point of AB (i.e., not an endpoint), and that distance
 // is less than minDist. If so, the value of minDist is updated and true is returned.
 // Otherwise it is unchanged and returns false.
-func MaybeUpdateMinInteriorDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
+func UpdateMinInteriorDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
 	return interiorDist(x, a, b, minDist, false)
 }
 
-// ClosestPoint returns the point along the edge AB that is closest to the point X.
+// Project returns the point along the edge AB that is closest to the point X.
 // The fractional distance of this point along the edge AB can be obtained
 // using DistanceFraction.
 //
 // This requires that all points are unit length.
-func ClosestPoint(x, a, b Point) Point {
+func Project(x, a, b Point) Point {
 	aXb := a.PointCross(b)
 	// Find the closest point to X along the great circle through AB.
 	p := x.Sub(aXb.Mul(x.Dot(aXb.Vector) / aXb.Vector.Norm2()))
@@ -142,19 +142,19 @@ func InterpolateAtDistance(ax s1.Angle, a, b Point) Point {
 }
 
 // minUpdateDistanceMaxError returns the maximum error in the result of
-// MaybeUpdateMinDistance (and the associated functions such as
-// MaybeUpdateMinInteriorDistance, IsDistanceLess, etc), assuming that all
+// UpdateMinDistance (and the associated functions such as
+// UpdateMinInteriorDistance, IsDistanceLess, etc), assuming that all
 // input points are normalized to within the bounds guaranteed by r3.Vector's
 // Normalize. The error can be added or subtracted from an s1.ChordAngle
 // using its Expanded method.
 func minUpdateDistanceMaxError(dist s1.ChordAngle) float64 {
-	// There are two cases for the maximum error in MaybeUpdateMinDistance(),
+	// There are two cases for the maximum error in UpdateMinDistance(),
 	// depending on whether the closest point is interior to the edge.
 	return math.Max(minUpdateInteriorDistanceMaxError(dist), dist.MaxPointError())
 }
 
 // minUpdateInteriorDistanceMaxError returns the maximum error in the result of
-// MaybeUpdateMinInteriorDistance, assuming that all input points are normalized
+// UpdateMinInteriorDistance, assuming that all input points are normalized
 // to within the bounds guaranteed by Point's Normalize. The error can be added
 // or subtracted from an s1.ChordAngle using its Expanded method.
 func minUpdateInteriorDistanceMaxError(dist s1.ChordAngle) float64 {

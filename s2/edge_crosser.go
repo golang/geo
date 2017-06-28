@@ -23,6 +23,20 @@ import (
 // EdgeCrosser allows edges to be efficiently tested for intersection with a
 // given fixed edge AB. It is especially efficient when testing for
 // intersection with an edge chain connecting vertices v0, v1, v2, ...
+//
+// Example usage:
+//
+//	func CountIntersections(a, b Point, edges []Edge) int {
+//		count := 0
+//		crosser := NewEdgeCrosser(a, b)
+//		for _, edge := range edges {
+//			if crosser.CrossingSign(&edge.First, &edge.Second) != DoNotCross {
+//				count++
+//			}
+//		}
+//		return count
+//	}
+//
 type EdgeCrosser struct {
 	a   Point
 	b   Point

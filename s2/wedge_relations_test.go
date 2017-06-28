@@ -26,7 +26,7 @@ func TestWedgeRelations(t *testing.T) {
 	// For simplicity, all of these tests use an origin of (0, 0, 1).
 	// This shouldn't matter as long as the lower-level primitives are
 	// implemented correctly.
-	ab1 := Point{r3.Vector{0, 0, 1}}
+	ab1 := Point{r3.Vector{0, 0, 1}.Normalize()}
 
 	tests := []struct {
 		desc           string
@@ -149,6 +149,11 @@ func TestWedgeRelations(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test.a0 = Point{test.a0.Normalize()}
+		test.a1 = Point{test.a1.Normalize()}
+		test.b0 = Point{test.b0.Normalize()}
+		test.b1 = Point{test.b1.Normalize()}
+
 		if got := WedgeContains(test.a0, ab1, test.a1, test.b0, test.b1); got != test.contains {
 			t.Errorf("%s: WedgeContains(%v, %v, %v, %v, %v) = %t, want %t", test.desc, test.a0, ab1, test.a1, test.b0, test.b1, got, test.contains)
 		}
