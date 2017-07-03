@@ -85,6 +85,13 @@ func longitude(p Point) s1.Angle {
 // The maximum error in the result is 1.5 * dblEpsilon. (This does not
 // include the error of converting degrees, E5, E6, or E7 into radians.)
 func PointFromLatLng(ll LatLng) Point {
+	return ll.Point()
+}
+
+// Point returns the Point for the LatLng.
+// The maximum error in the result is 1.5 * dblEpsilon. (This does not
+// include the error of converting degrees, E5, E6, or E7 into radians.)
+func (ll LatLng) Point() Point {
 	phi := ll.Lat.Radians()
 	theta := ll.Lng.Radians()
 	cosphi := math.Cos(phi)
@@ -93,5 +100,14 @@ func PointFromLatLng(ll LatLng) Point {
 
 // LatLngFromPoint returns an LatLng for a given Point.
 func LatLngFromPoint(p Point) LatLng {
+	return p.LatLng()
+}
+
+// Note(jasonpfox): I would expect this to be in point.go vice here; however,
+// latitude(p Point), longtitude(p Point), and LatLngFromPoint(p Point)
+// are defined here as well so it seems to fit.
+
+// LatLng returns the LatLng for the Point.
+func (p Point) LatLng() LatLng {
 	return LatLng{latitude(p), longitude(p)}
 }
