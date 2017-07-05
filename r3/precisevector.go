@@ -92,7 +92,7 @@ func (v PreciseVector) Vector() Vector {
 	x, _ := v.X.Float64()
 	y, _ := v.Y.Float64()
 	z, _ := v.Z.Float64()
-	return Vector{x, y, z}
+	return Vector{x, y, z}.Normalize()
 }
 
 // Equals reports whether v and ov are equal.
@@ -101,7 +101,7 @@ func (v PreciseVector) Equals(ov PreciseVector) bool {
 }
 
 func (v PreciseVector) String() string {
-	return fmt.Sprintf("(%v, %v, %v)", v.X, v.Y, v.Z)
+	return fmt.Sprintf("(%10g, %10g, %10g)", v.X, v.Y, v.Z)
 }
 
 // Norm2 returns the square of the norm.

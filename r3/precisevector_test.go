@@ -37,8 +37,8 @@ func TestPreciseRoundtrip(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := PreciseVectorFromVector(test.v).Vector(); !got.ApproxEqual(test.v) {
-			t.Errorf("PreciseVectorFromVector(%v).Vector() = %v, want %v", test.v, got, test.v)
+		if got, want := PreciseVectorFromVector(test.v).Vector(), test.v.Normalize(); !got.ApproxEqual(want) {
+			t.Errorf("PreciseVectorFromVector(%v).Vector() = %v, want %v", test.v, got, want)
 		}
 	}
 }
