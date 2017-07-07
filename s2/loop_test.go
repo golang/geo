@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
@@ -667,5 +668,47 @@ func TestLoopContainsMatchesCrossingSign(t *testing.T) {
 	bound := loop.RectBound()
 	if !bound.ContainsPoint(a0) {
 		t.Errorf("%v.RectBound().ContainsPoint(%v) = false, want true", loop, a0)
+	}
+}
+
+const (
+	// TODO(roberts): Convert these into changeable flags or parameters.
+	// A loop with a 10km radius and 4096 vertices has an edge length of 15 meters.
+	defaultRadiusKm   = 10.0
+	numLoopSamples    = 16
+	numQueriesPerLoop = 100
+)
+
+func BenchmarkLoopContainsPoint(b *testing.B) {
+	// Benchmark ContainsPoint() on regular loops. The query points for a loop are
+	// chosen so that they all lie in the loop's bounding rectangle (to avoid the
+	// quick-rejection code path).
+
+	// C++ ranges from 4 -> 256k by powers of 2 for number of vertices for benchmarking.
+	vertices := 4
+	for n := 1; n <= 17; n++ {
+		b.Run(fmt.Sprintf("%d", vertices),
+			func(b *testing.B) {
+				b.StopTimer()
+				loops := make([]*Loop, numLoopSamples)
+				for i := 0; i < numLoopSamples; i++ {
+					loops[i] = RegularLoop(randomPoint(), kmToAngle(10.0), vertices)
+				}
+
+				queries := make([][]Point, numLoopSamples)
+
+				for i, loop := range loops {
+					queries[i] = make([]Point, numQueriesPerLoop)
+					for j := 0; j < numQueriesPerLoop; j++ {
+						queries[i][j] = samplePointFromRect(loop.RectBound())
+					}
+				}
+
+				b.StartTimer()
+				for i := 0; i < b.N; i++ {
+					loops[i%numLoopSamples].ContainsPoint(queries[i%numLoopSamples][i%numQueriesPerLoop])
+				}
+			})
+		vertices *= 2
 	}
 }
