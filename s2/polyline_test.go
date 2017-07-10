@@ -17,10 +17,14 @@ limitations under the License.
 package s2
 
 import (
+	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
 
 func TestPolylineBasics(t *testing.T) {
@@ -141,4 +145,106 @@ func TestPolylineIntersectsCell(t *testing.T) {
 			t.Errorf("%v.IntersectsCell(%v) = %v, want %v", pline, cell, got, want)
 		}
 	}
+}
+
+func makePolylineFromString(input string) (*Polyline, error) {
+	var latLngs []LatLng
+	if len(input) > 0 {
+		latLngStrs := strings.Split(input, ", ")
+		for _, latLngStr := range latLngStrs {
+			pair := strings.Split(latLngStr, ":")
+			if len(pair) != 2 {
+				return nil, fmt.Errorf("bad polyline string: \"%s\" \"%s\"", latLngStr, pair)
+			}
+
+			lat, err := strconv.ParseFloat(pair[0], 64)
+			if err != nil {
+				return nil, err
+			}
+
+			lng, err := strconv.ParseFloat(pair[1], 64)
+			if err != nil {
+				return nil, err
+			}
+
+			latLngs = append(latLngs, LatLngFromDegrees(lat, lng))
+		}
+	}
+	return PolylineFromLatLngs(latLngs), nil
+}
+
+func checkSubsample(t *testing.T, inputStr string, tolerance s1.Angle, expectedStr string) {
+	polyline, err := makePolylineFromString(inputStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected, err := makePolylineFromString(expectedStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual := polyline.SubsampleVertices(tolerance)
+	if len(*expected) != len(*actual) {
+		t.Errorf("polylines not equal: expected=%#v, actual=%#v", expected, actual)
+	}
+
+	for i, pExpected := range *expected {
+		pActual := (*actual)[i]
+		if pActual != pExpected {
+			t.Errorf("polylines not equal: expected=%#v, actual=%#v", expected, actual)
+		}
+	}
+}
+
+func TestPolylineSubsampleVerticesTrivialInputs(t *testing.T) {
+	// No vertices.
+	checkSubsample(t, "", s1.Degree*1.0, "")
+	// One vertex.
+	checkSubsample(t, "0:1", s1.Degree*1.0, "0:1")
+	// Two vertices.
+	checkSubsample(t, "10:10, 11:11", s1.Degree*5.0, "10:10, 11:11")
+	// Three points on a straight line.
+	// In theory, zero tolerance should work, but in practice there are floating
+	// point errors.
+	checkSubsample(t, "-1:0, 0:0, 1:0", s1.Degree*1e-15, "-1:0, 1:0")
+	// Zero tolerance on a non-straight line.
+	checkSubsample(t, "-1:0, 0:0, 1:1", s1.Degree*0.0, "-1:0, 0:0, 1:1")
+	// Negative tolerance should return all vertices.
+	checkSubsample(t, "-1:0, 0:0, 1:1", s1.Degree*-1.0, "-1:0, 0:0, 1:1")
+	// Non-zero tolerance with a straight line.
+	checkSubsample(t, "0:1, 0:2, 0:3, 0:4, 0:5", s1.Degree*1.0, "0:1, 0:5")
+	// And finally, verify that we still do something reasonable if the client
+	// passes in an invalid polyline with two or more adjacent vertices.
+	checkSubsample(t, "0:1, 0:1, 0:1, 0:2", s1.Degree*0.0, "0:1, 0:2")
+}
+
+func TestPolylineSubsampleVerticesSimpleExample(t *testing.T) {
+	polyStr := "0:0, 0:1, -1:2, 0:3, 0:4, 1:4, 2:4.5, 3:4, 3.5:4, 4:4"
+	checkSubsample(t, polyStr, s1.Degree*3.0, "0:0, 4:4")
+	checkSubsample(t, polyStr, s1.Degree*2.0, "0:0, 2:4.5, 4:4")
+	checkSubsample(t, polyStr, s1.Degree*0.9, "0:0, -1:2, 2:4.5, 4:4")
+	checkSubsample(t, polyStr, s1.Degree*0.4, "0:0, 0:1, -1:2, 0:3, 0:4, 2:4.5, 4:4")
+	checkSubsample(t, polyStr, s1.Degree*0, "0:0, 0:1, -1:2, 0:3, 0:4, 1:4, 2:4.5, 3:4, 3.5:4, 4:4")
+}
+
+func TestPolylineSubsampleVerticesGuarantees(t *testing.T) {
+	// Check that duplicate vertices are never generated.
+	checkSubsample(t, "10:10, 12:12, 10:10", s1.Degree*5.0, "10:10")
+	checkSubsample(t, "0:0, 1:1, 0:0, 0:120, 0:130", s1.Degree*5.0, "0:0, 0:120, 0:130")
+
+	// Check that points are not collapsed if they would create a line
+	// segment longer than 90 degrees, and also that the code handles
+	// original polyline segments longer than 90 degrees.
+	checkSubsample(t, "90:0, 50:180, 20:180, -20:180, -50:180, -90:0, 30:0, 90:0",
+		s1.Degree*5.0, "90:0, 20:180, -50:180, -90:0, 30:0, 90:0")
+
+	// Check that the output polyline is parametrically equivalent and
+	// not just geometrically equivalent, i.e. that backtracking is
+	// preserved.  The algorithm achieves this by requiring that the
+	// points must be encountered in increasing order of distance
+	// along each output segment, except for points that are within
+	// "tolerance" of the first vertex of each segment.
+
+	checkSubsample(t, "10:10, 10:20, 10:30, 10:15, 10:40", s1.Degree*5.0, "10:10, 10:30, 10:15, 10:40")
+	checkSubsample(t, "10:10, 10:20, 10:30, 10:10, 10:30, 10:40", s1.Degree*5.0, "10:10, 10:30, 10:10, 10:40")
+	checkSubsample(t, "10:10, 12:12, 9:9, 10:20, 10:30", s1.Degree*5.0, "10:10, 10:30")
 }
