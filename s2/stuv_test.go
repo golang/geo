@@ -204,7 +204,7 @@ func TestUVWAxis(t *testing.T) {
 func TestSiTiSTRoundtrip(t *testing.T) {
 	// test int -> float -> int direction.
 	for i := 0; i < 1000; i++ {
-		si := uint64(randomUniformInt(maxSiTi))
+		si := uint32(randomUniformInt(maxSiTi))
 		if got := stToSiTi(siTiToST(si)); got != si {
 			t.Errorf("stToSiTi(siTiToST(%v)) = %v, want %v", si, got, si)
 		}
@@ -270,12 +270,12 @@ func TestXYZToFaceSiTi(t *testing.T) {
 			// Finally, test some random (si,ti) values that may be at different
 			// levels, or not at a valid level at all (for example, si == 0).
 			faceRandom := randomUniformInt(numFaces)
-			mask := -1 << uint64(maxLevel-level)
-			siRandom := uint64(randomUint32() & uint32(mask))
-			tiRandom := uint64(randomUint32() & uint32(mask))
+			mask := -1 << uint32(maxLevel-level)
+			siRandom := uint32(randomUint32() & uint32(mask))
+			tiRandom := uint32(randomUint32() & uint32(mask))
 			for siRandom > maxSiTi || tiRandom > maxSiTi {
-				siRandom = uint64(randomUint32() & uint32(mask))
-				tiRandom = uint64(randomUint32() & uint32(mask))
+				siRandom = uint32(randomUint32() & uint32(mask))
+				tiRandom = uint32(randomUint32() & uint32(mask))
 			}
 
 			pRandom := faceSiTiToXYZ(faceRandom, siRandom, tiRandom)

@@ -789,10 +789,10 @@ func TestCellIDFaceSiTi(t *testing.T) {
 	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel)
 	// Check that the (si, ti) coordinates of the center end in a
 	// 1 followed by (30 - level) 0's.
-	for level := uint64(0); level <= maxLevel; level++ {
-		l := maxLevel - int(level)
-		want := 1 << level
-		mask := 1<<(level+1) - 1
+	for level := 0; level <= maxLevel; level++ {
+		l := maxLevel - level
+		want := uint32(1) << uint(level)
+		mask := uint32(1)<<(uint(level)+1) - 1
 
 		_, si, ti := id.Parent(l).faceSiTi()
 		if want != si&mask {

@@ -440,7 +440,7 @@ func (ci CellID) encode(e *encoder) {
 // before doing this.  Do we want to mirror the C++ one as closely as possible?
 
 // distanceFromBegin returns the number of steps that this cell is from the first
-// node in the S2 heirarchy at our level. (i.e., FromFace(0).ChildBeginAtLevel(ci.Level())).
+// node in the S2 hierarchy at our level. (i.e., FromFace(0).ChildBeginAtLevel(ci.Level())).
 // The return value is always non-negative.
 func (ci CellID) distanceFromBegin() int64 {
 	return int64(ci >> uint64(2*(maxLevel-ci.Level())+1))
@@ -454,7 +454,7 @@ func (ci CellID) rawPoint() r3.Vector {
 }
 
 // faceSiTi returns the Face/Si/Ti coordinates of the center of the cell.
-func (ci CellID) faceSiTi() (face, si, ti int) {
+func (ci CellID) faceSiTi() (face int, si, ti uint32) {
 	face, i, j, _ := ci.faceIJOrientation()
 	delta := 0
 	if ci.IsLeaf() {
@@ -464,7 +464,7 @@ func (ci CellID) faceSiTi() (face, si, ti int) {
 			delta = 2
 		}
 	}
-	return face, 2*i + delta, 2*j + delta
+	return face, uint32(2*i + delta), uint32(2*j + delta)
 }
 
 // faceIJOrientation uses the global lookupIJ table to unfiddle the bits of ci.
@@ -743,7 +743,7 @@ func (ci CellID) Advance(steps int64) CellID {
 // centerST return the center of the CellID in (s,t)-space.
 func (ci CellID) centerST() r2.Point {
 	_, si, ti := ci.faceSiTi()
-	return r2.Point{siTiToST(uint64(si)), siTiToST(uint64(ti))}
+	return r2.Point{siTiToST(si), siTiToST(ti)}
 }
 
 // sizeST returns the edge length of this CellID in (s,t)-space at the given level.
@@ -763,7 +763,7 @@ func (ci CellID) boundST() r2.Rect {
 // the (u,v) rectangle covered by the cell.
 func (ci CellID) centerUV() r2.Point {
 	_, si, ti := ci.faceSiTi()
-	return r2.Point{stToUV(siTiToST(uint64(si))), stToUV(siTiToST(uint64(ti)))}
+	return r2.Point{stToUV(siTiToST(si)), stToUV(siTiToST(ti))}
 }
 
 // boundUV returns the bound of this CellID in (u,v)-space.
