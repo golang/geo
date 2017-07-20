@@ -18,9 +18,11 @@ package s2
 
 import (
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
 
 func TestPolylineBasics(t *testing.T) {
@@ -139,6 +141,143 @@ func TestPolylineIntersectsCell(t *testing.T) {
 		cell := CellFromCellID(CellIDFromFace(face))
 		if got, want := pline.IntersectsCell(cell), face&1 == 0; got != want {
 			t.Errorf("%v.IntersectsCell(%v) = %v, want %v", pline, cell, got, want)
+		}
+	}
+}
+
+func TestPolylineSubsample(t *testing.T) {
+	const polyStr = "0:0, 0:1, -1:2, 0:3, 0:4, 1:4, 2:4.5, 3:4, 3.5:4, 4:4"
+
+	tests := []struct {
+		have      string
+		tolerance float64
+		want      []int
+	}{
+		{
+			// No vertices.
+			tolerance: 1.0,
+		},
+		{
+			// One vertex.
+			have:      "0:1",
+			tolerance: 1.0,
+			want:      []int{0},
+		},
+		{
+			// Two vertices.
+			have:      "10:10, 11:11",
+			tolerance: 5.0,
+			want:      []int{0, 1},
+		},
+		{
+			// Three points on a straight line. In theory, zero tolerance
+			// should work, but in practice there are floating point errors.
+			have:      "-1:0, 0:0, 1:0",
+			tolerance: 1e-15,
+			want:      []int{0, 2},
+		},
+		{
+			// Zero tolerance on a non-straight line.
+			have:      "-1:0, 0:0, 1:1",
+			tolerance: 0.0,
+			want:      []int{0, 1, 2},
+		},
+		{
+			// Negative tolerance should return all vertices.
+			have:      "-1:0, 0:0, 1:1",
+			tolerance: -1.0,
+			want:      []int{0, 1, 2},
+		},
+		{
+			// Non-zero tolerance with a straight line.
+			have:      "0:1, 0:2, 0:3, 0:4, 0:5",
+			tolerance: 1.0,
+			want:      []int{0, 4},
+		},
+		{
+			// And finally, verify that we still do something
+			// reasonable if the client passes in an invalid polyline
+			// with two or more adjacent vertices.
+			have:      "0:1, 0:1, 0:1, 0:2",
+			tolerance: 0.0,
+			want:      []int{0, 3},
+		},
+
+		// Simple examples
+		{
+			have:      polyStr,
+			tolerance: 3.0,
+			want:      []int{0, 9},
+		},
+		{
+			have:      polyStr,
+			tolerance: 2.0,
+			want:      []int{0, 6, 9},
+		},
+		{
+			have:      polyStr,
+			tolerance: 0.9,
+			want:      []int{0, 2, 6, 9},
+		},
+		{
+			have:      polyStr,
+			tolerance: 0.4,
+			want:      []int{0, 1, 2, 3, 4, 6, 9},
+		},
+		{
+			have:      polyStr,
+			tolerance: 0,
+			want:      []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+		},
+
+		// Check that duplicate vertices are never generated.
+		{
+			have:      "10:10, 12:12, 10:10",
+			tolerance: 5.0,
+			want:      []int{0},
+		},
+		{
+			have:      "0:0, 1:1, 0:0, 0:120, 0:130",
+			tolerance: 5.0,
+			want:      []int{0, 3, 4},
+		},
+
+		// Check that points are not collapsed if they would create a line segment
+		// longer than 90 degrees, and also that the code handles original polyline
+		// segments longer than 90 degrees.
+		{
+			have:      "90:0, 50:180, 20:180, -20:180, -50:180, -90:0, 30:0, 90:0",
+			tolerance: 5.0,
+			want:      []int{0, 2, 4, 5, 6, 7},
+		},
+
+		// Check that the output polyline is parametrically equivalent and not just
+		// geometrically equivalent, i.e. that backtracking is preserved.  The
+		// algorithm achieves this by requiring that the points must be encountered
+		// in increasing order of distance along each output segment, except for
+		// points that are within "tolerance" of the first vertex of each segment.
+		{
+			have:      "10:10, 10:20, 10:30, 10:15, 10:40",
+			tolerance: 5.0,
+			want:      []int{0, 2, 3, 4},
+		},
+		{
+			have:      "10:10, 10:20, 10:30, 10:10, 10:30, 10:40",
+			tolerance: 5.0,
+			want:      []int{0, 2, 3, 5},
+		},
+		{
+			have:      "10:10, 12:12, 9:9, 10:20, 10:30",
+			tolerance: 5.0,
+			want:      []int{0, 4},
+		},
+	}
+
+	for _, test := range tests {
+		p := makePolyline(test.have)
+		got := p.SubsampleVertices(s1.Angle(test.tolerance) * s1.Degree)
+		if !reflect.DeepEqual(got, test.want) {
+			t.Errorf("%q.SubsampleVertices(%v°) = %v, want %v", test.have, test.tolerance, got, test.want)
 		}
 	}
 }
