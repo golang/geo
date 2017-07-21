@@ -115,8 +115,8 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			b:            Point{r3.Vector{1, na1, -1}},
 			c:            Point{r3.Vector{11, -12, -1}},
 			d:            Point{r3.Vector{10, 10, 1}},
-			robust:       DoNotCross, // TODO(roberts): Should be Cross, fix once exactSign is implemented.
-			edgeOrVertex: false,      // TODO(roberts): Should be true, fix once exactSign is implemented.
+			robust:       Cross,
+			edgeOrVertex: true,
 			simple:       false,
 		},
 		{
@@ -137,8 +137,8 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			b:            Point{r3.Vector{2, -1e-323, 1}},
 			c:            Point{r3.Vector{1, -1, 1}},
 			d:            Point{r3.Vector{1e-323, 0, 1}},
-			robust:       DoNotCross, // TODO(roberts): Should be Cross, fix once exactSign is implemented.
-			edgeOrVertex: false,      // TODO(roberts): Should be true, fix once exactSign is implemented.
+			robust:       Cross,
+			edgeOrVertex: true,
 			simple:       false,
 		},
 		{
@@ -169,8 +169,8 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			b:            Point{r3.Vector{-1e-323, 1, 1e-323}},
 			c:            Point{r3.Vector{1, -1, 1e-323}},
 			d:            Point{r3.Vector{1, 1, 0}},
-			robust:       Cross, // TODO(roberts): Should be DoNotCross, fix once exactSign is implemented.
-			edgeOrVertex: true,  // TODO(roberts): Should be false, fix once exactSign is implemented.
+			robust:       DoNotCross,
+			edgeOrVertex: false,
 			simple:       false,
 		},
 	}

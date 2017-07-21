@@ -27,6 +27,7 @@ package s2
 
 import (
 	"math"
+	"math/big"
 
 	"github.com/golang/geo/r3"
 )
@@ -219,20 +220,223 @@ func expensiveSign(a, b, c Point) Direction {
 	// the three points are truly collinear (e.g., three points on the equator).
 	detSign := stableSign(a, b, c)
 	if detSign != Indeterminate {
-		return detSign
+		return Direction(detSign)
 	}
 
 	// Otherwise fall back to exact arithmetic and symbolic permutations.
-	return exactSign(a, b, c, false)
+	return exactSign(a, b, c, true)
 }
 
-// exactSign reports the direction sign of the points using exact precision arithmetic.
+// exactSign reports the direction sign of the points computed using high-precision
+// arithmetic and/or symbolic perturbations.
 func exactSign(a, b, c Point, perturb bool) Direction {
-	// In the C++ version, the final computation is performed using OpenSSL's
-	// Bignum exact precision math library. The existence of an equivalent
-	// library in Go is indeterminate. In C++, using the exact precision library
-	// to solve this stage is ~300x slower than the above checks.
-	// TODO(roberts): Select and incorporate an appropriate Go exact precision
-	// floating point library for the remaining calculations.
-	return Indeterminate
+	// Sort the three points in lexicographic order, keeping track of the sign
+	// of the permutation. (Each exchange inverts the sign of the determinant.)
+	permSign := Direction(CounterClockwise)
+	pa := &a
+	pb := &b
+	pc := &c
+	if pa.Cmp(pb.Vector) > 0 {
+		pa, pb = pb, pa
+		permSign = -permSign
+	}
+	if pb.Cmp(pc.Vector) > 0 {
+		pb, pc = pc, pb
+		permSign = -permSign
+	}
+	if pa.Cmp(pb.Vector) > 0 {
+		pa, pb = pb, pa
+		permSign = -permSign
+	}
+
+	// Construct multiple-precision versions of the sorted points and compute
+	// their precise 3x3 determinant.
+	xa := r3.PreciseVectorFromVector(pa.Vector)
+	xb := r3.PreciseVectorFromVector(pb.Vector)
+	xc := r3.PreciseVectorFromVector(pc.Vector)
+	xbCrossXc := xb.Cross(xc)
+	det := xa.Dot(xbCrossXc)
+
+	// The precision of big.Float is high enough that the result should always
+	// be exact enough (no rounding was performed).
+
+	// If the exact determinant is non-zero, we're done.
+	detSign := Direction(det.Sign())
+	if detSign == Indeterminate && perturb {
+		// Otherwise, we need to resort to symbolic perturbations to resolve the
+		// sign of the determinant.
+		detSign = symbolicallyPerturbedSign(xa, xb, xc, xbCrossXc)
+	}
+	return permSign * Direction(detSign)
 }
+
+// symbolicallyPerturbedSign reports the sign of the determinant of three points
+// A, B, C under a model where every possible Point is slightly perturbed by
+// a unique infinitesmal amount such that no three perturbed points are
+// collinear and no four points are coplanar. The perturbations are so small
+// that they do not change the sign of any determinant that was non-zero
+// before the perturbations, and therefore can be safely ignored unless the
+// determinant of three points is exactly zero (using multiple-precision
+// arithmetic). This returns CounterClockwise or Clockwise according to the
+// sign of the determinant after the symbolic perturbations are taken into account.
+//
+// Since the symbolic perturbation of a given point is fixed (i.e., the
+// perturbation is the same for all calls to this method and does not depend
+// on the other two arguments), the results of this method are always
+// self-consistent. It will never return results that would correspond to an
+// impossible configuration of non-degenerate points.
+//
+// This requires that the 3x3 determinant of A, B, C must be exactly zero.
+// And the points must be distinct, with A < B < C in lexicographic order.
+//
+// Reference:
+//   "Simulation of Simplicity" (Edelsbrunner and Muecke, ACM Transactions on
+//   Graphics, 1990).
+//
+func symbolicallyPerturbedSign(a, b, c, bCrossC r3.PreciseVector) Direction {
+	// This method requires that the points are sorted in lexicographically
+	// increasing order. This is because every possible Point has its own
+	// symbolic perturbation such that if A < B then the symbolic perturbation
+	// for A is much larger than the perturbation for B.
+	//
+	// Alternatively, we could sort the points in this method and keep track of
+	// the sign of the permutation, but it is more efficient to do this before
+	// converting the inputs to the multi-precision representation, and this
+	// also lets us re-use the result of the cross product B x C.
+	//
+	// Every input coordinate x[i] is assigned a symbolic perturbation dx[i].
+	// We then compute the sign of the determinant of the perturbed points,
+	// i.e.
+	//               | a.X+da.X  a.Y+da.Y  a.Z+da.Z |
+	//               | b.X+db.X  b.Y+db.Y  b.Z+db.Z |
+	//               | c.X+dc.X  c.Y+dc.Y  c.Z+dc.Z |
+	//
+	// The perturbations are chosen such that
+	//
+	//   da.Z > da.Y > da.X > db.Z > db.Y > db.X > dc.Z > dc.Y > dc.X
+	//
+	// where each perturbation is so much smaller than the previous one that we
+	// don't even need to consider it unless the coefficients of all previous
+	// perturbations are zero. In fact, it is so small that we don't need to
+	// consider it unless the coefficient of all products of the previous
+	// perturbations are zero. For example, we don't need to consider the
+	// coefficient of db.Y unless the coefficient of db.Z *da.X is zero.
+	//
+	// The follow code simply enumerates the coefficients of the perturbations
+	// (and products of perturbations) that appear in the determinant above, in
+	// order of decreasing perturbation magnitude. The first non-zero
+	// coefficient determines the sign of the result. The easiest way to
+	// enumerate the coefficients in the correct order is to pretend that each
+	// perturbation is some tiny value "eps" raised to a power of two:
+	//
+	// eps**     1      2      4      8     16     32     64    128    256
+	//        da.Z   da.Y   da.X   db.Z   db.Y   db.X   dc.Z   dc.Y   dc.X
+	//
+	// Essentially we can then just count in binary and test the corresponding
+	// subset of perturbations at each step. So for example, we must test the
+	// coefficient of db.Z*da.X before db.Y because eps**12 > eps**16.
+	//
+	// Of course, not all products of these perturbations appear in the
+	// determinant above, since the determinant only contains the products of
+	// elements in distinct rows and columns. Thus we don't need to consider
+	// da.Z*da.Y, db.Y *da.Y, etc. Furthermore, sometimes different pairs of
+	// perturbations have the same coefficient in the determinant; for example,
+	// da.Y*db.X and db.Y*da.X have the same coefficient (c.Z). Therefore
+	// we only need to test this coefficient the first time we encounter it in
+	// the binary order above (which will be db.Y*da.X).
+	//
+	// The sequence of tests below also appears in Table 4-ii of the paper
+	// referenced above, if you just want to look it up, with the following
+	// translations: [a,b,c] -> [i,j,k] and [0,1,2] -> [1,2,3]. Also note that
+	// some of the signs are different because the opposite cross product is
+	// used (e.g., B x C rather than C x B).
+
+	detSign := bCrossC.Z.Sign() // da.Z
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+	detSign = bCrossC.Y.Sign() // da.Y
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+	detSign = bCrossC.X.Sign() // da.X
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+
+	detSign = new(big.Float).Sub(new(big.Float).Mul(c.X, a.Y), new(big.Float).Mul(c.Y, a.X)).Sign() // db.Z
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+	detSign = c.X.Sign() // db.Z * da.Y
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+	detSign = -(c.Y.Sign()) // db.Z * da.X
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+
+	detSign = new(big.Float).Sub(new(big.Float).Mul(c.Z, a.X), new(big.Float).Mul(c.X, a.Z)).Sign() // db.Y
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+	detSign = c.Z.Sign() // db.Y * da.X
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+
+	// The following test is listed in the paper, but it is redundant because
+	// the previous tests guarantee that C == (0, 0, 0).
+	// (c.Y*a.Z - c.Z*a.Y).Sign() // db.X
+
+	detSign = new(big.Float).Sub(new(big.Float).Mul(a.X, b.Y), new(big.Float).Mul(a.Y, b.X)).Sign() // dc.Z
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+	detSign = -(b.X.Sign()) // dc.Z * da.Y
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+	detSign = b.Y.Sign() // dc.Z * da.X
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+	detSign = a.X.Sign() // dc.Z * db.Y
+	if detSign != 0 {
+		return Direction(detSign)
+	}
+	return CounterClockwise // dc.Z * db.Y * da.X
+}
+
+// TODO(roberts): Differences from C++
+// CompareDistance(s)
+// CompareEdgeDistance
+// CompareEdgeDirections
+// EdgeCircumcenterSign
+// GetVoronoiSiteExclusion
+// GetCosDistance
+// GetSinDistance
+// GetSin2Distance
+// TriageCompareCosDistances
+// ExactCompareDistances
+// SymbolicCompareDistances
+// CompareSin2Distances
+// TriageCompareSin2Distance
+// GetClosestVertex
+// TriageCompareLineSin2Distance
+// TriageCompareLineCos2Distance
+// TriageCompareLineDistance
+// TriageCompareEdgeDistance
+// ExactCompareLineDistance
+// ExactCompareEdgeDistance
+// TriageCompareEdgeDirections
+// ExactCompareEdgeDirections
+// ArePointsAntipodal
+// ArePointsLinearlyDependent
+// GetCircumcenter
+// TriageEdgeCircumcenterSign
+// ExactEdgeCircumcenterSign
+// UnperturbedSign
+// SymbolicEdgeCircumcenterSign
+// ExactVoronoiSiteExclusion

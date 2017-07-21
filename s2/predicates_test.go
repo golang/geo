@@ -156,11 +156,9 @@ func TestPredicatesRobustSign(t *testing.T) {
 		// The following points happen to be *exactly collinear* along a line that it
 		// approximate tangent to the surface of the unit sphere. In fact, C is the
 		// exact midpoint of the line segment AB. All of these points are close
-		// enough to unit length to satisfy S2::IsUnitLength().
+		// enough to unit length to satisfy IsUnitLength().
 		{
-			// Until we get ExactSign, this will only return Indeterminate.
-			// It should be Clockwise.
-			poA, poB, poC, Indeterminate,
+			poA, poB, poC, Clockwise,
 		},
 
 		// The points "x1" and "x2" are exactly proportional, i.e. they both lie
@@ -169,26 +167,20 @@ func TestPredicatesRobustSign(t *testing.T) {
 		// Therefore the triangle (x1, x2, -x1) consists of three distinct points
 		// that all lie on a common line through the origin.
 		{
-			// Until we get ExactSign, this will only return Indeterminate.
-			// It should be CounterClockwise.
-			x1, x2, Point{x1.Mul(-1.0)}, Indeterminate,
+			x1, x2, Point{x1.Mul(-1.0)}, CounterClockwise,
 		},
 
 		// Here are two more points that are distinct, exactly proportional, and
 		// that satisfy (x == x.Normalize()).
 		{
-			// Until we get ExactSign, this will only return Indeterminate.
-			// It should be Clockwise.
-			x3, x4, Point{x3.Mul(-1.0)}, Indeterminate,
+			x3, x4, Point{x3.Mul(-1.0)}, Clockwise,
 		},
 
 		// The following points demonstrate that Normalize() is not idempotent,
 		// i.e. y0.Normalize() != y0.Normalize().Normalize(). Both points satisfy
-		// S2::IsNormalized(), though, and the two points are exactly proportional.
+		// IsNormalized(), though, and the two points are exactly proportional.
 		{
-			// Until we get ExactSign, this will only return Indeterminate.
-			// It should be CounterClockwise.
-			y1, y2, Point{y1.Mul(-1.0)}, Indeterminate,
+			y1, y2, Point{y1.Mul(-1.0)}, CounterClockwise,
 		},
 	}
 
@@ -219,21 +211,18 @@ func TestPredicatesRobustSign(t *testing.T) {
 	}
 
 	// Test cases that should not be indeterminate.
-	/*
-		Uncomment these tests once RobustSign is completed.
-		if got := RobustSign(poA, poB, poC); got == Indeterminate {
-			t.Errorf("RobustSign(%v,%v,%v) = %v, want not Indeterminate", poA, poA, poA, got)
-		}
-		if got := RobustSign(x1, x2, Point{x1.Mul(-1)}); got == Indeterminate {
-			t.Errorf("RobustSign(%v,%v,%v) = %v, want not Indeterminate", x1, x2, x1.Mul(-1), got)
-		}
-		if got := RobustSign(x3, x4, Point{x3.Mul(-1)}); got == Indeterminate {
-			t.Errorf("RobustSign(%v,%v,%v) = %v, want not Indeterminate", x3, x4, x3.Mul(-1), got)
-		}
-		if got := RobustSign(y1, y2, Point{y1.Mul(-1)}); got == Indeterminate {
-			t.Errorf("RobustSign(%v,%v,%v) = %v, want not Indeterminate", x1, x2, y1.Mul(-1), got)
-		}
-	*/
+	if got := RobustSign(poA, poB, poC); got == Indeterminate {
+		t.Errorf("RobustSign(%v,%v,%v) = %v, want not Indeterminate", poA, poA, poA, got)
+	}
+	if got := RobustSign(x1, x2, Point{x1.Mul(-1)}); got == Indeterminate {
+		t.Errorf("RobustSign(%v,%v,%v) = %v, want not Indeterminate", x1, x2, x1.Mul(-1), got)
+	}
+	if got := RobustSign(x3, x4, Point{x3.Mul(-1)}); got == Indeterminate {
+		t.Errorf("RobustSign(%v,%v,%v) = %v, want not Indeterminate", x3, x4, x3.Mul(-1), got)
+	}
+	if got := RobustSign(y1, y2, Point{y1.Mul(-1)}); got == Indeterminate {
+		t.Errorf("RobustSign(%v,%v,%v) = %v, want not Indeterminate", x1, x2, y1.Mul(-1), got)
+	}
 }
 
 func TestPredicatesStableSignFailureRate(t *testing.T) {
@@ -281,6 +270,154 @@ func TestPredicatesStableSignFailureRate(t *testing.T) {
 	rate := float64(failureCount) / float64(iters)
 	if rate >= want {
 		t.Errorf("stableSign failure rate for spacing %v km = %v, want %v", spacing, rate, want)
+	}
+}
+
+func TestPredicatesSymbolicallyPerturbedSign(t *testing.T) {
+	// The purpose of this test is simply to get code coverage of
+	// SymbolicallyPerturbedSign().  Let M_1, M_2, ... be the sequence of
+	// submatrices whose determinant sign is tested by that function. Then the
+	// i-th test below is a 3x3 matrix M (with rows A, B, C) such that:
+	//
+	//    det(M) = 0
+	//    det(M_j) = 0 for j < i
+	//    det(M_i) != 0
+	//    A < B < C in lexicographic order.
+	//
+	// Checked that reversing the sign of any of the "return" statements in
+	// SymbolicallyPerturbedSign will cause this test to fail.
+	tests := []struct {
+		a, b, c Point
+		want    Direction
+	}{
+		{
+			// det(M_1) = b0*c1 - b1*c0
+			a:    Point{r3.Vector{-3, -1, 0}},
+			b:    Point{r3.Vector{-2, 1, 0}},
+			c:    Point{r3.Vector{1, -2, 0}},
+			want: CounterClockwise,
+		},
+		{
+			// det(M_2) = b2*c0 - b0*c2
+			want: CounterClockwise,
+			a:    Point{r3.Vector{-6, 3, 3}},
+			b:    Point{r3.Vector{-4, 2, -1}},
+			c:    Point{r3.Vector{-2, 1, 4}},
+		},
+		{
+			// det(M_3) = b1*c2 - b2*c1
+			want: CounterClockwise,
+			a:    Point{r3.Vector{0, -1, -1}},
+			b:    Point{r3.Vector{0, 1, -2}},
+			c:    Point{r3.Vector{0, 2, 1}},
+		},
+		// From this point onward, B or C must be zero, or B is proportional to C.
+		{
+			// det(M_4) = c0*a1 - c1*a0
+			want: CounterClockwise,
+			a:    Point{r3.Vector{-1, 2, 7}},
+			b:    Point{r3.Vector{2, 1, -4}},
+			c:    Point{r3.Vector{4, 2, -8}},
+		},
+		{
+			// det(M_5) = c0
+			want: CounterClockwise,
+			a:    Point{r3.Vector{-4, -2, 7}},
+			b:    Point{r3.Vector{2, 1, -4}},
+			c:    Point{r3.Vector{4, 2, -8}},
+		},
+		{
+			// det(M_6) = -c1
+			want: CounterClockwise,
+			a:    Point{r3.Vector{0, -5, 7}},
+			b:    Point{r3.Vector{0, -4, 8}},
+			c:    Point{r3.Vector{0, -2, 4}},
+		},
+		{
+			// det(M_7) = c2*a0 - c0*a2
+			want: CounterClockwise,
+			a:    Point{r3.Vector{-5, -2, 7}},
+			b:    Point{r3.Vector{0, 0, -2}},
+			c:    Point{r3.Vector{0, 0, -1}},
+		},
+		{
+			// det(M_8) = c2
+			want: CounterClockwise,
+			a:    Point{r3.Vector{0, -2, 7}},
+			b:    Point{r3.Vector{0, 0, 1}},
+			c:    Point{r3.Vector{0, 0, 2}},
+		},
+		// From this point onward, C must be zero.
+		{
+			// det(M_9) = a0*b1 - a1*b0
+			want: CounterClockwise,
+			a:    Point{r3.Vector{-3, 1, 7}},
+			b:    Point{r3.Vector{-1, -4, 1}},
+			c:    Point{r3.Vector{0, 0, 0}},
+		},
+		{
+			// det(M_10) = -b0
+			want: CounterClockwise,
+			a:    Point{r3.Vector{-6, -4, 7}},
+			b:    Point{r3.Vector{-3, -2, 1}},
+			c:    Point{r3.Vector{0, 0, 0}},
+		},
+		{
+			// det(M_11) = b1
+			want: Clockwise,
+			a:    Point{r3.Vector{0, -4, 7}},
+			b:    Point{r3.Vector{0, -2, 1}},
+			c:    Point{r3.Vector{0, 0, 0}},
+		},
+		{
+			// det(M_12) = a0
+			want: Clockwise,
+			a:    Point{r3.Vector{-1, -4, 5}},
+			b:    Point{r3.Vector{0, 0, -3}},
+			c:    Point{r3.Vector{0, 0, 0}},
+		},
+		{
+			// det(M_13) = 1
+			want: CounterClockwise,
+			a:    Point{r3.Vector{0, -4, 5}},
+			b:    Point{r3.Vector{0, 0, -5}},
+			c:    Point{r3.Vector{0, 0, 0}},
+		},
+	}
+	// Given 3 points A, B, C that are exactly coplanar with the origin and where
+	// A < B < C in lexicographic order, verify that ABC is counterclockwise (if
+	// expected == 1) or clockwise (if expected == -1) using expensiveSign().
+
+	for _, test := range tests {
+		if test.a.Cmp(test.b.Vector) != -1 {
+			t.Errorf("%v >= %v, want <", test.a, test.b)
+		}
+		if test.b.Cmp(test.c.Vector) != -1 {
+			t.Errorf("%v >= %v, want <", test.b, test.c)
+		}
+		if got := test.a.Dot(test.b.Cross(test.c.Vector)); !float64Eq(got, 0) {
+			t.Errorf("%v.Dot(%v.Cross(%v)) = %v, want 0", test.a, test.b, test.c, got)
+		}
+
+		if got := expensiveSign(test.a, test.b, test.c); got != test.want {
+			t.Errorf("expensiveSign(%v, %v, %v) = %v, want %v", test.a, test.b, test.c, got, test.want)
+		}
+		if got := expensiveSign(test.b, test.c, test.a); got != test.want {
+			t.Errorf("expensiveSign(%v, %v, %v) = %v, want %v", test.b, test.c, test.a, got, test.want)
+		}
+		if got := expensiveSign(test.c, test.a, test.b); got != test.want {
+			t.Errorf("expensiveSign(%v, %v, %v) = %v, want %v", test.c, test.a, test.b, got, test.want)
+		}
+
+		if got := expensiveSign(test.c, test.b, test.a); got != -test.want {
+			t.Errorf("expensiveSign(%v, %v, %v) = %v, want %v", test.c, test.b, test.a, got, -test.want)
+		}
+		if got := expensiveSign(test.b, test.a, test.c); got != -test.want {
+			t.Errorf("expensiveSign(%v, %v, %v) = %v, want %v", test.b, test.a, test.c, got, -test.want)
+		}
+		if got := expensiveSign(test.a, test.c, test.b); got != -test.want {
+			t.Errorf("expensiveSign(%v, %v, %v) = %v, want %v", test.a, test.c, test.b, got, -test.want)
+		}
 	}
 }
 
