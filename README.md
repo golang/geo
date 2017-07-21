@@ -92,6 +92,7 @@ Approximately ~40% complete.
 *   matrix3x3
 *   Metric
 *   PaddedCell
+*   Point
 *   Region
 *   s2edge_clipping
 *   s2edge_crosser
@@ -107,7 +108,6 @@ listing of the incomplete methods are documented at the end of each file.
 
 *   Cell - Missing Subdivide, BoundUV, DistanceToEdge, ChordDistance.
 *   CellUnion - Missing Union, Intersection, etc.
-*   Point - Missing TurningAngle, Rotate, some Area methods.
 *   Polyline - Missing Projection, Intersects, Interpolate, etc.
 *   Rect (AKA s2latlngrect in C++) - Missing Centroid, Distance,
     InteriorContains.

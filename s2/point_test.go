@@ -151,7 +151,7 @@ func TestPointApproxEqual(t *testing.T) {
 var (
 	pz   = Point{r3.Vector{0, 0, 1}}
 	p000 = Point{r3.Vector{1, 0, 0}}
-	p045 = Point{r3.Vector{1, 1, 0}}
+	p045 = Point{r3.Vector{1, 1, 0}.Normalize()}
 	p090 = Point{r3.Vector{0, 1, 0}}
 	p180 = Point{r3.Vector{-1, 0, 0}}
 	// Degenerate triangles.
@@ -184,16 +184,33 @@ func TestPointArea(t *testing.T) {
 		{p000, p045, p090, 0.0, 0},
 		// Try a very long and skinny triangle.
 		{p000, Point{r3.Vector{1, 1, epsilon}}, p090, 5.8578643762690495119753e-11, 1e-9},
-		// TODO(roberts):
-		// C++ includes a 10,000 loop of perterbations to test out the Girard area
-		// computation is less than some noise threshold.
-		// Do we need that many? Will one or two suffice?
 		{g1, g2, g3, 0.0, 1e-15},
 	}
 	for _, test := range tests {
 		if got := PointArea(test.a, test.b, test.c); !float64Near(got, test.want, test.nearness) {
 			t.Errorf("PointArea(%v, %v, %v), got %v want %v", test.a, test.b, test.c, got, test.want)
 		}
+	}
+
+	maxGirard := 0.0
+	for i := 0; i < 10000; i++ {
+		p0 := randomPoint()
+		d1 := randomPoint()
+		d2 := randomPoint()
+		p1 := Point{p0.Add(d1.Mul(1e-15)).Normalize()}
+		p2 := Point{p0.Add(d2.Mul(1e-15)).Normalize()}
+		// The actual displacement can be as much as 1.2e-15 due to roundoff.
+		// This yields a maximum triangle area of about 0.7e-30.
+		if got := PointArea(p0, p1, p2); got > 0.7e-30 {
+			t.Errorf("PointArea(%v, %v, %v) = %v, want <= %v", p1, p1, p2, got, 0.7e-30)
+		}
+		if a := GirardArea(p0, p1, p2); a > maxGirard {
+			maxGirard = a
+		}
+	}
+	// This check only passes if GirardArea() uses RobustCrossProd().
+	if maxGirard > 1e-14 {
+		t.Errorf("maximum GirardArea = %v, want <= %v", maxGirard, 1e-14)
 	}
 }
 
@@ -206,8 +223,6 @@ func TestPointAreaQuarterHemisphere(t *testing.T) {
 		{Point{r3.Vector{1, 0.1 * epsilon, epsilon}}, p000, p045, p180, pz, math.Pi},
 		// Four other triangles that sum to a quarter-sphere.
 		{Point{r3.Vector{1, 1, epsilon}}, p000, p045, p180, pz, math.Pi},
-		// TODO(roberts):
-		// C++ Includes a loop of 100 perturbations on a hemisphere for more tests.
 	}
 	for _, test := range tests {
 		area := PointArea(test.a, test.b, test.c) +
@@ -217,6 +232,22 @@ func TestPointAreaQuarterHemisphere(t *testing.T) {
 
 		if !float64Eq(area, test.want) {
 			t.Errorf("Adding up 4 quarter hemispheres with PointArea(), got %v want %v", area, test.want)
+		}
+	}
+
+	// Compute the area of a hemisphere using four triangles with one near-180
+	// degree edge and one near-degenerate edge.
+	for i := 0; i < 100; i++ {
+		lng := s1.Angle(2 * math.Pi * randomFloat64())
+		p2Lng := lng + s1.Angle(randomFloat64())
+		p0 := PointFromLatLng(LatLng{1e-20, lng}.Normalized())
+		p1 := PointFromLatLng(LatLng{0, lng}.Normalized())
+		p2 := PointFromLatLng(LatLng{0, p2Lng}.Normalized())
+		p3 := PointFromLatLng(LatLng{0, lng + math.Pi}.Normalized())
+		p4 := PointFromLatLng(LatLng{0, lng + 5.0}.Normalized())
+		area := PointArea(p0, p1, p2) + PointArea(p0, p2, p3) + PointArea(p0, p3, p4) + PointArea(p0, p4, p1)
+		if !float64Near(area, 2*math.Pi, 2e-15) {
+			t.Errorf("hemisphere area of %v, %v, %v, %v, %v = %v, want %v", p1, p1, p2, p3, p4, area, 2*math.Pi)
 		}
 	}
 }
@@ -376,6 +407,80 @@ func TestPointRegion(t *testing.T) {
 		t.Errorf("%v.IntersectsCell(%v) = false, want true", r, cell)
 	}
 
+}
+
+func TestPointAngleMethods(t *testing.T) {
+
+	tests := []struct {
+		a, b, c       Point
+		wantAngle     s1.Angle
+		wantTurnAngle s1.Angle
+	}{
+		{p000, pz, p045, math.Pi / 4, -3 * math.Pi / 4},
+		{p045, pz, p180, 3 * math.Pi / 4, -math.Pi / 4},
+		{p000, pz, p180, math.Pi, 0},
+		{pz, p000, p045, math.Pi / 2, math.Pi / 2},
+		{pz, p000, pz, 0, -math.Pi},
+	}
+
+	for _, test := range tests {
+		if got := Angle(test.a, test.b, test.c); math.Abs(float64(got-test.wantAngle)) > epsilon {
+			t.Errorf("Angle(%v, %v, %v) = %v, want %v", test.a, test.b, test.c, got, test.wantAngle)
+		}
+		if got := TurnAngle(test.a, test.b, test.c); math.Abs(float64(got-test.wantTurnAngle)) > epsilon {
+			t.Errorf("TurnAngle(%v, %v, %v) = %v, want %v", test.a, test.b, test.c, got, test.wantTurnAngle)
+		}
+	}
+}
+
+func TestPointRotate(t *testing.T) {
+	for iter := 0; iter < 1000; iter++ {
+		axis := randomPoint()
+		target := randomPoint()
+		// Choose a distance whose logarithm is uniformly distributed.
+		distance := s1.Angle(math.Pi * math.Pow(1e-15, randomFloat64()))
+		// Sometimes choose points near the far side of the axis.
+		if oneIn(5) {
+			distance = math.Pi - distance
+		}
+		p := InterpolateAtDistance(distance, axis, target)
+		// Choose the rotation angle.
+		angle := s1.Angle(2 * math.Pi * math.Pow(1e-15, randomFloat64()))
+		if oneIn(3) {
+			angle = -angle
+		}
+		if oneIn(10) {
+			angle = 0
+		}
+
+		got := Rotate(p, axis, angle)
+
+		if !got.IsUnit() {
+			t.Errorf("%v should be unit length", got)
+		}
+
+		// got and p should be the same distance from axis.
+		const maxPositionError = 1e-15
+		if (got.Distance(axis) - p.Distance(axis)).Abs().Radians() > maxPositionError {
+			t.Errorf("rotated point %v should be same distance as %v, got %v, want %v", got, p, got.Distance(axis), p.Distance(axis))
+		}
+
+		// Check that the rotation angle is correct. We allow a fixed error in the
+		// *position* of the result, so we need to convert this into a rotation
+		// angle. The allowable error can be very large as "p" approaches "axis".
+		axisDistance := p.Cross(axis.Vector).Norm()
+		maxRotationError := 0.0
+		if axisDistance < maxPositionError {
+			maxRotationError = 2 * math.Pi
+		} else {
+			maxRotationError = math.Asin(maxPositionError / axisDistance)
+		}
+		actualRotation := TurnAngle(p, axis, got) + math.Pi
+		rotationError := math.Remainder((angle - actualRotation).Radians(), 2*math.Pi)
+		if rotationError > maxRotationError {
+			t.Errorf("rotational angle of %v = %v, want %v", got, actualRotation, angle)
+		}
+	}
 }
 
 func BenchmarkPointArea(b *testing.B) {
