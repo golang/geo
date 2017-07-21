@@ -59,23 +59,22 @@ func TestPolylineShape(t *testing.T) {
 	if got, want := shape.NumEdges(), 3; got != want {
 		t.Errorf("%v.NumEdges() = %v, want %d", shape, got, want)
 	}
+	if got, want := shape.NumChains(), 1; got != want {
+		t.Errorf("%v.NumChains() = %d, want %d", shape, got, want)
+	}
+	if got, want := shape.Chain(0).Start, 0; got != want {
+		t.Errorf("%v.Chain(0).Start = %d, want %d", shape, got, want)
+	}
+	if got, want := shape.Chain(0).Length, 3; got != want {
+		t.Errorf("%v.Chain(0).Length = %d, want %d", shape, got, want)
+	}
 
-	if got, want := shape.numChains(), 1; got != want {
-		t.Errorf("%v.numChains() = %d, want %d", shape, got, want)
+	e := shape.Edge(2)
+	if want := PointFromLatLng(LatLngFromDegrees(1, 1)); !e.V0.ApproxEqual(want) {
+		t.Errorf("%v.Edge(%d) point A = %v  want %v", shape, 2, e.V0, want)
 	}
-	if got, want := shape.chainStart(0), 0; got != want {
-		t.Errorf("%v.chainStart(0) = %d, want %d", shape, got, want)
-	}
-	if got, want := shape.chainStart(1), 3; got != want {
-		t.Errorf("%v.chainStart(1) = %d, want %d", shape, got, want)
-	}
-
-	v2, v3 := shape.Edge(2)
-	if want := PointFromLatLng(LatLngFromDegrees(1, 1)); !v2.ApproxEqual(want) {
-		t.Errorf("%v.Edge(%d) point A = %v  want %v", shape, 2, v2, want)
-	}
-	if want := PointFromLatLng(LatLngFromDegrees(2, 1)); !v3.ApproxEqual(want) {
-		t.Errorf("%v.Edge(%d) point B = %v  want %v", shape, 2, v3, want)
+	if want := PointFromLatLng(LatLngFromDegrees(2, 1)); !e.V1.ApproxEqual(want) {
+		t.Errorf("%v.Edge(%d) point B = %v  want %v", shape, 2, e.V1, want)
 	}
 
 	if shape.HasInterior() {
@@ -93,8 +92,8 @@ func TestPolylineShape(t *testing.T) {
 	if got, want := empty.NumEdges(), 0; got != want {
 		t.Errorf("%v.NumEdges() = %d, want %d", empty, got, want)
 	}
-	if got, want := empty.numChains(), 0; got != want {
-		t.Errorf("%v.numChains() = %d, want %d", empty, got, want)
+	if got, want := empty.NumChains(), 0; got != want {
+		t.Errorf("%v.NumChains() = %d, want %d", empty, got, want)
 	}
 }
 

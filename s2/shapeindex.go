@@ -29,36 +29,99 @@ const (
 	polygonGeometry
 )
 
+// Edge represents a geodesic edge consisting of two vertices. Zero-length edges are
+// allowed, and can be used to represent points.
+type Edge struct {
+	V0, V1 Point
+}
+
+// Cmp compares the two edges using the underlying Points Cmp method and returns
+//
+//   -1 if e <  other
+//    0 if e == other
+//   +1 if e >  other
+//
+// The two edges are compared by first vertex, and then by the second vertex.
+func (e Edge) Cmp(other Edge) int {
+	if v0cmp := e.V0.Cmp(other.V0.Vector); v0cmp != 0 {
+		return v0cmp
+	}
+	return e.V1.Cmp(other.V1.Vector)
+}
+
+// Chain represents a range of edge IDs corresponding to a chain of connected
+// edges, specified as a (start, length) pair. The chain is defined to consist of
+// edge IDs {start, start + 1, ..., start + length - 1}.
+type Chain struct {
+	Start, Length int
+}
+
+// ChainPosition represents the position of an edge within a given edge chain,
+// specified as a (chainID, offset) pair. Chains are numbered sequentially
+// starting from zero, and offsets are measured from the start of each chain.
+type ChainPosition struct {
+	ChainID, Offset int
+}
+
 // Shape defines an interface for any S2 type that needs to be indexable. A shape
 // is a collection of edges that optionally defines an interior. It can be used to
 // represent a set of points, a set of polylines, or a set of polygons.
+//
+// The edges of a Shape are indexed by a contiguous range of edge IDs
+// starting at 0. The edges are further subdivided into chains, where each
+// chain consists of a sequence of edges connected end-to-end (a polyline).
+// Shape has methods that allow edges to be accessed either using the global
+// numbering (edge ID) or within a particular chain. The global numbering is
+// sufficient for most purposes, but the chain representation is useful for
+// certain algorithms such as intersection (see BoundaryOperation).
 type Shape interface {
 	// NumEdges returns the number of edges in this shape.
 	NumEdges() int
 
-	// Edge returns endpoints for the given edge index.
-	// Zero-length edges are allowed, and can be used to represent points.
-	Edge(i int) (a, b Point)
+	// Edge returns the edge for the given edge index.
+	Edge(i int) Edge
 
-	// numChains reports the number of contiguous edge chains in the shape.
+	// HasInterior reports whether this shape has an interior.
+	HasInterior() bool
+
+	// ContainsOrigin returns true if this shape contains s2.Origin.
+	// Shapes that do not have an interior will return false.
+	ContainsOrigin() bool
+
+	// NumChains reports the number of contiguous edge chains in the shape.
 	// For example, a shape whose edges are [AB, BC, CD, AE, EF] would consist
-	// of two chains (AB,BC,CD and AE,EF). This method allows some algorithms
-	// to be optimized by skipping over edge chains that do not affect the output.
+	// of two chains (AB,BC,CD and AE,EF). Every chain is assigned a chain Id
+	// numbered sequentially starting from zero.
 	//
 	// Note that it is always acceptable to implement this method by returning
-	// NumEdges, i.e. every chain consists of a single edge.
-	numChains() int
+	// NumEdges, i.e. every chain consists of a single edge, but this may
+	// reduce the efficiency of some algorithms.
+	NumChains() int
 
-	// chainStart returns the id of the first edge in the i-th edge chain,
-	// and returns NumEdges when i == numChains. For example, if there are
-	// two chains AB,BC,CD and AE,EF, the chain starts would be [0, 3, 5].
+	// Chain returns the range of edge IDs corresponding to the given edge chain.
+	// Edge chains must consist of contiguous, non-overlapping ranges that cover
+	// the entire range of edge IDs. This is spelled out more formally below:
 	//
-	// This requires the following:
-	// 0 <= i <= numChains()
-	// chainStart(0) == 0
-	// chainStart(i) < chainStart(i+1)
-	// chainStart(numChains()) == NumEdges()
-	chainStart(i int) int
+	//  0 <= i < NumChains()
+	//  Chain(i).length > 0, for all i
+	//  Chain(0).start == 0
+	//  Chain(i).start + Chain(i).length == Chain(i+1).start, for i < NumChains()-1
+	//  Chain(i).start + Chain(i).length == NumEdges(), for i == NumChains()-1
+	Chain(chainID int) Chain
+
+	// ChainEdgeReturns the edge at offset "offset" within edge chain "chainID".
+	// Equivalent to "shape.Edge(shape.Chain(chainID).start + offset)"
+	// but more efficient.
+	ChainEdge(chainID, offset int) Edge
+
+	// ChainPosition finds the chain containing the given edge, and returns the
+	// position of that edge as a ChainPosition(chainID, offset) pair.
+	//
+	//  shape.Chain(pos.chainID).start + pos.offset == edgeID
+	//  shape.Chain(pos.chainID+1).start > edgeID
+	//
+	// where pos == shape.ChainPosition(edgeID).
+	ChainPosition(edgeID int) ChainPosition
 
 	// dimension returns the dimension of the geometry represented by this shape.
 	//
@@ -66,17 +129,6 @@ type Shape interface {
 	// to be distinguished, e.g. it allows a point to be distinguished from a
 	// polyline or polygon that has been simplified to a single point.
 	dimension() dimension
-
-	// HasInterior reports whether this shape has an interior. If so, it must be possible
-	// to assemble the edges into a collection of non-crossing loops.  Edges may
-	// be returned in any order, and edges may be oriented arbitrarily with
-	// respect to the shape interior.  (However, note that some Shape types
-	// may have stronger requirements.)
-	HasInterior() bool
-
-	// ContainsOrigin returns true if this shape contains s2.Origin.
-	// Shapes that do not have an interior will return false.
-	ContainsOrigin() bool
 }
 
 // A minimal check for types that should satisfy the Shape interface.
@@ -124,7 +176,7 @@ const (
 )
 
 // clippedShape represents the part of a shape that intersects a Cell.
-// It consists of the set of edge ids that intersect that cell and a boolean
+// It consists of the set of edge IDs that intersect that cell and a boolean
 // indicating whether the center of the cell is inside the shape (for shapes
 // that have an interior).
 //
@@ -140,8 +192,8 @@ type clippedShape struct {
 	// have an interior.
 	containsCenter bool
 
-	// edges is the ordered set of ShapeIndex original edge ids. Edges
-	// are stored in increasing order of edge id.
+	// edges is the ordered set of ShapeIndex original edge IDs. Edges
+	// are stored in increasing order of edge ID.
 	edges []int
 }
 
@@ -158,7 +210,7 @@ func (c *clippedShape) numEdges() int {
 	return len(c.edges)
 }
 
-// containsEdge reports if this clipped shape contains the given edge id.
+// containsEdge reports if this clipped shape contains the given edge ID.
 func (c *clippedShape) containsEdge(id int) bool {
 	// Linear search is fast because the number of edges per shape is typically
 	// very small (less than 10).
@@ -224,7 +276,7 @@ type faceEdge struct {
 	maxLevel    int      // Not desirable to subdivide this edge beyond this level
 	hasInterior bool     // Belongs to a shape that has an interior
 	a, b        r2.Point // The edge endpoints, clipped to a given face
-	va, vb      Point    // The original vertices of this edge.
+	edge        Edge     // The original edge.
 }
 
 // clippedEdge represents the portion of that edge that has been clipped to a given Cell.
@@ -400,10 +452,10 @@ type ShapeIndex struct {
 	nextID int
 
 	// cellMap is a map from CellID to the set of clipped shapes that intersect that
-	// cell. The cell ids cover a set of non-overlapping regions on the sphere.
+	// cell. The cell IDs cover a set of non-overlapping regions on the sphere.
 	// In C++, this is a BTree, so the cells are ordered naturally by the data structure.
 	cellMap map[CellID]*ShapeIndexCell
-	// Track the ordered list of cell ids.
+	// Track the ordered list of cell IDs.
 	cells []CellID
 
 	// The current status of the index.

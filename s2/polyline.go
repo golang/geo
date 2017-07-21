@@ -156,28 +156,8 @@ func (p *Polyline) NumEdges() int {
 }
 
 // Edge returns endpoints for the given edge index.
-func (p *Polyline) Edge(i int) (a, b Point) {
-	return (*p)[i], (*p)[i+1]
-}
-
-// dimension returns the dimension of the geometry represented by this Polyline.
-func (p *Polyline) dimension() dimension { return polylineGeometry }
-
-// numChains reports the number of contiguous edge chains in this Polyline.
-func (p *Polyline) numChains() int {
-	if p.NumEdges() >= 1 {
-		return 1
-	}
-	return 0
-}
-
-// chainStart returns the id of the first edge in the i-th edge chain in this Polyline.
-func (p *Polyline) chainStart(i int) int {
-	if i == 0 {
-		return 0
-	}
-
-	return p.NumEdges()
+func (p *Polyline) Edge(i int) Edge {
+	return Edge{(*p)[i], (*p)[i+1]}
 }
 
 // HasInterior returns false as Polylines are not closed.
@@ -189,6 +169,29 @@ func (p *Polyline) HasInterior() bool {
 func (p *Polyline) ContainsOrigin() bool {
 	return false
 }
+
+// NumChains reports the number of contiguous edge chains in this Polyline.
+func (p *Polyline) NumChains() int {
+	return min(1, p.NumEdges())
+}
+
+// Chain returns the i-th edge Chain in the Shape.
+func (p *Polyline) Chain(chainID int) Chain {
+	return Chain{0, p.NumEdges()}
+}
+
+// ChainEdge returns the j-th edge of the i-th edge Chain.
+func (p *Polyline) ChainEdge(chainID, offset int) Edge {
+	return Edge{(*p)[offset], (*p)[offset+1]}
+}
+
+// ChainPosition returns a pair (i, j) such that edgeID is the j-th edge
+func (p *Polyline) ChainPosition(edgeID int) ChainPosition {
+	return ChainPosition{0, edgeID}
+}
+
+// dimension returns the dimension of the geometry represented by this Polyline.
+func (p *Polyline) dimension() dimension { return polylineGeometry }
 
 // findEndVertex reports the maximal end index such that the line segment between
 // the start index and this one such that the line segment between these two

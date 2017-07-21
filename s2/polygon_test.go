@@ -173,8 +173,8 @@ func TestPolygonEmptyAndFull(t *testing.T) {
 	if got := emptyPolygon.dimension(); got != polygonGeometry {
 		t.Errorf("emptyPolygon.dimension() = %v, want %v", got, polygonGeometry)
 	}
-	if got, want := emptyPolygon.numChains(), 0; got != want {
-		t.Errorf("emptyPolygon.numChains() = %v, want %v", got, want)
+	if got, want := emptyPolygon.NumChains(), 0; got != want {
+		t.Errorf("emptyPolygon.NumChains() = %v, want %v", got, want)
 	}
 
 	if fullPolygon.IsEmpty() {
@@ -194,8 +194,8 @@ func TestPolygonEmptyAndFull(t *testing.T) {
 	if got := fullPolygon.dimension(); got != polygonGeometry {
 		t.Errorf("emptyPolygon.dimension() = %v, want %v", got, polygonGeometry)
 	}
-	if got, want := fullPolygon.numChains(), 0; got != want {
-		t.Errorf("emptyPolygon.numChains() = %v, want %v", got, want)
+	if got, want := fullPolygon.NumChains(), 0; got != want {
+		t.Errorf("emptyPolygon.NumChains() = %v, want %v", got, want)
 	}
 }
 
@@ -210,37 +210,31 @@ func TestPolygonShape(t *testing.T) {
 	if p.numVertices != shape.NumEdges() {
 		t.Errorf("the number of vertices in a polygon should equal the number of edges")
 	}
-	if p.NumLoops() != shape.numChains() {
+	if p.NumLoops() != shape.NumChains() {
 		t.Errorf("the number of loops in a polygon should equal the number of chains")
 	}
-	e := 0
-	v2, v3 := shape.Edge(2)
-	if want := PointFromLatLng(LatLngFromDegrees(1, 1)); !v2.ApproxEqual(want) {
-		t.Errorf("%v.Edge(%d) point A = %v  want %v", shape, 2, v2, want)
-	}
-	if want := PointFromLatLng(LatLngFromDegrees(2, 1)); !v3.ApproxEqual(want) {
-		t.Errorf("%v.Edge(%d) point B = %v  want %v", shape, 2, v3, want)
-	}
+
+	edgeID := 0
 	for i, l := range p.loops {
-		if e != shape.chainStart(i) {
-			t.Errorf("the edge id of the start of loop(%d) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.chainStart(i), e)
+		if edgeID != shape.Chain(i).Start {
+			t.Errorf("the edge id of the start of loop(%d) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.Chain(i).Start, edgeID)
+		}
+		if len(l.vertices) != shape.Chain(i).Length {
+			t.Errorf("the length of Chain(%d) should equal the length of loop(%d), got %v, want %v", i, i, shape.Chain(i).Length, len(l.vertices))
 		}
 		for j := 0; j < len(l.Vertices()); j++ {
-			v0, v1 := shape.Edge(e)
+			edge := shape.Edge(edgeID)
 			// TODO(roberts): Update once Loop implements orientedVertex.
 			//if l.orientedVertex(j) != v0 {
-			if l.Vertex(j) != v0 {
-				t.Errorf("l.Vertex(%d) = %v, want %v", j, l.Vertex(j), v0)
+			if l.Vertex(j) != edge.V0 {
+				t.Errorf("l.Vertex(%d) = %v, want %v", j, l.Vertex(j), edge.V0)
 			}
 			// TODO(roberts): Update once Loop implements orientedVertex.
 			//if l.orientedVertex(j+1) != v1 {
-			if l.Vertex(j+1) != v1 {
-				t.Errorf("l.Vertex(%d) = %v, want %v", j+1, l.Vertex(j+1), v1)
+			if l.Vertex(j+1) != edge.V1 {
+				t.Errorf("l.Vertex(%d) = %v, want %v", j+1, l.Vertex(j+1), edge.V1)
 			}
-			e++
-		}
-		if e != shape.chainStart(i+1) {
-			t.Errorf("the edge id of the start of the next loop(%d+1) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.chainStart(i+1), e)
+			edgeID++
 		}
 	}
 	if shape.dimension() != polygonGeometry {

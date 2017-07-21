@@ -217,29 +217,36 @@ func (l *Loop) NumEdges() int {
 }
 
 // Edge returns the endpoints for the given edge index.
-func (l *Loop) Edge(i int) (a, b Point) {
-	return l.Vertex(i), l.Vertex(i + 1)
+func (l *Loop) Edge(i int) Edge {
+	return Edge{l.Vertex(i), l.Vertex(i + 1)}
 }
 
-// dimension returns the dimension of the geometry represented by this Loop.
-func (l *Loop) dimension() dimension { return polygonGeometry }
-
-// numChains reports the number of contiguous edge chains in the Loop.
-func (l *Loop) numChains() int {
+// NumChains reports the number of contiguous edge chains in the Loop.
+func (l *Loop) NumChains() int {
 	if l.isEmptyOrFull() {
 		return 0
 	}
 	return 1
 }
 
-// chainStart returns the id of the first edge in the i-th edge chain in this Loop.
-func (l *Loop) chainStart(i int) int {
-	if i == 0 {
-		return 0
-	}
-
-	return l.NumEdges()
+// Chain returns the i-th edge chain in the Shape.
+func (l *Loop) Chain(chainID int) Chain {
+	return Chain{0, l.NumEdges()}
 }
+
+// ChainEdge returns the j-th edge of the i-th edge chain.
+func (l *Loop) ChainEdge(chainID, offset int) Edge {
+	return Edge{l.Vertex(offset), l.Vertex(offset + 1)}
+}
+
+// ChainPosition returns a ChainPosition pair (i, j) such that edgeID is the
+// j-th edge of the Loop.
+func (l *Loop) ChainPosition(edgeID int) ChainPosition {
+	return ChainPosition{0, edgeID}
+}
+
+// dimension returns the dimension of the geometry represented by this Loop.
+func (l *Loop) dimension() dimension { return polygonGeometry }
 
 // IsEmpty reports true if this is the special "empty" loop that contains no points.
 func (l *Loop) IsEmpty() bool {

@@ -161,13 +161,13 @@ func TestLoopEmptyAndFull(t *testing.T) {
 	if emptyLoop.NumEdges() != 0 {
 		t.Errorf("empty loops should have no edges")
 	}
-	if emptyLoop.numChains() != 0 {
+	if emptyLoop.NumChains() != 0 {
 		t.Errorf("empty loops should have no edge chains")
 	}
 	if fullLoop.NumEdges() != 0 {
 		t.Errorf("full loops should have no edges")
 	}
-	if fullLoop.numChains() != 0 {
+	if fullLoop.NumChains() != 0 {
 		t.Errorf("full loops should have no edge chains")
 	}
 }
@@ -178,23 +178,23 @@ func TestLoopBasic(t *testing.T) {
 	if got := shape.NumEdges(); got != 3 {
 		t.Errorf("shape.NumEdges = %d, want 3", got)
 	}
-	if got := shape.numChains(); got != 1 {
-		t.Errorf("shape.numChains = %d, want 1", got)
+	if got := shape.NumChains(); got != 1 {
+		t.Errorf("shape.NumChains = %d, want 1", got)
 	}
-	if got := shape.chainStart(0); got != 0 {
-		t.Errorf("shape.chainStart(0) = %d, want 3", got)
+	if got := shape.Chain(0).Start; got != 0 {
+		t.Errorf("shape.Chain(0).Start = %d, want 3", got)
 	}
-	if got := shape.chainStart(1); got != 3 {
-		t.Errorf("shape.chainStart(1) = %d, want 3", got)
+	if got := shape.Chain(0).Length; got != 3 {
+		t.Errorf("shape.Chain(0).Length = %d, want 3", got)
 	}
 
-	v2, v3 := shape.Edge(2)
-	if want := PointFromLatLng(LatLngFromDegrees(1, 0)); !v2.ApproxEqual(want) {
-		t.Errorf("shape.Edge(2) end A = %v, want %v", v2, want)
+	e := shape.Edge(2)
+	if want := PointFromLatLng(LatLngFromDegrees(1, 0)); !e.V0.ApproxEqual(want) {
+		t.Errorf("shape.Edge(2) end A = %v, want %v", e.V0, want)
 	}
-	if want := PointFromLatLng(LatLngFromDegrees(0, 0)); !v3.ApproxEqual(want) {
+	if want := PointFromLatLng(LatLngFromDegrees(0, 0)); !e.V1.ApproxEqual(want) {
 
-		t.Errorf("shape.Edge(2) end B = %v, want %v", v3, want)
+		t.Errorf("shape.Edge(2) end B = %v, want %v", e.V1, want)
 	}
 
 	if got := shape.dimension(); got != polygonGeometry {
@@ -540,8 +540,8 @@ func TestLoopEdge(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if a, b := test.loop.Edge(test.edge); !(pointsApproxEquals(a, test.wantA, epsilon) && pointsApproxEquals(b, test.wantB, epsilon)) {
-			t.Errorf("%v.Edge(%d) = (%v, %v), want (%v, %v)", test.loop, test.edge, a, b, test.wantA, test.wantB)
+		if e := test.loop.Edge(test.edge); !(pointsApproxEquals(e.V0, test.wantA, epsilon) && pointsApproxEquals(e.V1, test.wantB, epsilon)) {
+			t.Errorf("%v.Edge(%d) = %v, want (%v, %v)", test.loop, test.edge, e, test.wantA, test.wantB)
 		}
 	}
 }

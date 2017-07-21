@@ -247,7 +247,7 @@ func (p *Polygon) NumEdges() int {
 }
 
 // Edge returns endpoints for the given edge index.
-func (p *Polygon) Edge(e int) (a, b Point) {
+func (p *Polygon) Edge(e int) Edge {
 	var i int
 
 	if len(p.cumulativeEdges) > 0 {
@@ -267,7 +267,7 @@ func (p *Polygon) Edge(e int) (a, b Point) {
 
 	// TODO(roberts): C++ uses the oriented vertices from Loop. Move to those when
 	// they are implmented here.
-	return p.Loop(i).Vertex(e), p.Loop(i).Vertex(e + 1)
+	return Edge{p.Loop(i).Vertex(e), p.Loop(i).Vertex(e + 1)}
 }
 
 // HasInterior reports whether this Polygon has an interior.
@@ -284,11 +284,8 @@ func (p *Polygon) ContainsOrigin() bool {
 	return containsOrigin
 }
 
-// dimension returns the dimension of the geometry represented by this Polygon.
-func (p *Polygon) dimension() dimension { return polygonGeometry }
-
-// numChains reports the number of contiguous edge chains in the Polygon.
-func (p *Polygon) numChains() int {
+// NumChains reports the number of contiguous edge chains in the Polygon.
+func (p *Polygon) NumChains() int {
 	if p.IsFull() {
 		return 0
 	}
@@ -296,22 +293,49 @@ func (p *Polygon) numChains() int {
 	return p.NumLoops()
 }
 
-// chainStart returns the id of the first edge in the i-th edge chain in this Polygon.
-func (p *Polygon) chainStart(i int) int {
+// Chain returns the i-th edge Chain (loop) in the Shape.
+func (p *Polygon) Chain(chainID int) Chain {
 	if p.cumulativeEdges != nil {
-		if i == p.NumLoops() {
-			return p.numEdges
-		}
-		return p.cumulativeEdges[i]
+		return Chain{p.cumulativeEdges[chainID], len(p.Loop(chainID).vertices)}
 	}
 
 	e := 0
-	for i--; i >= 0; i-- {
-		e += len(p.Loop(i).vertices)
-
+	for j := 0; j < chainID; j++ {
+		e += len(p.Loop(j).vertices)
 	}
-	return e
+	return Chain{e, len(p.Loop(chainID).vertices)}
 }
+
+// ChainEdge returns the j-th edge of the i-th edge Chain (loop).
+func (p *Polygon) ChainEdge(i, j int) Edge {
+	return Edge{p.Loop(i).Vertex(j), p.Loop(i).Vertex(j + 1)}
+}
+
+// ChainPosition returns a pair (i, j) such that edgeID is the j-th edge
+// of the i-th edge Chain.
+func (p *Polygon) ChainPosition(edgeID int) ChainPosition {
+	var i int
+
+	if len(p.cumulativeEdges) > 0 {
+		for i = range p.cumulativeEdges {
+			if i+1 >= len(p.cumulativeEdges) || edgeID < p.cumulativeEdges[i+1] {
+				edgeID -= p.cumulativeEdges[i]
+				break
+			}
+		}
+	} else {
+		// When the number of loops is small, use linear search. Most often
+		// there is exactly one loop and the code below executes zero times.
+		for i = 0; edgeID >= len(p.Loop(i).vertices); i++ {
+			edgeID -= len(p.Loop(i).vertices)
+		}
+	}
+	// TODO(roberts): unify this and Edge since they are mostly identical.
+	return ChainPosition{i, edgeID}
+}
+
+// dimension returns the dimension of the geometry represented by this Polygon.
+func (p *Polygon) dimension() dimension { return polygonGeometry }
 
 // Encode encodes the Polygon
 func (p *Polygon) Encode(w io.Writer) error {

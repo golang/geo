@@ -27,14 +27,16 @@ type testShape struct {
 	edges int
 }
 
-func newTestShape() *testShape                { return &testShape{} }
-func (s *testShape) NumEdges() int            { return s.edges }
-func (s *testShape) Edge(id int) (a, b Point) { return s.a, s.b }
-func (s *testShape) dimension() dimension     { return pointGeometry }
-func (s *testShape) numChains() int           { return 0 }
-func (s *testShape) chainStart(i int) int     { return 0 }
-func (s *testShape) HasInterior() bool        { return false }
-func (s *testShape) ContainsOrigin() bool     { return false }
+func newTestShape() *testShape                              { return &testShape{} }
+func (s *testShape) NumEdges() int                          { return s.edges }
+func (s *testShape) Edge(id int) Edge                       { return Edge{s.a, s.b} }
+func (s *testShape) HasInterior() bool                      { return false }
+func (s *testShape) ContainsOrigin() bool                   { return false }
+func (s *testShape) NumChains() int                         { return 0 }
+func (s *testShape) Chain(chainID int) Chain                { return Chain{0, s.NumEdges()} }
+func (s *testShape) ChainEdge(chainID, offset int) Edge     { return Edge{s.a, s.b} }
+func (s *testShape) ChainPosition(edgeID int) ChainPosition { return ChainPosition{0, edgeID} }
+func (s *testShape) dimension() dimension                   { return pointGeometry }
 
 func TestShapeIndexBasics(t *testing.T) {
 	index := NewShapeIndex()
@@ -52,6 +54,56 @@ func TestShapeIndexBasics(t *testing.T) {
 	index.Reset()
 	if index.Len() != 0 {
 		t.Errorf("index should be empty after reset, got %v %+v", index.Len(), index)
+	}
+}
+
+func TestShapeEdgeComparisons(t *testing.T) {
+	tests := []struct {
+		a, b Edge
+		want int
+	}{
+		{
+			// a.V0 < b.V0
+			a:    Edge{PointFromCoords(-1, 0, 0), PointFromCoords(0, 0, 0)},
+			b:    Edge{PointFromCoords(0, 0, 0), PointFromCoords(0, 0, 0)},
+			want: -1,
+		},
+		{
+			// a.V0 = b.V0
+			a:    Edge{PointFromCoords(0, 2, 0), PointFromCoords(0, 0, 5)},
+			b:    Edge{PointFromCoords(0, 2, 0), PointFromCoords(0, 0, 5)},
+			want: 0,
+		},
+		{
+			// a.V0 > b.V0
+			a:    Edge{PointFromCoords(1, 0, 0), PointFromCoords(-6, 7, 8)},
+			b:    Edge{PointFromCoords(0, 0, 0), PointFromCoords(1, 3, 5)},
+			want: 1,
+		},
+		{
+			// a.V0 = b.V0 && a.V1 < b.V1
+			a:    Edge{PointFromCoords(5, -2, -0.4), PointFromCoords(-1, 0, 0)},
+			b:    Edge{PointFromCoords(5, -2, -0.4), PointFromCoords(0, -1, -1)},
+			want: -1,
+		},
+		{
+			// a.V0 = b.V0 && a.V1 = b.V1
+			a:    Edge{PointFromCoords(9, 8, 7), PointFromCoords(12, 3, -4)},
+			b:    Edge{PointFromCoords(9, 8, 7), PointFromCoords(12, 3, -4)},
+			want: 0,
+		},
+		{
+			// a.V0 = b.V0 && a.V1 > b.V1
+			a:    Edge{PointFromCoords(-11, 7.2, -4.6), PointFromCoords(0, 1, 0)},
+			b:    Edge{PointFromCoords(-11, 7.2, -4.6), PointFromCoords(0, 0, 0.9)},
+			want: 1,
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.a.Cmp(test.b); got != test.want {
+			t.Errorf("%v.Cmp(%v) = %v, want %v", test.a, test.b, got, test.want)
+		}
 	}
 }
 
@@ -112,13 +164,11 @@ func validateInterior(t *testing.T, shape Shape, ci CellID, indexContainsCenter 
 		return
 	}
 
-	a := OriginPoint()
-	b := ci.Point()
-	crosser := NewEdgeCrosser(a, b)
+	crosser := NewEdgeCrosser(OriginPoint(), ci.Point())
 	containsCenter := shape.ContainsOrigin()
 	for e := 0; e < shape.NumEdges(); e++ {
-		c, d := shape.Edge(e)
-		containsCenter = containsCenter != crosser.EdgeOrVertexCrossing(c, d)
+		edge := shape.Edge(e)
+		containsCenter = containsCenter != crosser.EdgeOrVertexCrossing(edge.V0, edge.V1)
 	}
 
 	if containsCenter != indexContainsCenter {
