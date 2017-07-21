@@ -24,8 +24,6 @@ import (
 	"github.com/golang/geo/r3"
 )
 
-const degenerate = Crossing(99) // means DoNotCross and MaybeCross are both acceptable.
-
 func TestEdgeCrosserCrossings(t *testing.T) {
 	na1 := math.Nextafter(1, 0)
 	na2 := math.Nextafter(1, 2)
@@ -178,36 +176,31 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		testCrossing(t, test.msg, test.a, test.b, test.c, test.d, test.robust, test.edgeOrVertex, test.simple)
-		testCrossing(t, test.msg, test.b, test.a, test.c, test.d, test.robust, test.edgeOrVertex, test.simple)
-		testCrossing(t, test.msg, test.a, test.b, test.d, test.c, test.robust, test.edgeOrVertex, test.simple)
-		testCrossing(t, test.msg, test.b, test.a, test.d, test.c, test.robust, test.edgeOrVertex, test.simple)
+		// just normalize them once
+		a := Point{test.a.Normalize()}
+		b := Point{test.b.Normalize()}
+		c := Point{test.c.Normalize()}
+		d := Point{test.d.Normalize()}
+		testCrossing(t, test.msg, a, b, c, d, test.robust, test.edgeOrVertex, test.simple)
+		testCrossing(t, test.msg, b, a, c, d, test.robust, test.edgeOrVertex, test.simple)
+		testCrossing(t, test.msg, a, b, d, c, test.robust, test.edgeOrVertex, test.simple)
+		testCrossing(t, test.msg, b, a, d, c, test.robust, test.edgeOrVertex, test.simple)
 
 		// test degenerate cases
-		testCrossing(t, test.msg, test.a, test.a, test.c, test.d, degenerate, false, false)
-		testCrossing(t, test.msg, test.a, test.b, test.c, test.c, degenerate, false, false)
-		testCrossing(t, test.msg, test.a, test.a, test.c, test.c, degenerate, false, false)
+		testCrossing(t, test.msg, a, a, c, d, DoNotCross, false, false)
+		testCrossing(t, test.msg, a, b, c, c, DoNotCross, false, false)
+		testCrossing(t, test.msg, a, a, c, c, DoNotCross, false, false)
 
-		testCrossing(t, test.msg, test.a, test.b, test.a, test.b, MaybeCross, true, false)
-		testCrossing(t, test.msg, test.c, test.d, test.a, test.b, test.robust, test.edgeOrVertex != (test.robust == MaybeCross), test.simple)
+		testCrossing(t, test.msg, a, b, a, b, MaybeCross, true, false)
+		testCrossing(t, test.msg, c, d, a, b, test.robust, test.edgeOrVertex != (test.robust == MaybeCross), test.simple)
 	}
-}
-
-func compareCrossingResults(got, want Crossing) bool {
-	// HACK ALERT: CrossingSign/ChainCrossingSign() is allowed to return i
-	// MaybeCross or DoNotCross if either edge is degenerate. If this is the case
-	// change the check from == to the ||.
-	if want == degenerate {
-		return got == MaybeCross || got == DoNotCross
-	}
-	return got == want
 }
 
 func testCrossing(t *testing.T, msg string, a, b, c, d Point, robust Crossing, edgeOrVertex, simple bool) {
-	a = Point{a.Normalize()}
-	b = Point{b.Normalize()}
-	c = Point{c.Normalize()}
-	d = Point{d.Normalize()}
+	// Modify the expected result if two vertices from different edges match.
+	if a == c || a == d || b == c || b == d {
+		robust = MaybeCross
+	}
 
 	input := fmt.Sprintf("%s: a: %v, b: %v, c: %v, d: %v", msg, a, b, c, d)
 	if simple {
@@ -217,16 +210,16 @@ func testCrossing(t *testing.T, msg string, a, b, c, d Point, robust Crossing, e
 	}
 
 	crosser := NewChainEdgeCrosser(a, b, c)
-	if got, want := crosser.ChainCrossingSign(d), robust; !compareCrossingResults(got, want) {
+	if got, want := crosser.ChainCrossingSign(d), robust; got != want {
 		t.Errorf("%v, ChainCrossingSign(d) = %d, want %d", input, got, want)
 	}
-	if got, want := crosser.ChainCrossingSign(c), robust; !compareCrossingResults(got, want) {
+	if got, want := crosser.ChainCrossingSign(c), robust; got != want {
 		t.Errorf("%v, ChainCrossingSign(c) = %d, want %d", input, got, want)
 	}
-	if got, want := crosser.CrossingSign(d, c), robust; !compareCrossingResults(got, want) {
+	if got, want := crosser.CrossingSign(d, c), robust; got != want {
 		t.Errorf("%v, CrossingSign(d, c) = %d, want %d", input, got, want)
 	}
-	if got, want := crosser.CrossingSign(c, d), robust; !compareCrossingResults(got, want) {
+	if got, want := crosser.CrossingSign(c, d), robust; got != want {
 		t.Errorf("%v, CrossingSign(c, d) = %d, want %d", input, got, want)
 	}
 
