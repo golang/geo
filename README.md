@@ -51,6 +51,10 @@ library](https://code.google.com/archive/p/s2-geometry-library), adapting to Go
 idioms where it makes sense. We detail the progress of this port below relative
 to that C++ library.
 
+*Note*: The C++ code on `code.google.com` is an out-of-date snapshot of the
+Google-internal version, and isn't the basis of this Go library. When the C++
+library is re-released, we will update this document.
+
 ## [ℝ¹](https://godoc.org/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
 
 Full parity with C++.
@@ -153,3 +157,8 @@ started.
 *   ShapeUtil - Most of this will end up in s2_test.
 *   lexicon
 *   priorityqueuesequence
+
+### Encode/Decode
+
+Encoding of S2 Go types is committed and is interoperable with C++ and Java.
+Decoding has not yet started, but will be worked on in the near future.
