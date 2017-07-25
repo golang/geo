@@ -502,7 +502,7 @@ func TestCellContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
 }
 
 func TestCellContainsPointContainsAmbiguousPoint(t *testing.T) {
-	// This tests a case where S2CellId returns the "wrong" cell for a point
+	// This tests a case where CellID returns the "wrong" cell for a point
 	// that is very close to the cell edge. (ConsistentWithS2CellIdFromPoint
 	// generates more examples like this.)
 	//
@@ -520,3 +520,117 @@ func TestCellContainsPointContainsAmbiguousPoint(t *testing.T) {
 		t.Errorf("For p=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p)
 	}
 }
+
+func TestCellDistance(t *testing.T) {
+	for iter := 0; iter < 1000; iter++ {
+		cell := CellFromCellID(randomCellID())
+		target := randomPoint()
+
+		minDist := s1.InfChordAngle()
+		for i := 0; i < 4; i++ {
+			minDist, _ = UpdateMinDistance(target, cell.Vertex(i), cell.Vertex((i+1)%4), minDist)
+		}
+		expectedToBoundary := minDist.Angle()
+		expectedToInterior := expectedToBoundary
+		if cell.ContainsPoint(target) {
+			expectedToInterior = 0
+		}
+
+		actualToBoundary := cell.BoundaryDistance(target).Angle()
+		actualToInterior := cell.Distance(target).Angle()
+
+		// The error has a peak near pi/2 for edge distance, and another peak near
+		// pi for vertex distance.
+		if !float64Near(expectedToBoundary.Radians(), actualToBoundary.Radians(), 1e-12) {
+			t.Errorf("%v.BoundaryDistance(%v) = %v, want %v", cell, target, actualToBoundary, expectedToBoundary)
+		}
+		if !float64Near(expectedToInterior.Radians(), actualToInterior.Radians(), 1e-12) {
+			t.Errorf("%v.Distance(%v) = %v, want %v", cell, target, actualToInterior, expectedToInterior)
+		}
+		if expectedToBoundary.Radians() <= math.Pi/3 {
+			if !float64Near(expectedToBoundary.Radians(), actualToBoundary.Radians(), 1e-15) {
+				t.Errorf("%v.BoundaryDistance(%v) = %v, want %v", cell, target, actualToBoundary, expectedToBoundary)
+			}
+			if !float64Near(expectedToInterior.Radians(), actualToInterior.Radians(), 1e-15) {
+				t.Errorf("%v.Distance(%v) = %v, want %v", cell, target, actualToInterior, expectedToInterior)
+			}
+		}
+	}
+}
+
+func chooseEdgeNearCell(cell Cell) (a, b Point) {
+	c := cell.CapBound()
+	if oneIn(5) {
+		// Choose a point anywhere on the sphere.
+		a = randomPoint()
+	} else {
+		// Choose a point inside or somewhere near the cell.
+		a = samplePointFromCap(CapFromCenterChordAngle(c.center, 1.5*c.radius))
+	}
+
+	// Now choose a maximum edge length ranging from very short to very long
+	// relative to the cell size, and choose the other endpoint.
+	maxLength := math.Min(100*math.Pow(1e-4, randomFloat64())*c.Radius().Radians(), math.Pi/2)
+	b = samplePointFromCap(CapFromCenterAngle(a, s1.Angle(maxLength)))
+
+	return a, b
+}
+
+func distanceToEdgeBruteForce(cell Cell, a, b Point) s1.ChordAngle {
+	if cell.ContainsPoint(a) || cell.ContainsPoint(b) {
+		return s1.ChordAngle(0)
+	}
+
+	/*
+		// TODO(roberts): This part of the test generation requires CrossingEdgeQuery
+		// which is not yet implemented. Uncomment this when it exists.
+		loop := LoopFromCell(cell)
+		index := NewShapeIndex()
+		index.Add(loop)
+
+		query := CrossingEdgeQuery(index)
+
+		if _, ok = query.Crossings(a, b, index.Shape(0), CrossingType_ALL); !ok {
+			return s1.ChordAngle(0)
+		}
+	*/
+
+	minDist := s1.InfChordAngle()
+	for i := 0; i < 4; i++ {
+		v0 := cell.Vertex(i)
+		v1 := cell.Vertex((i + 1) % 4)
+		minDist, _ = UpdateMinDistance(a, v0, v1, minDist)
+		minDist, _ = UpdateMinDistance(b, v0, v1, minDist)
+		minDist, _ = UpdateMinDistance(v0, a, b, minDist)
+	}
+	return minDist
+}
+
+// TODO(roberts): This test requires CrossingEdgeQuery which is not yet ported, in
+// order to select appropriater points for testing. Uncomment once that is added.
+/*
+func TestCellDistanceToEdge(t *testing.T) {
+	for iter := 0; iter < 1000; iter++ {
+		cell := CellFromCellID(randomCellID())
+
+		a, b := chooseEdgeNearCell(cell)
+		expected := distanceToEdgeBruteForce(cell, a, b).Angle()
+		actual := cell.DistanceToEdge(a, b).Angle()
+
+		// The error has a peak near Pi/2 for edge distance, and another peak near
+		// Pi for vertex distance.
+		if !float64Near(expected.Radians(), actual.Radians(), 1e-12) {
+			t.Errorf("%v.DistanceToEdge(%v, %v) = %v, want %v", cell, a, b, actual, expected)
+		}
+		if expected.Radians() <= math.Pi/3 {
+			if !float64Near(expected.Radians(), actual.Radians(), 1e-15) {
+				t.Errorf("%v.DistanceToEdge(%v, %v) = %v, want %v", cell, a, b, actual, expected)
+			}
+		}
+	}
+}
+*/
+
+// TODO(roberts): Differences from C++.
+// CellVsLoopRectBound
+// RectBoundIsLargeEnough

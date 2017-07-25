@@ -87,6 +87,7 @@ Approximately ~40% complete.
 **Complete** These files have full parity with the C++ implementation.
 
 *   Cap
+*   Cell
 *   CellID
 *   LatLng
 *   matrix3x3
@@ -106,7 +107,6 @@ Approximately ~40% complete.
 C++ code, and are reasonably complete enough to use in live code. Up to date
 listing of the incomplete methods are documented at the end of each file.
 
-*   Cell - Missing Subdivide, BoundUV, DistanceToEdge, ChordDistance.
 *   CellUnion - Missing Union, Intersection, etc.
 *   Polyline - Missing Projection, Intersects, Interpolate, etc.
 *   Rect (AKA s2latlngrect in C++) - Missing Centroid, Distance,
