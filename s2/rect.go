@@ -439,5 +439,24 @@ func (r Rect) encode(e *encoder) {
 	e.writeFloat64(r.Lng.Hi)
 }
 
+// Decode decodes a rectangle.
+func (r *Rect) Decode(rd io.Reader) error {
+	d := &decoder{r: asByteReader(rd)}
+	r.decode(d)
+	return d.err
+}
+
+func (r *Rect) decode(d *decoder) {
+	if version := d.readUint8(); int(version) > int(encodingVersion) && d.err == nil {
+		d.err = fmt.Errorf("can't decode version %d; my version: %d", version, encodingVersion)
+		return
+	}
+	r.Lat.Lo = d.readFloat64()
+	r.Lat.Hi = d.readFloat64()
+	r.Lng.Lo = d.readFloat64()
+	r.Lng.Hi = d.readFloat64()
+	return
+}
+
 // BUG: The major differences from the C++ version are:
 //   - GetCentroid, Get*Distance, Vertex, InteriorContains(LatLng|Rect|Point)

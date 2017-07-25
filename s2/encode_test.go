@@ -18,8 +18,11 @@ package s2
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
+	"reflect"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -27,6 +30,10 @@ import (
 
 type encodableRegion interface {
 	Encode(io.Writer) error
+}
+
+type decodableRegion interface {
+	Decode(io.Reader) error
 }
 
 const (
@@ -175,7 +182,7 @@ func TestEncodeDecode(t *testing.T) {
 		{encodedCellUnionFace1, &cuFace},
 		{encodedCellUnionFromCells, &cuCells},
 
-		// Uncompressed Loops
+		// Loops
 		{encodedLoopEmpty, EmptyLoop()},
 		{encodedLoopFull, FullLoop()},
 		{encodedLoopCross, LoopFromPoints(parsePoints(cross1))},
@@ -205,9 +212,7 @@ func TestEncodeDecode(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		// TODO(roberts): Once decode is completed, implement the remainder of this test.
-
-		// Test encode
+		// Test encode.
 		buf := new(bytes.Buffer)
 		if err := test.reg.Encode(buf); err != nil {
 			t.Errorf("error encoding %v: %v", test.reg, err)
@@ -216,6 +221,71 @@ func TestEncodeDecode(t *testing.T) {
 		encoded := fmt.Sprintf("%X", buf.Bytes())
 		if test.golden != encoded {
 			t.Errorf("%v.Encode() = %q, want %q", test.reg, encoded, test.golden)
+		}
+
+		// Test decode if supported.
+		_, ok := test.reg.(decodableRegion)
+		if !ok {
+			continue
+		}
+		// Create a struct of the same type as test.reg, to have a target to decode into.
+		gotRegained := reflect.New(reflect.TypeOf(test.reg).Elem()).Interface().(decodableRegion)
+		if err := gotRegained.Decode(buf); err != nil {
+			t.Errorf("decode(%v): %v", test.reg, err)
+			continue
+		}
+		if !reflect.DeepEqual(gotRegained, test.reg) {
+			t.Errorf("decode = %v, want %v", gotRegained, test.reg)
+		}
+	}
+}
+
+func TestDecodeCompressedLoop(t *testing.T) {
+	dat, err := hex.DecodeString(encodedLoopCompressed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := &decoder{r: bytes.NewReader(dat)}
+	gotDecoded := new(Loop)
+	gotDecoded.decodeCompressed(d, maxLevel)
+	if d.err != nil {
+		t.Fatalf("loop.decodeCompressed: %v", d.err)
+	}
+	wantDecoded := []LatLng{LatLngFromDegrees(0, 178), LatLngFromDegrees(-1, 180), LatLngFromDegrees(0, -179), LatLngFromDegrees(1, -180)}
+	for i, v := range gotDecoded.Vertices() {
+		got := LatLngFromPoint(v)
+		want := wantDecoded[i]
+		const margin = 1e-9
+		if math.Abs((got.Lat-want.Lat).Radians()) >= margin || math.Abs((got.Lng-want.Lng).Radians()) >= margin {
+			t.Errorf("decoding golden at %d = %v, want %v", i, got, want)
+		}
+	}
+	var buf bytes.Buffer
+	e := &encoder{w: &buf}
+	gotDecoded.encodeCompressed(e, maxLevel)
+	if e.err != nil {
+		t.Fatalf("encodeCompressed(decodeCompressed(loop)): %v", err)
+	}
+	gotReincoded := fmt.Sprintf("%X", buf.Bytes())
+	if gotReincoded != encodedLoopCompressed {
+		t.Errorf("encodeCompressed(decodeCompressed(loop)) = %q, want %q", gotReincoded, encodedLoopCompressed)
+	}
+}
+
+// Captures the uncompressed path.
+func TestLoopEncodeDecode(t *testing.T) {
+	pts := parsePoints("30:20, 40:20, 39:43, 33:35")
+	loops := []*Loop{LoopFromPoints(pts), EmptyLoop(), FullLoop()}
+	for i, l := range loops {
+		var buf bytes.Buffer
+		l.Encode(&buf)
+		ll := new(Loop)
+		if err := ll.Decode(&buf); err != nil {
+			t.Errorf("Decode %d: %v", i, err)
+			continue
+		}
+		if !reflect.DeepEqual(l, ll) {
+			t.Errorf("encoding roundtrip failed")
 		}
 	}
 }

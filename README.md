@@ -161,4 +161,5 @@ started.
 ### Encode/Decode
 
 Encoding of S2 Go types is committed and is interoperable with C++ and Java.
-Decoding has not yet started, but will be worked on in the near future.
+Decoding for Loops and Rects is now completed. The remaining types will be
+worked on in the future.

@@ -37,6 +37,15 @@ type encoder struct {
 	err error
 }
 
+func (e *encoder) writeUvarint(x uint64) {
+	if e.err != nil {
+		return
+	}
+	var buf [binary.MaxVarintLen64]byte
+	n := binary.PutUvarint(buf[:], x)
+	_, e.err = e.w.Write(buf[:n])
+}
+
 func (e *encoder) writeBool(x bool) {
 	if e.err != nil {
 		return
@@ -76,6 +85,13 @@ func (e *encoder) writeInt64(x int64) {
 	e.err = binary.Write(e.w, binary.LittleEndian, x)
 }
 
+func (e *encoder) writeUint8(x uint8) {
+	if e.err != nil {
+		return
+	}
+	_, e.err = e.w.Write([]byte{x})
+}
+
 func (e *encoder) writeUint32(x uint32) {
 	if e.err != nil {
 		return
@@ -104,8 +120,32 @@ func (e *encoder) writeFloat64(x float64) {
 	e.err = binary.Write(e.w, binary.LittleEndian, x)
 }
 
+type byteReader interface {
+	io.Reader
+	io.ByteReader
+}
+
+// byteReaderAdapter embellishes an io.Reader with a ReadByte method,
+// so that it implements the io.ByteReader interface.
+type byteReaderAdapter struct {
+	io.Reader
+}
+
+func (b byteReaderAdapter) ReadByte() (byte, error) {
+	buf := []byte{0}
+	_, err := io.ReadFull(b, buf)
+	return buf[0], err
+}
+
+func asByteReader(r io.Reader) byteReader {
+	if br, ok := r.(byteReader); ok {
+		return br
+	}
+	return byteReaderAdapter{r}
+}
+
 type decoder struct {
-	r   io.Reader // the real reader passed to Decode
+	r   byteReader // the real reader passed to Decode
 	err error
 }
 
@@ -150,6 +190,14 @@ func (d *decoder) readInt64() (x int64) {
 	return
 }
 
+func (d *decoder) readUint8() (x uint8) {
+	if d.err != nil {
+		return
+	}
+	x, d.err = d.r.ReadByte()
+	return
+}
+
 func (d *decoder) readUint32() (x uint32) {
 	if d.err != nil {
 		return
@@ -179,5 +227,13 @@ func (d *decoder) readFloat64() (x float64) {
 		return
 	}
 	d.err = binary.Read(d.r, binary.LittleEndian, &x)
+	return
+}
+
+func (d *decoder) readUvarint() (x uint64) {
+	if d.err != nil {
+		return
+	}
+	x, d.err = binary.ReadUvarint(d.r)
 	return
 }

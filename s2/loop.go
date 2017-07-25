@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"fmt"
 	"io"
 	"math"
 
@@ -468,6 +469,136 @@ func (l Loop) encode(e *encoder) {
 	l.bound.encode(e)
 }
 
+// Decode decodes a loop.
+func (l *Loop) Decode(r io.Reader) error {
+	*l = Loop{}
+	d := &decoder{r: asByteReader(r)}
+	version := int8(d.readUint8())
+	if version != encodingVersion {
+		return fmt.Errorf("cannot decode version %d, only %d", version, encodingVersion)
+	}
+	l.decode(d)
+	return d.err
+}
+
+func (l *Loop) decode(d *decoder) {
+	// Empty loops are explicitly allowed here: a newly created loop has zero vertices
+	// and such loops encode and decode properly.
+	nvertices := d.readUint32()
+	if nvertices > maxEncodedVertices {
+		if d.err == nil {
+			d.err = fmt.Errorf("too many vertices (%d; max is %d)", nvertices, maxEncodedVertices)
+
+		}
+		return
+	}
+	l.vertices = make([]Point, nvertices)
+	for i := range l.vertices {
+		l.vertices[i].X = d.readFloat64()
+		l.vertices[i].Y = d.readFloat64()
+		l.vertices[i].Z = d.readFloat64()
+	}
+	l.originInside = d.readBool()
+	l.depth = int(d.readUint32())
+	l.bound.decode(d)
+	l.subregionBound = ExpandForSubregions(l.bound)
+
+	l.index = NewShapeIndex()
+	l.index.Add(l)
+}
+
+// Bitmasks to read from properties.
+const (
+	originInside = 1 << iota
+	boundEncoded
+)
+
+func (l *Loop) xyzFaceSiTiVertices() []xyzFaceSiTi {
+	ret := make([]xyzFaceSiTi, len(l.vertices))
+	for i, v := range l.vertices {
+		ret[i].xyz = v
+		ret[i].face, ret[i].si, ret[i].ti, ret[i].level = xyzToFaceSiTi(v)
+	}
+	return ret
+}
+
+func (l *Loop) encodeCompressed(e *encoder, snapLevel int) {
+	vertices := l.xyzFaceSiTiVertices()
+	if len(vertices) > maxEncodedVertices {
+		if e.err == nil {
+			e.err = fmt.Errorf("too many vertices (%d; max is %d)", len(vertices), maxEncodedVertices)
+
+		}
+		return
+	}
+	e.writeUvarint(uint64(len(vertices)))
+	encodePointsCompressed(e, vertices, snapLevel)
+
+	props := l.compressedEncodingProperties()
+	e.writeUvarint(props)
+	e.writeUvarint(uint64(l.depth))
+	if props&boundEncoded != 0 {
+		l.bound.encode(e)
+	}
+}
+
+func (l *Loop) compressedEncodingProperties() uint64 {
+	var properties uint64
+	if l.originInside {
+		properties |= originInside
+	}
+
+	// Write whether there is a bound so we can change the threshold later.
+	// Recomputing the bound multiplies the decode time taken per vertex
+	// by a factor of about 3.5.  Without recomputing the bound, decode
+	// takes approximately 125 ns / vertex.  A loop with 63 vertices
+	// encoded without the bound will take ~30us to decode, which is
+	// acceptable.  At ~3.5 bytes / vertex without the bound, adding
+	// the bound will increase the size by <15%, which is also acceptable.
+	const minVerticesForBound = 64
+	if len(l.vertices) >= minVerticesForBound {
+		properties |= boundEncoded
+	}
+
+	return properties
+}
+
+func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
+	nvertices := d.readUvarint()
+	if d.err != nil {
+		return
+	}
+	if nvertices > maxEncodedVertices {
+		d.err = fmt.Errorf("too many vertices (%d; max is %d)", nvertices, maxEncodedVertices)
+		return
+	}
+	l.vertices = make([]Point, nvertices)
+	decodePointsCompressed(d, snapLevel, l.vertices)
+	properties := d.readUvarint()
+
+	// Make sure values are valid before using.
+	if d.err != nil {
+		return
+	}
+
+	l.originInside = (properties & originInside) != 0
+
+	l.depth = int(d.readUvarint())
+
+	if masked := properties & (1 << boundEncoded); masked != 0 {
+		l.bound.decode(d)
+		if d.err != nil {
+			return
+		}
+		l.subregionBound = ExpandForSubregions(l.bound)
+	} else {
+		l.initBound()
+	}
+
+	l.index = NewShapeIndex()
+	l.index.Add(l)
+}
+
 // TODO(roberts): Differences from the C++ version:
 // IsNormalized
 // Normalize
@@ -489,6 +620,4 @@ func (l Loop) encode(e *encoder) {
 // SurfaceIntegral
 // CompareBoundary
 // ContainsNonCrossingBoundary
-// getXYZFaceSiTiVertices
 // canonicalFirstVertex
-// encode/decodeCompressed
