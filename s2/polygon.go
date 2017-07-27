@@ -52,12 +52,6 @@ import (
 type Polygon struct {
 	loops []*Loop
 
-	// loopDepths keeps track of how deep a given loop is in this polygon.
-	// The depths tracked in this slice are kept in 1:1 lockstep with the
-	// elements in the loops list.
-	// Holes inside a polygon are stored as odd numbers, and shells are even.
-	loopDepths []int
-
 	// index is a spatial index of all the polygon loops.
 	index ShapeIndex
 
@@ -102,10 +96,7 @@ func PolygonFromLoops(loops []*Loop) *Polygon {
 	}
 
 	p := &Polygon{
-		loops: loops,
-		// TODO(roberts): This is explicitly set as depth of 0 for the one loop in
-		// the polygon. When multiple loops are supported, fix this to set the depths.
-		loopDepths:  []int{0},
+		loops:       loops,
 		numVertices: len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
 		// TODO(roberts): Compute these bounds.
 		bound:          loops[0].RectBound(),
@@ -133,7 +124,6 @@ func FullPolygon() *Polygon {
 		loops: []*Loop{
 			FullLoop(),
 		},
-		loopDepths:     []int{0},
 		numVertices:    len(FullLoop().Vertices()),
 		bound:          FullRect(),
 		subregionBound: FullRect(),
@@ -174,7 +164,7 @@ func (p *Polygon) Loop(k int) *Loop {
 // If the loop does not have a parent, ok=false is returned.
 func (p *Polygon) Parent(k int) (index int, ok bool) {
 	// See where we are on the depth heirarchy.
-	depth := p.loopDepths[k]
+	depth := p.loops[k].depth
 	if depth == 0 {
 		return -1, false
 	}
@@ -184,7 +174,7 @@ func (p *Polygon) Parent(k int) (index int, ok bool) {
 	// we don't know how many may be next to us before we get back to our parent loop.)
 	// Move up one position from us, and then begin traversing back through the set of loops
 	// until we find the one that is our parent or we get to the top of the polygon.
-	for k--; k >= 0 && p.loopDepths[k] <= depth; k-- {
+	for k--; k >= 0 && p.loops[k].depth <= depth; k-- {
 	}
 	return k, true
 }
@@ -200,19 +190,19 @@ func (p *Polygon) LastDescendant(k int) int {
 		return len(p.loops) - 1
 	}
 
-	depth := p.loopDepths[k]
+	depth := p.loops[k].depth
 
 	// Find the next loop immediately past us in the set of loops, and then start
 	// moving down the list until we either get to the end or find the next loop
 	// that is higher up the heirarchy than we are.
-	for k++; k < len(p.loops) && p.loopDepths[k] > depth; k++ {
+	for k++; k < len(p.loops) && p.loops[k].depth > depth; k++ {
 	}
 	return k - 1
 }
 
 // loopIsHole reports whether the given loop represents a hole in this polygon.
 func (p *Polygon) loopIsHole(k int) bool {
-	return p.loopDepths[k]&1 != 0
+	return p.loops[k].depth&1 != 0
 }
 
 // loopSign returns -1 if this loop represents a hole in this polygon.
