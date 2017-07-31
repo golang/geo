@@ -116,6 +116,7 @@ listing of the incomplete methods are documented at the end of each file.
     ConcentricLoopsPolygon and Fractal test shape generation. This file is a
     collection of testing helper methods.
 *   s2edge_distances - Missing Intersection, ClosestPair.
+*   ShapeIndex - Missing ShapeContainsPoint and FindContainingShapes
 
 **In Progress** Files that have some work done, but are probably not complete
 enough for general use in production code.
@@ -130,8 +131,6 @@ enough for general use in production code.
 *   PolylineSimplifier - Initial work has begun on this.
 *   s2predicates.go - This file is a collection of helper methods used by other
     parts of the library.
-*   ShapeIndex - Currently has only the minimal skeleton pieces submitted, but
-    changes are out for review for the remainder of it.
 
 **Not Started Yet.** These files (and their associated unit tests) have
 dependencies on most of the In Progress files before they can begin to be

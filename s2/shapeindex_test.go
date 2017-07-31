@@ -18,7 +18,13 @@ package s2
 
 import (
 	"testing"
+
+	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
+
+// TODO(roberts): This can be removed once s2shapeutil_test is added which has
+// various Shape types and tests that validate the Shape interface.
 
 // testShape is a minimal implementation of the Shape interface for use in testing
 // until such time as there are other s2 types that implement it.
@@ -176,6 +182,81 @@ func validateInterior(t *testing.T, shape Shape, ci CellID, indexContainsCenter 
 	}
 }
 
+// quadraticValidate verifies that that every cell of the index contains the correct
+// edges, and that no cells are missing from the index.  The running time of this
+// function is quadratic in the number of edges.
+func quadraticValidate(t *testing.T, index *ShapeIndex) {
+	// Iterate through a sequence of nonoverlapping cell ids that cover the
+	// sphere and include as a subset all the cell ids used in the index.  For
+	// each cell id, verify that the expected set of edges is present.
+	// "minCellID" is the first CellID that has not been validated yet.
+	minCellID := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
+	for it := index.Iterator(); ; it.Next() {
+		// Generate a list of CellIDs ("skipped cells") that cover the gap
+		// between the last cell we validated and the next cell in the index.
+		var skipped CellUnion
+		if !it.Done() {
+			cellID := it.CellID()
+			if cellID < minCellID {
+				t.Errorf("cell ID below min")
+			}
+			skipped = CellUnionFromRange(minCellID, cellID.RangeMin())
+			minCellID = cellID.RangeMax().Next()
+		} else {
+			// Validate the empty cells beyond the last cell in the index.
+			skipped = CellUnionFromRange(minCellID,
+				CellIDFromFace(5).ChildEndAtLevel(maxLevel))
+		}
+
+		// Iterate through all the shapes, simultaneously validating the current
+		// index cell and all the skipped cells.
+		shortEdges := 0 // number of edges counted toward subdivision
+		for id, shape := range index.shapes {
+			for j := 0; j < len(skipped); j++ {
+				validateInterior(t, shape, skipped[j], false)
+			}
+
+			// First check that containsCenter() is set correctly.
+			var clipped *clippedShape
+			if !it.Done() {
+				clipped = it.IndexCell().findByShapeID(id)
+				containsCenter := clipped != nil && clipped.containsCenter
+				validateInterior(t, shape, it.CellID(), containsCenter)
+			}
+			// If this shape has been removed, it should not be present at all.
+			if shape == nil {
+				if clipped != nil {
+					t.Errorf("clipped should be nil when shape is nil")
+				}
+				continue
+			}
+
+			// Otherwise check that the appropriate edges are present.
+			for e := 0; e < shape.NumEdges(); e++ {
+				edge := shape.Edge(e)
+				for j := 0; j < len(skipped); j++ {
+					validateEdge(t, edge.V0, edge.V1, skipped[j], false)
+				}
+				if !it.Done() {
+					hasEdge := clipped != nil && clipped.containsEdge(e)
+					validateEdge(t, edge.V0, edge.V1, it.CellID(), hasEdge)
+					if hasEdge && it.CellID().Level() < maxLevelForEdge(edge) {
+						shortEdges++
+					}
+				}
+			}
+		}
+
+		if shortEdges > index.maxEdgesPerCell {
+			t.Errorf("too many edges")
+		}
+
+		if it.Done() {
+			break
+		}
+	}
+}
+
 func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 	it := index.Iterator()
 	if !it.AtBegin() {
@@ -188,7 +269,7 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 	}
 
 	var ids []CellID
-	// "minCellID" is the first CellID in a complete traversal.
+	// minCellID is the first CellID in a complete traversal.
 	minCellID := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
 
 	for it.Reset(); !it.Done(); it.Next() {
@@ -301,7 +382,88 @@ func TestShapeIndexNoEdges(t *testing.T) {
 	iter := index.Iterator()
 
 	if !iter.Done() {
-		t.Errorf("iterator for empty index should report as done but did not")
+		t.Errorf("iterator for empty index should start at Done but did not")
 	}
 	testIteratorMethods(t, index)
 }
+
+func TestShapeIndexOneEdge(t *testing.T) {
+	index := NewShapeIndex()
+	e := edgeVectorShapeFromPoints(PointFromCoords(1, 0, 0), PointFromCoords(0, 1, 0))
+	index.Add(e)
+	quadraticValidate(t, index)
+	testIteratorMethods(t, index)
+}
+
+func TestShapeIndexManyIdenticalEdges(t *testing.T) {
+	const numEdges = 100
+	a := PointFromCoords(0.99, 0.99, 1)
+	b := PointFromCoords(-0.99, -0.99, 1)
+
+	index := NewShapeIndex()
+	for i := 0; i < numEdges; i++ {
+		index.Add(edgeVectorShapeFromPoints(a, b))
+	}
+	quadraticValidate(t, index)
+	testIteratorMethods(t, index)
+
+	// Since all edges span the diagonal of a face, no subdivision should
+	// have occurred (with the default index options).
+	for it := index.Iterator(); !it.Done(); it.Next() {
+		if it.CellID().Level() != 0 {
+			t.Errorf("it.CellID.Level() = %v, want nonzero", it.CellID().Level())
+		}
+	}
+}
+
+func TestShapeIndexManyTinyEdges(t *testing.T) {
+	// This test adds many edges to a single leaf cell, to check that
+	// subdivision stops when no further subdivision is possible.
+
+	// Construct two points in the same leaf cell.
+	a := cellIDFromPoint(PointFromCoords(1, 0, 0)).Point()
+	b := Point{a.Add(r3.Vector{0, 1e-12, 0}).Normalize()}
+	shape := &edgeVectorShape{}
+	for i := 0; i < 100; i++ {
+		shape.Add(a, b)
+	}
+
+	index := NewShapeIndex()
+	index.Add(shape)
+	quadraticValidate(t, index)
+
+	// Check that there is exactly one index cell and that it is a leaf cell.
+	it := index.Iterator()
+	if it.Done() {
+		t.Errorf("ShapeIndexIterator should not be positioned at the end for %v", index)
+		return
+	}
+	if !(it.CellID().IsLeaf()) {
+		t.Errorf("there should be only one leaf cell in the index but it.CellID().IsLeaf() returned false")
+	}
+	it.Next()
+	if !(it.Done()) {
+		t.Errorf("ShapeIndexIterator should be positioned at the end now since there should have been only one element")
+	}
+}
+
+func TestShapeIndexShrinkToFitOptimization(t *testing.T) {
+	// This used to trigger a bug in the ShrinkToFit optimization. The loop
+	// below contains almost all of face 0 except for a small region in the
+	// 0/00000 subcell. That subcell is the only one that contains any edges.
+	// This caused the index to be built only in that subcell. However, all the
+	// other cells on that face should also have index entries, in order to
+	// indicate that they are contained by the loop.
+	loop := RegularLoop(PointFromCoords(1, 0.5, 0.5), s1.Degree*89, 100)
+	index := NewShapeIndex()
+	index.Add(loop)
+	quadraticValidate(t, index)
+}
+
+// TODO(roberts): Differences from C++:
+// TestShapeIndexLoopSpanningThreeFaces(t *testing.T) {}
+// TestShapeIndexSimpleUpdates(t *testing.T) {}
+// TestShapeIndexRandomUpdates(t *testing.T) {}
+// TestShapeIndexContainingShapes(t *testing.T) {}
+// TestShapeIndexMixedGeometry(t *testing.T) {}
+// TestShapeIndexHasCrossing(t *testing.T) {}

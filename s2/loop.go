@@ -59,7 +59,7 @@ type Loop struct {
 	// If l.ContainsPoint(P), then l.bound.ContainsPoint(P).
 	bound Rect
 
-	// Since "bound" is not exact, it is possible that a loop A contains
+	// Since bound is not exact, it is possible that a loop A contains
 	// another loop B whose bounds are slightly larger. subregionBound
 	// has been expanded sufficiently to account for this error, i.e.
 	// if A.Contains(B), then A.subregionBound.Contains(B.bound).
@@ -148,10 +148,9 @@ func (l *Loop) initOriginAndBound() {
 		}
 	}
 
-	// We *must* call initBound before initIndex, because initBound calls
-	// ContainsPoint(s2.Point), and ContainsPoint(s2.Point) does a bounds check whenever the
-	// index is not fresh (i.e., the loop has been added to the index but the
-	// index has not been updated yet).
+	// We *must* call initBound before initializing the index, because
+	// initBound calls ContainsPoint which does a bounds check before using
+	// the index.
 	l.initBound()
 
 	// Create a new index and add us to it.
@@ -289,6 +288,11 @@ func (l *Loop) Vertex(i int) Point {
 	return l.vertices[i%len(l.vertices)]
 }
 
+// NumVertices returns the number of vertices in this loop.
+func (l *Loop) NumVertices() int {
+	return len(l.vertices)
+}
+
 // bruteForceContainsPoint reports if the given point is contained by this loop.
 // This method does not use the ShapeIndex, so it is only preferable below a certain
 // size of loop.
@@ -316,10 +320,6 @@ func (l *Loop) ContainsPoint(p Point) bool {
 	if len(l.vertices) < maxBruteForceVertices || l.index == nil {
 		return l.bruteForceContainsPoint(p)
 	}
-
-	// TODO(roberts): Remove this when the following code is fixed.
-	// See also https://github.com/golang/geo/issues/25.
-	return l.bruteForceContainsPoint(p)
 
 	// Otherwise, look up the point in the index.
 	it := l.index.Iterator()
@@ -611,11 +611,14 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 // DistanceToBoundary
 // Project
 // ProjectToBoundary
+// ContainsLoop
+// IntersectsLoop
+// EqualsLoop
 // LoopRelations
 // FindVertex
 // ContainsNested
-// Contains/Intersects/Equals Loop
-// BoundaryEquals/ApproxEquals
+// BoundaryEquals
+// BoundaryApproxEquals
 // BoundaryNear
 // SurfaceIntegral
 // CompareBoundary

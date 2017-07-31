@@ -27,7 +27,7 @@ import (
 // When the polygon is initialized, the given loops are automatically converted
 // into a canonical form consisting of "shells" and "holes". Shells and holes
 // are both oriented CCW, and are nested hierarchically. The loops are
-// reordered to correspond to a preorder traversal of the nesting hierarchy.
+// reordered to correspond to a pre-order traversal of the nesting hierarchy.
 //
 // Polygons may represent any region of the sphere with a polygonal boundary,
 // including the entire sphere (known as the "full" polygon). The full polygon
@@ -53,7 +53,7 @@ type Polygon struct {
 	loops []*Loop
 
 	// index is a spatial index of all the polygon loops.
-	index ShapeIndex
+	index *ShapeIndex
 
 	// hasHoles tracks if this polygon has at least one hole.
 	hasHoles bool
@@ -152,7 +152,7 @@ func (p *Polygon) Loops() []*Loop {
 }
 
 // Loop returns the loop at the given index. Note that during initialization,
-// the given loops are reordered according to a preorder traversal of the loop
+// the given loops are reordered according to a pre-order traversal of the loop
 // nesting hierarchy. This implies that every loop is immediately followed by
 // its descendants. This hierarchy can be traversed using the methods Parent,
 // LastDescendant, and Loop.depth.
@@ -163,7 +163,7 @@ func (p *Polygon) Loop(k int) *Loop {
 // Parent returns the index of the parent of loop k.
 // If the loop does not have a parent, ok=false is returned.
 func (p *Polygon) Parent(k int) (index int, ok bool) {
-	// See where we are on the depth heirarchy.
+	// See where we are on the depth hierarchy.
 	depth := p.loops[k].depth
 	if depth == 0 {
 		return -1, false
@@ -181,7 +181,7 @@ func (p *Polygon) Parent(k int) (index int, ok bool) {
 
 // LastDescendant returns the index of the last loop that is contained within loop k.
 // If k is negative, it returns the last loop in the polygon.
-// Note that loops are indexed according to a preorder traversal of the nesting
+// Note that loops are indexed according to a pre-order traversal of the nesting
 // hierarchy, so the immediate children of loop k can be found by iterating over
 // the loops (k+1)..LastDescendant(k) and selecting those whose depth is equal
 // to Loop(k).depth+1.
@@ -194,7 +194,7 @@ func (p *Polygon) LastDescendant(k int) int {
 
 	// Find the next loop immediately past us in the set of loops, and then start
 	// moving down the list until we either get to the end or find the next loop
-	// that is higher up the heirarchy than we are.
+	// that is higher up the hierarchy than we are.
 	for k++; k < len(p.loops) && p.loops[k].depth > depth; k++ {
 	}
 	return k - 1
@@ -223,11 +223,11 @@ func (p *Polygon) RectBound() Rect { return p.bound }
 
 // ContainsCell reports whether the polygon contains the given cell.
 // TODO(roberts)
-//func (p *Polygon) ContainsCell(c Cell) bool { ... }
+// func (p *Polygon) ContainsCell(c Cell) bool { ... }
 
 // IntersectsCell reports whether the polygon intersects the given cell.
 // TODO(roberts)
-//func (p *Polygon) IntersectsCell(c Cell) bool { ... }
+// func (p *Polygon) IntersectsCell(c Cell) bool{ ... }
 
 // Shape Interface
 
@@ -288,7 +288,6 @@ func (p *Polygon) Chain(chainID int) Chain {
 	if p.cumulativeEdges != nil {
 		return Chain{p.cumulativeEdges[chainID], len(p.Loop(chainID).vertices)}
 	}
-
 	e := 0
 	for j := 0; j < chainID; j++ {
 		e += len(p.Loop(j).vertices)
@@ -400,3 +399,6 @@ func (p *Polygon) encodeLossless(e *encoder) {
 // excludesBoundary
 // containsNonCrossingBoundary
 // excludesNonCrossingShells
+// anyLoopContains(Loop)
+// anyLoopIntersects(Loop)
+// clipBoundary
