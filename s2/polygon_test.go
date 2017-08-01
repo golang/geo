@@ -246,6 +246,10 @@ func TestPolygonShape(t *testing.T) {
 	if !shape.ContainsOrigin() {
 		t.Errorf("polygon %v should contain the origin", shape)
 	}
+
+	if got, want := p.ContainsPoint(OriginPoint()), shape.ContainsOrigin(); got != want {
+		t.Errorf("p.ContainsPoint(OriginPoint()) != shape.ContainsOrigin()")
+	}
 }
 
 func TestPolygonLoop(t *testing.T) {
@@ -332,3 +336,94 @@ func TestPolygonLoopIsHoleAndLoopSign(t *testing.T) {
 	// TODO: When multiple loops are supported, add more test cases to
 	// more fully show the parent levels.
 }
+
+func TestPolygonContainsPoint(t *testing.T) {
+	tests := []struct {
+		polygon string
+		point   string
+	}{
+		{nearLoop0, nearPoint},
+		{nearLoop1, nearPoint},
+		{nearLoop2, nearPoint},
+		{nearLoop3, nearPoint},
+		{nearLoopHemi, nearPoint},
+		{southLoop0a, southLoopPoint},
+		{southLoop1, southLoopPoint},
+		{southLoop2, southLoopPoint},
+		{southLoopHemi, southLoopPoint},
+	}
+
+	for _, test := range tests {
+		poly := makePolygon(test.polygon, true)
+		pt := parsePoint(test.point)
+		if !poly.ContainsPoint(pt) {
+			t.Errorf("%v.ContainsPoint(%v) = false, want true", test.polygon, test.point)
+		}
+	}
+}
+
+// TODO(roberts): Remaining Tests
+// TestInit
+// TestMultipleInit
+// TestInitSingleLoop
+// TestCellConstructorAndContains
+// TestUninitializedIsValid
+// TestOverlapFractions
+// TestOriginNearPole
+// TestTestApproxContainsAndDisjoint
+// TestRelations
+// TestOneLoopPolygonShape
+// TestSeveralLoopPolygonShape
+// TestManyLoopPolygonShape
+// TestPointInBigLoop
+// TestOperations
+// TestIntersectionSnapFunction
+// TestIntersectionPreservesLoopOrder
+// TestLoopPointers
+// TestBug1 - Bug14
+// TestPolylineIntersection
+// TestSplitting
+// TestInitToCellUnionBorder
+// TestUnionWithAmbgiuousCrossings
+// TestInitToSloppySupportsEmptyPolygons
+// TestInitToSnappedDoesNotRotateVertices
+// TestInitToSnappedWithSnapLevel
+// TestInitToSnappedIsValid_A
+// TestInitToSnappedIsValid_B
+// TestInitToSnappedIsValid_C
+// TestInitToSnappedIsValid_D
+// TestProject
+// TestDistance
+//
+// IsValidTests
+//   TestUnitLength
+//   TestVertexCount
+//   TestDuplicateVertex
+//   TestSelfIntersection
+//   TestEmptyLoop
+//   TestFullLoop
+//   TestLoopsCrossing
+//   TestDuplicateEdge
+//   TestInconsistentOrientations
+//   TestLoopDepthNegative
+//   TestLoopNestingInvalid
+//   TestFuzzTest
+//
+// PolygonSimplifier
+//   TestNoSimplification
+//   TestSimplifiedLoopSelfIntersects
+//   TestNoSimplificationManyLoops
+//   TestTinyLoopDisappears
+//   TestStraightLinesAreSimplified
+//   TestEdgeSplitInManyPieces
+//   TestEdgesOverlap
+//   TestLargeRegularPolygon
+//
+// InitToSimplifiedInCell
+//   TestPointsOnCellBoundaryKept
+//   TestPointsInsideCellSimplified
+//   TestCellCornerKept
+//   TestNarrowStripRemoved
+//   TestNarrowGapRemoved
+//   TestCloselySpacedEdgeVerticesKept
+//   TestPolylineAssemblyBug

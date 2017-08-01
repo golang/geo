@@ -115,6 +115,8 @@ func PolygonFromLoops(loops []*Loop) *Polygon {
 		p.numEdges += len(l.Vertices())
 	}
 
+	p.index = NewShapeIndex()
+	p.index.Add(p)
 	return p
 }
 
@@ -221,13 +223,141 @@ func (p *Polygon) CapBound() Cap { return p.bound.CapBound() }
 // RectBound returns a bounding latitude-longitude rectangle.
 func (p *Polygon) RectBound() Rect { return p.bound }
 
+// ContainsPoint reports whether the polygon contains the point.
+func (p *Polygon) ContainsPoint(point Point) bool {
+	// NOTE: A bounds check slows down this function by about 50%. It is
+	// worthwhile only when it might allow us to delay building the index.
+	if !p.index.IsFresh() && !p.bound.ContainsPoint(point) {
+		return false
+	}
+
+	// For small polygons, and during initial construction, it is faster to just
+	// check all the crossing.
+	const maxBruteForceVertices = 32
+	if p.numVertices < maxBruteForceVertices || p.index == nil {
+		inside := false
+		for _, l := range p.loops {
+			// use loops bruteforce to avoid building the index on each loop.
+			inside = inside != l.bruteForceContainsPoint(point)
+		}
+		return inside
+	}
+
+	// Otherwise, look up the ShapeIndex cell containing this point.
+	it := p.index.Iterator()
+	if !it.LocatePoint(point) {
+		return false
+	}
+
+	return p.iteratorContainsPoint(it, point)
+}
+
 // ContainsCell reports whether the polygon contains the given cell.
-// TODO(roberts)
-// func (p *Polygon) ContainsCell(c Cell) bool { ... }
+func (p *Polygon) ContainsCell(cell Cell) bool {
+	it := p.index.Iterator()
+	relation := it.LocateCellID(cell.ID())
+
+	// If "cell" is disjoint from all index cells, it is not contained.
+	// Similarly, if "cell" is subdivided into one or more index cells then it
+	// is not contained, since index cells are subdivided only if they (nearly)
+	// intersect a sufficient number of edges.  (But note that if "cell" itself
+	// is an index cell then it may be contained, since it could be a cell with
+	// no edges in the loop interior.)
+	if relation != Indexed {
+		return false
+	}
+
+	// Otherwise check if any edges intersect "cell".
+	if p.boundaryApproxIntersects(it, cell) {
+		return false
+	}
+
+	// Otherwise check if the loop contains the center of "cell".
+	return p.iteratorContainsPoint(it, cell.Center())
+}
 
 // IntersectsCell reports whether the polygon intersects the given cell.
-// TODO(roberts)
-// func (p *Polygon) IntersectsCell(c Cell) bool{ ... }
+func (p *Polygon) IntersectsCell(cell Cell) bool {
+	it := p.index.Iterator()
+	relation := it.LocateCellID(cell.ID())
+
+	// If cell does not overlap any index cell, there is no intersection.
+	if relation == Disjoint {
+		return false
+	}
+	// If cell is subdivided into one or more index cells, there is an
+	// intersection to within the S2ShapeIndex error bound (see Contains).
+	if relation == Subdivided {
+		return true
+	}
+	// If cell is an index cell, there is an intersection because index cells
+	// are created only if they have at least one edge or they are entirely
+	// contained by the loop.
+	if it.CellID() == cell.id {
+		return true
+	}
+	// Otherwise check if any edges intersect cell.
+	if p.boundaryApproxIntersects(it, cell) {
+		return true
+	}
+	// Otherwise check if the loop contains the center of cell.
+	return p.iteratorContainsPoint(it, cell.Center())
+}
+
+// boundaryApproxIntersects reports whether the loop's boundary intersects cell.
+// It may also return true when the loop boundary does not intersect cell but
+// some edge comes within the worst-case error tolerance.
+//
+// This requires that it.Locate(cell) returned Indexed.
+func (p *Polygon) boundaryApproxIntersects(it *ShapeIndexIterator, cell Cell) bool {
+	aClipped := it.IndexCell().findByShapeID(0)
+
+	// If there are no edges, there is no intersection.
+	if len(aClipped.edges) == 0 {
+		return false
+	}
+
+	// We can save some work if cell is the index cell itself.
+	if it.CellID() == cell.ID() {
+		return true
+	}
+
+	// Otherwise check whether any of the edges intersect cell.
+	maxError := (faceClipErrorUVCoord + intersectsRectErrorUVDist)
+	bound := cell.BoundUV().ExpandedByMargin(maxError)
+	for _, e := range aClipped.edges {
+		edge := p.index.Shape(0).Edge(e)
+		v0, v1, ok := ClipToPaddedFace(edge.V0, edge.V1, cell.Face(), maxError)
+		if ok && edgeIntersectsRect(v0, v1, bound) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// iteratorContainsPoint reports whether the iterator that is positioned at the
+// ShapeIndexCell that may contain p, contains the point p.
+func (p *Polygon) iteratorContainsPoint(it *ShapeIndexIterator, point Point) bool {
+	// Test containment by drawing a line segment from the cell center to the
+	// given point and counting edge crossings.
+	aClipped := it.IndexCell().findByShapeID(0)
+	inside := aClipped.containsCenter
+
+	if len(aClipped.edges) == 0 {
+		return inside
+	}
+
+	// This block requires ShapeIndex.
+	crosser := NewEdgeCrosser(it.Center(), point)
+	shape := p.index.Shape(0)
+	for _, e := range aClipped.edges {
+		edge := shape.Edge(e)
+		inside = inside != crosser.EdgeOrVertexCrossing(edge.V0, edge.V1)
+	}
+
+	return inside
+}
 
 // Shape Interface
 

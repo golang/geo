@@ -50,7 +50,7 @@ var (
 	_ Region = (*CellUnion)(nil)
 	_ Region = (*Loop)(nil)
 	_ Region = Point{}
-	//_ Region = (*Polygon)(nil)
+	_ Region = (*Polygon)(nil)
 	_ Region = (*Polyline)(nil)
 	_ Region = Rect{}
 )
