@@ -671,6 +671,84 @@ func TestLoopContainsMatchesCrossingSign(t *testing.T) {
 	}
 }
 
+func TestLoopTurningAngle(t *testing.T) {
+	tests := []struct {
+		loop *Loop
+		want float64
+	}{
+		{EmptyLoop(), 2 * math.Pi},
+		{FullLoop(), -2 * math.Pi},
+		{northHemi3, 0},
+		{westHemi, 0},
+		{candyCane, 4.69364376125922},
+		{lineTriangle, 2 * math.Pi},
+		{skinnyChevron, 2 * math.Pi},
+	}
+
+	for _, test := range tests {
+		if got := test.loop.TurningAngle(); !float64Near(got, test.want, epsilon) {
+			t.Errorf("%v.TurningAngle() = %v, want %v", test.loop, got, test.want)
+		}
+
+		// Check that the turning angle is *identical* when the vertex order is
+		// rotated, and that the sign is inverted when the vertices are reversed.
+		expected := test.loop.TurningAngle()
+		loopCopy := cloneLoop(test.loop)
+		for i := 0; i < len(test.loop.vertices); i++ {
+			/*
+				// TODO(roberts): Uncomment when Invert is added.
+				loopCopy.Invert()
+				if got := loopCopy.TurningAngle(); got != -expected {
+					t.Errorf("loop.Invert().TurningAngle() = %v, want %v", got, -expected)
+				}
+				// Invert it back to normal.
+				loopCopy.Invert()
+			*/
+
+			loopCopy = rotate(loopCopy)
+			if got := loopCopy.TurningAngle(); got != expected {
+				t.Errorf("loop.TurningAngle() = %v, want %v", got, expected)
+			}
+		}
+	}
+
+	/*
+		// TODO(roberts): Uncomment once Area is implemented.
+		// Build a narrow spiral loop starting at the north pole. This is designed
+		// to test that the error in TurningAngle is linear in the number of
+		// vertices even when the partial sum of the turning angles gets very large.
+		// The spiral consists of two arms defining opposite sides of the loop.
+		const armPoints = 10000 // Number of vertices in each "arm"
+		const armRadius = 0.01  // Radius of spiral.
+		var vertices = make([]Point, 2*armPoints)
+
+		// Set the center point of the spiral.
+		vertices[armPoints] = PointFromCoords(0, 0, 1)
+
+		for i := 0; i < armPoints; i++ {
+			angle := (2 * math.Pi / 3) * float64(i)
+			x := math.Cos(angle)
+			y := math.Sin(angle)
+			r1 := float64(i) * armRadius / armPoints
+			r2 := (float64(i) + 1.5) * armRadius / armPoints
+			vertices[armPoints-i-1] = PointFromCoords(r1*x, r1*y, 1)
+			vertices[armPoints+i] = PointFromCoords(r2*x, r2*y, 1)
+		}
+		// This is a pathological loop that contains many long parallel edges.
+		spiral := LoopFromPoints(vertices)
+
+		// Check that TurningAngle is consistent with Area to within the
+		// error bound of the former. We actually use a tiny fraction of the
+		// worst-case error bound, since the worst case only happens when all the
+		// roundoff errors happen in the same direction and this test is not
+		// designed to achieve that. The error in Area can be ignored for the
+		// purposes of this test since it is generally much smaller.
+		if got, want := spiral.TurningAngle(), (2*math.Pi - spiral.Area()); !float64Near(got, want, 0.01*spiral.TurningAngleMaxError()) {
+			t.Errorf("spiral.TurningAngle() = %v, want %v", got, want)
+		}
+	*/
+}
+
 const (
 	// TODO(roberts): Convert these into changeable flags or parameters.
 	// A loop with a 10km radius and 4096 vertices has an edge length of 15 meters.

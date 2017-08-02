@@ -445,6 +445,96 @@ func RegularLoopForFrame(frame matrix3x3, radius s1.Angle, numVertices int) *Loo
 	return LoopFromPoints(regularPointsForFrame(frame, radius, numVertices))
 }
 
+// CanonicalFirstVertex returns a first index and a direction (either +1 or -1)
+// such that the vertex sequence (first, first+dir, ..., first+(n-1)*dir) does
+// not change when the loop vertex order is rotated or inverted. This allows the
+// loop vertices to be traversed in a canonical order. The return values are
+// chosen such that (first, ..., first+n*dir) are in the range [0, 2*n-1] as
+// expected by the Vertex method.
+func (l *Loop) CanonicalFirstVertex() (firstIdx, direction int) {
+	firstIdx = 0
+	n := len(l.vertices)
+	for i := 1; i < n; i++ {
+		if l.Vertex(i).Cmp(l.Vertex(firstIdx).Vector) == -1 {
+			firstIdx = i
+		}
+	}
+
+	// 0 <= firstIdx <= n-1, so (firstIdx+n*dir) <= 2*n-1.
+	if l.Vertex(firstIdx+1).Cmp(l.Vertex(firstIdx+n-1).Vector) == -1 {
+		return firstIdx, 1
+	}
+
+	// n <= firstIdx <= 2*n-1, so (firstIdx+n*dir) >= 0.
+	firstIdx += n
+	return firstIdx, -1
+}
+
+// TurningAngle returns the sum of the turning angles at each vertex. The return
+// value is positive if the loop is counter-clockwise, negative if the loop is
+// clockwise, and zero if the loop is a great circle. Degenerate and
+// nearly-degenerate loops are handled consistently with Sign. So for example,
+// if a loop has zero area (i.e., it is a very small CCW loop) then the turning
+// angle will always be negative.
+//
+// This quantity is also called the "geodesic curvature" of the loop.
+func (l *Loop) TurningAngle() float64 {
+	// For empty and full loops, we return the limit value as the loop area
+	// approaches 0 or 4*Pi respectively.
+	if l.isEmptyOrFull() {
+		if l.ContainsOrigin() {
+			return -2 * math.Pi
+		}
+		return 2 * math.Pi
+	}
+
+	// Don't crash even if the loop is not well-defined.
+	if len(l.vertices) < 3 {
+		return 0
+	}
+
+	// To ensure that we get the same result when the vertex order is rotated,
+	// and that the result is negated when the vertex order is reversed, we need
+	// to add up the individual turn angles in a consistent order. (In general,
+	// adding up a set of numbers in a different order can change the sum due to
+	// rounding errors.)
+	//
+	// Furthermore, if we just accumulate an ordinary sum then the worst-case
+	// error is quadratic in the number of vertices. (This can happen with
+	// spiral shapes, where the partial sum of the turning angles can be linear
+	// in the number of vertices.) To avoid this we use the Kahan summation
+	// algorithm (http://en.wikipedia.org/wiki/Kahan_summation_algorithm).
+	n := len(l.vertices)
+	i, dir := l.CanonicalFirstVertex()
+	sum := TurnAngle(l.Vertex((i+n-dir)%n), l.Vertex(i), l.Vertex((i+dir)%n))
+
+	compensation := s1.Angle(0)
+	for n-1 > 0 {
+		i += dir
+		angle := TurnAngle(l.Vertex(i-dir), l.Vertex(i), l.Vertex(i+dir))
+		oldSum := sum
+		angle += compensation
+		sum += angle
+		compensation = (oldSum - sum) + angle
+		n--
+	}
+	return float64(dir) * float64(sum+compensation)
+}
+
+// turningAngleMaxError return the maximum error in TurningAngle. The value is not
+// constant; it depends on the loop.
+func (l *Loop) turningAngleMaxError() float64 {
+	// The maximum error can be bounded as follows:
+	//   2.24 * dblEpsilon    for RobustCrossProd(b, a)
+	//   2.24 * dblEpsilon    for RobustCrossProd(c, b)
+	//   3.25 * dblEpsilon    for Angle()
+	//   2.00 * dblEpsilon    for each addition in the Kahan summation
+	//   ------------------
+	//   9.73 * dblEpsilon
+	maxErrorPerVertex := 9.73 * dblEpsilon
+	return maxErrorPerVertex * float64(len(l.vertices))
+}
+
 // Encode encodes the Loop.
 func (l Loop) Encode(w io.Writer) error {
 	e := &encoder{w: w}
@@ -605,8 +695,6 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 // Invert
 // Area
 // Centroid
-// TurningAngle
-// TurningAngleMaxError
 // DistanceToPoint
 // DistanceToBoundary
 // Project
@@ -623,4 +711,3 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 // SurfaceIntegral
 // CompareBoundary
 // ContainsNonCrossingBoundary
-// canonicalFirstVertex
