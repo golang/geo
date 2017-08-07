@@ -103,14 +103,20 @@ func LoopFromCell(c Cell) *Loop {
 	return l
 }
 
+// These two points are used for the special Empty and Full loops.
+var (
+	emptyLoopPoint = Point{r3.Vector{X: 0, Y: 0, Z: 1}}
+	fullLoopPoint  = Point{r3.Vector{X: 0, Y: 0, Z: -1}}
+)
+
 // EmptyLoop returns a special "empty" loop.
 func EmptyLoop() *Loop {
-	return LoopFromPoints([]Point{{r3.Vector{X: 0, Y: 0, Z: 1}}})
+	return LoopFromPoints([]Point{emptyLoopPoint})
 }
 
 // FullLoop returns a special "full" loop.
 func FullLoop() *Loop {
-	return LoopFromPoints([]Point{{r3.Vector{X: 0, Y: 0, Z: -1}}})
+	return LoopFromPoints([]Point{fullLoopPoint})
 }
 
 // initOriginAndBound sets the origin containment for the given point and then calls
@@ -535,6 +541,65 @@ func (l *Loop) turningAngleMaxError() float64 {
 	return maxErrorPerVertex * float64(len(l.vertices))
 }
 
+// IsNormalized reports whether the loop area is at most 2*pi. Degenerate loops are
+// handled consistently with Sign, i.e., if a loop can be
+// expressed as the union of degenerate or nearly-degenerate CCW triangles,
+// then it will always be considered normalized.
+func (l *Loop) IsNormalized() bool {
+	// Optimization: if the longitude span is less than 180 degrees, then the
+	// loop covers less than half the sphere and is therefore normalized.
+	if l.bound.Lng.Length() < math.Pi {
+		return true
+	}
+
+	// We allow some error so that hemispheres are always considered normalized.
+	// TODO(roberts): This is no longer required by the Polygon implementation,
+	// so alternatively we could create the invariant that a loop is normalized
+	// if and only if its complement is not normalized.
+	return l.TurningAngle() >= -l.turningAngleMaxError()
+}
+
+// Normalize inverts the loop if necessary so that the area enclosed by the loop
+// is at most 2*pi.
+func (l *Loop) Normalize() {
+	if !l.IsNormalized() {
+		l.Invert()
+	}
+}
+
+// Invert reverses the order of the loop vertices, effectively complementing the
+// region represented by the loop. For example, the loop ABCD (with edges
+// AB, BC, CD, DA) becomes the loop DCBA (with edges DC, CB, BA, AD).
+// Notice that the last edge is the same in both cases except that its
+// direction has been reversed.
+func (l *Loop) Invert() {
+	l.index.Reset()
+	if l.isEmptyOrFull() {
+		if l.IsFull() {
+			l.vertices[0] = emptyLoopPoint
+		} else {
+			l.vertices[0] = fullLoopPoint
+		}
+	} else {
+		// For non-special loops, reverse the slice of vertices.
+		for i := len(l.vertices)/2 - 1; i >= 0; i-- {
+			opp := len(l.vertices) - 1 - i
+			l.vertices[i], l.vertices[opp] = l.vertices[opp], l.vertices[i]
+		}
+	}
+
+	// originInside must be set correctly before building the ShapeIndex.
+	l.originInside = l.originInside != true
+	if l.bound.Lat.Lo > -math.Pi/2 && l.bound.Lat.Hi < math.Pi/2 {
+		// The complement of this loop contains both poles.
+		l.bound = FullRect()
+		l.subregionBound = l.bound
+	} else {
+		l.initBound()
+	}
+	l.index.Add(l)
+}
+
 // Encode encodes the Loop.
 func (l Loop) Encode(w io.Writer) error {
 	e := &encoder{w: w}
@@ -690,9 +755,6 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 }
 
 // TODO(roberts): Differences from the C++ version:
-// IsNormalized
-// Normalize
-// Invert
 // Area
 // Centroid
 // DistanceToPoint

@@ -242,7 +242,8 @@ func TestLoopRectBound(t *testing.T) {
 	}
 
 	// Create a loop that contains the complement of the arctic80 loop.
-	arctic80Inv := invert(arctic80)
+	arctic80Inv := cloneLoop(arctic80)
+	arctic80Inv.Invert()
 	// The highest latitude of each edge is attained at its midpoint.
 	mid := Point{arctic80Inv.vertices[0].Vector.Add(arctic80Inv.vertices[1].Vector).Mul(.5)}
 	if got, want := arctic80Inv.RectBound().Lat.Hi, float64(LatLngFromPoint(mid).Lat); math.Abs(got-want) > 10*dblEpsilon {
@@ -266,14 +267,6 @@ func TestLoopCapBound(t *testing.T) {
 	if got, want := antarctic80.CapBound(), rectFromDegrees(-90, -180, -80, 180).CapBound(); !got.ApproxEqual(want) {
 		t.Errorf("antarctic 80 loop's CapBound (%v) should be %v", got, want)
 	}
-}
-
-func invert(l *Loop) *Loop {
-	vertices := make([]Point, 0, len(l.vertices))
-	for i := len(l.vertices) - 1; i >= 0; i-- {
-		vertices = append(vertices, l.vertices[i])
-	}
-	return LoopFromPoints(vertices)
 }
 
 func TestLoopOriginInside(t *testing.T) {
@@ -695,15 +688,12 @@ func TestLoopTurningAngle(t *testing.T) {
 		expected := test.loop.TurningAngle()
 		loopCopy := cloneLoop(test.loop)
 		for i := 0; i < len(test.loop.vertices); i++ {
-			/*
-				// TODO(roberts): Uncomment when Invert is added.
-				loopCopy.Invert()
-				if got := loopCopy.TurningAngle(); got != -expected {
-					t.Errorf("loop.Invert().TurningAngle() = %v, want %v", got, -expected)
-				}
-				// Invert it back to normal.
-				loopCopy.Invert()
-			*/
+			loopCopy.Invert()
+			if got := loopCopy.TurningAngle(); got != -expected {
+				t.Errorf("loop.Invert().TurningAngle() = %v, want %v", got, -expected)
+			}
+			// Invert it back to normal.
+			loopCopy.Invert()
 
 			loopCopy = rotate(loopCopy)
 			if got := loopCopy.TurningAngle(); got != expected {
@@ -747,6 +737,36 @@ func TestLoopTurningAngle(t *testing.T) {
 			t.Errorf("spiral.TurningAngle() = %v, want %v", got, want)
 		}
 	*/
+}
+
+func TestLoopNormalizedCompatibleWithContains(t *testing.T) {
+	p := parsePoint("40:40")
+
+	tests := []*Loop{
+		lineTriangle,
+		skinnyChevron,
+	}
+
+	// Checks that if a loop is normalized, it doesn't contain a
+	// point outside of it, and vice versa.
+	for _, loop := range tests {
+		flip := cloneLoop(loop)
+
+		flip.Invert()
+		if norm, contains := loop.IsNormalized(), loop.ContainsPoint(p); norm == contains {
+			t.Errorf("loop.IsNormalized() = %b == loop.ContainsPoint(%v) = %v, want !=", norm, p, contains)
+		}
+		if norm, contains := flip.IsNormalized(), flip.ContainsPoint(p); norm == contains {
+			t.Errorf("flip.IsNormalized() = %b == flip.ContainsPoint(%v) = %v, want !=", norm, p, contains)
+		}
+		if a, b := loop.IsNormalized(), flip.IsNormalized(); a == b {
+			t.Errorf("a loop and it's invert can not both be normalized")
+		}
+		flip.Normalize()
+		if flip.ContainsPoint(p) {
+			t.Errorf("%v.ContainsPoint(%v) = true, want false", flip, p)
+		}
+	}
 }
 
 const (
