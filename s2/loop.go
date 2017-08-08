@@ -294,6 +294,23 @@ func (l *Loop) Vertex(i int) Point {
 	return l.vertices[i%len(l.vertices)]
 }
 
+// OrientedVertex returns the vertex in reverse order if the loop represents a polygon
+// hole. For example, arguments 0, 1, 2 are mapped to vertices n-1, n-2, n-3, where
+// n == len(vertices). This ensures that the interior of the polygon is always to
+// the left of the vertex chain.
+//
+// This requires: 0 <= i < 2 * len(vertices)
+func (l *Loop) OrientedVertex(i int) Point {
+	j := i - len(l.vertices)
+	if j < 0 {
+		j = i
+	}
+	if l.IsHole() {
+		j = len(l.vertices) - 1 - j
+	}
+	return l.Vertex(i)
+}
+
 // NumVertices returns the number of vertices in this loop.
 func (l *Loop) NumVertices() int {
 	return len(l.vertices)
@@ -539,6 +556,17 @@ func (l *Loop) turningAngleMaxError() float64 {
 	//   9.73 * dblEpsilon
 	maxErrorPerVertex := 9.73 * dblEpsilon
 	return maxErrorPerVertex * float64(len(l.vertices))
+}
+
+// IsHole reports whether this loop represents a hole in its containing polygon.
+func (l *Loop) IsHole() bool { return l.depth&1 != 0 }
+
+// Sign returns -1 if this Loop represents a hole in its containing polygon, and +1 otherwise.
+func (l *Loop) Sign() int {
+	if l.IsHole() {
+		return -1
+	}
+	return 1
 }
 
 // IsNormalized reports whether the loop area is at most 2*pi. Degenerate loops are

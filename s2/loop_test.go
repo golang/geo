@@ -240,6 +240,34 @@ func TestLoopBasic(t *testing.T) {
 	}
 }
 
+func TestLoopHoleAndSign(t *testing.T) {
+	l := LoopFromPoints(parsePoints("0:-180, 0:-90, 0:0, 0:90"))
+
+	if l.IsHole() {
+		t.Errorf("loop with default depth should not be a hole")
+	}
+	if l.Sign() == -1 {
+		t.Errorf("loop with default depth should have a sign of +1")
+	}
+
+	l.depth = 3
+	if !l.IsHole() {
+		t.Errorf("loop with odd depth should be a hole")
+	}
+	if l.Sign() != -1 {
+		t.Errorf("loop with odd depth should have a sign of -1")
+	}
+
+	l.depth = 2
+	if l.IsHole() {
+		t.Errorf("loop with even depth should not be a hole")
+	}
+	if l.Sign() == -1 {
+		t.Errorf("loop with even depth should have a sign of +1")
+	}
+
+}
+
 func TestLoopRectBound(t *testing.T) {
 	if !EmptyLoop().RectBound().IsEmpty() {
 		t.Errorf("empty loop's RectBound should be empty")

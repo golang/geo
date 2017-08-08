@@ -224,15 +224,11 @@ func TestPolygonShape(t *testing.T) {
 		}
 		for j := 0; j < len(l.Vertices()); j++ {
 			edge := shape.Edge(edgeID)
-			// TODO(roberts): Update once Loop implements orientedVertex.
-			//if l.orientedVertex(j) != v0 {
-			if l.Vertex(j) != edge.V0 {
-				t.Errorf("l.Vertex(%d) = %v, want %v", j, l.Vertex(j), edge.V0)
+			if l.OrientedVertex(j) != edge.V0 {
+				t.Errorf("l.OrientedVertex(%d) = %v, want %v", j, l.OrientedVertex(j), edge.V0)
 			}
-			// TODO(roberts): Update once Loop implements orientedVertex.
-			//if l.orientedVertex(j+1) != v1 {
-			if l.Vertex(j+1) != edge.V1 {
-				t.Errorf("l.Vertex(%d) = %v, want %v", j+1, l.Vertex(j+1), edge.V1)
+			if l.OrientedVertex(j+1) != edge.V1 {
+				t.Errorf("l.OrientedVertex(%d) = %v, want %v", j+1, l.OrientedVertex(j+1), edge.V1)
 			}
 			edgeID++
 		}

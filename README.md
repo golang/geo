@@ -108,6 +108,8 @@ C++ code, and are reasonably complete enough to use in live code. Up to date
 listing of the incomplete methods are documented at the end of each file.
 
 *   CellUnion - Missing Union, Intersection, etc.
+*   Loop - Loop is mostly complete now. Missing Projection, Distance,
+    Contains, Intersects, Union, etc.
 *   Polyline - Missing Projection, Intersects, Interpolate, etc.
 *   Rect (AKA s2latlngrect in C++) - Missing Centroid, Distance,
     InteriorContains.
@@ -121,9 +123,6 @@ listing of the incomplete methods are documented at the end of each file.
 **In Progress** Files that have some work done, but are probably not complete
 enough for general use in production code.
 
-*   Loop - Loop has basic skelton complete and some tendons, but missing most
-    things. Normalize, Invert, Area, Centroid, Projection, Distance, Contains,
-    Intersects, Union, etc. A significant portion of these are under review now.
 *   Polygon - Polygon is at the partial skeleton phase, the fields all exist,
     and some basic methods are implemented, but it's missing almost everything.
     Init with multiple loops, Area, Centroid, Distance, Projection,

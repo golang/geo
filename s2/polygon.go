@@ -385,9 +385,7 @@ func (p *Polygon) Edge(e int) Edge {
 		}
 	}
 
-	// TODO(roberts): C++ uses the oriented vertices from Loop. Move to those when
-	// they are implmented here.
-	return Edge{p.Loop(i).Vertex(e), p.Loop(i).Vertex(e + 1)}
+	return Edge{p.Loop(i).OrientedVertex(e), p.Loop(i).OrientedVertex(e + 1)}
 }
 
 // HasInterior reports whether this Polygon has an interior.
@@ -427,7 +425,7 @@ func (p *Polygon) Chain(chainID int) Chain {
 
 // ChainEdge returns the j-th edge of the i-th edge Chain (loop).
 func (p *Polygon) ChainEdge(i, j int) Edge {
-	return Edge{p.Loop(i).Vertex(j), p.Loop(i).Vertex(j + 1)}
+	return Edge{p.Loop(i).OrientedVertex(j), p.Loop(i).OrientedVertex(j + 1)}
 }
 
 // ChainPosition returns a pair (i, j) such that edgeID is the j-th edge
