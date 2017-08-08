@@ -369,7 +369,7 @@ func (l *Loop) IntersectsCell(target Cell) bool {
 		return false
 	}
 	// If target is subdivided into one or more index cells, there is an
-	// intersection to within the S2ShapeIndex error bound (see Contains).
+	// intersection to within the ShapeIndex error bound (see Contains).
 	if relation == Subdivided {
 		return true
 	}
@@ -600,6 +600,268 @@ func (l *Loop) Invert() {
 	l.index.Add(l)
 }
 
+// surfaceIntegralFloat64 computes the oriented surface integral of some quantity f(x)
+// over the loop interior, given a function f(A,B,C) that returns the
+// corresponding integral over the spherical triangle ABC. Here "oriented
+// surface integral" means:
+//
+// (1) f(A,B,C) must be the integral of f if ABC is counterclockwise,
+//     and the integral of -f if ABC is clockwise.
+//
+// (2) The result of this function is *either* the integral of f over the
+//     loop interior, or the integral of (-f) over the loop exterior.
+//
+// Note that there are at least two common situations where it easy to work
+// around property (2) above:
+//
+//  - If the integral of f over the entire sphere is zero, then it doesn't
+//    matter which case is returned because they are always equal.
+//
+//  - If f is non-negative, then it is easy to detect when the integral over
+//    the loop exterior has been returned, and the integral over the loop
+//    interior can be obtained by adding the integral of f over the entire
+//    unit sphere (a constant) to the result.
+//
+// Any changes to this method may need corresponding changes to surfaceIntegralPoint as well.
+func (l *Loop) surfaceIntegralFloat64(f func(a, b, c Point) float64) float64 {
+	// We sum f over a collection T of oriented triangles, possibly
+	// overlapping. Let the sign of a triangle be +1 if it is CCW and -1
+	// otherwise, and let the sign of a point x be the sum of the signs of the
+	// triangles containing x. Then the collection of triangles T is chosen
+	// such that either:
+	//
+	//  (1) Each point in the loop interior has sign +1, and sign 0 otherwise; or
+	//  (2) Each point in the loop exterior has sign -1, and sign 0 otherwise.
+	//
+	// The triangles basically consist of a fan from vertex 0 to every loop
+	// edge that does not include vertex 0. These triangles will always satisfy
+	// either (1) or (2). However, what makes this a bit tricky is that
+	// spherical edges become numerically unstable as their length approaches
+	// 180 degrees. Of course there is not much we can do if the loop itself
+	// contains such edges, but we would like to make sure that all the triangle
+	// edges under our control (i.e., the non-loop edges) are stable. For
+	// example, consider a loop around the equator consisting of four equally
+	// spaced points. This is a well-defined loop, but we cannot just split it
+	// into two triangles by connecting vertex 0 to vertex 2.
+	//
+	// We handle this type of situation by moving the origin of the triangle fan
+	// whenever we are about to create an unstable edge. We choose a new
+	// location for the origin such that all relevant edges are stable. We also
+	// create extra triangles with the appropriate orientation so that the sum
+	// of the triangle signs is still correct at every point.
+
+	// The maximum length of an edge for it to be considered numerically stable.
+	// The exact value is fairly arbitrary since it depends on the stability of
+	// the function f. The value below is quite conservative but could be
+	// reduced further if desired.
+	const maxLength = math.Pi - 1e-5
+
+	var sum float64
+	origin := l.Vertex(0)
+	for i := 1; i+1 < len(l.vertices); i++ {
+		// Let V_i be vertex(i), let O be the current origin, and let length(A,B)
+		// be the length of edge (A,B). At the start of each loop iteration, the
+		// "leading edge" of the triangle fan is (O,V_i), and we want to extend
+		// the triangle fan so that the leading edge is (O,V_i+1).
+		//
+		// Invariants:
+		//  1. length(O,V_i) < maxLength for all (i > 1).
+		//  2. Either O == V_0, or O is approximately perpendicular to V_0.
+		//  3. "sum" is the oriented integral of f over the area defined by
+		//     (O, V_0, V_1, ..., V_i).
+		if l.Vertex(i+1).Angle(origin.Vector) > maxLength {
+			// We are about to create an unstable edge, so choose a new origin O'
+			// for the triangle fan.
+			oldOrigin := origin
+			if origin == l.Vertex(0) {
+				// The following point is well-separated from V_i and V_0 (and
+				// therefore V_i+1 as well).
+				origin = Point{l.Vertex(0).PointCross(l.Vertex(i)).Normalize()}
+			} else if l.Vertex(i).Angle(l.Vertex(0).Vector) < maxLength {
+				// All edges of the triangle (O, V_0, V_i) are stable, so we can
+				// revert to using V_0 as the origin.
+				origin = l.Vertex(0)
+			} else {
+				// (O, V_i+1) and (V_0, V_i) are antipodal pairs, and O and V_0 are
+				// perpendicular. Therefore V_0.CrossProd(O) is approximately
+				// perpendicular to all of {O, V_0, V_i, V_i+1}, and we can choose
+				// this point O' as the new origin.
+				origin = Point{l.Vertex(0).Cross(oldOrigin.Vector)}
+
+				// Advance the edge (V_0,O) to (V_0,O').
+				sum += f(l.Vertex(0), oldOrigin, origin)
+			}
+			// Advance the edge (O,V_i) to (O',V_i).
+			sum += f(oldOrigin, l.Vertex(i), origin)
+		}
+		// Advance the edge (O,V_i) to (O,V_i+1).
+		sum += f(origin, l.Vertex(i), l.Vertex(i+1))
+	}
+	// If the origin is not V_0, we need to sum one more triangle.
+	if origin != l.Vertex(0) {
+		// Advance the edge (O,V_n-1) to (O,V_0).
+		sum += f(origin, l.Vertex(len(l.vertices)-1), l.Vertex(0))
+	}
+	return sum
+}
+
+// surfaceIntegralPoint mirrors the surfaceIntegralFloat64 method but over Points;
+// see that method for commentary. The C++ version uses a templated method.
+// Any changes to this method may need corresponding changes to surfaceIntegralFloat64 as well.
+func (l *Loop) surfaceIntegralPoint(f func(a, b, c Point) Point) Point {
+	const maxLength = math.Pi - 1e-5
+	var sum r3.Vector
+
+	origin := l.Vertex(0)
+	for i := 1; i+1 < len(l.vertices); i++ {
+		if l.Vertex(i+1).Angle(origin.Vector) > maxLength {
+			oldOrigin := origin
+			if origin == l.Vertex(0) {
+				origin = Point{l.Vertex(0).PointCross(l.Vertex(i)).Normalize()}
+			} else if l.Vertex(i).Angle(l.Vertex(0).Vector) < maxLength {
+				origin = l.Vertex(0)
+			} else {
+				origin = Point{l.Vertex(0).Cross(oldOrigin.Vector)}
+				sum = sum.Add(f(l.Vertex(0), oldOrigin, origin).Vector)
+			}
+			sum = sum.Add(f(oldOrigin, l.Vertex(i), origin).Vector)
+		}
+		sum = sum.Add(f(origin, l.Vertex(i), l.Vertex(i+1)).Vector)
+	}
+	if origin != l.Vertex(0) {
+		sum = sum.Add(f(origin, l.Vertex(len(l.vertices)-1), l.Vertex(0)).Vector)
+	}
+	return Point{sum}
+}
+
+// Area returns the area of the loop interior, i.e. the region on the left side of
+// the loop. The return value is between 0 and 4*pi. (Note that the return
+// value is not affected by whether this loop is a "hole" or a "shell".)
+func (l *Loop) Area() float64 {
+	// It is suprisingly difficult to compute the area of a loop robustly. The
+	// main issues are (1) whether degenerate loops are considered to be CCW or
+	// not (i.e., whether their area is close to 0 or 4*pi), and (2) computing
+	// the areas of small loops with good relative accuracy.
+	//
+	// With respect to degeneracies, we would like Area to be consistent
+	// with ContainsPoint in that loops that contain many points
+	// should have large areas, and loops that contain few points should have
+	// small areas. For example, if a degenerate triangle is considered CCW
+	// according to s2predicates Sign, then it will contain very few points and
+	// its area should be approximately zero. On the other hand if it is
+	// considered clockwise, then it will contain virtually all points and so
+	// its area should be approximately 4*pi.
+	//
+	// More precisely, let U be the set of Points for which IsUnitLength
+	// is true, let P(U) be the projection of those points onto the mathematical
+	// unit sphere, and let V(P(U)) be the Voronoi diagram of the projected
+	// points. Then for every loop x, we would like Area to approximately
+	// equal the sum of the areas of the Voronoi regions of the points p for
+	// which x.ContainsPoint(p) is true.
+	//
+	// The second issue is that we want to compute the area of small loops
+	// accurately. This requires having good relative precision rather than
+	// good absolute precision. For example, if the area of a loop is 1e-12 and
+	// the error is 1e-15, then the area only has 3 digits of accuracy. (For
+	// reference, 1e-12 is about 40 square meters on the surface of the earth.)
+	// We would like to have good relative accuracy even for small loops.
+	//
+	// To achieve these goals, we combine two different methods of computing the
+	// area. This first method is based on the Gauss-Bonnet theorem, which says
+	// that the area enclosed by the loop equals 2*pi minus the total geodesic
+	// curvature of the loop (i.e., the sum of the "turning angles" at all the
+	// loop vertices). The big advantage of this method is that as long as we
+	// use Sign to compute the turning angle at each vertex, then
+	// degeneracies are always handled correctly. In other words, if a
+	// degenerate loop is CCW according to the symbolic perturbations used by
+	// Sign, then its turning angle will be approximately 2*pi.
+	//
+	// The disadvantage of the Gauss-Bonnet method is that its absolute error is
+	// about 2e-15 times the number of vertices (see turningAngleMaxError).
+	// So, it cannot compute the area of small loops accurately.
+	//
+	// The second method is based on splitting the loop into triangles and
+	// summing the area of each triangle. To avoid the difficulty and expense
+	// of decomposing the loop into a union of non-overlapping triangles,
+	// instead we compute a signed sum over triangles that may overlap (see the
+	// comments for surfaceIntegral). The advantage of this method
+	// is that the area of each triangle can be computed with much better
+	// relative accuracy (using l'Huilier's theorem). The disadvantage is that
+	// the result is a signed area: CCW loops may yield a small positive value,
+	// while CW loops may yield a small negative value (which is converted to a
+	// positive area by adding 4*pi). This means that small errors in computing
+	// the signed area may translate into a very large error in the result (if
+	// the sign of the sum is incorrect).
+	//
+	// So, our strategy is to combine these two methods as follows. First we
+	// compute the area using the "signed sum over triangles" approach (since it
+	// is generally more accurate). We also estimate the maximum error in this
+	// result. If the signed area is too close to zero (i.e., zero is within
+	// the error bounds), then we double-check the sign of the result using the
+	// Gauss-Bonnet method. (In fact we just call IsNormalized, which is
+	// based on this method.) If the two methods disagree, we return either 0
+	// or 4*pi based on the result of IsNormalized. Otherwise we return the
+	// area that we computed originally.
+	if l.isEmptyOrFull() {
+		if l.ContainsOrigin() {
+			return 4 * math.Pi
+		}
+		return 0
+	}
+	area := l.surfaceIntegralFloat64(SignedArea)
+
+	// TODO(roberts): This error estimate is very approximate. There are two
+	// issues: (1) SignedArea needs some improvements to ensure that its error
+	// is actually never higher than GirardArea, and (2) although the number of
+	// triangles in the sum is typically N-2, in theory it could be as high as
+	// 2*N for pathological inputs. But in other respects this error bound is
+	// very conservative since it assumes that the maximum error is achieved on
+	// every triangle.
+	maxError := l.turningAngleMaxError()
+
+	// The signed area should be between approximately -4*pi and 4*pi.
+	if area < 0 {
+		// We have computed the negative of the area of the loop exterior.
+		area += 4 * math.Pi
+	}
+
+	if area > 4*math.Pi {
+		area = 4 * math.Pi
+	}
+	if area < 0 {
+		area = 0
+	}
+
+	// If the area is close enough to zero or 4*pi so that the loop orientation
+	// is ambiguous, then we compute the loop orientation explicitly.
+	if area < maxError && !l.IsNormalized() {
+		return 4 * math.Pi
+	} else if area > (4*math.Pi-maxError) && l.IsNormalized() {
+		return 0
+	}
+
+	return area
+}
+
+// Centroid returns the true centroid of the loop multiplied by the area of the
+// loop. The result is not unit length, so you may want to normalize it. Also
+// note that in general, the centroid may not be contained by the loop.
+//
+// We prescale by the loop area for two reasons: (1) it is cheaper to
+// compute this way, and (2) it makes it easier to compute the centroid of
+// more complicated shapes (by splitting them into disjoint regions and
+// adding their centroids).
+//
+// Note that the return value is not affected by whether this loop is a
+// "hole" or a "shell".
+func (l *Loop) Centroid() Point {
+	// surfaceIntegralPoint() returns either the integral of position over loop
+	// interior, or the negative of the integral of position over the loop
+	// exterior. But these two values are the same (!), because the integral of
+	// position over the entire sphere is (0, 0, 0).
+	return l.surfaceIntegralPoint(TrueCentroid)
+}
+
 // Encode encodes the Loop.
 func (l Loop) Encode(w io.Writer) error {
 	e := &encoder{w: w}
@@ -755,8 +1017,6 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 }
 
 // TODO(roberts): Differences from the C++ version:
-// Area
-// Centroid
 // DistanceToPoint
 // DistanceToBoundary
 // Project
@@ -770,6 +1030,5 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 // BoundaryEquals
 // BoundaryApproxEquals
 // BoundaryNear
-// SurfaceIntegral
 // CompareBoundary
 // ContainsNonCrossingBoundary

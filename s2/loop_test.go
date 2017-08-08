@@ -74,10 +74,10 @@ var (
 
 	// Like loopA, but the vertices are at leaf cell centers.
 	snappedLoopA = LoopFromPoints([]Point{
-		CellIDFromLatLng(parseLatLngs("0:178")[0]).Point(),
-		CellIDFromLatLng(parseLatLngs("-1:180")[0]).Point(),
-		CellIDFromLatLng(parseLatLngs("0:-179")[0]).Point(),
-		CellIDFromLatLng(parseLatLngs("1:-180")[0]).Point(),
+		cellIDFromPoint(parsePoint("0:178")).Point(),
+		cellIDFromPoint(parsePoint("-1:180")).Point(),
+		cellIDFromPoint(parsePoint("0:-179")).Point(),
+		cellIDFromPoint(parsePoint("1:-180")).Point(),
 	})
 
 	// A different diamond-shaped loop around the point 0:180.
@@ -130,8 +130,40 @@ var (
 	loopF = LoopFromPoints(parsePoints("0:30, -30:30, -30:44, 0:44, 0:41, 0:39, 0:36, 0:34"))
 	loopG = LoopFromPoints(parsePoints("0:30, 0:34, 10:34, 10:36, 0:36, 0:39, 10:39, 10:41, 0:41, 0:44, 30:44, 30:30"))
 	loopH = LoopFromPoints(parsePoints("0:30, 0:34, -10:34, -10:36, 0:36, 0:39, 10:39, 10:41, 0:41, 0:44, 30:44, 30:30"))
-
 	loopI = LoopFromPoints(parsePoints("10:34, 0:34, -10:34, -10:36, 0:36, 10:36"))
+
+	// The set of all test loops.
+	allLoops = []*Loop{
+		EmptyLoop(),
+		FullLoop(),
+		northHemi,
+		northHemi3,
+		southHemi,
+		westHemi,
+		eastHemi,
+		nearHemi,
+		farHemi,
+		candyCane,
+		smallNECW,
+		arctic80,
+		antarctic80,
+		lineTriangle,
+		skinnyChevron,
+		loopA,
+		//snappedLoopA, // Fails TestAreaConsistentWithTurningAngle
+		loopB,
+		aIntersectB,
+		aUnionB,
+		aMinusB,
+		bMinusA,
+		loopC,
+		loopD,
+		loopE,
+		loopF,
+		loopG,
+		loopH,
+		loopI,
+	}
 )
 
 func TestLoopEmptyAndFull(t *testing.T) {
@@ -702,39 +734,171 @@ func TestLoopTurningAngle(t *testing.T) {
 		}
 	}
 
-	/*
-		// TODO(roberts): Uncomment once Area is implemented.
-		// Build a narrow spiral loop starting at the north pole. This is designed
-		// to test that the error in TurningAngle is linear in the number of
-		// vertices even when the partial sum of the turning angles gets very large.
-		// The spiral consists of two arms defining opposite sides of the loop.
-		const armPoints = 10000 // Number of vertices in each "arm"
-		const armRadius = 0.01  // Radius of spiral.
-		var vertices = make([]Point, 2*armPoints)
+	// TODO(roberts): Uncomment once Area is implemented.
+	// Build a narrow spiral loop starting at the north pole. This is designed
+	// to test that the error in TurningAngle is linear in the number of
+	// vertices even when the partial sum of the turning angles gets very large.
+	// The spiral consists of two arms defining opposite sides of the loop.
+	const armPoints = 10000 // Number of vertices in each "arm"
+	const armRadius = 0.01  // Radius of spiral.
+	var vertices = make([]Point, 2*armPoints)
 
-		// Set the center point of the spiral.
-		vertices[armPoints] = PointFromCoords(0, 0, 1)
+	// Set the center point of the spiral.
+	vertices[armPoints] = PointFromCoords(0, 0, 1)
 
-		for i := 0; i < armPoints; i++ {
-			angle := (2 * math.Pi / 3) * float64(i)
-			x := math.Cos(angle)
-			y := math.Sin(angle)
-			r1 := float64(i) * armRadius / armPoints
-			r2 := (float64(i) + 1.5) * armRadius / armPoints
-			vertices[armPoints-i-1] = PointFromCoords(r1*x, r1*y, 1)
-			vertices[armPoints+i] = PointFromCoords(r2*x, r2*y, 1)
+	for i := 0; i < armPoints; i++ {
+		angle := (2 * math.Pi / 3) * float64(i)
+		x := math.Cos(angle)
+		y := math.Sin(angle)
+		r1 := float64(i) * armRadius / armPoints
+		r2 := (float64(i) + 1.5) * armRadius / armPoints
+		vertices[armPoints-i-1] = PointFromCoords(r1*x, r1*y, 1)
+		vertices[armPoints+i] = PointFromCoords(r2*x, r2*y, 1)
+	}
+	// This is a pathological loop that contains many long parallel edges.
+	spiral := LoopFromPoints(vertices)
+
+	// Check that TurningAngle is consistent with Area to within the
+	// error bound of the former. We actually use a tiny fraction of the
+	// worst-case error bound, since the worst case only happens when all the
+	// roundoff errors happen in the same direction and this test is not
+	// designed to achieve that. The error in Area can be ignored for the
+	// purposes of this test since it is generally much smaller.
+	if got, want := spiral.TurningAngle(), (2*math.Pi - spiral.Area()); !float64Near(got, want, 0.01*spiral.turningAngleMaxError()) {
+		t.Errorf("spiral.TurningAngle() = %v, want %v", got, want)
+	}
+}
+
+func TestLoopAreaAndCentroid(t *testing.T) {
+	var p Point
+
+	if got, want := EmptyLoop().Area(), 0.0; got != want {
+		t.Errorf("EmptyLoop.Area() = %v, want %v", got, want)
+	}
+	if got, want := FullLoop().Area(), 4*math.Pi; got != want {
+		t.Errorf("FullLoop.Area() = %v, want %v", got, want)
+	}
+	if got := EmptyLoop().Centroid(); !p.ApproxEqual(got) {
+		t.Errorf("EmptyLoop.Centroid() = %v, want %v", got, p)
+	}
+	if got := FullLoop().Centroid(); !p.ApproxEqual(got) {
+		t.Errorf("FullLoop.Centroid() = %v, want %v", got, p)
+	}
+
+	if got, want := northHemi.Area(), 2*math.Pi; !float64Eq(got, want) {
+		t.Errorf("northHemi.Area() = %v, want %v", got, want)
+	}
+
+	eastHemiArea := eastHemi.Area()
+	if eastHemiArea < 2*math.Pi-1e-12 || eastHemiArea > 2*math.Pi+1e-12 {
+		t.Errorf("eastHemi.Area() = %v, want between [%v, %v]", eastHemiArea, 2*math.Pi-1e-12, 2*math.Pi+1e-12)
+	}
+
+	// Construct spherical caps of random height, and approximate their boundary
+	// with closely spaces vertices. Then check that the area and centroid are
+	// correct.
+	for i := 0; i < 50; i++ {
+		// Choose a coordinate frame for the spherical cap.
+		f := randomFrame()
+		x := f.col(0)
+		y := f.col(1)
+		z := f.col(2)
+
+		// Given two points at latitude phi and whose longitudes differ by dtheta,
+		// the geodesic between the two points has a maximum latitude of
+		// atan(tan(phi) / cos(dtheta/2)). This can be derived by positioning
+		// the two points at (-dtheta/2, phi) and (dtheta/2, phi).
+		//
+		// We want to position the vertices close enough together so that their
+		// maximum distance from the boundary of the spherical cap is maxDist.
+		// Thus we want abs(atan(tan(phi) / cos(dtheta/2)) - phi) <= maxDist.
+		const maxDist = 1e-6
+		height := 2 * randomFloat64()
+		phi := math.Asin(1.0 - height)
+		maxDtheta := 2 * math.Acos(math.Tan(math.Abs(phi))/math.Tan(math.Abs(phi)+maxDist))
+		maxDtheta = math.Min(math.Pi, maxDtheta)
+
+		var vertices []Point
+		for theta := 0.0; theta < 2*math.Pi; theta += randomFloat64() * maxDtheta {
+			vertices = append(vertices,
+				Point{x.Mul(math.Cos(theta) * math.Cos(phi)).Add(
+					y.Mul(math.Sin(theta) * math.Cos(phi))).Add(
+					z.Mul(math.Sin(phi)))},
+			)
 		}
-		// This is a pathological loop that contains many long parallel edges.
-		spiral := LoopFromPoints(vertices)
 
-		// Check that TurningAngle is consistent with Area to within the
-		// error bound of the former. We actually use a tiny fraction of the
-		// worst-case error bound, since the worst case only happens when all the
-		// roundoff errors happen in the same direction and this test is not
-		// designed to achieve that. The error in Area can be ignored for the
-		// purposes of this test since it is generally much smaller.
-		if got, want := spiral.TurningAngle(), (2*math.Pi - spiral.Area()); !float64Near(got, want, 0.01*spiral.TurningAngleMaxError()) {
-			t.Errorf("spiral.TurningAngle() = %v, want %v", got, want)
+		loop := LoopFromPoints(vertices)
+		area := loop.Area()
+		centroid := loop.Centroid()
+		expectedArea := 2 * math.Pi * height
+		if delta, want := math.Abs(area-expectedArea), 2*math.Pi*maxDist; delta > want {
+			t.Errorf("%v.Area() = %v, want to be within %v of %v, got %v", loop, area, want, expectedArea, delta)
+		}
+		expectedCentroid := z.Mul(expectedArea * (1 - 0.5*height))
+		if delta, want := centroid.Sub(expectedCentroid).Norm(), 2*maxDist; delta > want {
+			t.Errorf("%v.Centroid() = %v, want to be within %v of %v, got %v", loop, centroid, want, expectedCentroid, delta)
+		}
+	}
+}
+
+// TODO(roberts): Test that Area() has an accuracy significantly better
+// than 1e-15 on loops whose area is small.
+
+func TestLoopAreaConsistentWithTurningAngle(t *testing.T) {
+	// Check that the area computed using GetArea() is consistent with the
+	// turning angle of the loop computed using GetTurnAngle().  According to
+	// the Gauss-Bonnet theorem, the area of the loop should be equal to 2*Pi
+	// minus its turning angle.
+	for x, loop := range allLoops {
+		area := loop.Area()
+		gaussArea := 2*math.Pi - loop.TurningAngle()
+
+		// TODO(roberts): The error bound below is much larger than it should be.
+		if math.Abs(area-gaussArea) > 1e-9 {
+			t.Errorf("%d. %v.Area() = %v want %v", x, loop, area, gaussArea)
+		}
+	}
+}
+
+func TestLoopGetAreaConsistentWithSign(t *testing.T) {
+	// TODO(roberts): Uncomment when Loop has IsValid
+	/*
+		// Test that Area() returns an area near 0 for degenerate loops that
+		// contain almost no points, and an area near 4*pi for degenerate loops that
+		// contain almost all points.
+		const maxVertices = 6
+
+		for i := 0; i < 50; i++ {
+			numVertices := 3 + randomUniformInt(maxVertices-3+1)
+			// Repeatedly choose N vertices that are exactly on the equator until we
+			// find some that form a valid loop.
+			var loop = Loop{}
+			for !loop.IsValid() {
+				var vertices []Point
+				for i := 0; i < numVertices; i++ {
+					// We limit longitude to the range [0, 90] to ensure that the loop is
+					// degenerate (as opposed to following the entire equator).
+					vertices = append(vertices,
+						PointFromLatLng(LatLng{0, s1.Angle(randomFloat64()) * math.Pi / 2}))
+				}
+				loop.vertices = vertices
+				break
+			}
+
+			ccw := loop.IsNormalized()
+			want := 0.0
+			if !ccw {
+				want = 4 * math.Pi
+			}
+
+			// TODO(roberts): The error bound below is much larger than it should be.
+			if got := loop.Area(); !float64Near(got, want, 1e-8) {
+				t.Errorf("%v.Area() = %v, want %v", loop, got, want)
+			}
+			p := PointFromCoords(0, 0, 1)
+			if got := loop.ContainsPoint(p); got != !ccw {
+				t.Errorf("%v.ContainsPoint(%v) = %v, want %v", got, p, !ccw)
+			}
 		}
 	*/
 }
