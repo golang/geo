@@ -112,10 +112,25 @@ const (
 	// A Polyline from an empty slice.
 	encodedPolylineEmpty = "0100000000"
 	// A Polyline from 3 LatLngs {(0, 0),(0, 90),(0,180)};
-	encodedPolylineSemiEquator = "0103000000000000000000F03F00000000000000000000000000000000075C143326A6913C000000000000F03F0000000000000000000000000000F0BF075C143326A6A13C0000000000000000"
+	// TODO(roberts): The next two goldens differ from the C++ in the last few bits of the
+	// IEEE 754 values.
+	//
+	// When converting the LatLng (0, 90) to a Point.
+	//
+	// Go:  cos(theta)*cos(phi) = 6.12323399573675740770266929248e-17
+	// C++: cos(theta)*cos(phi) = 6.12323399573676603586882014729e-17
+	//
+	//   want: 005C143326A6913C
+	//   got:  075C143326A6913C
+	//   diff:  ^
+	//
+	// C++ golden: 0103000000000000000000F03F00000000000000000000000000000000075C143326A6913C000000000000F03F0000000000000000000000000000F0BF075C143326A6A13C0000000000000000
+	encodedPolylineSemiEquator = "0103000000000000000000F03F00000000000000000000000000000000005C143326A6913C000000000000F03F0000000000000000000000000000F0BF005C143326A6A13C0000000000000000"
 
 	// A Polyline from makePolyline("0:0, 0:10, 10:20, 20:30");
-	encodedPolyline3Segments = "0104000000000000000000F03F00000000000000000000000000000000171C818C8B83EF3F89730B7E1A3AC63F000000000000000061B46C3A039DED3FE2DC829F868ED53F89730B7E1A3AC63F1B995E6FA10AEA3F1B2D5242F611DE3FF50B8A74A8E3D53F"
+	// See comment above for why this golden differs from the C++ golden.
+	// C++ golden: 0104000000000000000000F03F00000000000000000000000000000000171C818C8B83EF3F89730B7E1A3AC63F000000000000000061B46C3A039DED3FE2DC829F868ED53F89730B7E1A3AC63F1B995E6FA10AEA3F1B2D5242F611DE3FF50B8A74A8E3D53F
+	encodedPolyline3Segments = "0104000000000000000000F03F00000000000000000000000000000000181C818C8B83EF3F89730B7E1A3AC63F000000000000000062B46C3A039DED3FE2DC829F868ED53F89730B7E1A3AC63F1B995E6FA10AEA3F1B2D5242F611DE3FF50B8A74A8E3D53F"
 
 	// Rect from EmptyRect
 	encodedRectEmpty = "01000000000000F03F0000000000000000182D4454FB210940182D4454FB2109C0"
@@ -200,8 +215,11 @@ func TestEncodeDecode(t *testing.T) {
 
 		// Polylines
 		{encodedPolylineEmpty, (Polyline{})},
-		//{encodedPolylineSemiEquator, semiEquator},
-		//{encodedPolyline3Segments, threeSegments},
+		// TODO(nsch): Comment these lines back in once all decoders are implemented.
+		// Then, switch the test from encode->decode->deepequal to
+		// decode->approxequal->encode
+		// {encodedPolylineSemiEquator, semiEquator},
+		// {encodedPolyline3Segments, threeSegments},
 
 		// Rects
 		{encodedRectEmpty, EmptyRect()},
@@ -218,7 +236,7 @@ func TestEncodeDecode(t *testing.T) {
 
 		encoded := fmt.Sprintf("%X", buf.Bytes())
 		if test.golden != encoded {
-			t.Errorf("%v.Encode() = %q, want %q", test.reg, encoded, test.golden)
+			t.Errorf("%#v.Encode() = %q, want %q", test.reg, encoded, test.golden)
 		}
 
 		// Test decode if supported.
@@ -226,14 +244,15 @@ func TestEncodeDecode(t *testing.T) {
 		if !ok {
 			continue
 		}
+
 		// Create a struct of the same type as test.reg, to have a target to decode into.
-		gotRegained := reflect.New(reflect.TypeOf(test.reg).Elem()).Interface().(decodableRegion)
-		if err := gotRegained.Decode(buf); err != nil {
-			t.Errorf("decode(%v): %v", test.reg, err)
+		decoded := reflect.New(reflect.TypeOf(test.reg).Elem()).Interface().(decodableRegion)
+		if err := decoded.Decode(buf); err != nil {
+			t.Errorf("decode(%#v): %v", test.reg, err)
 			continue
 		}
-		if !reflect.DeepEqual(gotRegained, test.reg) {
-			t.Errorf("decode = %v, want %v", gotRegained, test.reg)
+		if !reflect.DeepEqual(decoded, test.reg) {
+			t.Errorf("decode = %v, want %v", decoded, test.reg)
 		}
 	}
 }

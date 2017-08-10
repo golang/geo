@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"fmt"
 	"io"
 	"math"
 
@@ -344,6 +345,38 @@ func (p Polyline) encode(e *encoder) {
 		e.writeFloat64(v.X)
 		e.writeFloat64(v.Y)
 		e.writeFloat64(v.Z)
+	}
+}
+
+// Decode decodes the polyline.
+func (p *Polyline) Decode(r io.Reader) error {
+	d := decoder{r: asByteReader(r)}
+	p.decode(d)
+	return d.err
+}
+
+func (p *Polyline) decode(d decoder) {
+	version := d.readInt8()
+	if d.err != nil {
+		return
+	}
+	if int(version) != int(encodingVersion) {
+		d.err = fmt.Errorf("can't decode version %d; my version: %d", version, encodingVersion)
+		return
+	}
+	nvertices := d.readUint32()
+	if d.err != nil {
+		return
+	}
+	if nvertices > maxEncodedVertices {
+		d.err = fmt.Errorf("too many vertices (%d; max is %d)", nvertices, maxEncodedVertices)
+		return
+	}
+	*p = make([]Point, nvertices)
+	for i := range *p {
+		(*p)[i].X = d.readFloat64()
+		(*p)[i].Y = d.readFloat64()
+		(*p)[i].Z = d.readFloat64()
 	}
 }
 
