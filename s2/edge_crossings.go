@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -162,6 +163,58 @@ func EdgeOrVertexCrossing(a, b, c, d Point) bool {
 	default:
 		return VertexCrossing(a, b, c, d)
 	}
+}
+
+// EdgeIntersection returns the intersection point between the edges (a-b)
+// and (c-d).
+func EdgeIntersection(a, b, c, d Point) Point {
+	ab := Point{a.PointCross(b).Normalize()}
+	cd := Point{c.PointCross(d).Normalize()}
+	x := Point{ab.PointCross(cd).Normalize()}
+
+	// Make sure the intersection point is on the correct side of the sphere.
+	// Since all vertices are unit length, and edges are less than 180 degrees,
+	// (a + b) and (c + d) both have positive dot product with the
+	// intersection point.  We use the sum of all vertices to make sure that the
+	// result is unchanged when the edges are reversed or exchanged.
+	if s1, s2 := a.Add(b.Vector), c.Add(d.Vector); x.Dot(s1.Add(s2)) < 0 {
+		x = Point{r3.Vector{X: -x.X, Y: -x.Y, Z: -x.Z}}
+	}
+
+	// The calculation above is sufficient to ensure that "x" is within
+	// kIntersectionTolerance of the great circles through (a,b) and (c,d).
+	// However, if these two great circles are very close to parallel, it is
+	// possible that "x" does not lie between the endpoints of the given line
+	// segments.  In other words, "x" might be on the great circle through
+	// (a,b) but outside the range covered by (a,b).  In this case we do
+	// additional clipping to ensure that it does.
+	if OrderedCCW(a, x, b, ab) && OrderedCCW(c, x, d, cd) {
+		return x
+	}
+
+	// Find the acceptable endpoint closest to x and return it.  An endpoint is
+	// acceptable if it lies between the endpoints of the other line segment.
+	dmin2 := 10.0
+	vmin := x
+	replaceIfCloser := func(y Point) {
+		d2 := x.Sub(y.Vector).Norm2()
+		if d2 < dmin2 || (d2 == dmin2 && y.Cmp(vmin.Vector) == -1) {
+			dmin2, vmin = d2, y
+		}
+	}
+	if OrderedCCW(c, a, d, cd) {
+		replaceIfCloser(a)
+	}
+	if OrderedCCW(c, b, d, cd) {
+		replaceIfCloser(b)
+	}
+	if OrderedCCW(a, c, b, ab) {
+		replaceIfCloser(c)
+	}
+	if OrderedCCW(a, d, b, ab) {
+		replaceIfCloser(d)
+	}
+	return vmin
 }
 
 // TODO(roberts): Differences from C++
