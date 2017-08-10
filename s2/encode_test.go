@@ -71,12 +71,11 @@ const (
 	encodedCellFace0 = "0000000000000010"
 
 	// An unitialized empty CellUnion.
-	encodedCellUnionInvalid = "010000000000000000"
+	encodedCellUnionEmpty = "010000000000000000"
 	// CellUnion from a CellID from Face 1.
 	encodedCellUnionFace1 = "0101000000000000000000000000000030"
-	// CellUnion from the cells {0x33, 0x0, 0x8e3748fab, 0x91230abcdef83427};
-	// The second element is the invalid CellID which should be ignored.
-	encodedCellUnionFromCells = "01040000000000000033000000000000000000000000000000AB8F74E3080000002734F8DEBC0A2391"
+	// CellUnion from the cells {0x33, 0x8e3748fab, 0x91230abcdef83427};
+	encodedCellUnionFromCells = "0103000000000000003300000000000000AB8F74E3080000002734F8DEBC0A2391"
 
 	// Loop
 	encodedLoopEmpty = "010100000000000000000000000000000000000000000000000000F03F000000000001000000000000F03F0000000000000000182D4454FB210940182D4454FB2109C0"
@@ -135,7 +134,6 @@ func TestEncodeDecode(t *testing.T) {
 	cuFace := CellUnion([]CellID{CellIDFromFace(1)})
 	cuCells := CellUnion([]CellID{
 		CellID(0x33),
-		CellID(0x0),
 		CellID(0x8e3748fab),
 		CellID(0x91230abcdef83427),
 	})
@@ -178,7 +176,7 @@ func TestEncodeDecode(t *testing.T) {
 		{encodedCellFace0, CellFromCellID(CellIDFromFace(0))},
 
 		// CellUnions
-		{encodedCellUnionInvalid, &cu},
+		{encodedCellUnionEmpty, &cu},
 		{encodedCellUnionFace1, &cuFace},
 		{encodedCellUnionFromCells, &cuCells},
 
