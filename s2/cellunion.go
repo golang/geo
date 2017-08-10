@@ -224,6 +224,11 @@ func (cu *CellUnion) ContainsPoint(p Point) bool {
 	return cu.ContainsCell(CellFromPoint(p))
 }
 
+// CellUnionBound computes a covering of the CellUnion.
+func (cu *CellUnion) CellUnionBound() []CellID {
+	return cu.CapBound().CellUnionBound()
+}
+
 // LeafCellsCovered reports the number of leaf cells covered by this cell union.
 // This will be no more than 6*2^60 for the whole sphere.
 func (cu *CellUnion) LeafCellsCovered() int64 {

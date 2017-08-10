@@ -147,6 +147,11 @@ func (p *Polyline) ContainsPoint(point Point) bool {
 	return false
 }
 
+// CellUnionBound computes a covering of the Polyline.
+func (p *Polyline) CellUnionBound() []CellID {
+	return p.CapBound().CellUnionBound()
+}
+
 // NumEdges returns the number of edges in this shape.
 func (p *Polyline) NumEdges() int {
 	if len(*p) == 0 {

@@ -304,6 +304,12 @@ func (p *Polygon) IntersectsCell(cell Cell) bool {
 	return p.iteratorContainsPoint(it, cell.Center())
 }
 
+// CellUnionBound computes a covering of the Polygon.
+func (p *Polygon) CellUnionBound() []CellID {
+	// TODO(roberts): Use ShapeIndexRegion when it's available.
+	return p.CapBound().CellUnionBound()
+}
+
 // boundaryApproxIntersects reports whether the loop's boundary intersects cell.
 // It may also return true when the loop boundary does not intersect cell but
 // some edge comes within the worst-case error tolerance.

@@ -335,6 +335,11 @@ func (p Point) ContainsPoint(other Point) bool {
 	return p.Contains(other)
 }
 
+// CellUnionBound computes a covering of the Point.
+func (p Point) CellUnionBound() []CellID {
+	return p.CapBound().CellUnionBound()
+}
+
 // Contains reports if this Point contains the other Point.
 // (This method matches all other s2 types where the reflexive Contains
 // method does not contain the type's name.)

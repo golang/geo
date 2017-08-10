@@ -219,6 +219,11 @@ func (c Cell) ContainsCell(oc Cell) bool {
 	return c.id.Contains(oc.id)
 }
 
+// CellUnionBound computes a covering of the Cell.
+func (c Cell) CellUnionBound() []CellID {
+	return c.CapBound().CellUnionBound()
+}
+
 // latitude returns the latitude of the cell vertex in radians given by (i,j),
 // where i and j indicate the Hi (1) or Lo (0) corner.
 func (c Cell) latitude(i, j int) float64 {

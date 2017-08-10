@@ -404,6 +404,11 @@ func (l *Loop) IntersectsCell(target Cell) bool {
 	return l.iteratorContainsPoint(it, target.Center())
 }
 
+// CellUnionBound computes a covering of the Loop.
+func (l *Loop) CellUnionBound() []CellID {
+	return l.CapBound().CellUnionBound()
+}
+
 // boundaryApproxIntersects reports if the loop's boundary intersects target.
 // It may also return true when the loop boundary does not intersect target but
 // some edge comes within the worst-case error tolerance.

@@ -417,6 +417,32 @@ func (c Cap) intersects(cell Cell, vertices [4]Point) bool {
 	return false
 }
 
+// CellUnionBound computes a covering of the Cap. In general the covering
+// consists of at most 4 cells except for very large caps, which may need
+// up to 6 cells. The output is not sorted.
+func (c Cap) CellUnionBound() []CellID {
+	// TODO(roberts): The covering could be made quite a bit tighter by mapping
+	// the cap to a rectangle in (i,j)-space and finding a covering for that.
+
+	// Find the maximum level such that the cap contains at most one cell vertex
+	// and such that CellID.AppendVertexNeighbors() can be called.
+	level := MinWidthMetric.MaxLevel(2 * c.Radius().Radians())
+	level = min(level, maxLevel-1)
+
+	// Don't bother trying to optimize the level == 0 case, since more than
+	// four face cells may be required.
+	if level == 0 {
+		cellIDs := make([]CellID, 6)
+		for face := 0; face < 6; face++ {
+			cellIDs[face] = CellIDFromFace(face)
+		}
+		return cellIDs
+	}
+	// The covering consists of the 4 cells at the given level that share the
+	// cell vertex that is closest to the cap center.
+	return cellIDFromPoint(c.center).VertexNeighbors(level)
+}
+
 // Centroid returns the true centroid of the cap multiplied by its surface area
 // The result lies on the ray from the origin through the cap's center, but it
 // is not unit length. Note that if you just want the "surface centroid", i.e.

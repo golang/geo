@@ -293,6 +293,11 @@ func (r Rect) ContainsPoint(p Point) bool {
 	return r.ContainsLatLng(LatLngFromPoint(p))
 }
 
+// CellUnionBound computes a covering of the Rect.
+func (r Rect) CellUnionBound() []CellID {
+	return r.CapBound().CellUnionBound()
+}
+
 // intersectsLatEdge reports whether the edge AB intersects the given edge of constant
 // latitude. Requires the points to have unit length.
 func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
