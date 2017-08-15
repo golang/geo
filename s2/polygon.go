@@ -99,30 +99,37 @@ func PolygonFromLoops(loops []*Loop) *Polygon {
 		loops:       loops,
 		numVertices: len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
 		// TODO(roberts): Compute these bounds.
-		bound:          loops[0].RectBound(),
-		subregionBound: EmptyRect(),
+		bound: loops[0].RectBound(),
 	}
+	p.subregionBound = ExpandForSubregions(p.bound)
+	p.initEdgesAndIndex()
 
+	return p
+}
+
+func (p *Polygon) initEdgesAndIndex() {
 	const maxLinearSearchLoops = 12 // Based on benchmarks.
-	if len(loops) > maxLinearSearchLoops {
-		p.cumulativeEdges = make([]int, 0, len(loops))
+	if len(p.loops) > maxLinearSearchLoops {
+		p.cumulativeEdges = make([]int, 0, len(p.loops))
 	}
 
-	for _, l := range loops {
-		if p.cumulativeEdges != nil {
-			p.cumulativeEdges = append(p.cumulativeEdges, p.numEdges)
+	// Full polygons don't have edges, as far as the API is concerned.
+	if !p.IsFull() {
+		for _, l := range p.loops {
+			if p.cumulativeEdges != nil {
+				p.cumulativeEdges = append(p.cumulativeEdges, p.numEdges)
+			}
+			p.numEdges += len(l.Vertices())
 		}
-		p.numEdges += len(l.Vertices())
 	}
 
 	p.index = NewShapeIndex()
 	p.index.Add(p)
-	return p
 }
 
 // FullPolygon returns a special "full" polygon.
 func FullPolygon() *Polygon {
-	return &Polygon{
+	ret := &Polygon{
 		loops: []*Loop{
 			FullLoop(),
 		},
@@ -130,6 +137,8 @@ func FullPolygon() *Polygon {
 		bound:          FullRect(),
 		subregionBound: FullRect(),
 	}
+	ret.initEdgesAndIndex()
+	return ret
 }
 
 // IsEmpty reports whether this is the special "empty" polygon (consisting of no loops).
@@ -470,16 +479,47 @@ func (p *Polygon) Encode(w io.Writer) error {
 // encode only supports lossless encoding and not compressed format.
 func (p *Polygon) encode(e *encoder) {
 	if p.numVertices == 0 {
-		//p.encodeCompressed(e, nil, maxLevel)
-		e.err = fmt.Errorf("compressed encoding not yet implemented")
+		p.encodeCompressed(e, maxLevel, nil)
 		return
 	}
 
-	// TODO(roberts): C++ computes a heurstic at encoding time to decide between
-	// using compressed and lossless format. Add that calculation once XYZFaceSiTi
-	// type is implemented.
+	// Convert all the polygon vertices to XYZFaceSiTi format.
+	vs := make([]xyzFaceSiTi, 0, p.numVertices)
+	for _, l := range p.loops {
+		vs = append(vs, l.xyzFaceSiTiVertices()...)
+	}
 
-	p.encodeLossless(e)
+	// Computes a histogram of the cell levels at which the vertices are snapped.
+	// (histogram[0] is the number of unsnapped vertices, histogram[i] the number
+	// of vertices snapped at level i-1).
+	histogram := make([]int, maxLevel+2)
+	for _, v := range vs {
+		histogram[v.level+1]++
+	}
+
+	// Compute the level at which most of the vertices are snapped.
+	// If multiple levels have the same maximum number of vertices
+	// snapped to it, the first one (lowest level number / largest
+	// area / smallest encoding length) will be chosen, so this
+	// is desired.
+	var snapLevel, numSnapped int
+	for level, h := range histogram[1:] {
+		if h > numSnapped {
+			snapLevel, numSnapped = level, h
+		}
+	}
+
+	// Choose an encoding format based on the number of unsnapped vertices and a
+	// rough estimate of the encoded sizes.
+	numUnsnapped := p.numVertices - numSnapped // Number of vertices that won't be snapped at snapLevel.
+	const pointSize = 3 * 8                    // s2.Point is an r3.Vector, which is 3 float64s. That's 3*8 = 24 bytes.
+	compressedSize := 4*p.numVertices + (pointSize+2)*numUnsnapped
+	losslessSize := pointSize * p.numVertices
+	if compressedSize < losslessSize {
+		p.encodeCompressed(e, snapLevel, vs)
+	} else {
+		p.encodeLossless(e)
+	}
 }
 
 // encodeLossless encodes the polygon's Points as float64s.
@@ -489,12 +529,124 @@ func (p *Polygon) encodeLossless(e *encoder) {
 	e.writeBool(p.hasHoles)
 	e.writeUint32(uint32(len(p.loops)))
 
+	if e.err != nil {
+		return
+	}
+	if len(p.loops) > maxEncodedLoops {
+		e.err = fmt.Errorf("too many loops (%d; max is %d)", len(p.loops), maxEncodedLoops)
+		return
+	}
 	for _, l := range p.loops {
 		l.encode(e)
 	}
 
 	// Encode the bound.
 	p.bound.encode(e)
+}
+
+func (p *Polygon) encodeCompressed(e *encoder, snapLevel int, vertices []xyzFaceSiTi) {
+	e.writeUint8(uint8(encodingCompressedVersion))
+	e.writeUint8(uint8(snapLevel))
+	e.writeUvarint(uint64(len(p.loops)))
+
+	if e.err != nil {
+		return
+	}
+	if l := len(p.loops); l > maxEncodedLoops {
+		e.err = fmt.Errorf("too many loops to encode: %d; max is %d", l, maxEncodedLoops)
+		return
+	}
+
+	for _, l := range p.loops {
+		l.encodeCompressed(e, snapLevel, vertices[:len(l.vertices)])
+		vertices = vertices[len(l.vertices):]
+	}
+	// Do not write the bound, num_vertices, or has_holes_ as they can be
+	// cheaply recomputed by decodeCompressed.  Microbenchmarks show the
+	// speed difference is inconsequential.
+}
+
+// Decode decodes the Polygon.
+func (p *Polygon) Decode(r io.Reader) error {
+	d := &decoder{r: asByteReader(r)}
+	version := int8(d.readUint8())
+	var dec func(*decoder)
+	switch version {
+	case encodingVersion:
+		dec = p.decode
+	case encodingCompressedVersion:
+		dec = p.decodeCompressed
+	default:
+		return fmt.Errorf("unsupported version %d", version)
+	}
+	dec(d)
+	return d.err
+}
+
+// maxEncodedLoops is the biggest supported number of loops in a polygon during encoding.
+// Setting a maximum guards an allocation: it prevents an attacker from easily pushing us OOM.
+const maxEncodedLoops = 10000000
+
+func (p *Polygon) decode(d *decoder) {
+	*p = Polygon{}
+	d.readUint8() // Ignore irrelevant serialized owns_loops_ value.
+
+	p.hasHoles = d.readBool()
+
+	// Polygons with no loops are explicitly allowed here: a newly created
+	// polygon has zero loops and such polygons encode and decode properly.
+	nloops := d.readUint32()
+	if d.err != nil {
+		return
+	}
+	if nloops > maxEncodedLoops {
+		d.err = fmt.Errorf("too many loops (%d; max is %d)", nloops, maxEncodedLoops)
+		return
+	}
+	p.loops = make([]*Loop, nloops)
+	for i := range p.loops {
+		p.loops[i] = new(Loop)
+		p.loops[i].decode(d)
+		p.numVertices += len(p.loops[i].vertices)
+	}
+
+	p.bound.decode(d)
+	if d.err != nil {
+		return
+	}
+	p.subregionBound = ExpandForSubregions(p.bound)
+	p.initEdgesAndIndex()
+}
+
+func (p *Polygon) decodeCompressed(d *decoder) {
+	snapLevel := int(d.readUint8())
+
+	if snapLevel > maxLevel {
+		d.err = fmt.Errorf("snaplevel too big: %d", snapLevel)
+		return
+	}
+	// Polygons with no loops are explicitly allowed here: a newly created
+	// polygon has zero loops and such polygons encode and decode properly.
+	nloops := int(d.readUvarint())
+	if nloops > maxEncodedLoops {
+		d.err = fmt.Errorf("too many loops (%d; max is %d)", nloops, maxEncodedLoops)
+	}
+	p.loops = make([]*Loop, nloops)
+	for i := range p.loops {
+		p.loops[i] = new(Loop)
+		p.loops[i].decodeCompressed(d, snapLevel)
+		// TODO(roberts): Update this bound.Union call when initLoopProperties is implemented.
+		p.bound = p.bound.Union(p.loops[i].bound)
+		p.numVertices += len(p.loops[i].vertices)
+	}
+	if d.err != nil {
+		return
+	}
+	if p.numVertices == 0 {
+		p.bound = EmptyRect()
+	}
+	p.subregionBound = ExpandForSubregions(p.bound)
+	p.initEdgesAndIndex()
 }
 
 // TODO(roberts): Differences from C++

@@ -923,15 +923,20 @@ func (l Loop) encode(e *encoder) {
 func (l *Loop) Decode(r io.Reader) error {
 	*l = Loop{}
 	d := &decoder{r: asByteReader(r)}
-	version := int8(d.readUint8())
-	if version != encodingVersion {
-		return fmt.Errorf("cannot decode version %d, only %d", version, encodingVersion)
-	}
 	l.decode(d)
 	return d.err
 }
 
 func (l *Loop) decode(d *decoder) {
+	version := int8(d.readUint8())
+	if d.err != nil {
+		return
+	}
+	if version != encodingVersion {
+		d.err = fmt.Errorf("cannot decode version %d", version)
+		return
+	}
+
 	// Empty loops are explicitly allowed here: a newly created loop has zero vertices
 	// and such loops encode and decode properly.
 	nvertices := d.readUint32()
@@ -972,12 +977,13 @@ func (l *Loop) xyzFaceSiTiVertices() []xyzFaceSiTi {
 	return ret
 }
 
-func (l *Loop) encodeCompressed(e *encoder, snapLevel int) {
-	vertices := l.xyzFaceSiTiVertices()
+func (l *Loop) encodeCompressed(e *encoder, snapLevel int, vertices []xyzFaceSiTi) {
+	if len(l.vertices) != len(vertices) {
+		panic("encodeCompressed: vertices must be the same length as l.vertices")
+	}
 	if len(vertices) > maxEncodedVertices {
 		if e.err == nil {
 			e.err = fmt.Errorf("too many vertices (%d; max is %d)", len(vertices), maxEncodedVertices)
-
 		}
 		return
 	}

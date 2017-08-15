@@ -101,7 +101,7 @@ const (
 	encodedPolygonEmpty = "041E00"
 	// Polygon from makePolygon("full").
 	// This is encoded in compressed format.
-	encodedPolygonFull = "0400010108000000"
+	encodedPolygonFull = "040001010B000100"
 	// Loop from the unit test value cross1. This is encoded in lossless format.
 	encodedPolygon1Loops = "010100010000000108000000D44A8442C3F9EF3F7EDA2AB341DC913F27DCF7C958DEA1BFB4825F3C81FDEF3F27DCF7C958DE913F1EDD892B0BDF91BFB4825F3C81FDEF3F27DCF7C958DE913F1EDD892B0BDF913FD44A8442C3F9EF3F7EDA2AB341DC913F27DCF7C958DEA13FD44A8442C3F9EF3F7EDA2AB341DC91BF27DCF7C958DEA13FB4825F3C81FDEF3F27DCF7C958DE91BF1EDD892B0BDF913FB4825F3C81FDEF3F27DCF7C958DE91BF1EDD892B0BDF91BFD44A8442C3F9EF3F7EDA2AB341DC91BF27DCF7C958DEA1BF0000000000013EFC10E8F8DFA1BF3EFC10E8F8DFA13F389D52A246DF91BF389D52A246DF913F013EFC10E8F8DFA1BF3EFC10E8F8DFA13F389D52A246DF91BF389D52A246DF913F"
 	// Loop from the unit test value cross1+crossHole.
@@ -164,6 +164,12 @@ func TestEncodeDecode(t *testing.T) {
 	const cross1 = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1"
 	const crossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;"
 
+	emptyPolygon := func() *Polygon {
+		p := &Polygon{loops: []*Loop{}, bound: EmptyRect(), subregionBound: EmptyRect()}
+		p.initEdgesAndIndex()
+		return p
+	}
+
 	tests := []struct {
 		golden string
 		reg    encodableRegion
@@ -204,14 +210,15 @@ func TestEncodeDecode(t *testing.T) {
 		{encodedPointOrigin, OriginPoint()},
 		{encodedPointTesting, PointFromCoords(12.34, 56.78, 9.1011)},
 
-		// UncompressedPolygons
+		// Polygons.
+		{encodedPolygonEmpty, emptyPolygon()},
+		{encodedPolygonFull, FullPolygon()},
+		{encodedPolygon1Loops, makePolygon(cross1, false)},
 		// TODO(roberts): When Polygon has a more complete implementation,
 		// uncomment this. Currently things like bounds values do not match C++,
 		// and Polygons with more than one loop.
-		//{encodedPolygonEmpty, &(Polygon{})},
-		//{encodedPolygonFull, FullPolygon()},
-		//{encodedPolygon1Loops, makePolygon(cross1, false)},
-		//{encodedPolygon2Loops, makePolygon(cross1+";"+crossCenterHole, false)},
+
+		// {encodedPolygon2Loops, makePolygon(cross1+";"+crossCenterHole, false)},
 
 		// Polylines
 		{encodedPolylineEmpty, (Polyline{})},
@@ -279,13 +286,13 @@ func TestDecodeCompressedLoop(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	e := &encoder{w: &buf}
-	gotDecoded.encodeCompressed(e, maxLevel)
+	gotDecoded.encodeCompressed(e, maxLevel, gotDecoded.xyzFaceSiTiVertices())
 	if e.err != nil {
 		t.Fatalf("encodeCompressed(decodeCompressed(loop)): %v", err)
 	}
-	gotReincoded := fmt.Sprintf("%X", buf.Bytes())
-	if gotReincoded != encodedLoopCompressed {
-		t.Errorf("encodeCompressed(decodeCompressed(loop)) = %q, want %q", gotReincoded, encodedLoopCompressed)
+	gotReencoded := fmt.Sprintf("%X", buf.Bytes())
+	if gotReencoded != encodedLoopCompressed {
+		t.Errorf("encodeCompressed(decodeCompressed(loop)) = %q, want %q", gotReencoded, encodedLoopCompressed)
 	}
 }
 
