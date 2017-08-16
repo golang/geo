@@ -27,6 +27,9 @@ import (
 // Specifically, it may not contain the same CellID twice, nor a CellID that
 // is contained by another, nor the four sibling CellIDs that are children of
 // a single higher level CellID.
+//
+// CellUnions are not required to be normalized, but certain operations will
+// return different results if they are not (e.g. Contains).
 type CellUnion []CellID
 
 // CellUnionFromRange creates a CellUnion that covers the half-open range
@@ -39,7 +42,54 @@ func CellUnionFromRange(begin, end CellID) CellUnion {
 	for id := begin.MaxTile(end); id != end; id = id.Next().MaxTile(end) {
 		cu = append(cu, id)
 	}
+	// The output is normalized because the cells are added in order by the iteration.
 	return cu
+}
+
+// The C++ constructor methods FromNormalized and FromVerbatim are not necessary
+// since they don't call Normalize, and just set the CellIDs directly on the object,
+// so straight casting is sufficient in Go to replicate this behavior.
+
+// IsValid reports whether the cell union is valid, meaning that the CellIDs are
+// valid, non-overlapping, and sorted in increasing order.
+func (cu *CellUnion) IsValid() bool {
+	for i, cid := range *cu {
+		if !cid.IsValid() {
+			return false
+		}
+		if i == 0 {
+			continue
+		}
+		if (*cu)[i-1].RangeMax() >= cid.RangeMin() {
+			return false
+		}
+	}
+	return true
+}
+
+// IsNormalized reports whether the cell union is normalized, meaning that it is
+// satisfies IsValid and that no four cells have a common parent.
+// Certain operations such as Contains will return a different
+// result if the cell union is not normalized.
+func (cu *CellUnion) IsNormalized() bool {
+	for i, cid := range *cu {
+		if !cid.IsValid() {
+			return false
+		}
+		if i == 0 {
+			continue
+		}
+		if (*cu)[i-1].RangeMax() >= cid.RangeMin() {
+			return false
+		}
+		if i < 3 {
+			continue
+		}
+		if areSiblings((*cu)[i-3], (*cu)[i-2], (*cu)[i-1], cid) {
+			return false
+		}
+	}
+	return true
 }
 
 // Normalize normalizes the CellUnion.
@@ -77,24 +127,8 @@ func (cu *CellUnion) Normalize() {
 		// See if the last three cells plus this one can be collapsed.
 		// We loop because collapsing three accepted cells and adding a higher level cell
 		// could cascade into previously accepted cells.
-		for len(output) >= 3 {
-			fin := output[len(output)-3:]
-
-			// fast XOR test; a necessary but not sufficient condition
-			if fin[0]^fin[1]^fin[2]^ci != 0 {
-				break
-			}
-
-			// more expensive test; exact.
-			// Compute the two bit mask for the encoded child position,
-			// then see if they all agree.
-			mask := CellID(ci.lsb() << 1)
-			mask = ^(mask + mask<<1)
-			should := ci & mask
-			if (fin[0]&mask != should) || (fin[1]&mask != should) || (fin[2]&mask != should) || ci.isFace() {
-				break
-			}
-
+		for len(output) >= 3 && areSiblings(output[len(output)-3], output[len(output)-2], output[len(output)-1], ci) {
+			// Replace four children by their parent cell.
 			output = output[:len(output)-3]
 			ci = ci.immediateParent() // checked !ci.isFace above
 		}
@@ -104,8 +138,6 @@ func (cu *CellUnion) Normalize() {
 }
 
 // IntersectsCellID reports whether this cell union intersects the given cell ID.
-//
-// This method assumes that the CellUnion has been normalized.
 func (cu *CellUnion) IntersectsCellID(id CellID) bool {
 	// Find index of array item that occurs directly after our probe cell:
 	i := sort.Search(len(*cu), func(i int) bool { return id < (*cu)[i] })
@@ -119,7 +151,9 @@ func (cu *CellUnion) IntersectsCellID(id CellID) bool {
 // ContainsCellID reports whether the cell union contains the given cell ID.
 // Containment is defined with respect to regions, e.g. a cell contains its 4 children.
 //
-// This method assumes that the CellUnion has been normalized.
+// CAVEAT: If you have constructed a non-normalized CellUnion, note that groups
+// of 4 child cells are *not* considered to contain their parent cell. To get
+// this behavior you must use one of the call Normalize() explicitly.
 func (cu *CellUnion) ContainsCellID(id CellID) bool {
 	// Find index of array item that occurs directly after our probe cell:
 	i := sort.Search(len(*cu), func(i int) bool { return id < (*cu)[i] })
@@ -237,6 +271,28 @@ func (cu *CellUnion) LeafCellsCovered() int64 {
 		numLeaves += 1 << uint64((maxLevel-int64(c.Level()))<<1)
 	}
 	return numLeaves
+}
+
+// Returns true if the given four cells have a common parent.
+// This requires that the four CellIDs are distinct.
+func areSiblings(a, b, c, d CellID) bool {
+	// A necessary (but not sufficient) condition is that the XOR of the
+	// four cell IDs must be zero. This is also very fast to test.
+	if (a ^ b ^ c) != d {
+		return false
+	}
+
+	// Now we do a slightly more expensive but exact test. First, compute a
+	// mask that blocks out the two bits that encode the child position of
+	// "id" with respect to its parent, then check that the other three
+	// children all agree with "mask".
+	mask := uint64(d.lsb() << 1)
+	mask = ^(mask + (mask << 1))
+	idMasked := (uint64(d) & mask)
+	return ((uint64(a)&mask) == idMasked &&
+		(uint64(b)&mask) == idMasked &&
+		(uint64(c)&mask) == idMasked &&
+		!d.isFace())
 }
 
 // Encode encodes the CellUnion.

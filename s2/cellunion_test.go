@@ -25,6 +25,53 @@ import (
 	"github.com/golang/geo/s1"
 )
 
+func TestCellUnionDuplicateCellsNotValid(t *testing.T) {
+	id := cellIDFromPoint(PointFromCoords(1, 0, 0))
+	cu := CellUnion([]CellID{id, id})
+	if cu.IsValid() {
+		t.Errorf("%v.IsValid() = true, want false", cu)
+	}
+}
+
+func TestCellUnionUnsortedCellsNotValid(t *testing.T) {
+	id := cellIDFromPoint(PointFromCoords(1, 0, 0)).Parent(10)
+	cu := CellUnion([]CellID{id, id.Prev()})
+	if cu.IsValid() {
+		t.Errorf("%v.IsValid() = true, want false", cu)
+	}
+}
+
+func TestCellUnionIsNormalized(t *testing.T) {
+	id := cellIDFromPoint(PointFromCoords(1, 0, 0)).Parent(10)
+	children := id.Children()
+	cu := CellUnion([]CellID{children[0], children[1], children[2], children[3]})
+	if !(cu.IsValid()) {
+		t.Errorf("%v.IsValid() = false, want true", cu)
+	}
+	if cu.IsNormalized() {
+		t.Errorf("%v.IsNormalized() = true, want false", cu)
+	}
+}
+
+func TestCellUnionInvalidCellIdNotValid(t *testing.T) {
+	cu := CellUnion([]CellID{CellID(0)})
+	if cu.IsValid() {
+		t.Error("CellUnion containing an invalid CellID should not be valid")
+	}
+}
+
+func TestCellUnionAreSiblings(t *testing.T) {
+	id := cellIDFromPoint(PointFromCoords(1, 0, 0)).Parent(10)
+	children := id.Children()
+	if siblings := areSiblings(children[0], children[1], children[2], children[3]); !siblings {
+		t.Errorf("areSiblings(%v, %v, %v, %v) = false, want true", children[0], children[1], children[2], children[3])
+	}
+
+	if siblings := areSiblings(id, children[1], children[2], children[3]); siblings {
+		t.Errorf("areSiblings(%v, %v, %v, %v) = true, want false", id, children[1], children[2], children[3])
+	}
+}
+
 func TestCellUnionNormalization(t *testing.T) {
 	cu := CellUnion{
 		0x80855c0000000000, // A: a cell over Pittsburg CA
