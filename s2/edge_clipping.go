@@ -77,7 +77,7 @@ const (
 // intersects the given face, or false if the edge AB does not intersect.
 // This method guarantees that the clipped vertices lie within the [-1,1]x[-1,1]
 // cube face rectangle and are within faceClipErrorUVDist of the line AB, but
-// the results may differ from those produced by faceSegments.
+// the results may differ from those produced by FaceSegments.
 func ClipToFace(a, b Point, face int) (aUV, bUV r2.Point, intersects bool) {
 	return ClipToPaddedFace(a, b, face, 0.0)
 }
@@ -156,6 +156,33 @@ func ClipEdge(a, b r2.Point, clip r2.Rect) (aClip, bClip r2.Point, intersects bo
 	}
 
 	return bound.VertexIJ(ai, aj), bound.VertexIJ(1-ai, 1-aj), true
+}
+
+// The three functions below (sumEquals, intersectsFace, intersectsOppositeEdges)
+// all compare a sum (u + v) to a third value w. They are implemented in such a
+// way that they produce an exact result even though all calculations are done
+// with ordinary floating-point operations. Here are the principles on which these
+// functions are based:
+//
+// A. If u + v < w in floating-point, then u + v < w in exact arithmetic.
+//
+// B. If u + v < w in exact arithmetic, then at least one of the following
+//    expressions is true in floating-point:
+//       u + v < w
+//       u < w - v
+//       v < w - u
+//
+// Proof: By rearranging terms and substituting ">" for "<", we can assume
+// that all values are non-negative.  Now clearly "w" is not the smallest
+// value, so assume WLOG that "u" is the smallest.  We want to show that
+// u < w - v in floating-point.  If v >= w/2, the calculation of w - v is
+// exact since the result is smaller in magnitude than either input value,
+// so the result holds.  Otherwise we have u <= v < w/2 and w - v >= w/2
+// (even in floating point), so the result also holds.
+
+// sumEquals reports whether u + v == w exactly.
+func sumEquals(u, v, w float64) bool {
+	return (u+v == w) && (u == w-v) && (v == w-u)
 }
 
 // pointUVW represents a Point in (u,v,w) coordinate space of a cube face.
@@ -470,6 +497,178 @@ func interpolateFloat64(x, a, b, a1, b1 float64) float64 {
 	return b1 + (a1-b1)*(x-b)/(a-b)
 }
 
-// TODO(roberts): Differences from C++:
-// type FaceSegment
-// FaceSegments
+// FaceSegment represents an edge AB clipped to an S2 cube face. It is
+// represented by a face index and a pair of (u,v) coordinates.
+type FaceSegment struct {
+	face int
+	a, b r2.Point
+}
+
+// FaceSegments subdivides the given edge AB at every point where it crosses the
+// boundary between two S2 cube faces and returns the corresponding FaceSegments.
+// The segments are returned in order from A toward B. The input points must be
+// unit length.
+//
+// This function guarantees that the returned segments form a continuous path
+// from A to B, and that all vertices are within faceClipErrorUVDist of the
+// line AB. All vertices lie within the [-1,1]x[-1,1] cube face rectangles.
+// The results are consistent with Sign, i.e. the edge is well-defined even its
+// endpoints are antipodal.
+// TODO(roberts): Extend the implementation of PointCross so that this is true.
+func FaceSegments(a, b Point) []FaceSegment {
+	var segment FaceSegment
+
+	// Fast path: both endpoints are on the same face.
+	var aFace, bFace int
+	aFace, segment.a.X, segment.a.Y = xyzToFaceUV(a.Vector)
+	bFace, segment.b.X, segment.b.Y = xyzToFaceUV(b.Vector)
+	if aFace == bFace {
+		segment.face = aFace
+		return []FaceSegment{segment}
+	}
+
+	// Starting at A, we follow AB from face to face until we reach the face
+	// containing B. The following code is designed to ensure that we always
+	// reach B, even in the presence of numerical errors.
+	//
+	// First we compute the normal to the plane containing A and B. This normal
+	// becomes the ultimate definition of the line AB; it is used to resolve all
+	// questions regarding where exactly the line goes. Unfortunately due to
+	// numerical errors, the line may not quite intersect the faces containing
+	// the original endpoints. We handle this by moving A and/or B slightly if
+	// necessary so that they are on faces intersected by the line AB.
+	ab := a.PointCross(b)
+
+	aFace, segment.a = moveOriginToValidFace(aFace, a, ab, segment.a)
+	bFace, segment.b = moveOriginToValidFace(bFace, b, Point{ab.Mul(-1)}, segment.b)
+
+	// Now we simply follow AB from face to face until we reach B.
+	var segments []FaceSegment
+	segment.face = aFace
+	bSaved := segment.b
+
+	for face := aFace; face != bFace; {
+		// Complete the current segment by finding the point where AB
+		// exits the current face.
+		z := faceXYZtoUVW(face, ab)
+		n := pointUVW{z.Vector}
+
+		exitAxis := n.exitAxis()
+		segment.b = n.exitPoint(exitAxis)
+		segments = append(segments, segment)
+
+		// Compute the next face intersected by AB, and translate the exit
+		// point of the current segment into the (u,v) coordinates of the
+		// next face. This becomes the first point of the next segment.
+		exitXyz := faceUVToXYZ(face, segment.b.X, segment.b.Y)
+		face = nextFace(face, segment.b, exitAxis, n, bFace)
+		exitUvw := faceXYZtoUVW(face, Point{exitXyz})
+		segment.face = face
+		segment.a = r2.Point{exitUvw.X, exitUvw.Y}
+	}
+	// Finish the last segment.
+	segment.b = bSaved
+	return append(segments, segment)
+}
+
+// moveOriginToValidFace updates the origin point to a valid face if necessary.
+// Given a line segment AB whose origin A has been projected onto a given cube
+// face, determine whether it is necessary to project A onto a different face
+// instead. This can happen because the normal of the line AB is not computed
+// exactly, so that the line AB (defined as the set of points perpendicular to
+// the normal) may not intersect the cube face containing A. Even if it does
+// intersect the face, the exit point of the line from that face may be on
+// the wrong side of A (i.e., in the direction away from B). If this happens,
+// we reproject A onto the adjacent face where the line AB approaches A most
+// closely. This moves the origin by a small amount, but never more than the
+// error tolerances.
+func moveOriginToValidFace(face int, a, ab Point, aUV r2.Point) (int, r2.Point) {
+	// Fast path: if the origin is sufficiently far inside the face, it is
+	// always safe to use it.
+	const maxSafeUVCoord = 1 - faceClipErrorUVCoord
+	if math.Max(math.Abs((aUV).X), math.Abs((aUV).Y)) <= maxSafeUVCoord {
+		return face, aUV
+	}
+
+	// Otherwise check whether the normal AB even intersects this face.
+	z := faceXYZtoUVW(face, ab)
+	n := pointUVW{z.Vector}
+	if n.intersectsFace() {
+		// Check whether the point where the line AB exits this face is on the
+		// wrong side of A (by more than the acceptable error tolerance).
+		uv := n.exitPoint(n.exitAxis())
+		exit := faceUVToXYZ(face, uv.X, uv.Y)
+		aTangent := ab.Normalize().Cross(a.Vector)
+
+		// We can use the given face.
+		if exit.Sub(a.Vector).Dot(aTangent) >= -faceClipErrorRadians {
+			return face, aUV
+		}
+	}
+
+	// Otherwise we reproject A to the nearest adjacent face. (If line AB does
+	// not pass through a given face, it must pass through all adjacent faces.)
+	var dir int
+	if math.Abs((aUV).X) >= math.Abs((aUV).Y) {
+		// U-axis
+		if aUV.X > 0 {
+			dir = 1
+		}
+		face = uvwFace(face, 0, dir)
+	} else {
+		// V-axis
+		if aUV.Y > 0 {
+			dir = 1
+		}
+		face = uvwFace(face, 1, dir)
+	}
+
+	aUV.X, aUV.Y = validFaceXYZToUV(face, a.Vector)
+	aUV.X = math.Max(-1.0, math.Min(1.0, aUV.X))
+	aUV.Y = math.Max(-1.0, math.Min(1.0, aUV.Y))
+
+	return face, aUV
+}
+
+// nextFace returns the next face that should be visited by FaceSegments, given that
+// we have just visited face and we are following the line AB (represented
+// by its normal N in the (u,v,w) coordinates of that face). The other
+// arguments include the point where AB exits face, the corresponding
+// exit axis, and the target face containing the destination point B.
+func nextFace(face int, exit r2.Point, axis axis, n pointUVW, targetFace int) int {
+	// this bit is to work around C++ cleverly casting bools to ints for you.
+	exitA := exit.X
+	exit1MinusA := exit.Y
+
+	if axis == axisV {
+		exitA = exit.Y
+		exit1MinusA = exit.X
+	}
+	exitAPos := 0
+	if exitA > 0 {
+		exitAPos = 1
+	}
+	exit1MinusAPos := 0
+	if exit1MinusA > 0 {
+		exit1MinusAPos = 1
+	}
+
+	// We return the face that is adjacent to the exit point along the given
+	// axis. If line AB exits *exactly* through a corner of the face, there are
+	// two possible next faces. If one is the target face containing B, then
+	// we guarantee that we advance to that face directly.
+	//
+	// The three conditions below check that (1) AB exits approximately through
+	// a corner, (2) the adjacent face along the non-exit axis is the target
+	// face, and (3) AB exits *exactly* through the corner. (The sumEquals
+	// code checks whether the dot product of (u,v,1) and n is exactly zero.)
+	if math.Abs(exit1MinusA) == 1 &&
+		uvwFace(face, int(1-axis), exit1MinusAPos) == targetFace &&
+		sumEquals(exit.X*n.X, exit.Y*n.Y, -n.Z) {
+		return targetFace
+	}
+
+	// Otherwise return the face that is adjacent to the exit point in the
+	// direction of the exit axis.
+	return uvwFace(face, int(axis), exitAPos)
+}

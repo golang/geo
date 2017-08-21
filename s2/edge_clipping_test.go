@@ -123,8 +123,64 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 		return
 	}
 
+	// Test FaceSegements for this pair.
+	segments := FaceSegments(a, b)
+	n := len(segments)
+	if n == 0 {
+		t.Errorf("FaceSegments(%v, %v) should have generated at least one entry", a, b)
+	}
+
+	biunit := r2.Rect{r1.Interval{-1, 1}, r1.Interval{-1, 1}}
+	const errorRadians = faceClipErrorRadians
+
+	// The first and last vertices should approximately equal A and B.
+	if aPrime := faceUVToXYZ(segments[0].face, segments[0].a.X, segments[0].a.Y); a.Angle(aPrime) > errorRadians {
+		t.Errorf("%v.Angle(%v) = %v, want < %v", a, aPrime, a.Angle(aPrime), errorRadians)
+	}
+	if bPrime := faceUVToXYZ(segments[n-1].face, segments[n-1].b.X, segments[n-1].b.Y); b.Angle(bPrime) > errorRadians {
+		t.Errorf("%v.Angle(%v) = %v, want < %v", b, bPrime, b.Angle(bPrime), errorRadians)
+	}
+
 	norm := Point{a.PointCross(b).Normalize()}
 	aTan := Point{norm.Cross(a.Vector)}
+	bTan := Point{b.Cross(norm.Vector)}
+
+	for i := 0; i < n; i++ {
+		// Vertices may not protrude outside the biunit square.
+		if !biunit.ContainsPoint(segments[i].a) {
+			t.Errorf("biunit.ContainsPoint(%v) = false, want true", segments[i].a)
+		}
+		if !biunit.ContainsPoint(segments[i].b) {
+			t.Errorf("biunit.ContainsPoint(%v) = false, want true", segments[i].b)
+		}
+		if i == 0 {
+			continue
+		}
+
+		// The two representations of each interior vertex (on adjacent faces)
+		// must correspond to exactly the same Point.
+		if segments[i-1].face == segments[i].face {
+			t.Errorf("%v.face != %v.face", segments[i-1], segments[i])
+		}
+		if got, want := faceUVToXYZ(segments[i-1].face, segments[i-1].b.X, segments[i-1].b.Y),
+			faceUVToXYZ(segments[i].face, segments[i].a.X, segments[i].a.Y); !got.ApproxEqual(want) {
+			t.Errorf("interior vertices on adjacent faces should be the same point. got %v != %v", got, want)
+		}
+
+		// Interior vertices should be in the plane containing A and B, and should
+		// be contained in the wedge of angles between A and B (i.e., the dot
+		// products with aTan and bTan should be non-negative).
+		p := faceUVToXYZ(segments[i].face, segments[i].a.X, segments[i].a.Y).Normalize()
+		if got := math.Abs(p.Dot(norm.Vector)); got > errorRadians {
+			t.Errorf("%v.Dot(%v) = %v, want <= %v", p, norm, got, errorRadians)
+		}
+		if got := p.Dot(aTan.Vector); got < -errorRadians {
+			t.Errorf("%v.Dot(%v) = %v, want >= %v", p, aTan, got, -errorRadians)
+		}
+		if got := p.Dot(bTan.Vector); got < -errorRadians {
+			t.Errorf("%v.Dot(%v) = %v, want >= %v", p, bTan, got, -errorRadians)
+		}
+	}
 
 	padding := 0.0
 	if !oneIn(10) {
