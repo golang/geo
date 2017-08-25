@@ -216,6 +216,16 @@ func TestCapInteriorContains(t *testing.T) {
 	}
 }
 
+func TestCapCellUnionBoundLevel1Radius(t *testing.T) {
+	// Check that a cap whose radius is approximately the width of a level 1
+	// Cell can be covered by only 3 faces.
+	c := CapFromCenterAngle(PointFromCoords(1, 1, 1), s1.Angle(MinWidthMetric.Value(1)))
+	covering := c.CellUnionBound()
+	if len(covering) != 3 {
+		t.Errorf("a cap with radius of a level 1 cell should be covered by 3 faces, got %d", len(covering))
+	}
+}
+
 func TestCapExpanded(t *testing.T) {
 	cap50 := CapFromCenterAngle(xAxisPt, 50.0*s1.Degree)
 	cap51 := CapFromCenterAngle(xAxisPt, 51.0*s1.Degree)

@@ -426,12 +426,10 @@ func (c Cap) CellUnionBound() []CellID {
 
 	// Find the maximum level such that the cap contains at most one cell vertex
 	// and such that CellID.AppendVertexNeighbors() can be called.
-	level := MinWidthMetric.MaxLevel(2 * c.Radius().Radians())
-	level = min(level, maxLevel-1)
+	level := MinWidthMetric.MaxLevel(c.Radius().Radians()) - 1
 
-	// Don't bother trying to optimize the level == 0 case, since more than
-	// four face cells may be required.
-	if level == 0 {
+	// If level < 0, more than three face cells are required.
+	if level < 0 {
 		cellIDs := make([]CellID, 6)
 		for face := 0; face < 6; face++ {
 			cellIDs[face] = CellIDFromFace(face)
