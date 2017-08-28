@@ -80,8 +80,8 @@ func TestPolylineShape(t *testing.T) {
 	if shape.HasInterior() {
 		t.Errorf("polylines should not have an interior")
 	}
-	if shape.ContainsOrigin() {
-		t.Errorf("polylines should not contain the origin")
+	if shape.ReferencePoint().Contained {
+		t.Errorf("polylines should not contain their reference points")
 	}
 
 	if shape.dimension() != polylineGeometry {

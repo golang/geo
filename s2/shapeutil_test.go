@@ -18,6 +18,8 @@ package s2
 
 import (
 	"testing"
+
+	"github.com/golang/geo/s1"
 )
 
 // This file will contain a number of Shape utility types used in different
@@ -56,7 +58,7 @@ func (e *edgeVectorShape) Add(a, b Point) {
 func (e *edgeVectorShape) NumEdges() int                          { return len(e.edges) }
 func (e *edgeVectorShape) Edge(id int) Edge                       { return e.edges[id] }
 func (e *edgeVectorShape) HasInterior() bool                      { return false }
-func (e *edgeVectorShape) ContainsOrigin() bool                   { return false }
+func (e *edgeVectorShape) ReferencePoint() ReferencePoint         { return OriginReferencePoint(false) }
 func (e *edgeVectorShape) NumChains() int                         { return len(e.edges) }
 func (e *edgeVectorShape) Chain(chainID int) Chain                { return Chain{chainID, 1} }
 func (e *edgeVectorShape) ChainEdge(chainID, offset int) Edge     { return e.edges[chainID] }
@@ -81,5 +83,36 @@ func TestEdgeVectorShapeSingletonConstructor(t *testing.T) {
 	}
 	if edge.V1 != b {
 		t.Errorf("vertex 1 of the edge should be the same as was used to create it. got %v, want %v", edge.V1, b)
+	}
+}
+
+// TODO(roberts): Uncomment once LaxLoop and LaxPolygon are added to here.
+/*
+func TestShapeutilContainsBruteForceNoInterior(t *testing.T) {
+	// Defines a polyline that almost entirely encloses the point 0:0.
+	polyline := makeLaxPolyline("0:0, 0:1, 1:-1, -1:-1, -1e9:1")
+	if containsBruteForce(polyline, parsePoint("0:0")) {
+		t.Errorf("containsBruteForce(%v, %v) = true, want false")
+	}
+}
+
+func TestShapeutilContainsBruteForceContainsReferencePoint(t *testing.T) {
+	// Checks that containsBruteForce agrees with ReferencePoint.
+	polygon := makeLaxPolygon("0:0, 0:1, 1:-1, -1:-1, -1e9:1")
+	ref, _ := polygon.ReferencePoint()
+	if got := containsBruteForce(polygon, ref.point); got != ref.contained {
+		t.Errorf("containsBruteForce(%v, %v) = %v, want %v", polygon, ref.Point, got, ref.contained)
+	}
+}
+*/
+
+func TestShapeutilContainsBruteForceConsistentWithLoop(t *testing.T) {
+	// Checks that containsBruteForce agrees with Loop Contains.
+	loop := RegularLoop(parsePoint("89:-179"), s1.Angle(10)*s1.Degree, 100)
+	for i := 0; i < loop.NumVertices(); i++ {
+		if got, want := loop.ContainsPoint(loop.Vertex(i)),
+			containsBruteForce(loop, loop.Vertex(i)); got != want {
+			t.Errorf("loop.ContainsPoint(%v) = %v, containsBruteForce(shape, %v) = %v, should be the same", loop.Vertex(i), got, loop.Vertex(i), want)
+		}
 	}
 }

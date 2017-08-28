@@ -68,6 +68,20 @@ type ChainPosition struct {
 	ChainID, Offset int
 }
 
+// A ReferencePoint consists of a point and a boolean indicating whether the point
+// is contained by a particular shape.
+type ReferencePoint struct {
+	Point     Point
+	Contained bool
+}
+
+// OriginReferencePoint returns a ReferencePoint with the given value for
+// contained and the origin point. It should be used when all points or no
+// points are contained.
+func OriginReferencePoint(contained bool) ReferencePoint {
+	return ReferencePoint{Point: OriginPoint(), Contained: contained}
+}
+
 // Shape defines an interface for any S2 type that needs to be indexable. A shape
 // is a collection of edges that optionally defines an interior. It can be used to
 // represent a set of points, a set of polylines, or a set of polygons.
@@ -89,9 +103,12 @@ type Shape interface {
 	// HasInterior reports whether this shape has an interior.
 	HasInterior() bool
 
-	// ContainsOrigin returns true if this shape contains s2.Origin.
-	// Shapes that do not have an interior will return false.
-	ContainsOrigin() bool
+	// ReferencePoint returns an arbitrary reference point for the shape. (The
+	// containment boolean value must be false for shapes that do not have an interior.)
+	//
+	// This reference point may then be used to compute the containment of other
+	// points by counting edge crossings.
+	ReferencePoint() ReferencePoint
 
 	// NumChains reports the number of contiguous edge chains in the shape.
 	// For example, a shape whose edges are [AB, BC, CD, AE, EF] would consist
@@ -445,21 +462,17 @@ func (s *ShapeIndexIterator) LocateCellID(target CellID) CellRelation {
 // this to compute which shapes contain the center of every CellID in the index,
 // by advancing the focus from one cell center to the next.
 //
-// Initially the focus is OriginPoint, and therefore we can initialize the
-// state of every shape to its ContainsOrigin value. Next we advance the
-// focus to the start of the CellID space-filling curve, by drawing a line
-// segment between this point and OriginPoint and testing whether every edge
-// of every shape intersects it. Then we visit all the cells that are being
-// added to the ShapeIndex in increasing order of CellID. For each cell,
-// we draw two edges: one from the entry vertex to the center, and another
-// from the center to the exit vertex (where entry and exit refer to the
-// points where the space-filling curve enters and exits the cell). By
-// counting edge crossings we can incrementally compute which shapes contain
-// the cell center. Note that the same set of shapes will always contain the
-// exit point of one cell and the entry point of the next cell in the index,
-// because either (a) these two points are actually the same, or (b) the
-// intervening cells in CellID order are all empty, and therefore there are
-// no edge crossings if we follow this path from one cell to the other.
+// Initially the focus is at the start of the CellID space-filling curve. We then
+// visit all the cells that are being added to the ShapeIndex in increasing order
+// of CellID. For each cell, we draw two edges: one from the entry vertex to the
+// center, and another from the center to the exit vertex (where entry and exit
+// refer to the points where the space-filling curve enters and exits the cell).
+// By counting edge crossings we can incrementally compute which shapes contain
+// the cell center. Note that the same set of shapes will always contain the exit
+// point of one cell and the entry point of the next cell in the index, because
+// either (a) these two points are actually the same, or (b) the intervening
+// cells in CellID order are all empty, and therefore there are no edge crossings
+// if we follow this path from one cell to the other.
 //
 // In C++, this is S2ShapeIndex::InteriorTracker.
 type tracker struct {
@@ -482,13 +495,23 @@ func newTracker() *tracker {
 	// point and counting how many shape edges cross this edge.
 	t := &tracker{
 		isActive:   false,
-		b:          OriginPoint(),
+		b:          trackerOrigin(),
 		nextCellID: CellIDFromFace(0).ChildBeginAtLevel(maxLevel),
 	}
 	t.drawTo(Point{faceUVToXYZ(0, -1, -1).Normalize()}) // CellID curve start
 
 	return t
 }
+
+// trackerOrigin returns the initial focus point when the tracker is created
+// (corresponding to the start of the CellID space-filling curve).
+func trackerOrigin() Point {
+	// The start of the S2CellId space-filling curve.
+	return Point{faceUVToXYZ(0, -1, -1).Normalize()}
+}
+
+// focus returns the current focus point of the tracker.
+func (t *tracker) focus() Point { return t.b }
 
 // addShape adds a shape whose interior should be tracked. containsOrigin indicates
 // whether the current focus point is inside the shape. Alternatively, if
@@ -498,9 +521,9 @@ func newTracker() *tracker {
 // This updates the state to correspond to the new focus point.
 //
 // This requires shape.HasInterior
-func (t *tracker) addShape(shapeID int32, containsOrigin bool) {
+func (t *tracker) addShape(shapeID int32, containsFocus bool) {
 	t.isActive = true
-	if containsOrigin {
+	if containsFocus {
 		t.toggleShape(shapeID)
 	}
 }
@@ -607,10 +630,10 @@ func (t *tracker) lowerBound(shapeID int32) int32 {
 
 // removedShape represents a set of edges from the given shape that is queued for removal.
 type removedShape struct {
-	shapeID        int32
-	hasInterior    bool
-	containsOrigin bool
-	edges          []Edge
+	shapeID               int32
+	hasInterior           bool
+	containsTrackerOrigin bool
+	edges                 []Edge
 }
 
 // There are three basic states the index can be in.
@@ -791,10 +814,10 @@ func (s *ShapeIndex) Remove(shape Shape) {
 
 	numEdges := shape.NumEdges()
 	removed := &removedShape{
-		shapeID:        id,
-		hasInterior:    shape.HasInterior(),
-		containsOrigin: shape.ContainsOrigin(),
-		edges:          make([]Edge, numEdges),
+		shapeID:               id,
+		hasInterior:           shape.HasInterior(),
+		containsTrackerOrigin: shape.ReferencePoint().Contained,
+		edges: make([]Edge, numEdges),
 	}
 
 	for e := 0; e < numEdges; e++ {
@@ -889,7 +912,7 @@ func (s *ShapeIndex) addShapeInternal(shapeID int32, allEdges [][]faceEdge, t *t
 	}
 
 	if faceEdge.hasInterior {
-		t.addShape(shapeID, shape.ContainsOrigin())
+		t.addShape(shapeID, containsBruteForce(shape, t.focus()))
 	}
 
 	numEdges := shape.NumEdges()
@@ -899,10 +922,6 @@ func (s *ShapeIndex) addShapeInternal(shapeID int32, allEdges [][]faceEdge, t *t
 		faceEdge.edgeID = e
 		faceEdge.edge = edge
 		faceEdge.maxLevel = maxLevelForEdge(edge)
-
-		if faceEdge.hasInterior {
-			t.testEdge(shapeID, faceEdge.edge)
-		}
 		s.addFaceEdge(faceEdge, allEdges)
 	}
 }

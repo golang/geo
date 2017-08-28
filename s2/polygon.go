@@ -408,13 +408,13 @@ func (p *Polygon) HasInterior() bool {
 	return p.dimension() == polygonGeometry
 }
 
-// ContainsOrigin returns whether this shape contains the origin.
-func (p *Polygon) ContainsOrigin() bool {
+// ReferencePoint returns the reference point for this polygon.
+func (p *Polygon) ReferencePoint() ReferencePoint {
 	containsOrigin := false
 	for _, l := range p.loops {
 		containsOrigin = containsOrigin != l.ContainsOrigin()
 	}
-	return containsOrigin
+	return OriginReferencePoint(containsOrigin)
 }
 
 // NumChains reports the number of contiguous edge chains in the Polygon.

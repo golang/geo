@@ -235,8 +235,8 @@ func TestLoopBasic(t *testing.T) {
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")
 	}
-	if shape.ContainsOrigin() {
-		t.Errorf("shape.ContainsOrigin() = true, want false")
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = true, want false")
 	}
 }
 

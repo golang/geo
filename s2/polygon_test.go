@@ -163,8 +163,8 @@ func TestPolygonEmptyAndFull(t *testing.T) {
 		t.Errorf("empty polygon should not be full")
 	}
 
-	if emptyPolygon.ContainsOrigin() {
-		t.Errorf("emptyPolygon.ContainsOrigin() = true, want false")
+	if emptyPolygon.ReferencePoint().Contained {
+		t.Errorf("emptyPolygon.ReferencePoint().Contained = true, want false")
 	}
 	if got, want := emptyPolygon.NumEdges(), 0; got != want {
 		t.Errorf("emptyPolygon.NumEdges() = %v, want %v", got, want)
@@ -184,8 +184,8 @@ func TestPolygonEmptyAndFull(t *testing.T) {
 		t.Errorf("full polygon should be full")
 	}
 
-	if !fullPolygon.ContainsOrigin() {
-		t.Errorf("fullPolygon.ContainsOrigin() = false, want true")
+	if !fullPolygon.ReferencePoint().Contained {
+		t.Errorf("fullPolygon.ReferencePoint().Contained = false, want true")
 	}
 	if got, want := fullPolygon.NumEdges(), 0; got != want {
 		t.Errorf("fullPolygon.NumEdges() = %v, want %v", got, want)
@@ -239,12 +239,12 @@ func TestPolygonShape(t *testing.T) {
 	if !shape.HasInterior() {
 		t.Errorf("polygons should always have interiors")
 	}
-	if !shape.ContainsOrigin() {
-		t.Errorf("polygon %v should contain the origin", shape)
+	if !shape.ReferencePoint().Contained {
+		t.Errorf("polygon %v should contain its reference point", shape)
 	}
 
-	if got, want := p.ContainsPoint(OriginPoint()), shape.ContainsOrigin(); got != want {
-		t.Errorf("p.ContainsPoint(OriginPoint()) != shape.ContainsOrigin()")
+	if got, want := p.ContainsPoint(OriginPoint()), shape.ReferencePoint().Contained; got != want {
+		t.Errorf("p.ContainsPoint(OriginPoint()) != shape.ReferencePoint().Contained")
 	}
 }
 

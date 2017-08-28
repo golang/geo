@@ -209,6 +209,11 @@ func (l *Loop) ContainsOrigin() bool {
 	return l.originInside
 }
 
+// ReferencePoint returns the reference point for this loop.
+func (l *Loop) ReferencePoint() ReferencePoint {
+	return OriginReferencePoint(l.originInside)
+}
+
 // HasInterior returns true because all loops have an interior.
 func (l *Loop) HasInterior() bool {
 	return true

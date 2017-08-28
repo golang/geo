@@ -171,9 +171,9 @@ func (p *Polyline) HasInterior() bool {
 	return false
 }
 
-// ContainsOrigin returns false because there is no interior to contain s2.Origin.
-func (p *Polyline) ContainsOrigin() bool {
-	return false
+// ReferencePoint returns the default reference point with negative containment because Polylines are not closed.
+func (p *Polyline) ReferencePoint() ReferencePoint {
+	return OriginReferencePoint(false)
 }
 
 // NumChains reports the number of contiguous edge chains in this Polyline.

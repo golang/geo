@@ -23,30 +23,9 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-// TODO(roberts): This can be removed once s2shapeutil_test is added which has
-// various Shape types and tests that validate the Shape interface.
-
-// testShape is a minimal implementation of the Shape interface for use in testing
-// until such time as there are other s2 types that implement it.
-type testShape struct {
-	a, b  Point
-	edges int
-}
-
-func newTestShape() *testShape                              { return &testShape{} }
-func (s *testShape) NumEdges() int                          { return s.edges }
-func (s *testShape) Edge(id int) Edge                       { return Edge{s.a, s.b} }
-func (s *testShape) HasInterior() bool                      { return false }
-func (s *testShape) ContainsOrigin() bool                   { return false }
-func (s *testShape) NumChains() int                         { return 0 }
-func (s *testShape) Chain(chainID int) Chain                { return Chain{0, s.NumEdges()} }
-func (s *testShape) ChainEdge(chainID, offset int) Edge     { return Edge{s.a, s.b} }
-func (s *testShape) ChainPosition(edgeID int) ChainPosition { return ChainPosition{0, edgeID} }
-func (s *testShape) dimension() dimension                   { return pointGeometry }
-
 func TestShapeIndexBasics(t *testing.T) {
 	index := NewShapeIndex()
-	s := newTestShape()
+	s := &edgeVectorShape{}
 
 	if index.Len() != 0 {
 		t.Errorf("initial index should be empty after creation")
@@ -163,22 +142,14 @@ func validateEdge(t *testing.T, a, b Point, ci CellID, hasEdge bool) {
 // validateInterior tests if the given Shape contains the center of the given CellID,
 // and that this matches the expected value of indexContainsCenter.
 func validateInterior(t *testing.T, shape Shape, ci CellID, indexContainsCenter bool) {
-	if shape == nil || !shape.HasInterior() {
+	if shape == nil {
 		if indexContainsCenter {
 			t.Errorf("%v was nil or does not have an interior, but should have", shape)
 		}
 		return
 	}
-
-	crosser := NewEdgeCrosser(OriginPoint(), ci.Point())
-	containsCenter := shape.ContainsOrigin()
-	for e := 0; e < shape.NumEdges(); e++ {
-		edge := shape.Edge(e)
-		containsCenter = containsCenter != crosser.EdgeOrVertexCrossing(edge.V0, edge.V1)
-	}
-
-	if containsCenter != indexContainsCenter {
-		t.Errorf("validating interior of shape containsCenter = %v, want %v", containsCenter, indexContainsCenter)
+	if got := containsBruteForce(shape, ci.Point()); got != indexContainsCenter {
+		t.Errorf("validating interior of shape containsCenter = %v, want %v", got, indexContainsCenter)
 	}
 }
 
