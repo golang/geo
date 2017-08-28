@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"container/list"
 	"fmt"
 	"io"
 )
@@ -80,6 +81,56 @@ type Polygon struct {
 	cumulativeEdges []int
 }
 
+func insertLoop(newLoop, parent *Loop, loopMap map[*Loop]*list.List) {
+	children := loopMap[parent]
+	if children == nil {
+		children = list.New()
+		loopMap[parent] = children
+	}
+
+	for e := children.Front(); e != nil; e = e.Next() {
+		child := e.Value.(*Loop)
+		if child.ContainsNested(newLoop) {
+			insertLoop(newLoop, child, loopMap)
+			return
+		}
+	}
+
+	// Some of the children of the parent loop may now be children of the new
+	// loop.
+	newChildren := loopMap[newLoop]
+	for e := children.Front(); e != nil; e = e.Next() {
+		child := e.Value.(*Loop)
+
+		if newLoop.ContainsNested(child) {
+			if newChildren == nil {
+				newChildren = list.New()
+				loopMap[newLoop] = newChildren
+			}
+
+			newChildren.PushBack(child)
+			children.Remove(e)
+		}
+	}
+
+	children.PushBack(newLoop)
+}
+
+func (p *Polygon) initLoop(loop *Loop, depth int, loopMap map[*Loop]*list.List) {
+	if loop != nil {
+		loop.depth = depth
+		p.loops = append(p.loops, loop)
+	}
+
+	children := loopMap[loop]
+	if children != nil {
+		for e := children.Front(); e != nil; e = e.Next() {
+			child := e.Value.(*Loop)
+			p.initLoop(child, depth+1, loopMap)
+		}
+	}
+}
+
 // PolygonFromLoops constructs a polygon from the given hierarchically nested
 // loops. The polygon interior consists of the points contained by an odd
 // number of loops. (Recall that a loop contains the set of points on its
@@ -87,19 +138,10 @@ type Polygon struct {
 //
 // This method figures out the loop nesting hierarchy and assigns every loop a
 // depth. Shells have even depths, and holes have odd depths.
-//
-// NOTE: this function is NOT YET IMPLEMENTED for more than one loop and will
-// panic if given a slice of length > 1.
 func PolygonFromLoops(loops []*Loop) *Polygon {
-	if len(loops) > 1 {
-		panic("PolygonFromLoops for multiple loops is not yet implemented")
-	}
-
 	p := &Polygon{
-		loops:       loops,
-		numVertices: len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
-		// TODO(roberts): Compute these bounds.
-		bound:          loops[0].RectBound(),
+		loops:          make([]*Loop, 0, len(loops)),
+		bound:          EmptyRect(),
 		subregionBound: EmptyRect(),
 	}
 
@@ -108,12 +150,31 @@ func PolygonFromLoops(loops []*Loop) *Polygon {
 		p.cumulativeEdges = make([]int, 0, len(loops))
 	}
 
-	for _, l := range loops {
+	loopMap := map[*Loop]*list.List{}
+	for _, loop := range loops {
+		insertLoop(loop, nil, loopMap)
+
+		// Check if we're tracking cumulative edges.
 		if p.cumulativeEdges != nil {
 			p.cumulativeEdges = append(p.cumulativeEdges, p.numEdges)
 		}
-		p.numEdges += len(l.Vertices())
+
+		// Count vertices and edges.
+		p.numVertices += loop.NumVertices()
+		p.numEdges += loop.NumEdges()
+
+		// Check if this loop represents a hole.
+		if loop.IsHole() {
+			p.hasHoles = true
+		} else {
+			p.bound = p.bound.Union(loop.RectBound())
+			p.subregionBound = p.subregionBound.Union(loop.subregionBound)
+		}
 	}
+
+	// Reorder the loops in depth-first traversal order.
+	// Starting at nil == starting at the root.
+	p.initLoop(nil, -1, loopMap)
 
 	p.index = NewShapeIndex()
 	p.index.Add(p)
@@ -176,7 +237,7 @@ func (p *Polygon) Parent(k int) (index int, ok bool) {
 	// we don't know how many may be next to us before we get back to our parent loop.)
 	// Move up one position from us, and then begin traversing back through the set of loops
 	// until we find the one that is our parent or we get to the top of the polygon.
-	for k--; k >= 0 && p.loops[k].depth <= depth; k-- {
+	for k--; p.loops[k].depth == depth; k-- {
 	}
 	return k, true
 }
@@ -525,7 +586,6 @@ func (p *Polygon) encodeLossless(e *encoder) {
 // BreakEdgesAndAddToBuilder
 // clearLoops
 // findLoopNestingError
-// initLoops
 // initToSimplifiedInternal
 // internalClipPolyline
 // compareBoundary

@@ -101,58 +101,55 @@ var (
 	emptyPolygon = &Polygon{}
 	fullPolygon  = FullPolygon()
 
-	// TODO(roberts): Uncomment once Polygons with multiple loops are supported.
-	/*
-		near0Polygon     = makePolygon(nearLoop0, true)
-		near01Polygon    = makePolygon(nearLoop0+nearLoop1, true)
-		near30Polygon    = makePolygon(nearLoop3+nearLoop0, true)
-		near23Polygon    = makePolygon(nearLoop2+nearLoop3, true)
-		near0231Polygon  = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoop1, true)
-		near023H1Polygon = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoopHemi+nearLoop1, true)
+	near0Polygon     = makePolygon(nearLoop0, true)
+	near01Polygon    = makePolygon(nearLoop0+nearLoop1, true)
+	near30Polygon    = makePolygon(nearLoop3+nearLoop0, true)
+	near23Polygon    = makePolygon(nearLoop2+nearLoop3, true)
+	near0231Polygon  = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoop1, true)
+	near023H1Polygon = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoopHemi+nearLoop1, true)
 
-		far01Polygon    = makePolygon(farLoop0+farLoop1, true)
-		far21Polygon    = makePolygon(farLoop2+farLoop1, true)
-		far231Polygon   = makePolygon(farLoop2+farLoop3+farLoop1, true)
-		far2H0Polygon   = makePolygon(farLoop2+farLoopHemi+farLoop0, true)
-		far2H013Polygon = makePolygon(farLoop2+farLoopHemi+farLoop0+farLoop1+farLoop3, true)
+	far01Polygon    = makePolygon(farLoop0+farLoop1, true)
+	far21Polygon    = makePolygon(farLoop2+farLoop1, true)
+	far231Polygon   = makePolygon(farLoop2+farLoop3+farLoop1, true)
+	far2H0Polygon   = makePolygon(farLoop2+farLoopHemi+farLoop0, true)
+	far2H013Polygon = makePolygon(farLoop2+farLoopHemi+farLoop0+farLoop1+farLoop3, true)
 
-		south0abPolygon     = makePolygon(southLoop0a+southLoop0b, true)
-		south2Polygon       = makePolygon(southLoop2, true)
-		south20b1Polygon    = makePolygon(southLoop2+southLoop0b+southLoop1, true)
-		south2H1Polygon     = makePolygon(southLoop2+southLoopHemi+southLoop1, true)
-		south20bH0acPolygon = makePolygon(southLoop2+southLoop0b+southLoopHemi+
-			southLoop0a+southLoop0c, true)
+	south0abPolygon     = makePolygon(southLoop0a+southLoop0b, true)
+	south2Polygon       = makePolygon(southLoop2, true)
+	south20b1Polygon    = makePolygon(southLoop2+southLoop0b+southLoop1, true)
+	south2H1Polygon     = makePolygon(southLoop2+southLoopHemi+southLoop1, true)
+	south20bH0acPolygon = makePolygon(southLoop2+southLoop0b+southLoopHemi+
+		southLoop0a+southLoop0c, true)
 
-		nf1N10F2S10abcPolygon = makePolygon(southLoop0c+farLoop2+nearLoop1+
-			nearFarLoop1+nearLoop0+southLoop1+southLoop0b+southLoop0a, true)
+	nf1N10F2S10abcPolygon = makePolygon(southLoop0c+farLoop2+nearLoop1+
+		nearFarLoop1+nearLoop0+southLoop1+southLoop0b+southLoop0a, true)
 
-		nf2N2F210S210abPolygon = makePolygon(farLoop2+southLoop0a+farLoop1+
-			southLoop1+farLoop0+southLoop0b+nearFarLoop2+southLoop2+nearLoop2, true)
+	nf2N2F210S210abPolygon = makePolygon(farLoop2+southLoop0a+farLoop1+
+		southLoop1+farLoop0+southLoop0b+nearFarLoop2+southLoop2+nearLoop2, true)
 
-		f32n0Polygon  = makePolygon(farLoop2+nearLoop0+farLoop3, true)
-		n32s0bPolygon = makePolygon(nearLoop3+southLoop0b+nearLoop2, true)
+	f32n0Polygon  = makePolygon(farLoop2+nearLoop0+farLoop3, true)
+	n32s0bPolygon = makePolygon(nearLoop3+southLoop0b+nearLoop2, true)
 
-		cross1Polygon           = makePolygon(loopCross1, true)
-		cross1SideHolePolygon   = makePolygon(loopCross1+loopCross1SideHole, true)
-		cross1CenterHolePolygon = makePolygon(loopCross1+loopCrossCenterHole, true)
-		cross2Polygon           = makePolygon(loopCross2, true)
-		cross2SideHolePolygon   = makePolygon(loopCross2+loopCross2SideHole, true)
-		cross2CenterHolePolygon = makePolygon(loopCross2+loopCrossCenterHole, true)
+	cross1Polygon           = makePolygon(loopCross1, true)
+	cross1SideHolePolygon   = makePolygon(loopCross1+loopCross1SideHole, true)
+	cross1CenterHolePolygon = makePolygon(loopCross1+loopCrossCenterHole, true)
+	cross2Polygon           = makePolygon(loopCross2, true)
+	cross2SideHolePolygon   = makePolygon(loopCross2+loopCross2SideHole, true)
+	cross2CenterHolePolygon = makePolygon(loopCross2+loopCrossCenterHole, true)
 
-		overlap1Polygon           = makePolygon(loopOverlap1, true)
-		overlap1SideHolePolygon   = makePolygon(loopOverlap1+loopOverlap1SideHole, true)
-		overlap1CenterHolePolygon = makePolygon(loopOverlap1+loopOverlapCenterHole, true)
-		overlap2Polygon           = makePolygon(loopOverlap2, true)
-		overlap2SideHolePolygon   = makePolygon(loopOverlap2+loopOverlap2SideHole, true)
-		overlap2CenterHolePolygon = makePolygon(loopOverlap2+loopOverlapCenterHole, true)
+	overlap1Polygon           = makePolygon(loopOverlap1, true)
+	overlap1SideHolePolygon   = makePolygon(loopOverlap1+loopOverlap1SideHole, true)
+	overlap1CenterHolePolygon = makePolygon(loopOverlap1+loopOverlapCenterHole, true)
+	overlap2Polygon           = makePolygon(loopOverlap2, true)
+	overlap2SideHolePolygon   = makePolygon(loopOverlap2+loopOverlap2SideHole, true)
+	overlap2CenterHolePolygon = makePolygon(loopOverlap2+loopOverlapCenterHole, true)
 
-		overlap3Polygon = makePolygon(loopOverlap3, true)
-		overlap4Polygon = makePolygon(loopOverlap4, true)
+	overlap3Polygon = makePolygon(loopOverlap3, true)
+	overlap4Polygon = makePolygon(loopOverlap4, true)
 
-		farHemiPolygon      = makePolygon(farLoopHemi, true)
-		southHemiPolygon    = makePolygon(southLoopHemi, true)
-		farSouthHemiPolygon = makePolygon(farHemiSouthHemiLoop, true)
-	*/
+	farHemiPolygon      = makePolygon(farLoopHemi, true)
+	southHemiPolygon    = makePolygon(southLoopHemi, true)
+	farSouthHemiPolygon = makePolygon(farHemiSouthHemiLoop, true)
 )
 
 func TestPolygonEmptyAndFull(t *testing.T) {
@@ -262,7 +259,18 @@ func TestPolygonLoop(t *testing.T) {
 		t.Errorf("polygon with one loop should return it")
 	}
 
-	// TODO: When multiple loops are supported, add more test cases.
+	l1 := &Loop{}
+	l2 := &Loop{}
+	p2 := PolygonFromLoops([]*Loop{l1, l2})
+	if p2.NumLoops() != 2 {
+		t.Errorf("polygon with two loops should have two loops")
+	}
+	if p2.Loop(0) != l1 {
+		t.Errorf("polygon with two loops should return the first one")
+	}
+	if p2.Loop(1) != l2 {
+		t.Errorf("polygon with two loops should return the second one")
+	}
 }
 
 func TestPolygonParent(t *testing.T) {
@@ -275,9 +283,17 @@ func TestPolygonParent(t *testing.T) {
 	}{
 		{fullPolygon, 0, -1, false},
 		{p1, 0, -1, false},
-
-		// TODO: When multiple loops are supported, add more test cases to
-		// more fully show the parent levels.
+		{near0Polygon, 0, -1, false},
+		{near01Polygon, 0, -1, false},
+		{near01Polygon, 1, 0, true},
+		{near30Polygon, 0, -1, false},
+		{near30Polygon, 1, 0, true},
+		{near23Polygon, 0, -1, false},
+		{near23Polygon, 1, 0, true},
+		{near0231Polygon, 0, -1, false},
+		{near0231Polygon, 1, 0, true},
+		{near0231Polygon, 2, 1, true},
+		{near0231Polygon, 3, 2, true},
 	}
 
 	for _, test := range tests {
