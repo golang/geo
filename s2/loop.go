@@ -65,6 +65,9 @@ type Loop struct {
 	// if A.Contains(B), then A.subregionBound.Contains(B.bound).
 	subregionBound Rect
 
+	// Maps each Point to its order in the loop.
+	vertexToIndex map[Point]int
+
 	// index is the spatial index for this Loop.
 	index *ShapeIndex
 }
@@ -1049,6 +1052,41 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 	l.index.Add(l)
 }
 
+func (l *Loop) FindVertex(p Point) int {
+	if l.vertexToIndex == nil {
+		l.vertexToIndex = map[Point]int{}
+		for i, vertex := range l.vertices {
+			l.vertexToIndex[vertex] = i
+		}
+	}
+
+	i, ok := l.vertexToIndex[p]
+	if !ok {
+		return -1
+	}
+
+	return i
+}
+
+func (a *Loop) ContainsNested(b *Loop) bool {
+	if a.NumVertices() == 0 || b.NumVertices() == 0 || !a.subregionBound.Contains(b.bound) {
+		return false
+	}
+
+	// We are given that A and B do not share any edges, and that either one
+	// loop contains the other or they do not intersect.
+	m := a.FindVertex(b.Vertex(1))
+	if m == -1 {
+
+		// Since b.Vertex(1) is not shared, we can check whether A contains it.
+		return a.ContainsPoint(b.Vertex(1))
+	}
+
+	// Check whether the edge order around a.Vertex(1) is compatible with A
+	// containing B.s
+	return WedgeContains(a.Vertex(m-1), a.Vertex(m), a.Vertex(m+1), b.Vertex(0), b.Vertex(2))
+}
+
 // TODO(roberts): Differences from the C++ version:
 // DistanceToPoint
 // DistanceToBoundary
@@ -1058,8 +1096,6 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 // IntersectsLoop
 // EqualsLoop
 // LoopRelations
-// FindVertex
-// ContainsNested
 // BoundaryEquals
 // BoundaryApproxEquals
 // BoundaryNear

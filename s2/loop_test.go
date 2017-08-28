@@ -961,6 +961,37 @@ func TestLoopNormalizedCompatibleWithContains(t *testing.T) {
 	}
 }
 
+func TestLoopFindVertext(t *testing.T) {
+	for _, loop := range allLoops {
+		for i, vertext := range loop.vertices {
+			if foundIndex := loop.FindVertex(vertext); foundIndex != i {
+				t.Errorf("found vertext at index %d, want %d", i, foundIndex)
+			}
+		}
+	}
+}
+
+func TestLoopContainsNested(t *testing.T) {
+	if !aUnionB.ContainsNested(loopA) {
+		t.Error("union of a and b should contain a")
+	}
+	if !aUnionB.ContainsNested(loopB) {
+		t.Error("union of a and b should contain b")
+	}
+
+	if loopA.ContainsNested(aUnionB) {
+		t.Error("a should not contain the union of a and b")
+	}
+
+	if loopB.ContainsNested(aUnionB) {
+		t.Error("b should not contain the union of a and b")
+	}
+
+	if aMinusB.ContainsNested(loopB) {
+		t.Error("a minus b should not contain b")
+	}
+}
+
 const (
 	// TODO(roberts): Convert these into changeable flags or parameters.
 	// A loop with a 10km radius and 4096 vertices has an edge length of 15 meters.
