@@ -638,6 +638,73 @@ func (l *Loop) Invert() {
 	l.index.Add(l)
 }
 
+// findVertex returns the index of the vertex at the given Point in the range
+// 1..numVertices, and a boolean indicating if a vertex was found.
+func (l *Loop) findVertex(p Point) (index int, ok bool) {
+	const notFound = 0
+	if len(l.vertices) < 10 {
+		// Exhaustive search for loops below a small threshold.
+		for i, v := range l.vertices {
+			if i > 0 && v == p {
+				return i, true
+			}
+		}
+		return notFound, false
+	}
+
+	it := l.index.Iterator()
+	if !it.LocatePoint(p) {
+		return notFound, false
+	}
+
+	aClipped := it.IndexCell().findByShapeID(0)
+	for i := aClipped.numEdges() - 1; i >= 0; i-- {
+		ai := aClipped.edges[i]
+		if l.Vertex(ai) == p {
+			if ai == 0 {
+				return len(l.vertices), true
+			}
+			return ai, true
+		}
+
+		if l.Vertex(ai+1) == p {
+			return ai + 1, true
+		}
+	}
+	return notFound, false
+}
+
+// ContainsNested reports whether the given loops is contained within this loop.
+// This function does not test for edge intersections. The two loops must meet
+// all of the Polygon requirements; for example this implies that their
+// boundaries may not cross or have any shared edges (although they may have
+// shared vertices).
+func (l *Loop) ContainsNested(other *Loop) bool {
+	if !l.subregionBound.Contains(other.bound) {
+		return false
+	}
+
+	// Special cases to handle either loop being empty or full.  Also bail out
+	// when B has no vertices to avoid heap overflow on the vertex(1) call
+	// below.  (This method is called during polygon initialization before the
+	// client has an opportunity to call IsValid().)
+	if l.isEmptyOrFull() || other.NumVertices() < 2 {
+		return l.IsFull() || other.IsEmpty()
+	}
+
+	// We are given that A and B do not share any edges, and that either one
+	// loop contains the other or they do not intersect.
+	m, ok := l.findVertex(other.Vertex(1))
+	if !ok {
+		// Since b.vertex(1) is not shared, we can check whether A contains it.
+		return l.ContainsPoint(other.Vertex(1))
+	}
+
+	// Check whether the edge order around b.Vertex(1) is compatible with
+	// A containing B.
+	return WedgeContains(l.Vertex(m-1), l.Vertex(m), l.Vertex(m+1), other.Vertex(0), other.Vertex(2))
+}
+
 // surfaceIntegralFloat64 computes the oriented surface integral of some quantity f(x)
 // over the loop interior, given a function f(A,B,C) that returns the
 // corresponding integral over the spherical triangle ABC. Here "oriented
@@ -1069,8 +1136,6 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 // IntersectsLoop
 // EqualsLoop
 // LoopRelations
-// FindVertex
-// ContainsNested
 // BoundaryEquals
 // BoundaryApproxEquals
 // BoundaryNear

@@ -724,6 +724,627 @@ func TestLoopContainsMatchesCrossingSign(t *testing.T) {
 	}
 }
 
+func TestLoopRelations(t *testing.T) {
+	tests := []struct {
+		a, b               *Loop
+		contains           bool // A contains B
+		contained          bool // B contains A
+		disjoint           bool // A and B are disjoint (intersection is empty)
+		covers             bool // (A union B) covers the entire sphere
+		sharedEdge         bool // the loops share at least one edge (possibly reversed)
+		wantContainsNested bool
+	}{
+		{
+			a:          FullLoop(),
+			b:          FullLoop(),
+			contains:   true,
+			contained:  true,
+			covers:     true,
+			sharedEdge: true,
+		},
+
+		// Check full and empty relationships with normal loops and each other.
+		{
+			a:          FullLoop(),
+			b:          FullLoop(),
+			contains:   true,
+			contained:  true,
+			covers:     true,
+			sharedEdge: true,
+		},
+		{
+			a:                  FullLoop(),
+			b:                  northHemi,
+			contains:           true,
+			covers:             true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a:                  FullLoop(),
+			b:                  EmptyLoop(),
+			contains:           true,
+			disjoint:           true,
+			covers:             true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a:                  northHemi,
+			b:                  FullLoop(),
+			contained:          true,
+			covers:             true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a:                  northHemi,
+			b:                  EmptyLoop(),
+			contains:           true,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a:                  EmptyLoop(),
+			b:                  FullLoop(),
+			contained:          true,
+			disjoint:           true,
+			covers:             true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a:                  EmptyLoop(),
+			b:                  northHemi,
+			contained:          true,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a:                  EmptyLoop(),
+			b:                  EmptyLoop(),
+			contains:           true,
+			contained:          true,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a:          northHemi,
+			b:          northHemi,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          northHemi,
+			b:          southHemi,
+			disjoint:   true,
+			covers:     true,
+			sharedEdge: true,
+		},
+		{
+			a: northHemi,
+			b: eastHemi,
+		},
+		{
+			a:                  northHemi,
+			b:                  arctic80,
+			contains:           true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a:                  northHemi,
+			b:                  antarctic80,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a: northHemi,
+			b: candyCane,
+		},
+		// We can't compare northHemi3 vs. northHemi or southHemi because the
+		// result depends on the "simulation of simplicity" implementation details.
+		{
+			a:          northHemi3,
+			b:          northHemi3,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a: northHemi3,
+			b: eastHemi,
+		},
+		{
+			a:                  northHemi3,
+			b:                  arctic80,
+			contains:           true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a:                  northHemi3,
+			b:                  antarctic80,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a: northHemi3,
+			b: candyCane,
+		},
+		{
+			a:          southHemi,
+			b:          northHemi,
+			disjoint:   true,
+			covers:     true,
+			sharedEdge: true,
+		},
+		{
+			a:          southHemi,
+			b:          southHemi,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a: southHemi,
+			b: farHemi,
+		},
+		{
+			a:                  southHemi,
+			b:                  arctic80,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		// xxxx?
+		{
+			a:                  southHemi,
+			b:                  antarctic80,
+			contains:           true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a: southHemi,
+			b: candyCane,
+		},
+		{
+			a: candyCane,
+			b: northHemi,
+		},
+		{
+			a: candyCane,
+			b: southHemi,
+		},
+		{
+			a:                  candyCane,
+			b:                  arctic80,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a:                  candyCane,
+			b:                  antarctic80,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a:          candyCane,
+			b:          candyCane,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a: nearHemi,
+			b: westHemi,
+		},
+		{
+			a:                  smallNECW,
+			b:                  southHemi,
+			contains:           true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a:                  smallNECW,
+			b:                  westHemi,
+			contains:           true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a:          smallNECW,
+			b:          northHemi,
+			covers:     true,
+			sharedEdge: false,
+		},
+		{
+			a:          smallNECW,
+			b:          eastHemi,
+			covers:     true,
+			sharedEdge: false,
+		},
+		{
+			a:          loopA,
+			b:          loopA,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a: loopA,
+			b: loopB,
+		},
+		{
+			a:          loopA,
+			b:          aIntersectB,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopA,
+			b:          aUnionB,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopA,
+			b:          aMinusB,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopA,
+			b:          bMinusA,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a: loopB,
+			b: loopA,
+		},
+		{
+			a:          loopB,
+			b:          loopB,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopB,
+			b:          aIntersectB,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopB,
+			b:          aUnionB,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopB,
+			b:          aMinusB,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopB,
+			b:          bMinusA,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          aIntersectB,
+			b:          loopA,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          aIntersectB,
+			b:          loopB,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          aIntersectB,
+			b:          aIntersectB,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:                  aIntersectB,
+			b:                  aUnionB,
+			contained:          true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a:          aIntersectB,
+			b:          aMinusB,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          aIntersectB,
+			b:          bMinusA,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          aUnionB,
+			b:          loopA,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          aUnionB,
+			b:          loopB,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:                  aUnionB,
+			b:                  aIntersectB,
+			contains:           true,
+			sharedEdge:         false,
+			wantContainsNested: true,
+		},
+		{
+			a:          aUnionB,
+			b:          aUnionB,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          aUnionB,
+			b:          aMinusB,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          aUnionB,
+			b:          bMinusA,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          aMinusB,
+			b:          loopA,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          aMinusB,
+			b:          loopB,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          aMinusB,
+			b:          aIntersectB,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          aMinusB,
+			b:          aUnionB,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          aMinusB,
+			b:          aMinusB,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:                  aMinusB,
+			b:                  bMinusA,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a:          bMinusA,
+			b:          loopA,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          bMinusA,
+			b:          loopB,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          bMinusA,
+			b:          aIntersectB,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          bMinusA,
+			b:          aUnionB,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:                  bMinusA,
+			b:                  aMinusB,
+			disjoint:           true,
+			sharedEdge:         false,
+			wantContainsNested: false,
+		},
+		{
+			a:          bMinusA,
+			b:          bMinusA,
+			contains:   true,
+			contained:  true,
+			sharedEdge: true,
+		},
+		// Make sure the relations are correct if the loop crossing happens on
+		// two ends of a shared boundary segment.
+		// LoopRelationsWhenSameExceptPiecesStickingOutAndIn
+		{
+			a:          loopA,
+			b:          loopC,
+			sharedEdge: true,
+		},
+		{
+			a:          loopC,
+			b:          loopA,
+			sharedEdge: true,
+		},
+		{
+			a:          loopA,
+			b:          loopD,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopD,
+			b:          loopA,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopE,
+			b:          loopF,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopE,
+			b:          loopG,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopE,
+			b:          loopH,
+			sharedEdge: true,
+		},
+		{
+			a:          loopE,
+			b:          loopI,
+			sharedEdge: false,
+		},
+		{
+			a:          loopF,
+			b:          loopG,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopF,
+			b:          loopH,
+			sharedEdge: true,
+		},
+		{
+			a:          loopF,
+			b:          loopI,
+			sharedEdge: false,
+		},
+		{
+			a:          loopG,
+			b:          loopH,
+			contained:  true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopH,
+			b:          loopG,
+			contains:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopG,
+			b:          loopI,
+			disjoint:   true,
+			sharedEdge: true,
+		},
+		{
+			a:          loopH,
+			b:          loopI,
+			contains:   true,
+			sharedEdge: true,
+		},
+	}
+
+	for i, test := range tests {
+		// TODO(roberts): Uncomment when Contains/Intersects(Loop) are implemented.
+		/*
+			if test.contains {
+				testNestedPair(t, "a contains b", test.a, test.b)
+			}
+			if test.contained {
+				testNestedPair(t, "b contained by a", test.b, test.a)
+			}
+			if test.covers {
+				b1 := cloneLoop(test.b)
+				b1.Invert()
+				testNestedPair(t, "a covers b", test.a, b1)
+			}
+			if test.disjoint {
+				a1 := cloneLoop(test.a)
+				a1.Invert()
+				testNestedPair(t, "a disjoint from b", a1, test.b)
+			} else if !(test.contains || test.contained || test.covers) {
+				// Given loops A and B such that both A and its complement
+				// intersect both B and its complement, test various
+				// identities involving these four loops.
+				a1 := cloneLoop(test.a)
+				b1 := cloneLoop(test.b)
+				a1.Invert()
+				b1.Invert()
+				testOneOverlappingPair(t, test.a, test.b)
+				testOneOverlappingPair(t, a1, b1)
+				testOneOverlappingPair(t, a1, test.b)
+				testOneOverlappingPair(t, test.a, b1)
+			}
+		*/
+		if !test.sharedEdge && (test.contains || test.contained || test.disjoint) {
+			// TODO(roberts): Update this comparison once Contains(Loop) is completed.
+			// if test.a.Contains(test.b) != test.a.ContainsNested(test.b) {
+			if got := test.a.ContainsNested(test.b); got != test.wantContainsNested {
+				t.Errorf("%d. %v.ContainsNested(%v) = %v, want %v", i, test.a, test.b, got, test.wantContainsNested)
+			}
+		}
+
+		// A contains the boundary of B if either A contains B, or the two loops
+		// contain each other's boundaries and there are no shared edges (since at
+		// least one such edge must be reversed, and therefore is not considered to
+		// be contained according to the rules of CompareBoundary).
+		// TODO(roberts): Uncomment when CompareBoundary is implemented.
+		/*
+			comparison := 0
+			if test.contains || (test.covers && !test.sharedEdge) {
+				comparison = 1
+			}
+			// CompareBoundary requires that neither loop is empty.
+			if !test.a.IsEmpty() && !test.b.IsEmpty() {
+				if got := test.a.CompareBoundary(test.b); got != comparison {
+					t.Errorf("%v.CompareBoundary(%v) = %v, want %v", test.a, test.b, got, comparison)
+				}
+			}
+		*/
+	}
+}
+
 func TestLoopTurningAngle(t *testing.T) {
 	tests := []struct {
 		loop *Loop
