@@ -19,6 +19,7 @@ package s2
 import (
 	"io"
 	"math"
+	"sort"
 
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
@@ -29,6 +30,18 @@ import (
 type Point struct {
 	r3.Vector
 }
+
+// sortPoints sorts the slice of Points in place.
+func sortPoints(e []Point) {
+	sort.Sort(points(e))
+}
+
+// points implements the Sort interface for slices of Point.
+type points []Point
+
+func (p points) Len() int           { return len(p) }
+func (p points) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p points) Less(i, j int) bool { return p[i].Cmp(p[j].Vector) == -1 }
 
 // PointFromCoords creates a new normalized point from coordinates.
 //

@@ -19,7 +19,6 @@ package s2
 import (
 	"math"
 	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/golang/geo/r2"
@@ -204,17 +203,11 @@ func TestCellIDEdgeNeighbors(t *testing.T) {
 	}
 }
 
-type byCellID []CellID
-
-func (v byCellID) Len() int           { return len(v) }
-func (v byCellID) Swap(i, j int)      { v[i], v[j] = v[j], v[i] }
-func (v byCellID) Less(i, j int) bool { return uint64(v[i]) < uint64(v[j]) }
-
 func TestCellIDVertexNeighbors(t *testing.T) {
 	// Check the vertex neighbors of the center of face 2 at level 5.
 	id := cellIDFromPoint(PointFromCoords(0, 0, 1))
 	neighbors := id.VertexNeighbors(5)
-	sort.Sort(byCellID(neighbors))
+	sortCellIDs(neighbors)
 
 	for n, nbr := range neighbors {
 		i, j := 1<<29, 1<<29
@@ -234,7 +227,7 @@ func TestCellIDVertexNeighbors(t *testing.T) {
 	// Check the vertex neighbors of the corner of faces 0, 4, and 5.
 	id = CellIDFromFacePosLevel(0, 0, maxLevel)
 	neighbors = id.VertexNeighbors(0)
-	sort.Sort(byCellID(neighbors))
+	sortCellIDs(neighbors)
 	if len(neighbors) != 3 {
 		t.Errorf("len(CellID(%d).VertexNeighbors()) = %d, wanted %d", id, len(neighbors), 3)
 	}
@@ -287,8 +280,8 @@ func TestCellIDAllNeighbors(t *testing.T) {
 		}
 
 		// Sort the results and eliminate duplicates.
-		sort.Sort(byCellID(all))
-		sort.Sort(byCellID(want))
+		sortCellIDs(all)
+		sortCellIDs(want)
 		all = dedupCellIDs(all)
 		want = dedupCellIDs(want)
 

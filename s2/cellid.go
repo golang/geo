@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -55,6 +56,18 @@ import (
 // representations. For cells that represent 2D regions rather than
 // discrete point, it is better to use Cells.
 type CellID uint64
+
+// sortCellIDs sorts the slice of CellIDs in place.
+func sortCellIDs(ci []CellID) {
+	sort.Sort(cellIDs(ci))
+}
+
+// cellIDs implements the Sort interface for slices of CellIDs.
+type cellIDs []CellID
+
+func (c cellIDs) Len() int           { return len(c) }
+func (c cellIDs) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c cellIDs) Less(i, j int) bool { return c[i] < c[j] }
 
 // TODO(dsymonds): Some of these constants should probably be exported.
 const (

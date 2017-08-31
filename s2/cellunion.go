@@ -94,7 +94,7 @@ func (cu *CellUnion) IsNormalized() bool {
 
 // Normalize normalizes the CellUnion.
 func (cu *CellUnion) Normalize() {
-	sort.Sort(byID(*cu))
+	sortCellIDs(*cu)
 
 	output := make([]CellID, 0, len(*cu)) // the list of accepted cells
 	// Loop invariant: output is a sorted list of cells with no redundancy.
@@ -163,12 +163,6 @@ func (cu *CellUnion) ContainsCellID(id CellID) bool {
 	}
 	return i != 0 && (*cu)[i-1].RangeMax() >= id
 }
-
-type byID []CellID
-
-func (cu byID) Len() int           { return len(cu) }
-func (cu byID) Less(i, j int) bool { return cu[i] < cu[j] }
-func (cu byID) Swap(i, j int)      { cu[i], cu[j] = cu[j], cu[i] }
 
 // Denormalize replaces this CellUnion with an expanded version of the
 // CellUnion where any cell whose level is less than minLevel or where

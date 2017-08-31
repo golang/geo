@@ -18,6 +18,7 @@ package s2
 
 import (
 	"math"
+	"sort"
 	"sync"
 	"sync/atomic"
 
@@ -53,6 +54,18 @@ func (e Edge) Cmp(other Edge) int {
 	}
 	return e.V1.Cmp(other.V1.Vector)
 }
+
+// sortEdges sorts the slice of Edges in place.
+func sortEdges(e []Edge) {
+	sort.Sort(edges(e))
+}
+
+// edges implements the Sort interface for slices of Edge.
+type edges []Edge
+
+func (e edges) Len() int           { return len(e) }
+func (e edges) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
+func (e edges) Less(i, j int) bool { return e[i].Cmp(e[j]) == -1 }
 
 // Chain represents a range of edge IDs corresponding to a chain of connected
 // edges, specified as a (start, length) pair. The chain is defined to consist of
