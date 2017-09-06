@@ -102,31 +102,30 @@ Approximately ~40% complete.
 *   s2stuv.go (s2coords.h in C++) - This file is a collection of helper and
     conversion methods to and from ST-space, UV-space, and XYZ-space.
 *   s2wedge_relations
+*   ShapeIndex
 
 **Mostly Complete** Files that have almost all of the features of the original
 C++ code, and are reasonably complete enough to use in live code. Up to date
 listing of the incomplete methods are documented at the end of each file.
 
 *   CellUnion - Missing Union, Intersection, etc.
-*   Loop - Loop is mostly complete now. Missing Projection, Distance,
-    Contains, Intersects, Union, etc.
+*   Loop - Loop is mostly complete now. Missing Projection, Distance, Contains,
+    Intersects, Union, etc.
 *   Polyline - Missing Projection, Intersects, Interpolate, etc.
 *   Rect (AKA s2latlngrect in C++) - Missing Centroid, Distance,
     InteriorContains.
 *   RegionCoverer - Missing FloodFill and SimpleCovering.
-*   s2_test.go (AKA s2testing and s2textformat in C++) - Missing
-    ConcentricLoopsPolygon and Fractal test shape generation. This file is a
-    collection of testing helper methods.
+*   s2_test.go (AKA s2testing and s2textformat in C++) - Missing Fractal test
+    shape generation. This file is a collection of testing helper methods.
 *   s2edge_distances - Missing Intersection, ClosestPair.
-*   ShapeIndex - Missing ShapeContainsPoint and FindContainingShapes
 
 **In Progress** Files that have some work done, but are probably not complete
 enough for general use in production code.
 
-*   Polygon - Polygon is at the partial skeleton phase, the fields all exist,
-    and some basic methods are implemented, but it's missing almost everything.
-    Init with multiple loops, Area, Centroid, Distance, Projection,
-    Intersection, Union, Contains, Normalized, etc.
+*   Polygon - Polygons with multiple loops are supported. It fully
+    implements Shape and Region, but it's missing most other methods. (Area,
+    Centroid, Distance, Projection, Intersection, Union, Contains, Normalized,
+    etc.)
 *   PolylineSimplifier - Initial work has begun on this.
 *   s2predicates.go - This file is a collection of helper methods used by other
     parts of the library.
@@ -144,6 +143,7 @@ started.
 *   ClosestEdgeQuery
 *   ClosestPointQuery
 *   ConvexHullQuery
+*   ContainsPointQuery - ShapeContainsPoint and FindContainingShapes
 *   CrossingEdgeQuery
 *   EdgeTesselator
 *   PointCompression
@@ -152,12 +152,12 @@ started.
 *   RegionIntersection
 *   RegionUnion
 *   Projections
-*   ShapeUtil - Most of this will end up in s2_test.
+*   shapeutil
 *   lexicon
 *   priorityqueuesequence
 
 ### Encode/Decode
 
 Encoding of S2 Go types is committed and is interoperable with C++ and Java.
-Decoding for Loops and Rects is now completed. The remaining types will be
-worked on in the future.
+Decoding for Loops, Polygons, Polylines, and Rects is now completed. The
+remaining types will be worked on in the future.

@@ -96,66 +96,76 @@ const (
 	loopOverlap4 = "-10:0, 10:0, 10:-10, -10:-10"
 )
 
-// Some shared polygons used in the tests.
 var (
+	// Some standard polygons to use in the tests.
 	emptyPolygon = &Polygon{}
 	fullPolygon  = FullPolygon()
 
-	// TODO(roberts): Uncomment once Polygons with multiple loops are supported.
-	/*
-		near0Polygon     = makePolygon(nearLoop0, true)
-		near01Polygon    = makePolygon(nearLoop0+nearLoop1, true)
-		near30Polygon    = makePolygon(nearLoop3+nearLoop0, true)
-		near23Polygon    = makePolygon(nearLoop2+nearLoop3, true)
-		near0231Polygon  = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoop1, true)
-		near023H1Polygon = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoopHemi+nearLoop1, true)
+	near0Polygon     = makePolygon(nearLoop0, true)
+	near01Polygon    = makePolygon(nearLoop0+nearLoop1, true)
+	near30Polygon    = makePolygon(nearLoop3+nearLoop0, true)
+	near23Polygon    = makePolygon(nearLoop2+nearLoop3, true)
+	near0231Polygon  = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoop1, true)
+	near023H1Polygon = makePolygon(nearLoop0+nearLoop2+nearLoop3+nearLoopHemi+nearLoop1, true)
 
-		far01Polygon    = makePolygon(farLoop0+farLoop1, true)
-		far21Polygon    = makePolygon(farLoop2+farLoop1, true)
-		far231Polygon   = makePolygon(farLoop2+farLoop3+farLoop1, true)
-		far2H0Polygon   = makePolygon(farLoop2+farLoopHemi+farLoop0, true)
-		far2H013Polygon = makePolygon(farLoop2+farLoopHemi+farLoop0+farLoop1+farLoop3, true)
+	far01Polygon    = makePolygon(farLoop0+farLoop1, true)
+	far21Polygon    = makePolygon(farLoop2+farLoop1, true)
+	far231Polygon   = makePolygon(farLoop2+farLoop3+farLoop1, true)
+	far2H0Polygon   = makePolygon(farLoop2+farLoopHemi+farLoop0, true)
+	far2H013Polygon = makePolygon(farLoop2+farLoopHemi+farLoop0+farLoop1+farLoop3, true)
 
-		south0abPolygon     = makePolygon(southLoop0a+southLoop0b, true)
-		south2Polygon       = makePolygon(southLoop2, true)
-		south20b1Polygon    = makePolygon(southLoop2+southLoop0b+southLoop1, true)
-		south2H1Polygon     = makePolygon(southLoop2+southLoopHemi+southLoop1, true)
-		south20bH0acPolygon = makePolygon(southLoop2+southLoop0b+southLoopHemi+
-			southLoop0a+southLoop0c, true)
+	south0abPolygon     = makePolygon(southLoop0a+southLoop0b, true)
+	south2Polygon       = makePolygon(southLoop2, true)
+	south20b1Polygon    = makePolygon(southLoop2+southLoop0b+southLoop1, true)
+	south2H1Polygon     = makePolygon(southLoop2+southLoopHemi+southLoop1, true)
+	south20bH0acPolygon = makePolygon(southLoop2+southLoop0b+southLoopHemi+
+		southLoop0a+southLoop0c, true)
 
-		nf1N10F2S10abcPolygon = makePolygon(southLoop0c+farLoop2+nearLoop1+
-			nearFarLoop1+nearLoop0+southLoop1+southLoop0b+southLoop0a, true)
+	nf1N10F2S10abcPolygon = makePolygon(southLoop0c+farLoop2+nearLoop1+
+		nearFarLoop1+nearLoop0+southLoop1+southLoop0b+southLoop0a, true)
 
-		nf2N2F210S210abPolygon = makePolygon(farLoop2+southLoop0a+farLoop1+
-			southLoop1+farLoop0+southLoop0b+nearFarLoop2+southLoop2+nearLoop2, true)
+	nf2N2F210S210abPolygon = makePolygon(farLoop2+southLoop0a+farLoop1+
+		southLoop1+farLoop0+southLoop0b+nearFarLoop2+southLoop2+nearLoop2, true)
 
-		f32n0Polygon  = makePolygon(farLoop2+nearLoop0+farLoop3, true)
-		n32s0bPolygon = makePolygon(nearLoop3+southLoop0b+nearLoop2, true)
+	f32n0Polygon  = makePolygon(farLoop2+nearLoop0+farLoop3, true)
+	n32s0bPolygon = makePolygon(nearLoop3+southLoop0b+nearLoop2, true)
 
-		cross1Polygon           = makePolygon(loopCross1, true)
-		cross1SideHolePolygon   = makePolygon(loopCross1+loopCross1SideHole, true)
-		cross1CenterHolePolygon = makePolygon(loopCross1+loopCrossCenterHole, true)
-		cross2Polygon           = makePolygon(loopCross2, true)
-		cross2SideHolePolygon   = makePolygon(loopCross2+loopCross2SideHole, true)
-		cross2CenterHolePolygon = makePolygon(loopCross2+loopCrossCenterHole, true)
+	cross1Polygon           = makePolygon(loopCross1, true)
+	cross1SideHolePolygon   = makePolygon(loopCross1+loopCross1SideHole, true)
+	cross1CenterHolePolygon = makePolygon(loopCross1+loopCrossCenterHole, true)
+	cross2Polygon           = makePolygon(loopCross2, true)
+	cross2SideHolePolygon   = makePolygon(loopCross2+loopCross2SideHole, true)
+	cross2CenterHolePolygon = makePolygon(loopCross2+loopCrossCenterHole, true)
 
-		overlap1Polygon           = makePolygon(loopOverlap1, true)
-		overlap1SideHolePolygon   = makePolygon(loopOverlap1+loopOverlap1SideHole, true)
-		overlap1CenterHolePolygon = makePolygon(loopOverlap1+loopOverlapCenterHole, true)
-		overlap2Polygon           = makePolygon(loopOverlap2, true)
-		overlap2SideHolePolygon   = makePolygon(loopOverlap2+loopOverlap2SideHole, true)
-		overlap2CenterHolePolygon = makePolygon(loopOverlap2+loopOverlapCenterHole, true)
+	overlap1Polygon           = makePolygon(loopOverlap1, true)
+	overlap1SideHolePolygon   = makePolygon(loopOverlap1+loopOverlap1SideHole, true)
+	overlap1CenterHolePolygon = makePolygon(loopOverlap1+loopOverlapCenterHole, true)
+	overlap2Polygon           = makePolygon(loopOverlap2, true)
+	overlap2SideHolePolygon   = makePolygon(loopOverlap2+loopOverlap2SideHole, true)
+	overlap2CenterHolePolygon = makePolygon(loopOverlap2+loopOverlapCenterHole, true)
 
-		overlap3Polygon = makePolygon(loopOverlap3, true)
-		overlap4Polygon = makePolygon(loopOverlap4, true)
+	overlap3Polygon = makePolygon(loopOverlap3, true)
+	overlap4Polygon = makePolygon(loopOverlap4, true)
 
-		farHemiPolygon      = makePolygon(farLoopHemi, true)
-		southHemiPolygon    = makePolygon(southLoopHemi, true)
-		farSouthHemiPolygon = makePolygon(farHemiSouthHemiLoop, true)
-	*/
+	farHemiPolygon      = makePolygon(farLoopHemi, true)
+	southHemiPolygon    = makePolygon(southLoopHemi, true)
+	farSouthHemiPolygon = makePolygon(farHemiSouthHemiLoop, true)
 )
 
-func TestPolygonEmptyAndFull(t *testing.T) {
+func TestPolygonInitSingleLoop(t *testing.T) {
+	if !PolygonFromLoops([]*Loop{EmptyLoop()}).IsEmpty() {
+		t.Errorf("polygon from Empty Loop should make an EmptyPolygon")
+	}
+	if !PolygonFromLoops([]*Loop{FullLoop()}).IsFull() {
+		t.Errorf("polygon from Full Loop should make a FullPolygon")
+	}
+	p := PolygonFromLoops([]*Loop{makeLoop("0:0, 0:10, 10:0")})
+	if got, want := p.numVertices, 3; got != want {
+		t.Errorf("%v.numVertices = %v, want %v", p, got, want)
+	}
+}
+
+func TestPolygonEmpty(t *testing.T) {
 	if !emptyPolygon.IsEmpty() {
 		t.Errorf("empty polygon should be empty")
 	}
@@ -169,14 +179,15 @@ func TestPolygonEmptyAndFull(t *testing.T) {
 	if got, want := emptyPolygon.NumEdges(), 0; got != want {
 		t.Errorf("emptyPolygon.NumEdges() = %v, want %v", got, want)
 	}
-
 	if got := emptyPolygon.dimension(); got != polygonGeometry {
 		t.Errorf("emptyPolygon.dimension() = %v, want %v", got, polygonGeometry)
 	}
 	if got, want := emptyPolygon.NumChains(), 0; got != want {
 		t.Errorf("emptyPolygon.NumChains() = %v, want %v", got, want)
 	}
+}
 
+func TestPolygonFull(t *testing.T) {
 	if fullPolygon.IsEmpty() {
 		t.Errorf("full polygon should not be emtpy")
 	}
@@ -190,79 +201,67 @@ func TestPolygonEmptyAndFull(t *testing.T) {
 	if got, want := fullPolygon.NumEdges(), 0; got != want {
 		t.Errorf("fullPolygon.NumEdges() = %v, want %v", got, want)
 	}
-
 	if got := fullPolygon.dimension(); got != polygonGeometry {
-		t.Errorf("emptyPolygon.dimension() = %v, want %v", got, polygonGeometry)
+		t.Errorf("fullPolygon.dimension() = %v, want %v", got, polygonGeometry)
 	}
 	if got, want := fullPolygon.NumChains(), 0; got != want {
-		t.Errorf("emptyPolygon.NumChains() = %v, want %v", got, want)
+		t.Errorf("fullPolygon.NumChains() = %v, want %v", got, want)
 	}
 }
 
 func TestPolygonShape(t *testing.T) {
-	p := makePolygon("0:0, 1:0, 1:1, 2:1", true)
-	shape := Shape(p)
+	const numLoops = 100
+	const numVerticesPerLoop = 6
+	concentric := concentricLoopsPolygon(PointFromCoords(1, 0, 0), numLoops, numVerticesPerLoop)
 
-	if got, want := shape.NumEdges(), 4; got != want {
-		t.Errorf("%v.NumEdges() = %v, want %d", shape, got, want)
+	tests := []struct {
+		p *Polygon
+	}{
+		{near0Polygon},    // one loop polygon
+		{near0231Polygon}, // several loops polygon
+		{concentric},      // many loops polygon
 	}
 
-	if p.numVertices != shape.NumEdges() {
-		t.Errorf("the number of vertices in a polygon should equal the number of edges")
-	}
-	if p.NumLoops() != shape.NumChains() {
-		t.Errorf("the number of loops in a polygon should equal the number of chains")
-	}
+	for _, test := range tests {
+		shape := Shape(test.p)
 
-	edgeID := 0
-	for i, l := range p.loops {
-		if edgeID != shape.Chain(i).Start {
-			t.Errorf("the edge id of the start of loop(%d) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.Chain(i).Start, edgeID)
+		if test.p.numVertices != shape.NumEdges() {
+			t.Errorf("the number of vertices in a polygon should equal the number of edges. got %v, want %v", test.p.numVertices, shape.NumEdges())
 		}
-		if len(l.vertices) != shape.Chain(i).Length {
-			t.Errorf("the length of Chain(%d) should equal the length of loop(%d), got %v, want %v", i, i, shape.Chain(i).Length, len(l.vertices))
+
+		if test.p.NumLoops() != shape.NumChains() {
+			t.Errorf("the number of loops in a polygon should equal the number of chains. got %v, want %v", test.p.NumLoops(), shape.NumChains())
 		}
-		for j := 0; j < len(l.Vertices()); j++ {
-			edge := shape.Edge(edgeID)
-			if l.OrientedVertex(j) != edge.V0 {
-				t.Errorf("l.OrientedVertex(%d) = %v, want %v", j, l.OrientedVertex(j), edge.V0)
+
+		edgeID := 0
+		for i, l := range test.p.loops {
+			if edgeID != shape.Chain(i).Start {
+				t.Errorf("the edge id of the start of loop(%d) should equal the sum of vertices so far in the polygon. got %d, want %d", i, shape.Chain(i).Start, edgeID)
 			}
-			if l.OrientedVertex(j+1) != edge.V1 {
-				t.Errorf("l.OrientedVertex(%d) = %v, want %v", j+1, l.OrientedVertex(j+1), edge.V1)
+			if len(l.vertices) != shape.Chain(i).Length {
+				t.Errorf("the length of Chain(%d) should equal the length of loop(%d), got %v, want %v", i, i, shape.Chain(i).Length, len(l.vertices))
 			}
-			edgeID++
+			for j := 0; j < len(l.Vertices()); j++ {
+				edge := shape.Edge(edgeID)
+				if l.OrientedVertex(j) != edge.V0 {
+					t.Errorf("l.Vertex(%d) = %v, want %v", j, l.Vertex(j), edge.V0)
+				}
+				if l.OrientedVertex(j+1) != edge.V1 {
+					t.Errorf("l.Vertex(%d) = %v, want %v", j+1, l.Vertex(j+1), edge.V1)
+				}
+				edgeID++
+			}
+		}
+		if shape.dimension() != polygonGeometry {
+			t.Errorf("dimension = %v, want %v", shape.dimension(), polygonGeometry)
+		}
+		if !shape.HasInterior() {
+			t.Errorf("polygons should always have interiors")
+		}
+		if got, want := test.p.ContainsPoint(OriginPoint()), shape.ReferencePoint().Contained; got != want {
+			t.Errorf("p.ContainsPoint(OriginPoint()) != shape.ReferencePoint().Contained")
 		}
 	}
-	if shape.dimension() != polygonGeometry {
-		t.Errorf("polygon.dimension() = %v, want %v", shape.dimension(), polygonGeometry)
-	}
-	if !shape.HasInterior() {
-		t.Errorf("polygons should always have interiors")
-	}
-	if !shape.ReferencePoint().Contained {
-		t.Errorf("polygon %v should contain its reference point", shape)
-	}
-
-	if got, want := p.ContainsPoint(OriginPoint()), shape.ReferencePoint().Contained; got != want {
-		t.Errorf("p.ContainsPoint(OriginPoint()) != shape.ReferencePoint().Contained")
-	}
-}
-
-func TestPolygonLoop(t *testing.T) {
-	if fullPolygon.NumLoops() != 1 {
-		t.Errorf("full polygon should have one loop")
-	}
-
-	l := &Loop{}
-	p1 := PolygonFromLoops([]*Loop{l})
-	if p1.NumLoops() != 1 {
-		t.Errorf("polygon with one loop should have one loop")
-	}
-	if p1.Loop(0) != l {
-		t.Errorf("polygon with one loop should return it")
-	}
-
-	// TODO: When multiple loops are supported, add more test cases.
 }
 
 func TestPolygonParent(t *testing.T) {

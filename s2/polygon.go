@@ -80,47 +80,234 @@ type Polygon struct {
 	cumulativeEdges []int
 }
 
-// PolygonFromLoops constructs a polygon from the given hierarchically nested
-// loops. The polygon interior consists of the points contained by an odd
-// number of loops. (Recall that a loop contains the set of points on its
-// left-hand side.)
+// PolygonFromLoops constructs a polygon from the given set of loops. The polygon
+// interior consists of the points contained by an odd number of loops. (Recall
+// that a loop contains the set of points on its left-hand side.)
 //
-// This method figures out the loop nesting hierarchy and assigns every loop a
+// This method determines the loop nesting hierarchy and assigns every loop a
 // depth. Shells have even depths, and holes have odd depths.
 //
-// NOTE: this function is NOT YET IMPLEMENTED for more than one loop and will
-// panic if given a slice of length > 1.
+// Note: The given set of loops are reordered by this method so that the hierarchy
+// can be traversed using Parent, LastDescendant and the loops depths.
 func PolygonFromLoops(loops []*Loop) *Polygon {
-	if len(loops) > 1 {
-		panic("PolygonFromLoops for multiple loops is not yet implemented")
+	p := &Polygon{}
+	// Empty polygons do not contain any loops, even the Empty loop.
+	if len(loops) == 1 && loops[0].IsEmpty() {
+		p.initLoopProperties()
+		return p
 	}
-
-	p := &Polygon{
-		loops:       loops,
-		numVertices: len(loops[0].Vertices()), // TODO(roberts): Once multi-loop is supported, fix this.
-		// TODO(roberts): Compute these bounds.
-		bound: loops[0].RectBound(),
-	}
-	p.subregionBound = ExpandForSubregions(p.bound)
-	p.initEdgesAndIndex()
-
+	p.loops = loops
+	p.initNested()
 	return p
+
 }
 
+// TODO(roberts): Implement initOriented
+/*
+// PolygonFromOrientedLoops, like PolygonFromLoops, returns a Polygon from the
+// given set of loops. It expects loops to be oriented such that the polygon
+// interior is on the left-hand side of all loops. This implies that shells
+// and holes should have opposite orientations in the input to this method.
+// (During initialization, loops representing holes will automatically be
+// inverted.)
+func PolygonFromOrientedLoops(loops []*Loop) *Polygon {
+	panic("PolygonFromOrientedLoops not yet implemented")
+	p := &Polygon{
+		loops: loops,
+	}
+	p.initOriented()
+	return p
+}
+*/
+
+// PolygonFromCell returns a Polygon from a single loop created from the given Cell.
+func PolygonFromCell(cell Cell) *Polygon {
+	return PolygonFromLoops([]*Loop{LoopFromCell(cell)})
+}
+
+// initNested takes the set of loops in this polygon and performs the nesting
+// computations to set the proper nesting and parent/child relationships.
+func (p *Polygon) initNested() {
+	if len(p.loops) == 1 {
+		p.initOneLoop()
+		return
+	}
+
+	lm := make(loopMap)
+
+	for _, l := range p.loops {
+		lm.insertLoop(l, nil)
+	}
+
+	// Reorder the loops in depth-first traversal order.
+	p.initLoops(lm)
+	p.initLoopProperties()
+}
+
+// initOriented takes the loops in this polygon and performs the nesting
+// computations. It expects the loops to be oriented such that the polygon
+// interior is on the left-hand side of all loops. This implies that shells
+// and holes should have opposite orientations in the input to this method.
+// (During initialization, loops representing holes will automatically be
+// inverted.)
+func (p *Polygon) initOriented() {
+	// Here is the algorithm:
+	//
+	// 1. Remember which of the given loops contain OriginPoint.
+	//
+	// 2. Invert loops as necessary to ensure that they are nestable (i.e., no
+	//    loop contains the complement of any other loop). This may result in a
+	//    set of loops corresponding to the complement of the given polygon, but
+	//    we will fix that problem later.
+	//
+	//    We make the loops nestable by first normalizing all the loops (i.e.,
+	//    inverting any loops whose turning angle is negative). This handles
+	//    all loops except those whose turning angle is very close to zero
+	//    (within the maximum error tolerance). Any such loops are inverted if
+	//    and only if they contain OriginPoint(). (In theory this step is only
+	//    necessary if there are at least two such loops.) The resulting set of
+	//    loops is guaranteed to be nestable.
+	//
+	// 3. Build the polygon. This yields either the desired polygon or its
+	//    complement.
+	//
+	// 4. If there is at least one loop, we find a loop L that is adjacent to
+	//    OriginPoint() (where "adjacent" means that there exists a path
+	//    connecting OriginPoint() to some vertex of L such that the path does
+	//    not cross any loop). There may be a single such adjacent loop, or
+	//    there may be several (in which case they should all have the same
+	//    contains_origin() value). We choose L to be the loop containing the
+	//    origin whose depth is greatest, or loop(0) (a top-level shell) if no
+	//    such loop exists.
+	//
+	// 5. If (L originally contained origin) != (polygon contains origin), we
+	//    invert the polygon. This is done by inverting a top-level shell whose
+	//    turning angle is minimal and then fixing the nesting hierarchy. Note
+	//    that because we normalized all the loops initially, this step is only
+	//    necessary if the polygon requires at least one non-normalized loop to
+	//    represent it.
+	panic("initOriented not yet implemented")
+}
+
+// loopMap is a map of a loop to its immediate children with respect to nesting.
+// It is used to determine which loops are shells and which are holes.
+type loopMap map[*Loop][]*Loop
+
+// insertLoop adds the given loop to the loop map under the specified parent.
+// All children of the new entry are checked to see if the need to move up to
+// a different level.
+func (lm loopMap) insertLoop(newLoop, parent *Loop) {
+	var children []*Loop
+	for done := false; !done; {
+		children = lm[parent]
+		done = true
+		for _, child := range children {
+			if child.ContainsNested(newLoop) {
+				parent = child
+				done = false
+				break
+			}
+		}
+	}
+
+	// Now, we have found a parent for this loop, it may be that some of the
+	// children of the parent of this loop may now be children of the new loop.
+	newChildren := lm[newLoop]
+	for i := 0; i < len(children); {
+		child := children[i]
+		if newLoop.ContainsNested(child) {
+			newChildren = append(newChildren, child)
+			children = append(children[0:i], children[i+1:]...)
+		} else {
+			i++
+		}
+	}
+
+	lm[newLoop] = newChildren
+	lm[parent] = append(lm[parent], newLoop)
+}
+
+// loopStack simplifies access to the loops while being initialized.
+type loopStack []*Loop
+
+func (s *loopStack) push(v *Loop) {
+	*s = append(*s, v)
+}
+func (s *loopStack) pop() *Loop {
+	l := len(*s)
+	r := (*s)[l-1]
+	*s = (*s)[:l-1]
+	return r
+}
+
+// initLoops walks the mapping of loops to all of their children, and adds them in
+// order into to the polygons set of loops.
+func (p *Polygon) initLoops(lm loopMap) {
+	var stack loopStack
+	depth := -1
+
+	for len(stack) > 0 {
+		loop := stack.pop()
+		if loop != nil {
+			depth = loop.depth
+			p.loops = append(p.loops, loop)
+		}
+		children := lm[loop]
+		for i := len(children) - 1; i >= 0; i-- {
+			child := children[i]
+			child.depth = depth + 1
+			stack.push(child)
+		}
+	}
+}
+
+// initOneLoop set the properties for a polygon made of a single loop.
+// TODO(roberts): Can this be merged with initLoopProperties
+func (p *Polygon) initOneLoop() {
+	p.hasHoles = false
+	p.numVertices = len(p.loops[0].vertices)
+	p.bound = p.loops[0].RectBound()
+	p.subregionBound = ExpandForSubregions(p.bound)
+	// Ensure the loops depth is set correctly.
+	p.loops[0].depth = 0
+
+	p.initEdgesAndIndex()
+}
+
+// initLoopProperties sets the properties for polygons with multiple loops.
+func (p *Polygon) initLoopProperties() {
+	// the loops depths are set by initNested/initOriented prior to this.
+
+	p.hasHoles = false
+	for k, l := range p.loops {
+		if p.loopIsHole(k) {
+			p.hasHoles = true
+		} else {
+			p.bound = p.bound.Union(l.RectBound())
+		}
+		p.numVertices += l.NumVertices()
+	}
+	p.subregionBound = ExpandForSubregions(p.bound)
+
+	p.initEdgesAndIndex()
+}
+
+// initEdgesAndIndex performs the shape related initializations and adds the final
+// polygon to the index.
 func (p *Polygon) initEdgesAndIndex() {
+	if p.IsFull() {
+		return
+	}
 	const maxLinearSearchLoops = 12 // Based on benchmarks.
 	if len(p.loops) > maxLinearSearchLoops {
 		p.cumulativeEdges = make([]int, 0, len(p.loops))
 	}
 
-	// Full polygons don't have edges, as far as the API is concerned.
-	if !p.IsFull() {
-		for _, l := range p.loops {
-			if p.cumulativeEdges != nil {
-				p.cumulativeEdges = append(p.cumulativeEdges, p.numEdges)
-			}
-			p.numEdges += len(l.Vertices())
+	for _, l := range p.loops {
+		if p.cumulativeEdges != nil {
+			p.cumulativeEdges = append(p.cumulativeEdges, p.numEdges)
 		}
+		p.numEdges += len(l.vertices)
 	}
 
 	p.index = NewShapeIndex()
@@ -650,9 +837,6 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 }
 
 // TODO(roberts): Differences from C++
-// InitNestedFromLoops
-// InitFromLoop
-// InitOrientedFromLoops
 // IsValid
 // Area
 // Centroid
@@ -675,9 +859,9 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 // IsNormalized
 // Equals/BoundaryEquals/BoundaryApproxEquals/BoundaryNear Polygons
 // BreakEdgesAndAddToBuilder
+//
 // clearLoops
 // findLoopNestingError
-// initLoops
 // initToSimplifiedInternal
 // internalClipPolyline
 // compareBoundary
