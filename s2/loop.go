@@ -204,6 +204,59 @@ func (l *Loop) initBound() {
 	l.subregionBound = ExpandForSubregions(l.bound)
 }
 
+// IsValid reports whether this is a valid loop or not.
+func (l *Loop) IsValid() bool {
+	return l.findValidationError() == nil
+}
+
+// findValidationError reports whether this is not a valid loop and if so
+// returns an error describing why. This function requires the Loops ShapeIndex
+// to have been intialized.
+func (l *Loop) findValidationError() error {
+	if err := l.findValidationErrorNoIndex(); err != nil {
+		return err
+	}
+	// Check for intersections between non-adjacent edges (including at vertices)
+	// TODO(roberts): Once shapeutil gets findAnyCrossing uncomment this.
+	// return findAnyCrossing(l.index)
+	return nil
+}
+
+// findValidationErrorNoIndex reports whether this is not a valid loop, but
+// skips checks that would require a ShapeIndex to be built for the loop. This
+// is primarily used by Polygon to do validation so it doesn't trigger the
+// creation of unneeded ShapeIndices.
+func (l *Loop) findValidationErrorNoIndex() error {
+	// All vertices must be unit length.
+	for i, v := range l.vertices {
+		if !v.IsUnit() {
+			return fmt.Errorf("vertex %d is not unit length", i)
+		}
+	}
+
+	// Loops must have at least 3 vertices (except for empty and full).
+	if len(l.vertices) < 3 {
+		if l.isEmptyOrFull() {
+			return nil // Skip remaining tests.
+		}
+		return fmt.Errorf("non-empty, non-full loops must have at least 3 vertices")
+	}
+
+	// Loops are not allowed to have any duplicate vertices or edge crossings.
+	// We split this check into two parts. First we check that no edge is
+	// degenerate (identical endpoints). Then we check that there are no
+	// intersections between non-adjacent edges (including at vertices). The
+	// second check needs the ShapeIndex, so it does not fall within the scope
+	// of this method.
+	for i, v := range l.vertices {
+		if v == l.Vertex(i+1) {
+			return fmt.Errorf("edge %d is degenerate (duplicate vertex)", i)
+		}
+	}
+
+	return nil
+}
+
 // ContainsOrigin reports true if this loop contains s2.OriginPoint().
 func (l *Loop) ContainsOrigin() bool {
 	return l.originInside

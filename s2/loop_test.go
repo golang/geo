@@ -1582,6 +1582,63 @@ func TestLoopNormalizedCompatibleWithContains(t *testing.T) {
 	}
 }
 
+func TestLoopIsValidDetectsInvalidLoops(t *testing.T) {
+	tests := []struct {
+		msg    string
+		points []Point
+	}{
+		// Not enough vertices. Note that all single-vertex loops are valid; they
+		// are interpreted as being either "empty" or "full".
+		{
+			msg:    "loop has no vertices",
+			points: parsePoints(""),
+		},
+		{
+			msg:    "loop has too few vertices",
+			points: parsePoints("20:20, 21:21"),
+		},
+		// degenerate edge checks happen in validation before duplicate vertices.
+		{
+			msg:    "loop has degenerate first edge",
+			points: parsePoints("20:20, 20:20, 20:21"),
+		},
+		{
+			msg:    "loop has degenerate third edge",
+			points: parsePoints("20:20, 20:21, 20:20"),
+		},
+		// TODO(roberts): Uncomment these cases when FindAnyCrossings is in.
+		/*
+			{
+				msg:    "loop has duplicate points",
+				points: parsePoints("20:20, 21:21, 21:20, 20:20, 20:21"),
+			},
+			{
+				msg:    "loop has crossing edges",
+				points: parsePoints("20:20, 21:21, 21:20.5, 21:20, 20:21"),
+			},
+		*/
+		{
+			// Ensure points are not normalized.
+			msg: "loop with non-normalized vertices",
+			points: []Point{
+				Point{r3.Vector{2, 0, 0}},
+				Point{r3.Vector{0, 1, 0}},
+				Point{r3.Vector{0, 0, 1}},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		loop := LoopFromPoints(test.points)
+		err := loop.findValidationError()
+		if err == nil {
+			t.Errorf("%s. %v.findValidationError() = nil, want err to be non-nil", test.msg, loop)
+		}
+		// The C++ tests also tests that the returned error message string contains
+		// a specific set of text. That part of the test is skipped here.
+	}
+}
+
 const (
 	// TODO(roberts): Convert these into changeable flags or parameters.
 	// A loop with a 10km radius and 4096 vertices has an edge length of 15 meters.
