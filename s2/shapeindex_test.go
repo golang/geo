@@ -431,10 +431,28 @@ func TestShapeIndexShrinkToFitOptimization(t *testing.T) {
 	quadraticValidate(t, index)
 }
 
+func TestShapeIndexMixedGeometry(t *testing.T) {
+	// This test used to trigger a bug where the presence of a shape with an
+	// interior could cause shapes that don't have an interior to suddenly
+	// acquire one. This would cause extra ShapeIndex cells to be created
+	// that are outside the bounds of the given geometry.
+	index := NewShapeIndex()
+	index.Add(makePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"))
+	index.Add(makePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"))
+	index.Add(makePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"))
+
+	loop := LoopFromCell(CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(maxLevel)))
+	index.Add(loop)
+	it := index.Iterator()
+	// No geometry intersects face 1, so there should be no index cells there.
+	c := CellIDFromFace(1)
+	if got, want := it.LocateCellID(c), Disjoint; got != want {
+		t.Errorf("%v.LocateCellID(%v) = %v, want %v\n%v", it, c, got, want, index)
+	}
+}
+
 // TODO(roberts): Differences from C++:
 // TestShapeIndexLoopSpanningThreeFaces(t *testing.T) {}
 // TestShapeIndexSimpleUpdates(t *testing.T) {}
 // TestShapeIndexRandomUpdates(t *testing.T) {}
-// TestShapeIndexContainingShapes(t *testing.T) {}
-// TestShapeIndexMixedGeometry(t *testing.T) {}
 // TestShapeIndexHasCrossing(t *testing.T) {}
