@@ -876,6 +876,7 @@ func (s *ShapeIndex) maybeApplyUpdates() {
 	if atomic.LoadInt32(&s.status) != fresh {
 		s.mu.Lock()
 		s.applyUpdatesInternal()
+		atomic.StoreInt32(&s.status, fresh)
 		s.mu.Unlock()
 	}
 }
@@ -906,7 +907,7 @@ func (s *ShapeIndex) applyUpdatesInternal() {
 
 	s.pendingRemovals = s.pendingRemovals[:0]
 	s.pendingAdditionsPos = int32(len(s.shapes))
-	// It is the caller's responsibility to update index_status_.
+	// It is the caller's responsibility to update the index status.
 }
 
 // addShapeInternal clips all edges of the given shape to the six cube faces,
