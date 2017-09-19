@@ -224,7 +224,7 @@ func (lm loopMap) insertLoop(newLoop, parent *Loop) {
 	}
 
 	lm[newLoop] = newChildren
-	lm[parent] = append(lm[parent], newLoop)
+	lm[parent] = append(children, newLoop)
 }
 
 // loopStack simplifies access to the loops while being initialized.
@@ -244,6 +244,7 @@ func (s *loopStack) pop() *Loop {
 // order into to the polygons set of loops.
 func (p *Polygon) initLoops(lm loopMap) {
 	var stack loopStack
+	stack.push(nil)
 	depth := -1
 
 	for len(stack) > 0 {
