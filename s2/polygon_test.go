@@ -310,28 +310,6 @@ func TestPolygonLastDescendant(t *testing.T) {
 	}
 }
 
-func TestPolygonLoopIsHoleAndLoopSign(t *testing.T) {
-	if fullPolygon.loopIsHole(0) {
-		t.Errorf("the full polygons only loop should not be a hole")
-	}
-	if fullPolygon.loopSign(0) != 1 {
-		t.Errorf("the full polygons only loop should be postitive")
-	}
-
-	loop := LoopFromPoints(parsePoints("30:20, 40:20, 39:43, 33:35"))
-	p := PolygonFromLoops([]*Loop{loop})
-
-	if p.loopIsHole(0) {
-		t.Errorf("first loop in a polygon should not start out as a hole")
-	}
-	if p.loopSign(0) != 1 {
-		t.Errorf("first loop in a polygon should start out as positive")
-	}
-
-	// TODO: When multiple loops are supported, add more test cases to
-	// more fully show the parent levels.
-}
-
 func TestPolygonContainsPoint(t *testing.T) {
 	tests := []struct {
 		polygon string

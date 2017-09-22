@@ -1037,8 +1037,7 @@ func (l Loop) encode(e *encoder) {
 	}
 
 	e.writeBool(l.originInside)
-	// The depth of this loop within a polygon. Go does not currently track this value.
-	e.writeInt32(0)
+	e.writeInt32(int32(l.depth))
 
 	// Encode the bound.
 	l.bound.encode(e)

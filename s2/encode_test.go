@@ -214,11 +214,7 @@ func TestEncodeDecode(t *testing.T) {
 		{encodedPolygonEmpty, emptyPolygon()},
 		{encodedPolygonFull, FullPolygon()},
 		{encodedPolygon1Loops, makePolygon(cross1, false)},
-		// TODO(roberts): When Polygon has a more complete implementation,
-		// uncomment this. Currently things like bounds values do not match C++,
-		// and Polygons with more than one loop.
-
-		// {encodedPolygon2Loops, makePolygon(cross1+";"+crossCenterHole, false)},
+		{encodedPolygon2Loops, makePolygon(cross1+";"+crossCenterHole, false)},
 
 		// Polylines
 		{encodedPolylineEmpty, (Polyline{})},

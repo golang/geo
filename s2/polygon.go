@@ -138,6 +138,9 @@ func (p *Polygon) initNested() {
 	for _, l := range p.loops {
 		lm.insertLoop(l, nil)
 	}
+	// The loops have all been added to the loopMap for ordering. Clear the
+	// loops slice because we add all the loops in-order in initLoops.
+	p.loops = nil
 
 	// Reorder the loops in depth-first traversal order.
 	p.initLoops(lm)
@@ -280,8 +283,8 @@ func (p *Polygon) initLoopProperties() {
 	// the loops depths are set by initNested/initOriented prior to this.
 
 	p.hasHoles = false
-	for k, l := range p.loops {
-		if p.loopIsHole(k) {
+	for _, l := range p.loops {
+		if l.IsHole() {
 			p.hasHoles = true
 		} else {
 			p.bound = p.bound.Union(l.RectBound())
@@ -397,21 +400,6 @@ func (p *Polygon) LastDescendant(k int) int {
 	for k++; k < len(p.loops) && p.loops[k].depth > depth; k++ {
 	}
 	return k - 1
-}
-
-// loopIsHole reports whether the given loop represents a hole in this polygon.
-func (p *Polygon) loopIsHole(k int) bool {
-	return p.loops[k].depth&1 != 0
-}
-
-// loopSign returns -1 if this loop represents a hole in this polygon.
-// Otherwise, it returns +1. This is used when computing the area of a polygon.
-// (holes are subtracted from the total area).
-func (p *Polygon) loopSign(k int) int {
-	if p.loopIsHole(k) {
-		return -1
-	}
-	return 1
 }
 
 // CapBound returns a bounding spherical cap.
