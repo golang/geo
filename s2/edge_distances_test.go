@@ -169,6 +169,11 @@ func TestEdgeDistancesInterpolate(t *testing.T) {
 	// Choose test points designed to expose floating-point errors.
 	p1 := PointFromCoords(0.1, 1e-30, 0.3)
 	p2 := PointFromCoords(-0.7, -0.55, -1e30)
+	i := PointFromCoords(1, 0, 0)
+	j := PointFromCoords(0, 1, 0)
+
+	// Take a small fraction along the curve, 1/1000 of the way.
+	p := Interpolate(0.001, i, j)
 
 	tests := []struct {
 		a, b Point
@@ -197,6 +202,34 @@ func TestEdgeDistancesInterpolate(t *testing.T) {
 			2.0 / 3.0,
 			Point{r3.Vector{1, math.Sqrt(3), 0}},
 		},
+
+		// InterpolateCanExtrapolate checks
+
+		// Initial vectors at 90 degrees.
+		{i, j, 0, Point{r3.Vector{1, 0, 0}}},
+		{i, j, 1, Point{r3.Vector{0, 1, 0}}},
+		{i, j, 1.5, Point{r3.Vector{-1, 1, 0}}},
+		{i, j, 2, Point{r3.Vector{-1, 0, 0}}},
+		{i, j, 3, Point{r3.Vector{0, -1, 0}}},
+		{i, j, 4, Point{r3.Vector{1, 0, 0}}},
+
+		// Negative values of t.
+		{i, j, -1, Point{r3.Vector{0, -1, 0}}},
+		{i, j, -2, Point{r3.Vector{-1, 0, 0}}},
+		{i, j, -3, Point{r3.Vector{0, 1, 0}}},
+		{i, j, -4, Point{r3.Vector{1, 0, 0}}},
+
+		// Initial vectors at 45 degrees.
+		{i, Point{r3.Vector{1, 1, 0}}, 2, Point{r3.Vector{0, 1, 0}}},
+		{i, Point{r3.Vector{1, 1, 0}}, 3, Point{r3.Vector{-1, 1, 0}}},
+		{i, Point{r3.Vector{1, 1, 0}}, 4, Point{r3.Vector{-1, 0, 0}}},
+
+		// Initial vectors at 135 degrees.
+		{i, Point{r3.Vector{-1, 1, 0}}, 2, Point{r3.Vector{0, -1, 0}}},
+
+		// Test that we should get back where we started by interpolating
+		// the 1/1000th by 1000.
+		{i, p, 1000, j},
 	}
 
 	for _, test := range tests {
@@ -261,8 +294,233 @@ func TestEdgeDistancesRepeatedInterpolation(t *testing.T) {
 	}
 }
 
-// TODO(roberts):
-// TestEdgeDistancesInterpolateCanExtrapolate
-// TestEdgeDistanceUpdateMinDistanceMaxError
-// TestEdgeDistancesEdgePairDistance
+func TestEdgeDistanceMinUpdateDistanceMaxError(t *testing.T) {
+	tests := []struct {
+		actual s1.Angle
+		maxErr s1.Angle
+	}{
+		{0, 1.5e-15},
+		{1e-8, 1e-22},
+		{1e-5, 1e-20},
+		{0.05, 1e-16},
+		{math.Pi/2 - 1e-8, 1e-15},
+		{math.Pi / 2, 1e-15},
+		{math.Pi/2 + 1e-8, 1e-15},
+		{math.Pi - 1e-5, 1e-10},
+		{math.Pi, 0},
+	}
+
+	// This checks that the error returned by minUpdateDistanceMaxError for
+	// the distance actual (measured in radians) corresponds to a distance error
+	// of less than maxErr (measured in radians).
+	//
+	// The reason for the awkward phraseology above is that the value returned by
+	// minUpdateDistanceMaxError is not a distance; it represents an error in
+	// the *squared* distance.
+	for _, test := range tests {
+		ca := s1.ChordAngleFromAngle(test.actual)
+		bound := ca.Expanded(minUpdateDistanceMaxError(ca)).Angle()
+
+		if got := s1.Angle(bound.Radians()) - test.actual; got > test.maxErr {
+			t.Errorf("minUpdateDistanceMaxError(%v)-%v = %v> %v, want <=", ca, got, test.actual, test.maxErr)
+		}
+	}
+}
+
+func TestEdgeDistancesEdgePairDistance(t *testing.T) {
+	var zero Point
+	tests := []struct {
+		a0, a1   Point
+		b0, b1   Point
+		distRads float64
+		wantA    Point
+		wantB    Point
+	}{
+		{
+			// One edge is degenerate.
+			a0:       PointFromCoords(1, 0, 1),
+			a1:       PointFromCoords(1, 0, 1),
+			b0:       PointFromCoords(1, -1, 0),
+			b1:       PointFromCoords(1, 1, 0),
+			distRads: math.Pi / 4,
+			wantA:    PointFromCoords(1, 0, 1),
+			wantB:    PointFromCoords(1, 0, 0),
+		},
+		{
+			// One edge is degenerate.
+			a0:       PointFromCoords(1, -1, 0),
+			a1:       PointFromCoords(1, 1, 0),
+			b0:       PointFromCoords(1, 0, 1),
+			b1:       PointFromCoords(1, 0, 1),
+			distRads: math.Pi / 4,
+			wantA:    PointFromCoords(1, 0, 0),
+			wantB:    PointFromCoords(1, 0, 1),
+		},
+		{
+			// Both edges are degenerate.
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(1, 0, 0),
+			b0:       PointFromCoords(0, 1, 0),
+			b1:       PointFromCoords(0, 1, 0),
+			distRads: math.Pi / 2,
+			wantA:    PointFromCoords(1, 0, 0),
+			wantB:    PointFromCoords(0, 1, 0),
+		},
+		{
+			// Both edges are degenerate and antipodal.
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(1, 0, 0),
+			b0:       PointFromCoords(-1, 0, 0),
+			b1:       PointFromCoords(-1, 0, 0),
+			distRads: math.Pi,
+			wantA:    PointFromCoords(1, 0, 0),
+			wantB:    PointFromCoords(-1, 0, 0),
+		},
+		{
+			// Two identical edges.
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(0, 1, 0),
+			b0:       PointFromCoords(1, 0, 0),
+			b1:       PointFromCoords(0, 1, 0),
+			distRads: 0,
+			wantA:    zero,
+			wantB:    zero,
+		},
+		{
+			// Both edges are degenerate and identical.
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(1, 0, 0),
+			b0:       PointFromCoords(1, 0, 0),
+			b1:       PointFromCoords(1, 0, 0),
+			distRads: 0,
+			wantA:    PointFromCoords(1, 0, 0),
+			wantB:    PointFromCoords(1, 0, 0),
+		},
+		// Edges that share exactly one vertex (all 4 possibilities).
+		{
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(0, 1, 0),
+			b0:       PointFromCoords(0, 1, 0),
+			b1:       PointFromCoords(0, 1, 1),
+			distRads: 0,
+			wantA:    PointFromCoords(0, 1, 0),
+			wantB:    PointFromCoords(0, 1, 0),
+		},
+		{
+			a0:       PointFromCoords(0, 1, 0),
+			a1:       PointFromCoords(1, 0, 0),
+			b0:       PointFromCoords(0, 1, 0),
+			b1:       PointFromCoords(0, 1, 1),
+			distRads: 0,
+			wantA:    PointFromCoords(0, 1, 0),
+			wantB:    PointFromCoords(0, 1, 0),
+		},
+		{
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(0, 1, 0),
+			b0:       PointFromCoords(0, 1, 1),
+			b1:       PointFromCoords(0, 1, 0),
+			distRads: 0,
+			wantA:    PointFromCoords(0, 1, 0),
+			wantB:    PointFromCoords(0, 1, 0),
+		},
+		{
+			a0:       PointFromCoords(0, 1, 0),
+			a1:       PointFromCoords(1, 0, 0),
+			b0:       PointFromCoords(0, 1, 1),
+			b1:       PointFromCoords(0, 1, 0),
+			distRads: 0,
+			wantA:    PointFromCoords(0, 1, 0),
+			wantB:    PointFromCoords(0, 1, 0),
+		},
+		{
+			// Two edges whose interiors cross.
+			a0:       PointFromCoords(1, -1, 0),
+			a1:       PointFromCoords(1, 1, 0),
+			b0:       PointFromCoords(1, 0, -1),
+			b1:       PointFromCoords(1, 0, 1),
+			distRads: 0,
+			wantA:    PointFromCoords(1, 0, 0),
+			wantB:    PointFromCoords(1, 0, 0),
+		},
+		// The closest distance occurs between two edge endpoints, but more than one
+		// endpoint pair is equally distant.
+		{
+			a0:       PointFromCoords(1, -1, 0),
+			a1:       PointFromCoords(1, 1, 0),
+			b0:       PointFromCoords(-1, 0, 0),
+			b1:       PointFromCoords(-1, 0, 1),
+			distRads: math.Acos(-0.5),
+			wantA:    zero,
+			wantB:    PointFromCoords(-1, 0, 1),
+		},
+		{
+			a0:       PointFromCoords(-1, 0, 0),
+			a1:       PointFromCoords(-1, 0, 1),
+			b0:       PointFromCoords(1, -1, 0),
+			b1:       PointFromCoords(1, 1, 0),
+			distRads: math.Acos(-0.5),
+			wantA:    PointFromCoords(-1, 0, 1),
+			wantB:    zero,
+		},
+		{
+			a0:       PointFromCoords(1, -1, 0),
+			a1:       PointFromCoords(1, 1, 0),
+			b0:       PointFromCoords(-1, 0, -1),
+			b1:       PointFromCoords(-1, 0, 1),
+			distRads: math.Acos(-0.5),
+			wantA:    zero,
+			wantB:    zero,
+		},
+	}
+
+	// Given two edges a0a1 and b0b1, check that the minimum distance
+	// between them is distRads, and that EdgePairClosestPoints returns
+	// wantA and wantB as the points that achieve this distance.
+	// Point{0, 0, 0} may be passed for wantA or wantB to indicate
+	// that both endpoints of the corresponding edge are equally distance,
+	// and therefore either one might be returned.
+	for _, test := range tests {
+		actualA, actualB := EdgePairClosestPoints(test.a0, test.a1, test.b0, test.b1)
+		if test.wantA == zero {
+			// either end point works.
+			if !(actualA == test.a0 || actualA == test.a1) {
+				t.Errorf("EdgePairClosestPoints(%v, %v, %v, %v) = %v, want %v or %v", test.a0, test.a1, test.b0, test.b1, actualA, test.a0, test.a1)
+			}
+		} else {
+			if !actualA.ApproxEqual(test.wantA) {
+				t.Errorf("EdgePairClosestPoints(%v, %v, %v, %v) = %v, want %v", test.a0, test.a1, test.b0, test.b1, actualA, test.wantA)
+			}
+		}
+
+		if test.wantB == zero {
+			// either end point works.
+			if !(actualB == test.b0 || actualB == test.b1) {
+				t.Errorf("EdgePairClosestPoints(%v, %v, %v, %v) = %v, want %v or %v", test.a0, test.a1, test.b0, test.b1, actualB, test.b0, test.b1)
+			}
+		} else {
+			if !actualB.ApproxEqual(test.wantB) {
+				t.Errorf("EdgePairClosestPoints(%v, %v, %v, %v) = %v, want %v", test.a0, test.a1, test.b0, test.b1, actualB, test.wantB)
+			}
+		}
+
+		var minDist s1.ChordAngle
+		var ok bool
+		minDist, ok = updateEdgePairMinDistance(test.a0, test.a1, test.b0, test.b1, minDist)
+		if ok {
+			t.Errorf("updateEdgePairMinDistance(%v, %v, %v, %v, %v) = %v, want updated to be false", test.a0, test.a1, test.b0, test.b1, 0, minDist)
+		}
+
+		minDist = s1.InfChordAngle()
+		minDist, ok = updateEdgePairMinDistance(test.a0, test.a1, test.b0, test.b1, minDist)
+		if !ok {
+			t.Errorf("updateEdgePairMinDistance(%v, %v, %v, %v, %v) = %v, want updated to be true", test.a0, test.a1, test.b0, test.b1, s1.InfChordAngle(), minDist)
+		}
+
+		if !float64Near(test.distRads, minDist.Angle().Radians(), 1e-15) {
+			t.Errorf("mindDist %v - %v = %v, want < %v", test.distRads, minDist.Angle().Radians(), (test.distRads - minDist.Angle().Radians()), 1e-15)
+		}
+	}
+}
+
 // TestEdgeDistancesEdgeBNearEdgeA

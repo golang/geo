@@ -258,6 +258,63 @@ func interiorDist(x, a, b Point, minDist s1.ChordAngle, alwaysUpdate bool) (s1.C
 	return dist, true
 }
 
-// TODO(roberts): UpdateEdgePairMinDistance
-// TODO(roberts): GetEdgePairClosestPoints
-// TODO(roberts): IsEdgeBNearEdgeA
+func updateEdgePairMinDistance(a0, a1, b0, b1 Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
+	if minDist == 0 {
+		return 0, false
+	}
+	if CrossingSign(a0, a1, b0, b1) == Cross {
+		minDist = 0
+		return 0, true
+	}
+
+	// Otherwise, the minimum distance is achieved at an endpoint of at least
+	// one of the two edges. We ensure that all four possibilities are always checked.
+	//
+	// The calculation below computes each of the six vertex-vertex distances
+	// twice (this could be optimized).
+	var ok1, ok2, ok3, ok4 bool
+	minDist, ok1 = UpdateMinDistance(a0, b0, b1, minDist)
+	minDist, ok2 = UpdateMinDistance(a1, b0, b1, minDist)
+	minDist, ok3 = UpdateMinDistance(b0, a0, a1, minDist)
+	minDist, ok4 = UpdateMinDistance(b1, a0, a1, minDist)
+	return minDist, ok1 || ok2 || ok3 || ok4
+}
+
+// EdgePairClosestPoints returns the pair of points (a, b) that achieves the
+// minimum distance between edges a0a1 and b0b1, where a is a point on a0a1 and
+// b is a point on b0b1. If the two edges intersect, a and b are both equal to
+// the intersection point. Handles a0 == a1 and b0 == b1 correctly.
+func EdgePairClosestPoints(a0, a1, b0, b1 Point) (Point, Point) {
+	if CrossingSign(a0, a1, b0, b1) == Cross {
+		x := Intersection(a0, a1, b0, b1)
+		return x, x
+	}
+	// We save some work by first determining which vertex/edge pair achieves
+	// the minimum distance, and then computing the closest point on that edge.
+	var minDist s1.ChordAngle
+	var ok bool
+
+	minDist, ok = updateMinDistance(a0, b0, b1, minDist, true)
+	closestVertex := 0
+	if minDist, ok = UpdateMinDistance(a1, b0, b1, minDist); ok {
+		closestVertex = 1
+	}
+	if minDist, ok = UpdateMinDistance(b0, a0, a1, minDist); ok {
+		closestVertex = 2
+	}
+	if minDist, ok = UpdateMinDistance(b1, a0, a1, minDist); ok {
+		closestVertex = 3
+	}
+	switch closestVertex {
+	case 0:
+		return a0, Project(a0, b0, b1)
+	case 1:
+		return a1, Project(a1, b0, b1)
+	case 2:
+		return Project(b0, a0, a1), b0
+	case 3:
+		return Project(b1, a0, a1), b1
+	default:
+		panic("illegal case reached")
+	}
+}

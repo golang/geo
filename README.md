@@ -117,7 +117,7 @@ listing of the incomplete methods are documented at the end of each file.
 *   RegionCoverer - Missing FloodFill and SimpleCovering.
 *   s2_test.go (AKA s2testing and s2textformat in C++) - Missing Fractal test
     shape generation. This file is a collection of testing helper methods.
-*   s2edge_distances - Missing Intersection, ClosestPair.
+*   s2edge_distances - Missing Intersection
 
 **In Progress** Files that have some work done, but are probably not complete
 enough for general use in production code.
