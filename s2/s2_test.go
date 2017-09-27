@@ -17,8 +17,10 @@ limitations under the License.
 package s2
 
 import (
+	"io"
 	"math"
 	"math/rand"
+	"os"
 
 	"github.com/golang/geo/r2"
 	"github.com/golang/geo/s1"
@@ -281,6 +283,34 @@ func perturbedCornerOrMidpoint(p, q Point) Point {
 		return perturbedCornerOrMidpoint(p, q)
 	}
 	return Point{a}
+}
+
+// readLoops returns a slice of Loops read from a file encoded using Loops Encode.
+func readLoops(filename string) ([]*Loop, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var loops []*Loop
+
+	// Test loop files are expected to be a direct concatenation of encoded loops with
+	// no separator tokens. Because there is no way of knowing a priori how many items
+	// or how many bytes ahead of time, the only way to end the loop is when we hit EOF.
+	for {
+		l := &Loop{}
+		err := l.Decode(f)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		loops = append(loops, l)
+	}
+
+	return loops, nil
 }
 
 // TODO(roberts): Items remaining to port:
