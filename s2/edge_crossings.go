@@ -17,6 +17,9 @@ limitations under the License.
 package s2
 
 import (
+	"math"
+
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -164,5 +167,240 @@ func EdgeOrVertexCrossing(a, b, c, d Point) bool {
 	}
 }
 
-// TODO(roberts): Differences from C++
-// Intersection related methods
+// Intersection returns the intersection point of two edges AB and CD that cross
+// (CrossingSign(a,b,c,d) == Crossing).
+//
+// Useful properties of Intersection:
+//
+//  (1) Intersection(b,a,c,d) == Intersection(a,b,d,c) == Intersection(a,b,c,d)
+//  (2) Intersection(c,d,a,b) == Intersection(a,b,c,d)
+//
+// The returned intersection point X is guaranteed to be very close to the
+// true intersection point of AB and CD, even if the edges intersect at a
+// very small angle.
+func Intersection(a0, a1, b0, b1 Point) Point {
+	// It is difficult to compute the intersection point of two edges accurately
+	// when the angle between the edges is very small. Previously we handled
+	// this by only guaranteeing that the returned intersection point is within
+	// intersectionError of each edge. However, this means that when the edges
+	// cross at a very small angle, the computed result may be very far from the
+	// true intersection point.
+	//
+	// Instead this function now guarantees that the result is always within
+	// intersectionError of the true intersection. This requires using more
+	// sophisticated techniques and in some cases extended precision.
+	//
+	//  - intersectionStable computes the intersection point using
+	//    projection and interpolation, taking care to minimize cancellation
+	//    error.
+	//
+	//  - intersectionExact computes the intersection point using precision
+	//    arithmetic and converts the final result back to an Point.
+	pt, ok := intersectionStable(a0, a1, b0, b1)
+	if !ok {
+		pt = intersectionExact(a0, a1, b0, b1)
+	}
+
+	// Make sure the intersection point is on the correct side of the sphere.
+	// Since all vertices are unit length, and edges are less than 180 degrees,
+	// (a0 + a1) and (b0 + b1) both have positive dot product with the
+	// intersection point.  We use the sum of all vertices to make sure that the
+	// result is unchanged when the edges are swapped or reversed.
+	if pt.Dot((a0.Add(a1.Vector)).Add(b0.Add(b1.Vector))) < 0 {
+		pt = Point{pt.Mul(-1)}
+	}
+
+	return pt
+}
+
+// Computes the cross product of two vectors, normalized to be unit length.
+// Also returns the length of the cross
+// product before normalization, which is useful for estimating the amount of
+// error in the result.  For numerical stability, the vectors should both be
+// approximately unit length.
+func robustNormalWithLength(x, y r3.Vector) (r3.Vector, float64) {
+	var pt r3.Vector
+	// This computes 2 * (x.Cross(y)), but has much better numerical
+	// stability when x and y are unit length.
+	tmp := x.Sub(y).Cross(x.Add(y))
+	length := tmp.Norm()
+	if length != 0 {
+		pt = tmp.Mul(1 / length)
+	}
+	return pt, 0.5 * length // Since tmp == 2 * (x.Cross(y))
+}
+
+/*
+// intersectionSimple is not used by the C++ so it is skipped here.
+*/
+
+// projection returns the projection of aNorm onto X (x.Dot(aNorm)), and a bound
+// on the error in the result. aNorm is not necessarily unit length.
+//
+// The remaining parameters (the length of aNorm (aNormLen) and the edge endpoints
+// a0 and a1) allow this dot product to be computed more accurately and efficiently.
+func projection(x, aNorm r3.Vector, aNormLen float64, a0, a1 Point) (proj, bound float64) {
+	// The error in the dot product is proportional to the lengths of the input
+	// vectors, so rather than using x itself (a unit-length vector) we use
+	// the vectors from x to the closer of the two edge endpoints. This
+	// typically reduces the error by a huge factor.
+	x0 := x.Sub(a0.Vector)
+	x1 := x.Sub(a1.Vector)
+	x0Dist2 := x0.Norm2()
+	x1Dist2 := x1.Norm2()
+
+	// If both distances are the same, we need to be careful to choose one
+	// endpoint deterministically so that the result does not change if the
+	// order of the endpoints is reversed.
+	var dist float64
+	if x0Dist2 < x1Dist2 || (x0Dist2 == x1Dist2 && x0.Cmp(x1) == -1) {
+		dist = math.Sqrt(x0Dist2)
+		proj = x0.Dot(aNorm)
+	} else {
+		dist = math.Sqrt(x1Dist2)
+		proj = x1.Dot(aNorm)
+	}
+
+	// This calculation bounds the error from all sources: the computation of
+	// the normal, the subtraction of one endpoint, and the dot product itself.
+	// dblEpsilon appears because the input points are assumed to be
+	// normalized in double precision.
+	//
+	// For reference, the bounds that went into this calculation are:
+	// ||N'-N|| <= ((1 + 2 * sqrt(3))||N|| + 32 * sqrt(3) * dblEpsilon) * epsilon
+	// |(A.B)'-(A.B)| <= (1.5 * (A.B) + 1.5 * ||A|| * ||B||) * epsilon
+	// ||(X-Y)'-(X-Y)|| <= ||X-Y|| * epsilon
+	bound = (((3.5+2*math.Sqrt(3))*aNormLen+32*math.Sqrt(3)*dblEpsilon)*dist + 1.5*math.Abs(proj)) * epsilon
+	return proj, bound
+}
+
+// compareEdges reports whether (a0,a1) is less than (b0,b1) with respect to a total
+// ordering on edges that is invariant under edge reversals.
+func compareEdges(a0, a1, b0, b1 Point) bool {
+	if a0.Cmp(a1.Vector) != -1 {
+		a0, a1 = a1, a0
+	}
+	if b0.Cmp(b1.Vector) != -1 {
+		b0, b1 = b1, b0
+	}
+	return a0.Cmp(b0.Vector) == -1 || (a0 == b0 && b0.Cmp(b1.Vector) == -1)
+}
+
+// intersectionStable returns the intersection point of the edges (a0,a1) and
+// (b0,b1) if it can be computed to within an error of at most intersectionError
+// by this function.
+//
+// The intersection point is not guaranteed to have the correct sign because we
+// choose to use the longest of the two edges first. The sign is corrected by
+// Intersection.
+func intersectionStable(a0, a1, b0, b1 Point) (Point, bool) {
+	// Sort the two edges so that (a0,a1) is longer, breaking ties in a
+	// deterministic way that does not depend on the ordering of the endpoints.
+	// This is desirable for two reasons:
+	//  - So that the result doesn't change when edges are swapped or reversed.
+	//  - It reduces error, since the first edge is used to compute the edge
+	//    normal (where a longer edge means less error), and the second edge
+	//    is used for interpolation (where a shorter edge means less error).
+	aLen2 := a1.Sub(a0.Vector).Norm2()
+	bLen2 := b1.Sub(b0.Vector).Norm2()
+	if aLen2 < bLen2 || (aLen2 == bLen2 && compareEdges(a0, a1, b0, b1)) {
+		return intersectionStableSorted(b0, b1, a0, a1)
+	}
+	return intersectionStableSorted(a0, a1, b0, b1)
+}
+
+// intersectionStableSorted is a helper function for intersectionStable.
+// It expects that the edges (a0,a1) and (b0,b1) have been sorted so that
+// the first edge passed in is longer.
+func intersectionStableSorted(a0, a1, b0, b1 Point) (Point, bool) {
+	var pt Point
+
+	// Compute the normal of the plane through (a0, a1) in a stable way.
+	aNorm := a0.Sub(a1.Vector).Cross(a0.Add(a1.Vector))
+	aNormLen := aNorm.Norm()
+	bLen := b1.Sub(b0.Vector).Norm()
+
+	// Compute the projection (i.e., signed distance) of b0 and b1 onto the
+	// plane through (a0, a1).  Distances are scaled by the length of aNorm.
+	b0Dist, b0Error := projection(b0.Vector, aNorm, aNormLen, a0, a1)
+	b1Dist, b1Error := projection(b1.Vector, aNorm, aNormLen, a0, a1)
+
+	// The total distance from b0 to b1 measured perpendicularly to (a0,a1) is
+	// |b0Dist - b1Dist|.  Note that b0Dist and b1Dist generally have
+	// opposite signs because b0 and b1 are on opposite sides of (a0, a1).  The
+	// code below finds the intersection point by interpolating along the edge
+	// (b0, b1) to a fractional distance of b0Dist / (b0Dist - b1Dist).
+	//
+	// It can be shown that the maximum error in the interpolation fraction is
+	//
+	//   (b0Dist * b1Error - b1Dist * b0Error) / (distSum * (distSum - errorSum))
+	//
+	// We save ourselves some work by scaling the result and the error bound by
+	// "distSum", since the result is normalized to be unit length anyway.
+	distSum := math.Abs(b0Dist - b1Dist)
+	errorSum := b0Error + b1Error
+	if distSum <= errorSum {
+		return pt, false // Error is unbounded in this case.
+	}
+
+	x := b1.Mul(b0Dist).Sub(b0.Mul(b1Dist))
+	err := bLen*math.Abs(b0Dist*b1Error-b1Dist*b0Error)/
+		(distSum-errorSum) + 2*distSum*epsilon
+
+	// Finally we normalize the result, compute the corresponding error, and
+	// check whether the total error is acceptable.
+	xLen := x.Norm()
+	maxError := intersectionError
+	if err > (float64(maxError)-epsilon)*xLen {
+		return pt, false
+	}
+
+	return Point{x.Mul(1 / xLen)}, true
+}
+
+// intersectionExact returns the intersection point of (a0, a1) and (b0, b1)
+// using precise arithmetic. Note that the result is not exact because it is
+// rounded down to double precision at the end. Also, the intersection point
+// is not guaranteed to have the correct sign (i.e., the return value may need
+// to be negated).
+func intersectionExact(a0, a1, b0, b1 Point) Point {
+	// Since we are using presice arithmetic, we don't need to worry about
+	// numerical stability.
+	a0P := r3.PreciseVectorFromVector(a0.Vector)
+	a1P := r3.PreciseVectorFromVector(a1.Vector)
+	b0P := r3.PreciseVectorFromVector(b0.Vector)
+	b1P := r3.PreciseVectorFromVector(b1.Vector)
+	aNormP := a0P.Cross(a1P)
+	bNormP := b0P.Cross(b1P)
+	xP := aNormP.Cross(bNormP)
+
+	// The final Normalize() call is done in double precision, which creates a
+	// directional error of up to 2*dblEpsilon. (Precise conversion and Normalize()
+	// each contribute up to dblEpsilon of directional error.)
+	x := xP.Vector()
+
+	if x == (r3.Vector{}) {
+		// The two edges are exactly collinear, but we still consider them to be
+		// "crossing" because of simulation of simplicity. Out of the four
+		// endpoints, exactly two lie in the interior of the other edge. Of
+		// those two we return the one that is lexicographically smallest.
+		x = r3.Vector{10, 10, 10} // Greater than any valid S2Point
+
+		aNorm := Point{aNormP.Vector()}
+		bNorm := Point{bNormP.Vector()}
+		if OrderedCCW(b0, a0, b1, bNorm) && a0.Cmp(x) == -1 {
+			return a0
+		}
+		if OrderedCCW(b0, a1, b1, bNorm) && a1.Cmp(x) == -1 {
+			return a1
+		}
+		if OrderedCCW(a0, b0, a1, aNorm) && b0.Cmp(x) == -1 {
+			return b0
+		}
+		if OrderedCCW(a0, b1, a1, aNorm) && b1.Cmp(x) == -1 {
+			return b1
+		}
+	}
+
+	return Point{x}
+}
