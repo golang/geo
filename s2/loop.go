@@ -1165,7 +1165,7 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 
 	l.depth = int(d.readUvarint())
 
-	if masked := properties & (1 << boundEncoded); masked != 0 {
+	if (properties & boundEncoded) != 0 {
 		l.bound.decode(d)
 		if d.err != nil {
 			return
