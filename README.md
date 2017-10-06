@@ -98,6 +98,8 @@ Approximately ~40% complete.
 *   s2edge_clipping
 *   s2edge_crosser
 *   s2edge_crossings
+*   edgeVectorShape
+*   laxLoop
 *   s2rect_bounder
 *   s2stuv.go (s2coords.h in C++) - This file is a collection of helper and
     conversion methods to and from ST-space, UV-space, and XYZ-space.
@@ -122,10 +124,9 @@ listing of the incomplete methods are documented at the end of each file.
 **In Progress** Files that have some work done, but are probably not complete
 enough for general use in production code.
 
-*   Polygon - Polygons with multiple loops are supported. It fully
-    implements Shape and Region, but it's missing most other methods. (Area,
-    Centroid, Distance, Projection, Intersection, Union, Contains, Normalized,
-    etc.)
+*   Polygon - Polygons with multiple loops are supported. It fully implements
+    Shape and Region, but it's missing most other methods. (Area, Centroid,
+    Distance, Projection, Intersection, Union, Contains, Normalized, etc.)
 *   PolylineSimplifier - Initial work has begun on this.
 *   s2predicates.go - This file is a collection of helper methods used by other
     parts of the library.
@@ -153,6 +154,8 @@ started.
 *   RegionUnion
 *   Projections
 *   shapeutil
+*   laxPolyline
+*   laxPolygon
 *   lexicon
 *   priorityqueuesequence
 
