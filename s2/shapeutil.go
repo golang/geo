@@ -33,6 +33,63 @@ const (
 	CrossingTypeNonAdjacent
 )
 
+// rangeIterator is a wrapper over ShapeIndexIterator with extra methods
+// that are useful for merging the contents of two or more ShapeIndexes.
+type rangeIterator struct {
+	it *ShapeIndexIterator
+	// The min and max leaf cell ids covered by the current cell. If done() is
+	// true, these methods return a value larger than any valid cell id.
+	rangeMin CellID
+	rangeMax CellID
+}
+
+// newRangeIterator creates a new rangeIterator positioned at the first cell of the given index.
+func newRangeIterator(index *ShapeIndex) *rangeIterator {
+	r := &rangeIterator{
+		it: index.Iterator(),
+	}
+	r.refresh()
+	return r
+}
+
+func (r *rangeIterator) cellID() CellID             { return r.it.CellID() }
+func (r *rangeIterator) indexCell() *ShapeIndexCell { return r.it.IndexCell() }
+func (r *rangeIterator) next()                      { r.it.Next(); r.refresh() }
+func (r *rangeIterator) done() bool                 { return r.it.Done() }
+
+// seekTo positions the iterator at the first cell that overlaps or follows
+// the current range minimum of the target iterator, i.e. such that its
+// rangeMax >= target.rangeMin.
+func (r *rangeIterator) seekTo(target *rangeIterator) {
+	r.it.seek(target.rangeMin)
+	// If the current cell does not overlap target, it is possible that the
+	// previous cell is the one we are looking for. This can only happen when
+	// the previous cell contains target but has a smaller CellID.
+	if r.it.Done() || r.it.CellID().RangeMin() > target.rangeMax {
+		if r.it.Prev() && r.it.CellID().RangeMax() < target.cellID() {
+			r.it.Next()
+		}
+	}
+	r.refresh()
+}
+
+// seekBeyond positions the iterator at the first cell that follows the current
+// range minimum of the target iterator. i.e. the first cell such that its
+// rangeMin > target.rangeMax.
+func (r *rangeIterator) seekBeyond(target *rangeIterator) {
+	r.it.seek(target.rangeMax.Next())
+	if !r.it.Done() && r.it.CellID().RangeMin() <= target.rangeMax {
+		r.it.Next()
+	}
+	r.refresh()
+}
+
+// refresh updates the iterators min and max values.
+func (r *rangeIterator) refresh() {
+	r.rangeMin = r.cellID().RangeMin()
+	r.rangeMax = r.cellID().RangeMax()
+}
+
 // referencePointForShape is a helper function for implementing various Shapes
 // ReferencePoint functions.
 //

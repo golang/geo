@@ -377,12 +377,15 @@ func (s *ShapeIndexIterator) Next() {
 	s.position++
 }
 
-// Prev advances the iterator to the previous cell in the index.
-// If the iterator is at the first cell the call does nothing.
-func (s *ShapeIndexIterator) Prev() {
+// Prev advances the iterator to the previous cell in the index and returns true to
+// indicate it was not yet at the beginning of the index. If the iterator is at the
+// first cell the call does nothing and returns false.
+func (s *ShapeIndexIterator) Prev() bool {
 	if s.position > 0 {
 		s.position--
+		return true
 	}
+	return false
 }
 
 // Done reports if the iterator is positioned at or after the last index cell.

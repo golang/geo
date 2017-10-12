@@ -52,3 +52,67 @@ func TestShapeutilContainsBruteForceConsistentWithLoop(t *testing.T) {
 		}
 	}
 }
+
+func TestShapeutilRangeIteratorNext(t *testing.T) {
+	// Create an index with one point each on CellID faces 0, 1, and 2.
+	// TODO(roberts): Convert this to makeIndex once it's added to textformat.
+	// index := makeIndex("0:0 | 0:90 | 90:0 # #")
+	index := NewShapeIndex()
+	index.Add(makePolyline("0:0, 0:90, 90:0"))
+	it := newRangeIterator(index)
+
+	if got, want := it.cellID().Face(), 0; got != want {
+		t.Errorf("it.CellID().Face() = %v, want %v", got, want)
+	}
+	it.next()
+
+	if got, want := it.cellID().Face(), 1; got != want {
+		t.Errorf("it.CellID().Face() = %v, want %v", got, want)
+	}
+	it.next()
+
+	if got, want := it.cellID().Face(), 2; got != want {
+		t.Errorf("it.CellID().Face() = %v, want %v", got, want)
+	}
+	it.next()
+
+	if !it.done() {
+		t.Errorf("iterator over index of three items should be done after 3 calls to next")
+	}
+}
+
+func TestShapeutilRangeIteratorEmptyIndex(t *testing.T) {
+	// TODO(roberts): Convert these to makeIndex once it's added to textformat.
+	// empty := makeIndex("# #")
+	empty := NewShapeIndex()
+	// nonEmpty := makeIndex("0:0 # #")
+	nonEmpty := NewShapeIndex()
+	nonEmpty.Add(makePolyline("0:0"))
+
+	emptyIter := newRangeIterator(empty)
+	nonEmptyIter := newRangeIterator(nonEmpty)
+
+	if !emptyIter.done() {
+		t.Errorf("the rangeIterator on an empty ShapeIndex should be done at creation")
+	}
+
+	emptyIter.seekTo(nonEmptyIter)
+	if !emptyIter.done() {
+		t.Errorf("seeking in the range iterator on an empty index to a cell should hit the end")
+	}
+
+	emptyIter.seekBeyond(nonEmptyIter)
+	if !emptyIter.done() {
+		t.Errorf("seeking in the range iterator on an empty index beyond a cell should hit the end")
+	}
+
+	emptyIter.seekTo(emptyIter)
+	if !emptyIter.done() {
+		t.Errorf("seeking in the range iterator on an empty index to a its current position should hit the end")
+	}
+
+	emptyIter.seekBeyond(emptyIter)
+	if !emptyIter.done() {
+		t.Errorf("seeking in the range iterator on an empty index beyond itself should hit the end")
+	}
+}
