@@ -57,6 +57,12 @@ import (
 // discrete point, it is better to use Cells.
 type CellID uint64
 
+// SentinelCellID is an invalid cell ID guaranteed to be larger than any
+// valid cell ID. It is used primarily by ShapeIndex. The value is also used
+// by some S2 types when encoding data.
+// Note that the sentinel's RangeMin == RangeMax == itself.
+const SentinelCellID = CellID(^uint64(0))
+
 // sortCellIDs sorts the slice of CellIDs in place.
 func sortCellIDs(ci []CellID) {
 	sort.Sort(cellIDs(ci))

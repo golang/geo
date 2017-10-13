@@ -35,6 +35,16 @@ func TestCellIDFromFace(t *testing.T) {
 	}
 }
 
+func TestCellIDSentinelRangeMinMax(t *testing.T) {
+	s := SentinelCellID
+	if got := s.RangeMin(); s != got {
+		t.Errorf("sentinel.RangeMin() = %v, want %v", got, s)
+	}
+	if got := s.RangeMax(); s != got {
+		t.Errorf("sentinel.RangeMax() = %v, want %v", got, s)
+	}
+}
+
 func TestCellIDParentChildRelationships(t *testing.T) {
 	ci := CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)
 
@@ -351,6 +361,19 @@ func TestCellIDFromTokensErrorCases(t *testing.T) {
 	if noneID != CellID(0) {
 		t.Errorf("CellIDFromToken(%q) = %x, want 0", noneToken, uint64(noneID))
 	}
+
+	// Sentinel is invalid.
+	sentinel := SentinelCellID.ToToken()
+	if got, want := CellIDFromToken(sentinel), SentinelCellID; got != want {
+		t.Errorf("CellIDFromToken(%v) = %v, want %v", sentinel, got, want)
+	}
+
+	// Check an invalid face.
+	face7 := CellIDFromFace(7).ToToken()
+	if got, want := CellIDFromToken(face7), CellIDFromFace(7); got != want {
+		t.Errorf("CellIDFromToken(%v) = %v, want %v", face7, got, want)
+	}
+
 	tests := []string{
 		"876b e99",
 		"876bee99\n",
