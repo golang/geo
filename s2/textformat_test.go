@@ -16,17 +16,48 @@ limitations under the License.
 
 package s2
 
+// s2textformat_test contains a collection of functions for converting geometry
+// to and from a human-readable format. It is intended for testing and debugging.
+// Be aware that the human-readable format is *NOT* designed to preserve the full
+// precision of the original object, so it should not be used for data storage.
+//
+// Most functions here use the same format for inputs, a comma separated set of
+// latitude-longitude coordinates in degrees. Functions that expect a different
+// input document the values in the function comment.
+//
+// Examples of the input format:
+//     ""                                 // no points
+//     "-20:150"                          // one point
+//     "-20:150, 10:-120, 0.123:-170.652" // three points
+
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
 	"github.com/golang/geo/r3"
 )
 
-// parsePoint returns an Point from the latitude-longitude coordinate in degrees
-// in the given string, or the origin if the string was invalid.
-// e.g., "-20:150"
+// writePoint formats the point and writes it to the given writer.
+func writePoint(w io.Writer, p Point) {
+	ll := LatLngFromPoint(p)
+	fmt.Fprintf(w, "%.15g:%.15g", ll.Lat.Degrees(), ll.Lng.Degrees())
+}
+
+// writePoints formats the given points in debug format and writes them to the given writer.
+func writePoints(w io.Writer, pts []Point) {
+	for i, pt := range pts {
+		writePoint(w, pt)
+		if i < len(pts) {
+			fmt.Fprintf(w, ", ")
+		}
+	}
+}
+
+// parsePoint returns a Point from the given string, or the origin if the
+// string was invalid. If more than one value is given, only the first is used.
 func parsePoint(s string) Point {
 	p := parsePoints(s)
 	if len(p) > 0 {
@@ -36,7 +67,15 @@ func parsePoint(s string) Point {
 	return Point{r3.Vector{0, 0, 0}}
 }
 
-// parsePoints takes a string of lat:lng points and returns the set of Points it defines.
+// pointToString returns a string representation suitable for reconstruction
+// by the parsePoint method.
+func pointToString(point Point) string {
+	var buf bytes.Buffer
+	writePoint(&buf, point)
+	return buf.String()
+}
+
+// parsePoints returns the values in the input string as Points.
 func parsePoints(s string) []Point {
 	lls := parseLatLngs(s)
 	points := make([]Point, len(lls))
@@ -46,8 +85,15 @@ func parsePoints(s string) []Point {
 	return points
 }
 
-// parseLatLngs splits up a string of lat:lng points and returns the list of parsed
-// entries.
+// pointsToString returns a string representation suitable for reconstruction
+// by the parsePoints method.
+func pointsToString(points []Point) string {
+	var buf bytes.Buffer
+	writePoints(&buf, points)
+	return buf.String()
+}
+
+// parseLatLngs returns the values in the input string as LatLngs.
 func parseLatLngs(s string) []LatLng {
 	pieces := strings.Split(s, ",")
 	var lls []LatLng
@@ -79,14 +125,8 @@ func parseLatLngs(s string) []LatLng {
 	return lls
 }
 
-// parseRect returns the minimal bounding Rect that contains the one or more
-// latitude-longitude coordinates in degrees in the given string.
-// Examples of input:
-//   "-20:150"                     // one point
-//   "-20:150, -20:151, -19:150"   // three points
-//
-// TODO(roberts): Rename this to makeRect for consistency with other methods.
-func parseRect(s string) Rect {
+// makeRect returns the minimal bounding Rect that contains the values in the input string.
+func makeRect(s string) Rect {
 	var rect Rect
 	lls := parseLatLngs(s)
 	if len(lls) > 0 {
@@ -100,10 +140,8 @@ func parseRect(s string) Rect {
 	return rect
 }
 
-// makeLoop constructs a loop from a comma separated string of lat:lng
-// coordinates in degrees. Example of the input format:
-//   "-20:150, 10:-120, 0.123:-170.652"
-// The special strings "empty" or "full" create an empty or full loop respectively.
+// makeLoop constructs a Loop from the input string.
+// The strings "empty" or "full" create an empty or full loop respectively.
 func makeLoop(s string) *Loop {
 	if s == "full" {
 		return FullLoop()
@@ -115,18 +153,26 @@ func makeLoop(s string) *Loop {
 	return LoopFromPoints(parsePoints(s))
 }
 
-// makePolygon constructs a polygon from the set of semicolon separated CSV
-// strings of lat:lng points defining each loop in the polygon. If the normalize
-// flag is set to true, loops are normalized by inverting them
-// if necessary so that they enclose at most half of the unit sphere.
+// makePolygon constructs a polygon from the sequence of loops in the input
+// string. Loops are automatically normalized by inverting them if necessary
+// so that they enclose at most half of the unit sphere. (Historically this was
+// once a requirement of polygon loops. It also hides the problem that if the
+// user thinks of the coordinates as X:Y rather than LAT:LNG, it yields a loop
+// with the opposite orientation.)
+//
+// Loops are semicolon separated in the input string with each loop using the
+// same format as above.
 //
 // Examples of the input format:
 //     "10:20, 90:0, 20:30"                                  // one loop
 //     "10:20, 90:0, 20:30; 5.5:6.5, -90:-180, -15.2:20.3"   // two loops
 //     ""       // the empty polygon (consisting of no loops)
+//     "empty"  // the empty polygon (consisting of no loops)
 //     "full"   // the full polygon (consisting of one full loop)
-//     "empty"  // **INVALID** (a polygon consisting of one empty loop)
 func makePolygon(s string, normalize bool) *Polygon {
+	if s == "empty" {
+		s = ""
+	}
 	strs := strings.Split(s, ";")
 	var loops []*Loop
 	for _, str := range strs {
@@ -134,7 +180,7 @@ func makePolygon(s string, normalize bool) *Polygon {
 			continue
 		}
 		loop := makeLoop(strings.TrimSpace(str))
-		if normalize {
+		if normalize && !loop.IsFull() {
 			// TODO(roberts): Uncomment once Normalize is implemented.
 			// loop.Normalize()
 		}
@@ -143,13 +189,13 @@ func makePolygon(s string, normalize bool) *Polygon {
 	return PolygonFromLoops(loops)
 }
 
-// makePolyline constructs a Polyline from the given string of lat:lng values.
+// makePolyline constructs a Polyline from the given string.
 func makePolyline(s string) *Polyline {
 	p := Polyline(parsePoints(s))
 	return &p
 }
 
 // TODO(roberts): Remaining C++ textformat related methods
-// to debug string methods for many types.
-// make type methods for remaining types.
+// make$S2TYPE methods for missing types.
+// to debug string for many types
 // to/from debug for ShapeIndex

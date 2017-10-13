@@ -17,7 +17,6 @@ limitations under the License.
 package s2
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/golang/geo/r1"
@@ -25,17 +24,13 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-func TestParsePoint(t *testing.T) {
+func TestTextFormatParsePointRoundtrip(t *testing.T) {
 	tests := []struct {
 		have string
 		want Point
 	}{
 		{"0:0", Point{r3.Vector{1, 0, 0}}},
 		{"90:0", Point{r3.Vector{6.123233995736757e-17, 0, 1}}},
-		{"91:0", Point{r3.Vector{-0.017452406437283473, -0, 0.9998476951563913}}},
-		{"179.99:0", Point{r3.Vector{-0.9999999847691292, -0, 0.00017453292431344843}}},
-		{"180:0", Point{r3.Vector{-1, -0, 1.2246467991473515e-16}}},
-		{"181.0:0", Point{r3.Vector{-0.9998476951563913, -0, -0.017452406437283637}}},
 		{"-45:0", Point{r3.Vector{0.7071067811865476, 0, -0.7071067811865475}}},
 		{"0:0.01", Point{r3.Vector{0.9999999847691292, 0.00017453292431333684, 0}}},
 		{"0:30", Point{r3.Vector{0.8660254037844387, 0.49999999999999994, 0}}},
@@ -43,52 +38,188 @@ func TestParsePoint(t *testing.T) {
 		{"0:90", Point{r3.Vector{6.123233995736757e-17, 1, 0}}},
 		{"30:30", Point{r3.Vector{0.7500000000000001, 0.4330127018922193, 0.49999999999999994}}},
 		{"-30:30", Point{r3.Vector{0.7500000000000001, 0.4330127018922193, -0.49999999999999994}}},
-		{"180:90", Point{r3.Vector{-6.123233995736757e-17, -1, 1.2246467991473515e-16}}},
-		{"37.4210:-122.0866, 37.4231:-122.0819", Point{r3.Vector{-0.4218751185559026, -0.6728760966593905, 0.6076669670863027}}},
+		{"0:180", Point{r3.Vector{-1, 6.123233995736757e-17, 0}}},
+		{"0:-180", Point{r3.Vector{-1, -6.123233995736757e-17, 0}}},
+		{"90:-180", Point{r3.Vector{-6.123233995736757e-17, -0, 1}}},
+		{"1e-20:1e-30", Point{r3.Vector{1, 0, 0}}},
 	}
+
 	for _, test := range tests {
-		if got := parsePoint(test.have); !got.ApproxEqual(test.want) {
-			t.Errorf("parsePoint(%s) = %v, want %v", test.have, got, test.want)
+		pt := parsePoint(test.have)
+		if !pt.ApproxEqual(test.want) {
+			t.Errorf("parsePoint(%s) = %v, want %v", test.have, pt, test.want)
+		}
+		if got := pointToString(pt); got != test.have {
+			t.Errorf("pointToString(parsePoint(%v)) = %v, want %v", test.have, got, test.have)
 		}
 	}
 }
 
-func TestParsePoints(t *testing.T) {
+func TestTextFormatParsePointRoundtripEdgecases(t *testing.T) {
 	tests := []struct {
-		have string
-		want []Point
+		have    string
+		wantPt  Point
+		wantStr string
 	}{
-		{"0:0", []Point{{r3.Vector{1, 0, 0}}}},
-		{"      0:0,    ", []Point{{r3.Vector{1, 0, 0}}}},
+		// just past pole, lng should shift by 180
 		{
-			"90:0,-90:0",
-			[]Point{
+			have:    "91:0",
+			wantPt:  Point{r3.Vector{-0.017452406437283473, 0, 0.9998476951563913}},
+			wantStr: "89:-180",
+		},
+		{
+			have:    "-91:0",
+			wantPt:  Point{r3.Vector{-0.017452406437283473, -0, -0.9998476951563913}},
+			wantStr: "-89:-180",
+		},
+
+		// The conversion from degrees to radians and back leads to little
+		// bits of floating point noise, so we end up with things like
+		// 7.01e-15 instead of 0.
+
+		// values wrap around past the North pole back past the equator on the
+		// other side of the earth.
+		{
+			have:    "179.99:0",
+			wantPt:  Point{r3.Vector{-0.9999999847691292, -0, 0.00017453292431344843}},
+			wantStr: "0.0100000000000064:-180",
+		},
+		/*
+			// TODO(roberts): This test output differs between gccgo and 6g in the last significant digit.
+			{
+				have:    "180:0",
+				wantPt:  Point{r3.Vector{-1, -0, 1.2246467991473515e-16}},
+				wantStr: "7.01670929853487e-15:-180",
+			},
+		*/
+		{
+			have:    "181.0:0",
+			wantPt:  Point{r3.Vector{-0.9998476951563913, -0, -0.017452406437283637}},
+			wantStr: "-1.00000000000001:-180",
+		},
+		/*
+			// past pole to equator, lng should shift by 180 as well.
+			// TODO(roberts): This test output differs between gccgo and 6g in the last significant digit.
+			{
+				have:    "-180:90",
+				wantPt:  Point{r3.Vector{-6.123233995736757e-17, -1, 1.2246467991473515e-16}},
+				wantStr: "-7.01670929853487e-15:-90",
+			},
+		*/
+
+		// string contains more than one value, only first is used in making a point.
+		{
+			have:    "37.4210:-122.0866, 37.4231:-122.0819",
+			wantPt:  Point{r3.Vector{-0.4218751185559026, -0.6728760966593905, 0.6076669670863027}},
+			wantStr: "37.421:-122.0866",
+		},
+	}
+
+	for _, test := range tests {
+		pt := parsePoint(test.have)
+		if !pt.ApproxEqual(test.wantPt) {
+			t.Errorf("parsePoint(%s) = %v, want %v", test.have, pt, test.wantPt)
+		}
+		if got := pointToString(pt); got != test.wantStr {
+			t.Errorf("pointToString(parsePoint(%v)) = %v, want %v", test.have, got, test.wantStr)
+		}
+	}
+}
+
+func TestTextFormatParsePointsLatLngs(t *testing.T) {
+	tests := []struct {
+		have    string
+		wantPts []Point
+		wantLLs []LatLng
+	}{
+		{
+			have:    "0:0",
+			wantPts: []Point{{r3.Vector{1, 0, 0}}},
+			wantLLs: []LatLng{{Lat: 0, Lng: 0}},
+		},
+		{
+			have:    "      0:0,    ",
+			wantPts: []Point{{r3.Vector{1, 0, 0}}},
+			wantLLs: []LatLng{{Lat: 0, Lng: 0}},
+		},
+		{
+			have: "90:0,-90:0",
+			wantPts: []Point{
 				{r3.Vector{6.123233995736757e-17, 0, 1}},
 				{r3.Vector{6.123233995736757e-17, 0, -1}},
 			},
+			wantLLs: []LatLng{
+				{Lat: 90 * s1.Degree, Lng: 0},
+				{Lat: -90 * s1.Degree, Lng: 0},
+			},
 		},
 		{
-			"90:0, 0:90, -90:0, 0:-90",
-			[]Point{
+			have: "90:0, 0:90, -90:0, 0:-90",
+			wantPts: []Point{
 				{r3.Vector{6.123233995736757e-17, 0, 1}},
 				{r3.Vector{6.123233995736757e-17, 1, 0}},
 				{r3.Vector{6.123233995736757e-17, 0, -1}},
 				{r3.Vector{6.123233995736757e-17, -1, 0}},
 			},
+			wantLLs: []LatLng{
+				{Lat: 90 * s1.Degree, Lng: 0},
+				{Lat: 0, Lng: 90 * s1.Degree},
+				{Lat: -90 * s1.Degree, Lng: 0},
+				{Lat: 0, Lng: -90 * s1.Degree},
+			},
+		},
+		{
+			have: "37.4210:-122.0866, 37.4231:-122.0819",
+			wantPts: []Point{
+				{r3.Vector{-0.421875118555903, -0.672876096659391, 0.607666967086303}},
+				{r3.Vector{-0.421808091075447, -0.672891829588934, 0.607696075333505}},
+			},
+			wantLLs: []LatLng{
+				{s1.Degree * 37.4210, s1.Degree * -122.0866},
+				{s1.Degree * 37.4231, s1.Degree * -122.0819},
+			},
+		},
+		{
+			// empty string, should get back nothing.
+			have: "",
+		},
+		{
+			// two empty elements, both should be skipped.
+			have: ",",
+		},
+		{
+			// Oversized values should come through as expected.
+			have: "9000:1234.56",
+			wantPts: []Point{
+				{r3.Vector{-0.903035619536086, 0.429565675827430, 9.82193362e-16}},
+			},
+
+			wantLLs: []LatLng{
+				{Lat: 9000 * s1.Degree, Lng: 1234.56 * s1.Degree},
+			},
 		},
 	}
 
 	for _, test := range tests {
-		got := parsePoints(test.have)
-		for i := range got { // assume we at least get the same number of points
-			if !got[i].ApproxEqual(test.want[i]) {
-				t.Errorf("parsePoints(%s): [%d]: got %v, want %v", test.have, i, got[i], test.want[i])
+		for i, pt := range parsePoints(test.have) {
+			if !pt.ApproxEqual(test.wantPts[i]) {
+				t.Errorf("parsePoints(%s): [%d]: got %v, want %v", test.have, i, pt, test.wantPts[i])
 			}
 		}
+
+		// TODO(roberts): Test the roundtrip back to pointsToString()
+
+		for i, ll := range parseLatLngs(test.have) {
+			if ll != test.wantLLs[i] {
+				t.Errorf("parseLatLngs(%s): [%d]: got %v, want %v", test.have, i, ll, test.wantLLs[i])
+			}
+		}
+
+		// TODO(roberts): Test the roundtrip back to latlngssToString()
 	}
 }
 
-func TestParseRect(t *testing.T) {
+func TestTextFormatParseRect(t *testing.T) {
 	tests := []struct {
 		have string
 		want Rect
@@ -145,30 +276,8 @@ func TestParseRect(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if got := parseRect(test.have); got != test.want {
-			t.Errorf("parseRect(%s) = %v, want %v", test.have, got, test.want)
-		}
-	}
-}
-
-func TestParseLatLngs(t *testing.T) {
-	tests := []struct {
-		have string
-		want []LatLng
-	}{
-		{"0:0", []LatLng{{0, 0}}},
-		{
-			"37.4210:-122.0866, 37.4231:-122.0819",
-			[]LatLng{
-				{s1.Degree * 37.4210, s1.Degree * -122.0866},
-				{s1.Degree * 37.4231, s1.Degree * -122.0819},
-			},
-		},
-	}
-	for _, test := range tests {
-		got := parseLatLngs(test.have)
-		if !reflect.DeepEqual(got, test.want) {
-			t.Errorf("parseLatLngs(%s) = %v, want %v", test.have, got, test.want)
+		if got := makeRect(test.have); got != test.want {
+			t.Errorf("makeRect(%s) = %v, want %v", test.have, got, test.want)
 		}
 	}
 }
@@ -178,5 +287,5 @@ func TestParseLatLngs(t *testing.T) {
 //   SpecialCases, EmptyLoop, EmptyPolyline, Empty Othertypes, ShapeIndex
 //
 // make type tests for ValidInput and InvalidInput for
-//   Point, LatLngs, Points, Rect, Loop, Polyline, Polygon,
+//   LatLngs, Points, Rect, Loop, Polyline, Polygon,
 //   LaxPolyline, LaxPolygon, ShapeIndex
