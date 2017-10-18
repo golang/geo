@@ -1626,6 +1626,15 @@ func TestLoopIsValidDetectsInvalidLoops(t *testing.T) {
 				Point{r3.Vector{0, 0, 1}},
 			},
 		},
+		{
+			// Adjacent antipodal vertices
+			msg: "loop with antipodal points",
+			points: []Point{
+				Point{r3.Vector{1, 0, 0}},
+				Point{r3.Vector{-1, 0, 0}},
+				Point{r3.Vector{0, 0, 1}},
+			},
+		},
 	}
 
 	for _, test := range tests {

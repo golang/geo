@@ -34,9 +34,10 @@ import (
 // very large area.
 //
 // Loops are not allowed to have any duplicate vertices (whether adjacent or
-// not), and non-adjacent edges are not allowed to intersect. Loops must have
-// at least 3 vertices (except for the "empty" and "full" loops discussed
-// below).
+// not).  Non-adjacent edges are not allowed to intersect, and furthermore edges
+// of length 180 degrees are not allowed (i.e., adjacent vertices cannot be
+// antipodal). Loops must have at least 3 vertices (except for the "empty" and
+// "full" loops discussed below).
 //
 // There are two special loops: the "empty" loop contains no points and the
 // "full" loop contains all points. These loops do not have any edges, but to
@@ -251,6 +252,12 @@ func (l *Loop) findValidationErrorNoIndex() error {
 	for i, v := range l.vertices {
 		if v == l.Vertex(i+1) {
 			return fmt.Errorf("edge %d is degenerate (duplicate vertex)", i)
+		}
+
+		// Antipodal vertices are not allowed.
+		if other := (Point{l.Vertex(i + 1).Mul(-1)}); v == other {
+			return fmt.Errorf("vertices %d and %d are antipodal", i,
+				(i+1)%len(l.vertices))
 		}
 	}
 
