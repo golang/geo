@@ -169,7 +169,7 @@ func quadraticValidate(t *testing.T, index *ShapeIndex) {
 		if !it.Done() {
 			cellID := it.CellID()
 			if cellID < minCellID {
-				t.Errorf("cell ID below min")
+				t.Errorf("cell ID below min, got %v, want %v", cellID, minCellID)
 			}
 			skipped = CellUnionFromRange(minCellID, cellID.RangeMin())
 			minCellID = cellID.RangeMax().Next()
@@ -228,13 +228,24 @@ func quadraticValidate(t *testing.T, index *ShapeIndex) {
 	}
 }
 
+// copyIterator copies the internal state of the given iterator to a new iterator.
+func copyIterator(i *ShapeIndexIterator) *ShapeIndexIterator {
+	s := &ShapeIndexIterator{
+		index:    i.index,
+		position: i.position,
+		id:       i.id,
+		cell:     i.cell,
+	}
+	return s
+}
+
 func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 	it := index.Iterator()
-	if !it.AtBegin() {
-		t.Errorf("new iterator should start positioned at beginning")
+	if it.Prev() {
+		t.Fatalf("new iterator should not be able to go backwards")
 	}
 
-	it = index.End()
+	it.End()
 	if !it.Done() {
 		t.Errorf("iterator positioned at end should report as done")
 	}
@@ -243,12 +254,12 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 	// minCellID is the first CellID in a complete traversal.
 	minCellID := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
 
-	for it.Reset(); !it.Done(); it.Next() {
+	for it.Begin(); !it.Done(); it.Next() {
 		// Get the next cell in the iterator.
 		ci := it.CellID()
 		skipped := CellUnionFromRange(minCellID, ci.RangeMin())
 
-		it2 := index.Iterator()
+		it2 := NewShapeIndexIterator(index, IteratorEnd)
 		for i := 0; i < len(skipped); i++ {
 			if it2.LocatePoint(skipped[i].Point()) {
 				t.Errorf("iterator should not have been able to find the cell %v wihich was not in the index", skipped[i].Point())
@@ -257,55 +268,51 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 			if got := it2.LocateCellID(skipped[i]); got != Disjoint {
 				t.Errorf("CellID location should be Disjoint for non-existent entry, got %v", got)
 			}
+			it2.Begin()
+			it2.seek(skipped[i])
+			if ci != it2.CellID() {
+				t.Errorf("seeking the current cell in the skipped list should match the current cellid. got %v, want %v", it2.CellID(), ci)
+			}
 		}
 
 		if len(ids) != 0 {
-			if it.AtBegin() {
-				t.Errorf("an iterator from a non-empty set of cells should not be positioned at the beginning")
+			prevCell := ids[len(ids)-1]
+			// C++ overloads operator= to clone the iterator. We can't
+			// just assign directly since it2 will than change it when
+			// it should not.
+			it2 = copyIterator(it)
+			if !it2.Prev() {
+				t.Errorf("should have been able to go back because there are cells")
 			}
-
-			it2 = index.Iterator()
-			it2.Prev()
-			// jump back one spot.
-			if ids[len(ids)-1] != it2.CellID() {
+			if prevCell != it2.CellID() {
 				t.Errorf("ShapeIndexIterator should be positioned at the beginning and not equal to last entry")
 			}
 
 			it2.Next()
 			if ci != it2.CellID() {
-				t.Errorf("advancing one spot should put us at the end")
+				t.Errorf("advancing back one spot should give us the current cell")
 			}
 
-			it2.seek(ids[len(ids)-1])
-			if ids[len(ids)-1] != it2.CellID() {
-				t.Errorf("seek from beginning for the first entry (%v) should not put us at the end %v", ids[len(ids)-1], it.CellID())
-			}
-
-			it2.seekForward(ci)
-			if ci != it2.CellID() {
-				t.Errorf("%v.seekForward(%v) = %v, want %v", it2, ci, it2.CellID(), ci)
-			}
-
-			it2.seekForward(ids[len(ids)-1])
-			if ci != it2.CellID() {
-				t.Errorf("%v.seekForward(%v) (to last entry) = %v, want %v", it2, ids[len(ids)-1], it2.CellID(), ci)
+			it2.seek(prevCell)
+			if prevCell != it2.CellID() {
+				t.Errorf("seek from beginning for the first previous cell %v should not give us the current cell %v", prevCell, it.CellID())
 			}
 		}
 
-		it2.Reset()
+		it2.Begin()
 		if ci.Point() != it.Center() {
-			t.Errorf("point at center of current position should equal center of the crrent CellID")
+			t.Errorf("point at center of current position should equal center of the crrent CellID. got %v, want %v", it.Center(), ci.Point())
 		}
 
 		if !it2.LocatePoint(it.Center()) {
-			t.Fatalf("it.LocatePoint(it.Center()) should have been able to locate the point it is currently at")
+			t.Errorf("it.LocatePoint(it.Center()) should have been able to locate the point it is currently at")
 		}
 
 		if ci != it2.CellID() {
 			t.Errorf("CellID of the Point we just located should be equal. got %v, want %v", it2.CellID(), ci)
 		}
 
-		it2.Reset()
+		it2.Begin()
 		if got := it2.LocateCellID(ci); got != Indexed {
 			t.Errorf("it.LocateCellID(%v) = %v, want %v", ci, got, Indexed)
 		}
@@ -315,7 +322,7 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 		}
 
 		if !ci.isFace() {
-			it2.Reset()
+			it2.Begin()
 			if got := it2.LocateCellID(ci.immediateParent()); Subdivided != got {
 				t.Errorf("it2.LocateCellID(%v) = %v, want %v", ci.immediateParent(), got, Subdivided)
 			}
@@ -331,7 +338,7 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 
 		if !ci.IsLeaf() {
 			for i := 0; i < 4; i++ {
-				it2.Reset()
+				it2.Begin()
 				if got, want := it2.LocateCellID(ci.Children()[i]), Indexed; got != want {
 					t.Errorf("it2.LocateCellID(%v.Children[%d]) = %v, want %v", ci, i, got, want)
 				}
@@ -361,7 +368,9 @@ func TestShapeIndexNoEdges(t *testing.T) {
 func TestShapeIndexOneEdge(t *testing.T) {
 	index := NewShapeIndex()
 	e := edgeVectorShapeFromPoints(PointFromCoords(1, 0, 0), PointFromCoords(0, 1, 0))
-	index.Add(e)
+	if got := index.Add(e); got != 0 {
+		t.Errorf("the first element added to the index should have id 0, got %v", got)
+	}
 	quadraticValidate(t, index)
 	testIteratorMethods(t, index)
 }
@@ -372,8 +381,10 @@ func TestShapeIndexManyIdenticalEdges(t *testing.T) {
 	b := PointFromCoords(-0.99, -0.99, 1)
 
 	index := NewShapeIndex()
-	for i := 0; i < numEdges; i++ {
-		index.Add(edgeVectorShapeFromPoints(a, b))
+	for i := int32(0); i < numEdges; i++ {
+		if got := index.Add(edgeVectorShapeFromPoints(a, b)); got != i {
+			t.Errorf("element %d id = %v, want %v", i, got, i)
+		}
 	}
 	quadraticValidate(t, index)
 	testIteratorMethods(t, index)
@@ -385,6 +396,34 @@ func TestShapeIndexManyIdenticalEdges(t *testing.T) {
 			t.Errorf("it.CellID.Level() = %v, want nonzero", it.CellID().Level())
 		}
 	}
+}
+
+func TestShapeIndexDegenerateEdge(t *testing.T) {
+	// This test verifies that degenerate edges are supported.  The following
+	// point is a cube face vertex, and so it should be indexed in 3 cells.
+	a := PointFromCoords(1, 1, 1)
+	shape := edgeVectorShapeFromPoints(a, a)
+	index := NewShapeIndex()
+	index.Add(shape)
+	quadraticValidate(t, index)
+	// Check that exactly 3 index cells contain the degenerate edge.
+	count := 0
+	for it := index.Iterator(); !it.Done(); it.Next() {
+		if !it.CellID().IsLeaf() {
+			t.Errorf("the cell for this shape should be a leaf cell.")
+		}
+		if got := len(it.IndexCell().shapes); got != 1 {
+			t.Errorf("there should only be one shape stored in the index cell, got %d", got)
+		}
+		if got := len(it.IndexCell().shapes[0].edges); got != 1 {
+			t.Errorf("point should only have one edge, got %d", got)
+		}
+		count++
+	}
+	if count != 3 {
+		t.Errorf("expected 3 index cells, got %d", count)
+	}
+
 }
 
 func TestShapeIndexManyTinyEdges(t *testing.T) {
@@ -451,8 +490,22 @@ func TestShapeIndexMixedGeometry(t *testing.T) {
 	}
 }
 
+func TestShapeIndexLoopSpanningThreeFaces(t *testing.T) {
+	const numEdges = 100
+	// Construct two loops consisting of numEdges vertices each, centered
+	// around the cube vertex at the start of the Hilbert curve.
+	polygon := concentricLoopsPolygon(PointFromCoords(1, -1, -1), 2, numEdges)
+	index := NewShapeIndex()
+
+	for _, l := range polygon.loops {
+		index.Add(l)
+	}
+
+	quadraticValidate(t, index)
+	testIteratorMethods(t, index)
+}
+
 // TODO(roberts): Differences from C++:
-// TestShapeIndexLoopSpanningThreeFaces(t *testing.T) {}
 // TestShapeIndexSimpleUpdates(t *testing.T) {}
 // TestShapeIndexRandomUpdates(t *testing.T) {}
 // TestShapeIndexHasCrossing(t *testing.T) {}

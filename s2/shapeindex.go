@@ -181,6 +181,18 @@ type clippedEdge struct {
 	bound    r2.Rect   // Bounding box for the clipped portion
 }
 
+// ShapeIndexIteratorPos defines the set of possible iterator starting positions. By
+// default iterators are unpositioned, since this avoids an extra seek in this
+// situation where one of the seek methods (such as Locate) is immediately called.
+type ShapeIndexIteratorPos int
+
+const (
+	// IteratorBegin specifies the iterator should be positioned at the beginning of the index.
+	IteratorBegin ShapeIndexIteratorPos = iota
+	// IteratorEnd specifies the iterator should be positioned at the end of the index.
+	IteratorEnd
+)
+
 // ShapeIndexIterator is an iterator that provides low-level access to
 // the cells of the index. Cells are returned in increasing order of CellID.
 //
@@ -191,19 +203,46 @@ type clippedEdge struct {
 type ShapeIndexIterator struct {
 	index    *ShapeIndex
 	position int
+	id       CellID
+	cell     *ShapeIndexCell
 }
 
-// CellID returns the CellID of the cell at the current position of the iterator.
-func (s *ShapeIndexIterator) CellID() CellID {
-	if s.position >= len(s.index.cells) {
-		return 0
+// NewShapeIndexIterator creates a new iterator for the given index. If a starting
+// position is specified, the iterator is positioned at the given spot.
+func NewShapeIndexIterator(index *ShapeIndex, pos ...ShapeIndexIteratorPos) *ShapeIndexIterator {
+	s := &ShapeIndexIterator{
+		index: index,
 	}
-	return s.index.cells[s.position]
+
+	if len(pos) > 0 {
+		if len(pos) > 1 {
+			panic("too many ShapeIndexIteratorPos arguments")
+		}
+		switch pos[0] {
+		case IteratorBegin:
+			s.Begin()
+		case IteratorEnd:
+			s.End()
+		default:
+			panic("unknown ShapeIndexIteratorPos value")
+		}
+	}
+
+	return s
 }
 
-// IndexCell returns the ShapeIndexCell at the current position of the iterator.
+// CellID returns the CellID of the current index cell.
+// If s.Done() is true, a value larger than any valid CellID is returned.
+func (s *ShapeIndexIterator) CellID() CellID {
+	return s.id
+}
+
+// IndexCell returns the current index cell.
 func (s *ShapeIndexIterator) IndexCell() *ShapeIndexCell {
-	return s.index.cellMap[s.CellID()]
+	// TODO(roberts): C++ has this call a virtual method to allow subclasses
+	// of ShapeIndexIterator to do other work before returning the cell. Do
+	// we need such a thing?
+	return s.cell
 }
 
 // Center returns the Point at the center of the current position of the iterator.
@@ -211,43 +250,58 @@ func (s *ShapeIndexIterator) Center() Point {
 	return s.CellID().Point()
 }
 
-// Reset the iterator to be positioned at the first cell in the index.
-func (s *ShapeIndexIterator) Reset() {
+// Begin positions the iterator at the beginning of the index.
+func (s *ShapeIndexIterator) Begin() {
 	if !s.index.IsFresh() {
 		s.index.maybeApplyUpdates()
 	}
 	s.position = 0
+	s.refresh()
 }
 
-// AtBegin reports if the iterator is positioned at the first index cell.
-func (s *ShapeIndexIterator) AtBegin() bool {
-	return s.position == 0
-}
-
-// Next advances the iterator to the next cell in the index.
+// Next positions the iterator at the next index cell.
 func (s *ShapeIndexIterator) Next() {
 	s.position++
+	s.refresh()
 }
 
 // Prev advances the iterator to the previous cell in the index and returns true to
 // indicate it was not yet at the beginning of the index. If the iterator is at the
 // first cell the call does nothing and returns false.
 func (s *ShapeIndexIterator) Prev() bool {
-	if s.position > 0 {
-		s.position--
-		return true
+	if s.position <= 0 {
+		return false
 	}
-	return false
+
+	s.position--
+	s.refresh()
+	return true
+}
+
+// End positions the iterator at the end of the index.
+func (s *ShapeIndexIterator) End() {
+	s.position = len(s.index.cells)
+	s.refresh()
 }
 
 // Done reports if the iterator is positioned at or after the last index cell.
 func (s *ShapeIndexIterator) Done() bool {
-	return s.position >= len(s.index.cells)
+	return s.id == SentinelCellID
 }
 
-// seek positions the iterator at the first cell whose ID >= target starting from the
-// current position of the iterator, or at the end of the index if no such cell exists.
-// If the iterator is currently at the end, nothing is done.
+// refresh updates the stored internal iterator values.
+func (s *ShapeIndexIterator) refresh() {
+	if s.position < len(s.index.cells) {
+		s.id = s.index.cells[s.position]
+		s.cell = s.index.cellMap[s.CellID()]
+	} else {
+		s.id = SentinelCellID
+		s.cell = nil
+	}
+}
+
+// seek positions the iterator at the first cell whose ID >= target, or at the
+// end of the index if no such cell exists.
 func (s *ShapeIndexIterator) seek(target CellID) {
 	// In C++, this relies on the lower_bound method of the underlying btree_map.
 	// TODO(roberts): Convert this to a binary search since the list of cells is ordered.
@@ -260,14 +314,7 @@ func (s *ShapeIndexIterator) seek(target CellID) {
 		// Otherwise, advance the position.
 		s.position++
 	}
-}
-
-// seekForward advances the iterator to the next cell with cellID >= target if the
-// iterator is not Done or already satisfies the condition.
-func (s *ShapeIndexIterator) seekForward(target CellID) {
-	if !s.Done() && s.CellID() < target {
-		s.seek(target)
-	}
+	s.refresh()
 }
 
 // LocatePoint positions the iterator at the cell that contains the given Point.
@@ -285,20 +332,17 @@ func (s *ShapeIndexIterator) LocatePoint(p Point) bool {
 		return true
 	}
 
-	if !s.AtBegin() {
-		s.Prev()
-		if s.CellID().RangeMax() >= target {
-			return true
-		}
+	if s.Prev() && s.CellID().RangeMax() >= target {
+		return true
 	}
 	return false
 }
 
-// LocateCellID attempts to position the iterator at the first matching indexCell
+// LocateCellID attempts to position the iterator at the first matching index cell
 // in the index that has some relation to the given CellID. Let T be the target CellID.
 // If T is contained by (or equal to) some index cell I, then the iterator is positioned
 // at I and returns Indexed. Otherwise if T contains one or more (smaller) index cells,
-// then position the iterator at the first such cell I and return Subdivided.
+// then the iterator is positioned at the first such cell I and return Subdivided.
 // Otherwise Disjoint is returned and the iterator position is undefined.
 func (s *ShapeIndexIterator) LocateCellID(target CellID) CellRelation {
 	// Let T be the target, let I = cellMap.LowerBound(T.RangeMin()), and
@@ -315,11 +359,8 @@ func (s *ShapeIndexIterator) LocateCellID(target CellID) CellRelation {
 			return Subdivided
 		}
 	}
-	if !s.AtBegin() {
-		s.Prev()
-		if s.CellID().RangeMax() >= target {
-			return Indexed
-		}
+	if s.Prev() && s.CellID().RangeMax() >= target {
+		return Indexed
 	}
 	return Disjoint
 }
@@ -599,13 +640,13 @@ func NewShapeIndex() *ShapeIndex {
 // Iterator returns an iterator for this index.
 func (s *ShapeIndex) Iterator() *ShapeIndexIterator {
 	s.maybeApplyUpdates()
-	return &ShapeIndexIterator{index: s}
+	return NewShapeIndexIterator(s, IteratorBegin)
 }
 
 // Begin positions the iterator at the first cell in the index.
 func (s *ShapeIndex) Begin() *ShapeIndexIterator {
 	s.maybeApplyUpdates()
-	return &ShapeIndexIterator{index: s}
+	return NewShapeIndexIterator(s, IteratorBegin)
 }
 
 // End positions the iterator at the last cell in the index.
@@ -615,10 +656,7 @@ func (s *ShapeIndex) End() *ShapeIndexIterator {
 	// will be invalid or not the end. For now, things will be undefined if this
 	// happens. See about referencing the IsFresh to guard for this in the future.
 	s.maybeApplyUpdates()
-	return &ShapeIndexIterator{
-		index:    s,
-		position: len(s.cells),
-	}
+	return NewShapeIndexIterator(s, IteratorEnd)
 }
 
 // Len reports the number of Shapes in this index.
@@ -647,11 +685,12 @@ func (s *ShapeIndex) NumEdges() int {
 // Shape returns the shape with the given ID, or nil if the shape has been removed from the index.
 func (s *ShapeIndex) Shape(id int32) Shape { return s.shapes[id] }
 
-// Add adds the given shape to the index.
-func (s *ShapeIndex) Add(shape Shape) {
+// Add adds the given shape to the index and returns the assigned ID..
+func (s *ShapeIndex) Add(shape Shape) int32 {
 	s.shapes[s.nextID] = shape
 	s.nextID++
 	atomic.StoreInt32(&s.status, stale)
+	return s.nextID - 1
 }
 
 // Remove removes the given shape from the index.
