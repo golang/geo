@@ -1193,10 +1193,10 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 // ProjectToBoundary
 // ContainsLoop
 // IntersectsLoop
-// EqualsLoop
+// EqualLoop
 // LoopRelations
-// BoundaryEquals
-// BoundaryApproxEquals
+// BoundaryEqual
+// BoundaryApproxEqual
 // BoundaryNear
 // CompareBoundary
 // ContainsNonCrossingBoundary

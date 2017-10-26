@@ -85,7 +85,7 @@ func TestPaddedCellMethods(t *testing.T) {
 			}
 
 			r := r2.RectFromPoints(cellChild.id.centerUV()).ExpandedByMargin(padding)
-			if got := pCellChild.Middle(); !r.ApproxEquals(got) {
+			if got := pCellChild.Middle(); !r.ApproxEqual(got) {
 				t.Errorf("%v.Middle() = %v, want %v", pCellChild, got, r)
 			}
 

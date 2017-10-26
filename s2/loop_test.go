@@ -487,19 +487,19 @@ func TestLoopVertex(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := test.loop.Vertex(test.vertex); !pointsApproxEquals(got, test.want, epsilon) {
+		if got := test.loop.Vertex(test.vertex); !pointsApproxEqual(got, test.want, epsilon) {
 			t.Errorf("%v.Vertex(%d) = %v, want %v", test.loop, test.vertex, got, test.want)
 		}
 	}
 
 	// Check that wrapping is correct.
-	if !pointsApproxEquals(arctic80.Vertex(2), arctic80.Vertex(5), epsilon) {
+	if !pointsApproxEqual(arctic80.Vertex(2), arctic80.Vertex(5), epsilon) {
 		t.Errorf("Vertex should wrap values. %v.Vertex(2) = %v != %v.Vertex(5) = %v",
 			arctic80, arctic80.Vertex(2), arctic80, arctic80.Vertex(5))
 	}
 
 	loopAroundThrice := 2 + 3*len(arctic80.vertices)
-	if !pointsApproxEquals(arctic80.Vertex(2), arctic80.Vertex(loopAroundThrice), epsilon) {
+	if !pointsApproxEqual(arctic80.Vertex(2), arctic80.Vertex(loopAroundThrice), epsilon) {
 		t.Errorf("Vertex should wrap values. %v.Vertex(2) = %v != %v.Vertex(%d) = %v",
 			arctic80, arctic80.Vertex(2), arctic80, loopAroundThrice, arctic80.Vertex(loopAroundThrice))
 	}
@@ -593,7 +593,7 @@ func TestLoopEdge(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if e := test.loop.Edge(test.edge); !(pointsApproxEquals(e.V0, test.wantA, epsilon) && pointsApproxEquals(e.V1, test.wantB, epsilon)) {
+		if e := test.loop.Edge(test.edge); !(pointsApproxEqual(e.V0, test.wantA, epsilon) && pointsApproxEqual(e.V1, test.wantB, epsilon)) {
 			t.Errorf("%v.Edge(%d) = %v, want (%v, %v)", test.loop, test.edge, e, test.wantA, test.wantB)
 		}
 	}

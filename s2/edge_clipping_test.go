@@ -102,7 +102,7 @@ func TestEdgeClippingExitPoint(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := test.a.exitPoint(test.exitAxis); !r2PointsApproxEquals(got, test.want, epsilon) {
+		if got := test.a.exitPoint(test.exitAxis); !r2PointsApproxEqual(got, test.want, epsilon) {
 			t.Errorf("%v.exitPoint() = %v, want %v", test.a, got, test.want)
 		}
 	}

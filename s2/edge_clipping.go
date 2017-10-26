@@ -158,7 +158,7 @@ func ClipEdge(a, b r2.Point, clip r2.Rect) (aClip, bClip r2.Point, intersects bo
 	return bound.VertexIJ(ai, aj), bound.VertexIJ(1-ai, 1-aj), true
 }
 
-// The three functions below (sumEquals, intersectsFace, intersectsOppositeEdges)
+// The three functions below (sumEqual, intersectsFace, intersectsOppositeEdges)
 // all compare a sum (u + v) to a third value w. They are implemented in such a
 // way that they produce an exact result even though all calculations are done
 // with ordinary floating-point operations. Here are the principles on which these
@@ -180,8 +180,8 @@ func ClipEdge(a, b r2.Point, clip r2.Rect) (aClip, bClip r2.Point, intersects bo
 // so the result holds.  Otherwise we have u <= v < w/2 and w - v >= w/2
 // (even in floating point), so the result also holds.
 
-// sumEquals reports whether u + v == w exactly.
-func sumEquals(u, v, w float64) bool {
+// sumEqual reports whether u + v == w exactly.
+func sumEqual(u, v, w float64) bool {
 	return (u+v == w) && (u == w-v) && (v == w-u)
 }
 
@@ -660,11 +660,11 @@ func nextFace(face int, exit r2.Point, axis axis, n pointUVW, targetFace int) in
 	//
 	// The three conditions below check that (1) AB exits approximately through
 	// a corner, (2) the adjacent face along the non-exit axis is the target
-	// face, and (3) AB exits *exactly* through the corner. (The sumEquals
+	// face, and (3) AB exits *exactly* through the corner. (The sumEqual
 	// code checks whether the dot product of (u,v,1) and n is exactly zero.)
 	if math.Abs(exit1MinusA) == 1 &&
 		uvwFace(face, int(1-axis), exit1MinusAPos) == targetFace &&
-		sumEquals(exit.X*n.X, exit.Y*n.Y, -n.Z) {
+		sumEqual(exit.X*n.X, exit.Y*n.Y, -n.Z) {
 		return targetFace
 	}
 

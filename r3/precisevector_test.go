@@ -147,7 +147,7 @@ func TestPreciseAdd(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := test.v1.Add(test.v2); !got.Equals(test.want) {
+		if got := test.v1.Add(test.v2); !got.Equal(test.want) {
 			t.Errorf("%v + %v = %v, want %v", test.v1, test.v2, got, test.want)
 		}
 	}
@@ -180,7 +180,7 @@ func TestPreciseSub(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := test.v1.Sub(test.v2); !got.Equals(test.want) {
+		if got := test.v1.Sub(test.v2); !got.Equal(test.want) {
 			t.Errorf("%v - %v = %v, want %v", test.v1, test.v2, got, test.want)
 		}
 	}
@@ -225,7 +225,7 @@ func TestPreciseMul(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := test.v.Mul(test.f); !got.Equals(test.want) {
+		if got := test.v.Mul(test.f); !got.Equal(test.want) {
 			t.Errorf("%v.Mul(%v) = %v, want %v", test.v, test.f, got, test.want)
 		}
 	}
@@ -270,7 +270,7 @@ func TestPreciseMulByFloat64(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := test.v.MulByFloat64(test.f); !got.Equals(test.want) {
+		if got := test.v.MulByFloat64(test.f); !got.Equal(test.want) {
 			t.Errorf("%v.MulByFloat64(%v) = %v, want %v", test.v, test.f, got, test.want)
 		}
 	}
@@ -369,7 +369,7 @@ func TestPreciseCross(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := test.v1.Cross(test.v2); !got.Equals(test.want) {
+		if got := test.v1.Cross(test.v2); !got.Equal(test.want) {
 			t.Errorf("%v ⨯ %v = %v, want %v", test.v1, test.v2, got, test.want)
 		}
 	}
@@ -416,7 +416,7 @@ func TestPreciseIdentities(t *testing.T) {
 			t.Errorf("%v = %v · %v != %v · %v = %v", d1, test.v1, test.v2, test.v2, test.v1, d2)
 		}
 		// Cross anti-commutes
-		if !c1.Equals(c2.MulByFloat64(-1.0)) {
+		if !c1.Equal(c2.MulByFloat64(-1.0)) {
 			t.Errorf("%v = %v ⨯ %v != -(%v ⨯ %v) = -%v", c1, test.v1, test.v2, test.v2, test.v1, c2)
 		}
 		// Cross is orthogonal to original vectors

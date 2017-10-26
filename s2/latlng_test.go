@@ -115,7 +115,7 @@ func TestLatLngPointConversion(t *testing.T) {
 	for _, test := range tests {
 		ll := LatLngFromDegrees(test.lat, test.lng)
 		p := PointFromLatLng(ll)
-		// TODO(mikeperrow): Port Point.ApproxEquals, then use here.
+		// TODO(mikeperrow): Port Point.ApproxEqual, then use here.
 		if !float64Eq(p.X, test.x) || !float64Eq(p.Y, test.y) || !float64Eq(p.Z, test.z) {
 			t.Errorf("PointFromLatLng({%v°, %v°}) = %v, want %v, %v, %v",
 				test.lat, test.lng, p, test.x, test.y, test.z)

@@ -487,7 +487,7 @@ func TestFrames(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if !pointsApproxEquals(test.a, test.b, epsilon) {
+		if !pointsApproxEqual(test.a, test.b, epsilon) {
 			t.Errorf("%v != %v", test.a, test.b)
 		}
 	}

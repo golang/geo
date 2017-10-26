@@ -846,7 +846,7 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 // DestructiveApproxUnion
 // InitToCellUnionBorder
 // IsNormalized
-// Equals/BoundaryEquals/BoundaryApproxEquals/BoundaryNear Polygons
+// Equal/BoundaryEqual/BoundaryApproxEqual/BoundaryNear Polygons
 // BreakEdgesAndAddToBuilder
 //
 // clearLoops

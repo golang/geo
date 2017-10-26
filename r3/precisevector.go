@@ -95,8 +95,8 @@ func (v PreciseVector) Vector() Vector {
 	return Vector{x, y, z}.Normalize()
 }
 
-// Equals reports whether v and ov are equal.
-func (v PreciseVector) Equals(ov PreciseVector) bool {
+// Equal reports whether v and ov are equal.
+func (v PreciseVector) Equal(ov PreciseVector) bool {
 	return v.X.Cmp(ov.X) == 0 && v.Y.Cmp(ov.Y) == 0 && v.Z.Cmp(ov.Z) == 0
 }
 

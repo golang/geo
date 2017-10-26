@@ -75,8 +75,8 @@ func (p *Polyline) Centroid() Point {
 	return centroid
 }
 
-// Equals reports whether the given Polyline is exactly the same as this one.
-func (p *Polyline) Equals(b *Polyline) bool {
+// Equal reports whether the given Polyline is exactly the same as this one.
+func (p *Polyline) Equal(b *Polyline) bool {
 	if len(*p) != len(*b) {
 		return false
 	}

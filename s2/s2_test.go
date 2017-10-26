@@ -155,10 +155,10 @@ func randomCap(minArea, maxArea float64) Cap {
 	return CapFromCenterArea(randomPoint(), capArea)
 }
 
-// pointsApproxEquals reports whether the two points are within the given distance
-// of each other. This is the same as Point.ApproxEquals but permits specifying
+// pointsApproxEqual reports whether the two points are within the given distance
+// of each other. This is the same as Point.ApproxEqual but permits specifying
 // the epsilon.
-func pointsApproxEquals(a, b Point, epsilon float64) bool {
+func pointsApproxEqual(a, b Point, epsilon float64) bool {
 	return float64(a.Vector.Angle(b.Vector)) <= epsilon
 }
 
@@ -168,7 +168,7 @@ var (
 )
 
 // r2PointsApproxEqual reports whether the two points are within the given epsilon.
-func r2PointsApproxEquals(a, b r2.Point, epsilon float64) bool {
+func r2PointsApproxEqual(a, b r2.Point, epsilon float64) bool {
 	return float64Near(a.X, b.X, epsilon) && float64Near(a.Y, b.Y, epsilon)
 }
 

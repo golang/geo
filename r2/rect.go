@@ -248,9 +248,9 @@ func (r Rect) Intersection(other Rect) Rect {
 	return Rect{xx, yy}
 }
 
-// ApproxEquals returns true if the x- and y-intervals of the two rectangles are
+// ApproxEqual returns true if the x- and y-intervals of the two rectangles are
 // the same up to the given tolerance.
-func (r Rect) ApproxEquals(r2 Rect) bool {
+func (r Rect) ApproxEqual(r2 Rect) bool {
 	return r.X.ApproxEqual(r2.X) && r.Y.ApproxEqual(r2.Y)
 }
 

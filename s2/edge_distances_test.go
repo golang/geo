@@ -239,7 +239,7 @@ func TestEdgeDistancesInterpolate(t *testing.T) {
 
 		// We allow a bit more than the usual 1e-15 error tolerance because
 		// Interpolate() uses trig functions.
-		if got := Interpolate(test.dist, test.a, test.b); !pointsApproxEquals(got, test.want, 3e-15) {
+		if got := Interpolate(test.dist, test.a, test.b); !pointsApproxEqual(got, test.want, 3e-15) {
 			t.Errorf("Interpolate(%v, %v, %v) = %v, want %v", test.dist, test.a, test.b, got, test.want)
 		}
 	}
@@ -254,13 +254,13 @@ func TestEdgeDistancesInterpolateOverLongEdge(t *testing.T) {
 		// Test that interpolation is accurate on a long edge (but not so long that
 		// the definition of the edge itself becomes too unstable).
 		want := Point{PointFromLatLng(LatLng{0, s1.Angle(f * lng)}).Normalize()}
-		if got := Interpolate(f, a, b); !pointsApproxEquals(got, want, 3e-15) {
+		if got := Interpolate(f, a, b); !pointsApproxEqual(got, want, 3e-15) {
 			t.Errorf("long edge Interpolate(%v, %v, %v) = %v, want %v", f, a, b, got, want)
 		}
 
 		// Test the remainder of the dist also matches.
 		wantRem := Point{PointFromLatLng(LatLng{0, s1.Angle((1 - f) * lng)}).Normalize()}
-		if got := Interpolate(1-f, a, b); !pointsApproxEquals(got, wantRem, 3e-15) {
+		if got := Interpolate(1-f, a, b); !pointsApproxEqual(got, wantRem, 3e-15) {
 			t.Errorf("long edge Interpolate(%v, %v, %v) = %v, want %v", 1-f, a, b, got, wantRem)
 		}
 	}
