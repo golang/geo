@@ -393,7 +393,7 @@ func TestCellUnionNormalizePseudoRandom(t *testing.T) {
 				len(expected), len(cellunion))
 		}
 
-		// Test GetCapBound().
+		// Test CapBound().
 		cb := cellunion.CapBound()
 		for _, ci := range cellunion {
 			if !cb.ContainsCell(CellFromCellID(ci)) {
@@ -647,6 +647,12 @@ func TestCellUnionRectBound(t *testing.T) {
 }
 
 func TestCellUnionLeafCellsCovered(t *testing.T) {
+	fiveFaces := CellUnion{CellIDFromFace(0)}
+	fiveFaces.ExpandAtLevel(0)
+	wholeWorld := CellUnion{CellIDFromFace(0)}
+	wholeWorld.ExpandAtLevel(0)
+	wholeWorld.ExpandAtLevel(0)
+
 	tests := []struct {
 		have []CellID
 		want int64
@@ -671,15 +677,14 @@ func TestCellUnionLeafCellsCovered(t *testing.T) {
 			},
 			want: 1 << 60,
 		},
-		/*
-			TODO(roberts): Once Expand is implemented, add the two tests for these
-			// Five faces.
-			cell_union.Expand(0),
+		{
+			have: fiveFaces,
 			want: 5 << 60,
-			// Whole world.
-			cell_union.Expand(0),
+		},
+		{
+			have: wholeWorld,
 			want: 6 << 60,
-		*/
+		},
 		{
 			// Add some disjoint cells.
 			have: []CellID{
@@ -708,7 +713,7 @@ func TestCellUnionLeafCellsCovered(t *testing.T) {
 }
 
 func TestCellUnionFromRange(t *testing.T) {
-	for iter := 0; iter < 100; iter++ {
+	for iter := 0; iter < 2000; iter++ {
 		min := randomCellIDForLevel(maxLevel)
 		max := randomCellIDForLevel(maxLevel)
 		if min > max {
@@ -758,6 +763,289 @@ func TestCellUnionFromRange(t *testing.T) {
 		if !cu[i].isFace() {
 			t.Errorf("CellUnionFromRange for full sphere cu[%d].isFace() = %t, want %t", i, cu[i].isFace(), true)
 		}
+	}
+}
+
+func TestCellUnionFromUnionDiffIntersection(t *testing.T) {
+	const iters = 2000
+	for i := 0; i < iters; i++ {
+		input := []CellID{}
+		expected := []CellID{}
+		addCells(CellID(0), false, &input, &expected, t)
+
+		var x, y, xOrY, xAndY []CellID
+		for _, id := range input {
+			inX := oneIn(2)
+			inY := oneIn(2)
+
+			if inX {
+				x = append(x, id)
+			}
+			if inY {
+				y = append(y, id)
+			}
+			if inX || inY {
+				xOrY = append(xOrY, id)
+			}
+		}
+
+		xcells := CellUnion(x)
+		xcells.Normalize()
+		ycells := CellUnion(y)
+		ycells.Normalize()
+		xOrYExpected := CellUnion(xOrY)
+		xOrYExpected.Normalize()
+
+		xOrYCells := CellUnionFromUnion(xcells, ycells)
+
+		if !xOrYCells.Equal(xOrYExpected) {
+			t.Errorf("CellUnionFromUnion(%v, %v) = %v, want %v", xcells, ycells, xOrYCells, xOrYExpected)
+		}
+
+		// Compute the intersection of x with each cell of y,
+		// check that this intersection is correct, and append the
+		// results to xAndYExpected.
+		for _, yid := range ycells {
+			u := CellUnionFromIntersectionWithCellID(xcells, yid)
+			for _, xid := range xcells {
+				if xid.Contains(yid) {
+					if !(len(u) == 1 && u[0] == yid) {
+						t.Errorf("CellUnionFromIntersectionWithCellID(%v, %v) = %v with len: %d, want len of 1.", xcells, yid, u, len(u))
+					}
+				} else if yid.Contains(xid) {
+					if !u.ContainsCellID(xid) {
+						t.Errorf("%v.ContainsCellID(%v) = false, want true", u, xid)
+					}
+				}
+			}
+			for _, uCellID := range u {
+				if !xcells.ContainsCellID(uCellID) {
+					t.Errorf("%v.ContainsCellID(%v) = false, but should contain CellID that was used to create CellUnion", xcells, uCellID)
+				}
+				if !yid.Contains(uCellID) {
+					t.Errorf("%v.Contains(%v) = false, but should contain CellID that was used to create CellUnion", yid, uCellID)
+				}
+			}
+
+			xAndY = append(xAndY, u...)
+		}
+
+		xAndYExpected := CellUnion(xAndY)
+		xAndYExpected.Normalize()
+
+		xAndYCells := CellUnionFromIntersection(xcells, ycells)
+		if !xAndYCells.Equal(xAndYExpected) {
+			t.Errorf("CellUnionFromIntersection(%v, %v) = %v, want %v", xcells, ycells, xAndYCells, xAndYExpected)
+		}
+
+		xMinusYCells := CellUnionFromDifference(xcells, ycells)
+		yMinusXCells := CellUnionFromDifference(ycells, xcells)
+		if !xcells.Contains(xMinusYCells) {
+			t.Errorf("%v.Contains(%v) = false, want true", xcells, xMinusYCells)
+		}
+		if xMinusYCells.Intersects(ycells) {
+			t.Errorf("%v.Intersects(%v) = true, want false", xMinusYCells, ycells)
+		}
+		if !ycells.Contains(yMinusXCells) {
+			t.Errorf("%v.Contains(%v) = false, want true", ycells, yMinusXCells)
+		}
+		if yMinusXCells.Intersects(xcells) {
+			t.Errorf("%v.Intersects(%v) = true, want false", yMinusXCells, xcells)
+		}
+		if xMinusYCells.Intersects(yMinusXCells) {
+			t.Errorf("%v.Intersects(%v) = true, want false", xMinusYCells, yMinusXCells)
+		}
+
+		diffUnion := CellUnionFromUnion(xMinusYCells, yMinusXCells)
+		diffIntersectionUnion := CellUnionFromUnion(diffUnion, xAndYCells)
+		if !diffIntersectionUnion.Equal(xOrYCells) {
+			t.Errorf("Union(%v, %v).Union(%v) = %v, want %v", xMinusYCells, yMinusXCells, xAndYCells, diffIntersectionUnion, xOrYCells)
+		}
+	}
+}
+
+// cellUnionDistanceFromAxis returns the maximum geodesic distance from axis to any point of
+// the given CellUnion.
+func cellUnionDistanceFromAxis(cu CellUnion, axis Point) float64 {
+	var maxDist float64
+	for _, cid := range cu {
+		cell := CellFromCellID(cid)
+		for j := 0; j < 4; j++ {
+			a := cell.Vertex(j)
+			b := cell.Vertex((j + 1) & 3)
+			var dist float64
+			// The maximum distance is not always attained at a cell vertex: if at
+			// least one vertex is in the opposite hemisphere from axis then the
+			// maximum may be attained along an edge. We solve this by computing
+			// the minimum distance from the edge to (-axis) instead. We can't
+			// simply do this all the time because DistanceFromSegment() has
+			// poor accuracy when the result is close to Pi.
+			//
+			// TODO: Improve edgeutil's DistanceFromSegment accuracy near Pi.
+			if a.Angle(axis.Vector) > math.Pi/2 || b.Angle(axis.Vector) > math.Pi/2 {
+				dist = math.Pi - float64(DistanceFromSegment(Point{axis.Mul(-1)}, a, b).Radians())
+			} else {
+				dist = float64(a.Angle(axis.Vector))
+			}
+			maxDist = math.Max(maxDist, dist)
+		}
+	}
+	return maxDist
+}
+
+func TestCellUnionExpand(t *testing.T) {
+	// This test generates coverings for caps of random sizes, expands
+	// the coverings by a random radius, and then make sure that the new
+	// covering covers the expanded cap.  It also makes sure that the
+	// new covering is not too much larger than expected.
+	for i := 0; i < 5000; i++ {
+		rndCap := randomCap(AvgAreaMetric.Value(maxLevel), 4*math.Pi)
+
+		// Expand the cap area by a random factor whose log is uniformly
+		// distributed between 0 and log(1e2).
+		expandedCap := CapFromCenterHeight(
+			rndCap.center, math.Min(2.0, math.Pow(1e2, randomFloat64())*rndCap.Height()))
+
+		radius := (expandedCap.Radius() - rndCap.Radius()).Radians()
+		maxLevelDiff := randomUniformInt(8)
+
+		// Generate a covering for the original cap, and measure the maximum
+		// distance from the cap center to any point in the covering.
+		coverer := &RegionCoverer{
+			MaxLevel: maxLevel,
+			MaxCells: 1 + skewedInt(10),
+			LevelMod: 1,
+		}
+		covering := coverer.CellUnion(rndCap)
+		checkCellUnionCovering(t, rndCap, covering, true, 0)
+		coveringRadius := cellUnionDistanceFromAxis(covering, rndCap.center)
+
+		// This code duplicates the logic in Expand(min_radius, max_level_diff)
+		// that figures out an appropriate cell level to use for the expansion.
+		minLevel := maxLevel
+		for _, cid := range covering {
+			minLevel = min(minLevel, cid.Level())
+		}
+		expandLevel := min(minLevel+maxLevelDiff, MinWidthMetric.MaxLevel(radius))
+
+		// Generate a covering for the expanded cap, and measure the new maximum
+		// distance from the cap center to any point in the covering.
+		covering.ExpandByRadius(s1.Angle(radius), maxLevelDiff)
+		checkCellUnionCovering(t, expandedCap, covering, false, 0)
+		expandedCoveringRadius := cellUnionDistanceFromAxis(covering, rndCap.center)
+
+		// If the covering includes a tiny cell along the boundary, in theory the
+		// maximum angle of the covering from the cap center can increase by up to
+		// twice the maximum length of a cell diagonal.
+		if expandedCoveringRadius-coveringRadius >= 2*MaxDiagMetric.Value(expandLevel) {
+			t.Errorf("covering.ExpandByRadius(%v, %v) distance from center = %v want < %v", radius, maxLevelDiff, expandedCoveringRadius-coveringRadius, 2*MaxDiagMetric.Value(expandLevel))
+		}
+	}
+}
+
+// checkCellUnionCovering checks that the given covering completely covers the given region.
+// If checkTight is true, it also checks that it does not contain any cells that do not
+// intersect the given region. The id is the CellID to start at for the checks. If an
+// invalid value is used as the ID, then all faces are checked.
+func checkCellUnionCovering(t *testing.T, r Region, covering CellUnion, checkTight bool, id CellID) {
+	if !id.IsValid() {
+		for face := 0; face < 6; face++ {
+			checkCellUnionCovering(t, r, covering, checkTight, CellIDFromFace(face))
+		}
+		return
+	}
+
+	if !r.IntersectsCell(CellFromCellID(id)) {
+		// If region does not intersect the id, then neither should the covering.
+		if checkTight {
+			if covering.IntersectsCellID(id) {
+				t.Errorf("%v.IntersectsCellID(%v) = true, want false", covering, id)
+			}
+		}
+		return
+	}
+	if !covering.ContainsCellID(id) {
+		// The region may intersect id, but we can't assert that the covering
+		// intersects id because we may discover that the region does not actually
+		// intersect upon further subdivision.  (IntersectsCell is not exact.)
+		if r.ContainsCell(CellFromCellID(id)) {
+			t.Errorf("%v.ContainsCell(%v) = true, want false", r, id)
+			return
+		}
+		if id.IsLeaf() {
+			t.Errorf("%v.IsLeaf() = true, want false", id)
+			return
+		}
+		for child := id.ChildBegin(); child != id.ChildEnd(); child = child.Next() {
+			checkCellUnionCovering(t, r, covering, checkTight, child)
+		}
+	}
+}
+
+func TestCellUnionEmpty(t *testing.T) {
+	var empty CellUnion
+
+	// Normalize()
+	empty.Normalize()
+	if len(empty) != 0 {
+		t.Errorf("len(empty.Normalize()) = %d, want 0", len(empty))
+	}
+
+	// Denormalize(...)
+	empty.Denormalize(0, 2)
+	if len(empty) != 0 {
+		t.Errorf("len(empty.Denormalize(0, 2)) = %d, want 0", len(empty))
+	}
+
+	face1ID := CellIDFromFace(1)
+	// Contains(...)
+	if empty.ContainsCellID(face1ID) {
+		t.Errorf("empty.ContainsCellID(%v) = true, want false", face1ID)
+	}
+	if !empty.Contains(empty) {
+		t.Errorf("empty.Contains(%v) = false, want true", empty)
+	}
+
+	// Intersects(...)
+	if empty.IntersectsCellID(face1ID) {
+		t.Errorf("empty.IntersectsCellID(%v) = true, want false", face1ID)
+	}
+	if empty.Intersects(empty) {
+		t.Errorf("empty.Intersects(%v) = true, want false", empty)
+	}
+
+	// Union(...)
+	cellUnion := CellUnionFromUnion(empty, empty)
+	if len(cellUnion) != 0 {
+		t.Errorf("CellUnionFromUnion(empty, empty) has %v cells, want 0", len(cellUnion))
+	}
+
+	// Intersection(...)
+	intersection := CellUnionFromIntersectionWithCellID(empty, face1ID)
+	if len(intersection) != 0 {
+		t.Errorf("CellUnionFromIntersectionWithCellID(%v, %v) = %v cells, want 0", empty, face1ID, len(intersection))
+	}
+
+	intersection = CellUnionFromIntersection(empty, empty)
+	if len(intersection) != 0 {
+		t.Errorf("CellUnionFromIntersection(%v, %v) = %v cells, want 0", empty, empty, len(intersection))
+	}
+
+	// Difference(...)
+	difference := CellUnionFromDifference(empty, empty)
+	if len(difference) != 0 {
+		t.Errorf("CellUnionFromDifference(%v, %v) = %v cells, want 0", empty, empty, len(difference))
+	}
+
+	// Expand(...)
+	empty.ExpandByRadius(s1.Angle(1), 20)
+	if len(empty) != 0 {
+		t.Errorf("empty.ExpandByRadius(1, 20) = %v cells, want 0", len(empty))
+	}
+
+	empty.ExpandAtLevel(10)
+	if len(empty) != 0 {
+		t.Errorf("empty.ExpandAtLevel(10) = %v cells, want 0", len(empty))
 	}
 }
 

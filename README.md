@@ -89,6 +89,7 @@ Approximately ~40% complete.
 *   Cap
 *   Cell
 *   CellID
+*   CellUnion
 *   LatLng
 *   matrix3x3
 *   Metric
@@ -110,7 +111,6 @@ Approximately ~40% complete.
 C++ code, and are reasonably complete enough to use in live code. Up to date
 listing of the incomplete methods are documented at the end of each file.
 
-*   CellUnion - Missing Union, Intersection, etc.
 *   Loop - Loop is mostly complete now. Missing Projection, Distance, Contains,
     Intersects, Union, etc.
 *   Polyline - Missing Projection, Intersects, Interpolate, etc.
@@ -149,7 +149,6 @@ started.
 *   EdgeTesselator
 *   PointCompression
 *   PointIndex
-*   PolygonBuilder
 *   RegionIntersection
 *   RegionUnion
 *   Projections
