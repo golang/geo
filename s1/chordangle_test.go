@@ -109,6 +109,44 @@ func TestChordAngleIsFunctions(t *testing.T) {
 	}
 }
 
+func TestChordAngleSuccessor(t *testing.T) {
+	if got, want := NegativeChordAngle.Successor(), ChordAngle(0.0); got != want {
+		t.Errorf("NegativeChordAngle.Successor() = %v, want %v", got, want)
+	}
+	if got, want := StraightChordAngle.Successor(), InfChordAngle(); got != want {
+		t.Errorf("StraightChordAngle.Successor() = %v, want %v", got, want)
+	}
+	if got, want := InfChordAngle().Successor(), InfChordAngle(); got != want {
+		t.Errorf("InfChordAngle.Successor() = %v, want %v", got, want)
+	}
+	x := NegativeChordAngle
+	for i := 0; i < 10; i++ {
+		if x >= x.Successor() {
+			t.Errorf("%d. %0.24f >= %0.24f.Successor() = %0.24f, want <", i, x, x, x.Successor())
+		}
+		x = x.Successor()
+	}
+}
+
+func TestChordAnglePredecessor(t *testing.T) {
+	if got, want := InfChordAngle().Predecessor(), StraightChordAngle; got != want {
+		t.Errorf("InfChordAngle.Predecessor() = %v, want %v", got, want)
+	}
+	if got, want := (ChordAngle(0)).Predecessor(), NegativeChordAngle; got != want {
+		t.Errorf("Zero ChordAngle.Predecessor() = %v, want %v", got, want)
+	}
+	if got, want := NegativeChordAngle.Predecessor(), NegativeChordAngle; got != want {
+		t.Errorf("NegativeChordAngle.Predecessor() = %v, want %v", got, want)
+	}
+	x := InfChordAngle()
+	for i := 0; i < 10; i++ {
+		if x <= x.Predecessor() {
+			t.Errorf("%v <= %v.Predecessor() = %v, want <", x, x, x.Predecessor())
+		}
+		x = x.Predecessor()
+	}
+}
+
 func TestChordAngleFromAngle(t *testing.T) {
 	for _, angle := range []float64{0, 1, -1, math.Pi} {
 		if got := ChordAngleFromAngle(Angle(angle)).Angle().Radians(); got != angle {
