@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/golang/geo/r3"
@@ -52,6 +53,19 @@ const (
 	// DoNotCross means the edges do not cross.
 	DoNotCross
 )
+
+func (c Crossing) String() string {
+	switch c {
+	case Cross:
+		return "Cross"
+	case MaybeCross:
+		return "MaybeCross"
+	case DoNotCross:
+		return "DoNotCross"
+	default:
+		return fmt.Sprintf("(BAD CROSSING %d)", c)
+	}
+}
 
 // SimpleCrossing reports whether edge AB crosses CD at a point that is interior
 // to both edges. Properties:
