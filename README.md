@@ -90,6 +90,7 @@ Approximately ~40% complete.
 *   Cell
 *   CellID
 *   CellUnion
+*   CrossingEdgeQuery
 *   LatLng
 *   matrix3x3
 *   Metric
@@ -130,12 +131,13 @@ enough for general use in production code.
 *   PolylineSimplifier - Initial work has begun on this.
 *   s2predicates.go - This file is a collection of helper methods used by other
     parts of the library.
+*   s2shapeutil - Initial elements added. Missing VisitCrossings.
 
 **Not Started Yet.** These files (and their associated unit tests) have
 dependencies on most of the In Progress files before they can begin to be
 started.
 
-*   BoundaryOperation
+*   BooleanOperation - used when assembling polygons and loops.
 *   Builder - This is a robust tool for creating the various Shape types from
     collection of simpler S2 types.
 *   BuilderGraph
@@ -143,20 +145,22 @@ started.
 *   BuilderSnapFunctions
 *   ClosestEdgeQuery
 *   ClosestPointQuery
-*   ConvexHullQuery
 *   ContainsPointQuery - ShapeContainsPoint and FindContainingShapes
-*   CrossingEdgeQuery
+*   ContainsVertexQuery
+*   ConvexHullQuery
 *   EdgeTesselator
 *   PointCompression
 *   PointIndex
+*   PointRegion
+*   PointUtil
 *   RegionIntersection
 *   RegionUnion
 *   Projections
-*   shapeutil
+*   ShapeIndexRegion - Allows ShapeIndexes to be used as Regions for things like
+    RegionCoverer
 *   laxPolyline
 *   laxPolygon
 *   lexicon
-*   priorityqueuesequence
 
 ### Encode/Decode
 
