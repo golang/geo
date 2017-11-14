@@ -264,6 +264,62 @@ func (l *Loop) findValidationErrorNoIndex() error {
 	return nil
 }
 
+// Contains reports whether the region contained by this loop is a superset of the
+// region contained by the given other loop.
+func (l *Loop) Contains(o *Loop) bool {
+	// For this loop A to contains the given loop B, all of the following must
+	// be true:
+	//
+	//  (1) There are no edge crossings between A and B except at vertices.
+	//
+	//  (2) At every vertex that is shared between A and B, the local edge
+	//      ordering implies that A contains B.
+	//
+	//  (3) If there are no shared vertices, then A must contain a vertex of B
+	//      and B must not contain a vertex of A. (An arbitrary vertex may be
+	//      chosen in each case.)
+	//
+	// The second part of (3) is necessary to detect the case of two loops whose
+	// union is the entire sphere, i.e. two loops that contains each other's
+	// boundaries but not each other's interiors.
+	if !l.subregionBound.Contains(o.bound) {
+		return false
+	}
+
+	// Special cases to handle either loop being empty or full.
+	if l.isEmptyOrFull() || o.isEmptyOrFull() {
+		return l.IsFull() || o.IsEmpty()
+	}
+
+	// Check whether there are any edge crossings, and also check the loop
+	// relationship at any shared vertices.
+	relation := &containsRelation{}
+	if hasCrossingRelation(l, o, relation) {
+		return false
+	}
+
+	// There are no crossings, and if there are any shared vertices then A
+	// contains B locally at each shared vertex.
+	if relation.foundSharedVertex {
+		return true
+	}
+
+	// Since there are no edge intersections or shared vertices, we just need to
+	// test condition (3) above. We can skip this test if we discovered that A
+	// contains at least one point of B while checking for edge crossings.
+	if !l.ContainsPoint(o.Vertex(0)) {
+		return false
+	}
+
+	// We still need to check whether (A union B) is the entire sphere.
+	// Normally this check is very cheap due to the bounding box precondition.
+	if (o.subregionBound.Contains(l.bound) || o.bound.Union(l.bound).IsFull()) &&
+		o.ContainsPoint(l.Vertex(0)) {
+		return false
+	}
+	return true
+}
+
 // ContainsOrigin reports true if this loop contains s2.OriginPoint().
 func (l *Loop) ContainsOrigin() bool {
 	return l.originInside
@@ -1186,15 +1242,347 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 	l.index.Add(l)
 }
 
+// crossingTarget is an enum representing the possible crossing target cases for relations.
+type crossingTarget int
+
+const (
+	crossingTargetDontCare crossingTarget = iota
+	crossingTargetDontCross
+	crossingTargetCross
+)
+
+// loopRelation defines the interface for checking a type of relationship between two loops.
+// Some examples of relations are Contains, Intersects, or CompareBoundary.
+type loopRelation interface {
+	// Optionally, aCrossingTarget and bCrossingTarget can specify an early-exit
+	// condition for the loop relation. If any point P is found such that
+	//
+	//   A.ContainsPoint(P) == aCrossingTarget() &&
+	//   B.ContainsPoint(P) == bCrossingTarget()
+	//
+	// then the loop relation is assumed to be the same as if a pair of crossing
+	// edges were found. For example, the ContainsPoint relation has
+	//
+	//   aCrossingTarget() == crossingTargetDontCross
+	//   bCrossingTarget() == crossingTargetCross
+	//
+	// because if A.ContainsPoint(P) == false and B.ContainsPoint(P) == true
+	// for any point P, then it is equivalent to finding an edge crossing (i.e.,
+	// since Contains returns false in both cases).
+	//
+	// Loop relations that do not have an early-exit condition of this form
+	// should return crossingTargetDontCare for both crossing targets.
+
+	// aCrossingTarget reports whether loop A crosses the target point with
+	// the given relation type.
+	aCrossingTarget() crossingTarget
+	// bCrossingTarget reports whether loop B crosses the target point with
+	// the given relation type.
+	bCrossingTarget() crossingTarget
+
+	// wedgesCross reports if a shared vertex ab1 and the two associated wedges
+	// (a0, ab1, b2) and (b0, ab1, b2) are equivalent to an edge crossing.
+	// The loop relation is also allowed to maintain its own internal state, and
+	// can return true if it observes any sequence of wedges that are equivalent
+	// to an edge crossing.
+	wedgesCross(a0, ab1, a2, b0, b2 Point) bool
+}
+
+// loopCrosser is a helper type for determining whether two loops cross.
+// It is instantiated twice for each pair of loops to be tested, once for the
+// pair (A,B) and once for the pair (B,A), in order to be able to process
+// edges in either loop nesting order.
+type loopCrosser struct {
+	a, b            *Loop
+	relation        loopRelation
+	swapped         bool
+	aCrossingTarget crossingTarget
+	bCrossingTarget crossingTarget
+
+	// state maintained by startEdge and edgeCrossesCell.
+	crosser    *EdgeCrosser
+	aj, bjPrev int
+
+	// temporary data declared here to avoid repeated memory allocations.
+	bQuery *CrossingEdgeQuery
+	bCells []*ShapeIndexCell
+}
+
+// newLoopCrosser creates a loopCrosser from the given values. If swapped is true,
+// the loops A and B have been swapped. This affects how arguments are passed to
+// the given loop relation, since for example A.Contains(B) is not the same as
+// B.Contains(A).
+func newLoopCrosser(a, b *Loop, relation loopRelation, swapped bool) *loopCrosser {
+	l := &loopCrosser{
+		a:               a,
+		b:               b,
+		relation:        relation,
+		swapped:         swapped,
+		aCrossingTarget: relation.aCrossingTarget(),
+		bCrossingTarget: relation.bCrossingTarget(),
+		bQuery:          NewCrossingEdgeQuery(b.index),
+	}
+	if swapped {
+		l.aCrossingTarget, l.bCrossingTarget = l.bCrossingTarget, l.aCrossingTarget
+	}
+
+	return l
+}
+
+// startEdge sets the crossers state for checking the given edge of loop A.
+func (l *loopCrosser) startEdge(aj int) {
+	l.crosser = NewEdgeCrosser(l.a.Vertex(aj), l.a.Vertex(aj+1))
+	l.aj = aj
+	l.bjPrev = -2
+}
+
+// edgeCrossesCell reports whether the current edge of loop A has any crossings with
+// edges of the index cell of loop B.
+func (l *loopCrosser) edgeCrossesCell(bClipped *clippedShape) bool {
+	// Test the current edge of A against all edges of bClipped
+	bNumEdges := bClipped.numEdges()
+	for j := 0; j < bNumEdges; j++ {
+		bj := bClipped.edges[j]
+		if bj != l.bjPrev+1 {
+			l.crosser.RestartAt(l.b.Vertex(bj))
+		}
+		l.bjPrev = bj
+		if crossing := l.crosser.ChainCrossingSign(l.b.Vertex(bj + 1)); crossing == DoNotCross {
+			continue
+		} else if crossing == Cross {
+			return true
+		}
+
+		// We only need to check each shared vertex once, so we only
+		// consider the case where l.aVertex(l.aj+1) == l.b.Vertex(bj+1).
+		if l.a.Vertex(l.aj+1) == l.b.Vertex(bj+1) {
+			if l.swapped {
+				if l.relation.wedgesCross(l.b.Vertex(bj), l.b.Vertex(bj+1), l.b.Vertex(bj+2), l.a.Vertex(l.aj), l.a.Vertex(l.aj+2)) {
+					return true
+				}
+			} else {
+				if l.relation.wedgesCross(l.a.Vertex(l.aj), l.a.Vertex(l.aj+1), l.a.Vertex(l.aj+2), l.b.Vertex(bj), l.b.Vertex(bj+2)) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// cellCrossesCell reports whether there are any edge crossings or wedge crossings
+// within the two given cells.
+func (l *loopCrosser) cellCrossesCell(aClipped, bClipped *clippedShape) bool {
+	// Test all edges of aClipped against all edges of bClipped.
+	for _, edge := range aClipped.edges {
+		l.startEdge(edge)
+		if l.edgeCrossesCell(bClipped) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// cellCrossesAnySubcell reports whether given an index cell of A, if there are any
+// edge or wedge crossings with any index cell of B contained within bID.
+func (l *loopCrosser) cellCrossesAnySubcell(aClipped *clippedShape, bID CellID) bool {
+	// Test all edges of aClipped against all edges of B. The relevant B
+	// edges are guaranteed to be children of bID, which lets us find the
+	// correct index cells more efficiently.
+	bRoot := PaddedCellFromCellID(bID, 0)
+	for _, aj := range aClipped.edges {
+		// Use an CrossingEdgeQuery starting at bRoot to find the index cells
+		// of B that might contain crossing edges.
+		l.bCells = l.bQuery.getCells(l.a.Vertex(aj), l.a.Vertex(aj+1), bRoot)
+		if len(l.bCells) == 0 {
+			continue
+		}
+		l.startEdge(aj)
+		for c := 0; c < len(l.bCells); c++ {
+			if l.edgeCrossesCell(l.bCells[c].shapes[0]) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// hasCrossing reports whether given two iterators positioned such that
+// ai.cellID().ContainsCellID(bi.cellID()), there is an edge or wedge crossing
+// anywhere within ai.cellID(). This function advances bi only past ai.cellID().
+func (l *loopCrosser) hasCrossing(ai, bi *rangeIterator) bool {
+	// If ai.CellID() intersects many edges of B, then it is faster to use
+	// CrossingEdgeQuery to narrow down the candidates. But if it intersects
+	// only a few edges, it is faster to check all the crossings directly.
+	// We handle this by advancing bi and keeping track of how many edges we
+	// would need to test.
+	const edgeQueryMinEdges = 20 // Tuned from benchmarks.
+	var totalEdges int
+	l.bCells = nil
+
+	for {
+		if n := bi.it.IndexCell().shapes[0].numEdges(); n > 0 {
+			totalEdges += n
+			if totalEdges >= edgeQueryMinEdges {
+				// There are too many edges to test them directly, so use CrossingEdgeQuery.
+				if l.cellCrossesAnySubcell(ai.it.IndexCell().shapes[0], ai.cellID()) {
+					return true
+				}
+				bi.seekBeyond(ai)
+				return false
+			}
+			l.bCells = append(l.bCells, bi.indexCell())
+		}
+		bi.next()
+		if bi.cellID() > ai.rangeMax {
+			break
+		}
+	}
+
+	// Test all the edge crossings directly.
+	for _, c := range l.bCells {
+		if l.cellCrossesCell(ai.it.IndexCell().shapes[0], c.shapes[0]) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// containsCenterMatches reports if the clippedShapes containsCenter boolean corresponds
+// to the crossing target type given. (This is to work around C++ allowing false == 0,
+// true == 1 type implicit conversions and comparisons)
+func containsCenterMatches(a *clippedShape, target crossingTarget) bool {
+	return (!a.containsCenter && target == crossingTargetDontCross) ||
+		(a.containsCenter && target == crossingTargetCross)
+}
+
+// hasCrossingRelation reports whether given two iterators positioned such that
+// ai.cellID().ContainsCellID(bi.cellID()), there is a crossing relationship
+// anywhere within ai.cellID(). Specifically, this method returns true if there
+// is an edge crossing, a wedge crossing, or a point P that matches both relations
+// crossing targets. This function advances both iterators past ai.cellID.
+func (l *loopCrosser) hasCrossingRelation(ai, bi *rangeIterator) bool {
+	aClipped := ai.it.IndexCell().shapes[0]
+	if aClipped.numEdges() != 0 {
+		// The current cell of A has at least one edge, so check for crossings.
+		if l.hasCrossing(ai, bi) {
+			return true
+		}
+		ai.next()
+		return false
+	}
+
+	if containsCenterMatches(aClipped, l.aCrossingTarget) {
+		// The crossing target for A is not satisfied, so we skip over these cells of B.
+		bi.seekBeyond(ai)
+		ai.next()
+		return false
+	}
+
+	// All points within ai.cellID() satisfy the crossing target for A, so it's
+	// worth iterating through the cells of B to see whether any cell
+	// centers also satisfy the crossing target for B.
+	for bi.cellID() <= ai.rangeMax {
+		bClipped := bi.it.IndexCell().shapes[0]
+		if containsCenterMatches(bClipped, l.bCrossingTarget) {
+			return true
+		}
+		bi.next()
+	}
+	ai.next()
+	return false
+}
+
+// hasCrossingRelation checks all edges of loop A for intersection against all edges
+// of loop B and reports if there are any that satisfy the given relation. If there
+// is any shared vertex, the wedges centered at this vertex are sent to the given
+// relation to be tested.
+//
+// If the two loop boundaries cross, this method is guaranteed to return
+// true. It also returns true in certain cases if the loop relationship is
+// equivalent to crossing. For example, if the relation is Contains and a
+// point P is found such that B contains P but A does not contain P, this
+// method will return true to indicate that the result is the same as though
+// a pair of crossing edges were found (since Contains returns false in
+// both cases).
+//
+// See Contains, Intersects and CompareBoundary for the three uses of this function.
+func hasCrossingRelation(a, b *Loop, relation loopRelation) bool {
+	// We look for CellID ranges where the indexes of A and B overlap, and
+	// then test those edges for crossings.
+	ai := newRangeIterator(a.index)
+	bi := newRangeIterator(b.index)
+
+	ab := newLoopCrosser(a, b, relation, false) // Tests edges of A against B
+	ba := newLoopCrosser(b, a, relation, true)  // Tests edges of B against A
+
+	for !ai.done() || !bi.done() {
+		if ai.rangeMax < bi.rangeMin {
+			// The A and B cells don't overlap, and A precedes B.
+			ai.seekTo(bi)
+		} else if bi.rangeMax < ai.rangeMin {
+			// The A and B cells don't overlap, and B precedes A.
+			bi.seekTo(ai)
+		} else {
+			// One cell contains the other. Determine which cell is larger.
+			abRelation := int64(ai.it.CellID().lsb() - bi.it.CellID().lsb())
+			if abRelation > 0 {
+				// A's index cell is larger.
+				if ab.hasCrossingRelation(ai, bi) {
+					return true
+				}
+			} else if abRelation < 0 {
+				// B's index cell is larger.
+				if ba.hasCrossingRelation(bi, ai) {
+					return true
+				}
+			} else {
+				// The A and B cells are the same. Since the two cells
+				// have the same center point P, check whether P satisfies
+				// the crossing targets.
+				aClipped := ai.it.IndexCell().shapes[0]
+				bClipped := bi.it.IndexCell().shapes[0]
+				if containsCenterMatches(aClipped, ab.aCrossingTarget) &&
+					containsCenterMatches(bClipped, ab.bCrossingTarget) {
+					return true
+				}
+				// Otherwise test all the edge crossings directly.
+				if aClipped.numEdges() > 0 && bClipped.numEdges() > 0 && ab.cellCrossesCell(aClipped, bClipped) {
+					return true
+				}
+				ai.next()
+				bi.next()
+			}
+		}
+	}
+	return false
+}
+
+// containsRelation implements loopRelation for a contains operation. If
+// A.ContainsPoint(P) == false && B.ContainsPoint(P) == true, it is equivalent
+// to having an edge crossing (i.e., Contains returns false).
+type containsRelation struct {
+	foundSharedVertex bool
+}
+
+func (c *containsRelation) aCrossingTarget() crossingTarget { return crossingTargetDontCross }
+func (c *containsRelation) bCrossingTarget() crossingTarget { return crossingTargetCross }
+func (c *containsRelation) wedgesCross(a0, ab1, a2, b0, b2 Point) bool {
+	c.foundSharedVertex = true
+	return !WedgeContains(a0, ab1, a2, b0, b2)
+}
+
 // TODO(roberts): Differences from the C++ version:
 // DistanceToPoint
 // DistanceToBoundary
 // Project
 // ProjectToBoundary
-// ContainsLoop
-// IntersectsLoop
-// EqualLoop
-// LoopRelations
+// Intersects
+// Equal
 // BoundaryEqual
 // BoundaryApproxEqual
 // BoundaryNear

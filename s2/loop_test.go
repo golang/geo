@@ -726,23 +726,13 @@ func TestLoopContainsMatchesCrossingSign(t *testing.T) {
 
 func TestLoopRelations(t *testing.T) {
 	tests := []struct {
-		a, b               *Loop
-		contains           bool // A contains B
-		contained          bool // B contains A
-		disjoint           bool // A and B are disjoint (intersection is empty)
-		covers             bool // (A union B) covers the entire sphere
-		sharedEdge         bool // the loops share at least one edge (possibly reversed)
-		wantContainsNested bool
+		a, b       *Loop
+		contains   bool // A contains B
+		contained  bool // B contains A
+		disjoint   bool // A and B are disjoint (intersection is empty)
+		covers     bool // (A union B) covers the entire sphere
+		sharedEdge bool // the loops share at least one edge (possibly reversed)
 	}{
-		{
-			a:          FullLoop(),
-			b:          FullLoop(),
-			contains:   true,
-			contained:  true,
-			covers:     true,
-			sharedEdge: true,
-		},
-
 		// Check full and empty relationships with normal loops and each other.
 		{
 			a:          FullLoop(),
@@ -753,63 +743,56 @@ func TestLoopRelations(t *testing.T) {
 			sharedEdge: true,
 		},
 		{
-			a:                  FullLoop(),
-			b:                  northHemi,
-			contains:           true,
-			covers:             true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          FullLoop(),
+			b:          northHemi,
+			contains:   true,
+			covers:     true,
+			sharedEdge: false,
 		},
 		{
-			a:                  FullLoop(),
-			b:                  EmptyLoop(),
-			contains:           true,
-			disjoint:           true,
-			covers:             true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          FullLoop(),
+			b:          EmptyLoop(),
+			contains:   true,
+			disjoint:   true,
+			covers:     true,
+			sharedEdge: false,
 		},
 		{
-			a:                  northHemi,
-			b:                  FullLoop(),
-			contained:          true,
-			covers:             true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          northHemi,
+			b:          FullLoop(),
+			contained:  true,
+			covers:     true,
+			sharedEdge: false,
 		},
 		{
-			a:                  northHemi,
-			b:                  EmptyLoop(),
-			contains:           true,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          northHemi,
+			b:          EmptyLoop(),
+			contains:   true,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		{
-			a:                  EmptyLoop(),
-			b:                  FullLoop(),
-			contained:          true,
-			disjoint:           true,
-			covers:             true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          EmptyLoop(),
+			b:          FullLoop(),
+			contained:  true,
+			disjoint:   true,
+			covers:     true,
+			sharedEdge: false,
 		},
 		{
-			a:                  EmptyLoop(),
-			b:                  northHemi,
-			contained:          true,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          EmptyLoop(),
+			b:          northHemi,
+			contained:  true,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		{
-			a:                  EmptyLoop(),
-			b:                  EmptyLoop(),
-			contains:           true,
-			contained:          true,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          EmptyLoop(),
+			b:          EmptyLoop(),
+			contains:   true,
+			contained:  true,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		{
 			a:          northHemi,
@@ -830,18 +813,16 @@ func TestLoopRelations(t *testing.T) {
 			b: eastHemi,
 		},
 		{
-			a:                  northHemi,
-			b:                  arctic80,
-			contains:           true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          northHemi,
+			b:          arctic80,
+			contains:   true,
+			sharedEdge: false,
 		},
 		{
-			a:                  northHemi,
-			b:                  antarctic80,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          northHemi,
+			b:          antarctic80,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		{
 			a: northHemi,
@@ -861,18 +842,16 @@ func TestLoopRelations(t *testing.T) {
 			b: eastHemi,
 		},
 		{
-			a:                  northHemi3,
-			b:                  arctic80,
-			contains:           true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          northHemi3,
+			b:          arctic80,
+			contains:   true,
+			sharedEdge: false,
 		},
 		{
-			a:                  northHemi3,
-			b:                  antarctic80,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          northHemi3,
+			b:          antarctic80,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		{
 			a: northHemi3,
@@ -897,19 +876,17 @@ func TestLoopRelations(t *testing.T) {
 			b: farHemi,
 		},
 		{
-			a:                  southHemi,
-			b:                  arctic80,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          southHemi,
+			b:          arctic80,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		// xxxx?
 		{
-			a:                  southHemi,
-			b:                  antarctic80,
-			contains:           true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          southHemi,
+			b:          antarctic80,
+			contains:   true,
+			sharedEdge: false,
 		},
 		{
 			a: southHemi,
@@ -924,18 +901,16 @@ func TestLoopRelations(t *testing.T) {
 			b: southHemi,
 		},
 		{
-			a:                  candyCane,
-			b:                  arctic80,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          candyCane,
+			b:          arctic80,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		{
-			a:                  candyCane,
-			b:                  antarctic80,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          candyCane,
+			b:          antarctic80,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		{
 			a:          candyCane,
@@ -949,18 +924,16 @@ func TestLoopRelations(t *testing.T) {
 			b: westHemi,
 		},
 		{
-			a:                  smallNECW,
-			b:                  southHemi,
-			contains:           true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          smallNECW,
+			b:          southHemi,
+			contains:   true,
+			sharedEdge: false,
 		},
 		{
-			a:                  smallNECW,
-			b:                  westHemi,
-			contains:           true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          smallNECW,
+			b:          westHemi,
+			contains:   true,
+			sharedEdge: false,
 		},
 		{
 			a:          smallNECW,
@@ -1064,11 +1037,10 @@ func TestLoopRelations(t *testing.T) {
 			sharedEdge: true,
 		},
 		{
-			a:                  aIntersectB,
-			b:                  aUnionB,
-			contained:          true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          aIntersectB,
+			b:          aUnionB,
+			contained:  true,
+			sharedEdge: false,
 		},
 		{
 			a:          aIntersectB,
@@ -1095,11 +1067,10 @@ func TestLoopRelations(t *testing.T) {
 			sharedEdge: true,
 		},
 		{
-			a:                  aUnionB,
-			b:                  aIntersectB,
-			contains:           true,
-			sharedEdge:         false,
-			wantContainsNested: true,
+			a:          aUnionB,
+			b:          aIntersectB,
+			contains:   true,
+			sharedEdge: false,
 		},
 		{
 			a:          aUnionB,
@@ -1152,11 +1123,10 @@ func TestLoopRelations(t *testing.T) {
 			sharedEdge: true,
 		},
 		{
-			a:                  aMinusB,
-			b:                  bMinusA,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          aMinusB,
+			b:          bMinusA,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		{
 			a:          bMinusA,
@@ -1183,11 +1153,10 @@ func TestLoopRelations(t *testing.T) {
 			sharedEdge: true,
 		},
 		{
-			a:                  bMinusA,
-			b:                  aMinusB,
-			disjoint:           true,
-			sharedEdge:         false,
-			wantContainsNested: false,
+			a:          bMinusA,
+			b:          aMinusB,
+			disjoint:   true,
+			sharedEdge: false,
 		},
 		{
 			a:          bMinusA,
@@ -1285,56 +1254,60 @@ func TestLoopRelations(t *testing.T) {
 		},
 	}
 
-	for i, test := range tests {
-		// TODO(roberts): Uncomment when Contains/Intersects(Loop) are implemented.
-		/*
-			if test.contains {
-				testNestedPair(t, "a contains b", test.a, test.b)
-			}
-			if test.contained {
-				testNestedPair(t, "b contained by a", test.b, test.a)
-			}
-			if test.covers {
-				b1 := cloneLoop(test.b)
-				b1.Invert()
-				testNestedPair(t, "a covers b", test.a, b1)
-			}
-			if test.disjoint {
-				a1 := cloneLoop(test.a)
-				a1.Invert()
-				testNestedPair(t, "a disjoint from b", a1, test.b)
-			} else if !(test.contains || test.contained || test.covers) {
-				// Given loops A and B such that both A and its complement
-				// intersect both B and its complement, test various
-				// identities involving these four loops.
-				a1 := cloneLoop(test.a)
-				b1 := cloneLoop(test.b)
-				a1.Invert()
-				b1.Invert()
-				testOneOverlappingPair(t, test.a, test.b)
-				testOneOverlappingPair(t, a1, b1)
-				testOneOverlappingPair(t, a1, test.b)
-				testOneOverlappingPair(t, test.a, b1)
-			}
-		*/
+	for _, test := range tests {
+		if test.contains {
+			testLoopNestedPair(t, test.a, test.b)
+		}
+		if test.contained {
+			testLoopNestedPair(t, test.b, test.a)
+		}
+		if test.covers {
+			b1 := cloneLoop(test.b)
+			b1.Invert()
+			testLoopNestedPair(t, test.a, b1)
+		}
+		if test.disjoint {
+			a1 := cloneLoop(test.a)
+			a1.Invert()
+			testLoopNestedPair(t, a1, test.b)
+		} else if !(test.contains || test.contained || test.covers) {
+			// Given loops A and B such that both A and its complement
+			// intersect both B and its complement, test various
+			// identities involving these four loops.
+			a1 := cloneLoop(test.a)
+			a1.Invert()
+			b1 := cloneLoop(test.b)
+			b1.Invert()
+			testLoopOneOverlappingPair(t, test.a, test.b)
+			testLoopOneOverlappingPair(t, a1, b1)
+			testLoopOneOverlappingPair(t, a1, test.b)
+			testLoopOneOverlappingPair(t, test.a, b1)
+		}
 		if !test.sharedEdge && (test.contains || test.contained || test.disjoint) {
-			// TODO(roberts): Update this comparison once Contains(Loop) is completed.
-			// if test.a.Contains(test.b) != test.a.ContainsNested(test.b) {
-			if got := test.a.ContainsNested(test.b); got != test.wantContainsNested {
-				t.Errorf("%d. %v.ContainsNested(%v) = %v, want %v", i, test.a, test.b, got, test.wantContainsNested)
+			if got, want := test.a.Contains(test.b), test.a.ContainsNested(test.b); got != want {
+				t.Errorf("%v.Contains(%v) = %v, but should equal %v.ContainsNested(%v) = %v", test.a, test.b, got, test.a, test.b, want)
 			}
 		}
 
-		// A contains the boundary of B if either A contains B, or the two loops
-		// contain each other's boundaries and there are no shared edges (since at
-		// least one such edge must be reversed, and therefore is not considered to
-		// be contained according to the rules of CompareBoundary).
-		// TODO(roberts): Uncomment when CompareBoundary is implemented.
+		// TODO(roberts): Uncomment once CompareBoundary is implemented.
+
 		/*
+			// A contains the boundary of B if either A contains B, or the two loops
+			// contain each other's boundaries and there are no shared edges (since at
+			// least one such edge must be reversed, and therefore is not considered to
+			// be contained according to the rules of CompareBoundary).
 			comparison := 0
 			if test.contains || (test.covers && !test.sharedEdge) {
 				comparison = 1
 			}
+
+			// Similarly, A excludes the boundary of B if either A and B are disjoint,
+			// or B contains A and there are no shared edges (since A is considered to
+			// contain such edges according to the rules of CompareBoundary).
+			if test.disjoint || (test.contained && !test.sharedEdge) {
+				comparison = -1
+			}
+
 			// CompareBoundary requires that neither loop is empty.
 			if !test.a.IsEmpty() && !test.b.IsEmpty() {
 				if got := test.a.CompareBoundary(test.b); got != comparison {
@@ -1343,6 +1316,91 @@ func TestLoopRelations(t *testing.T) {
 			}
 		*/
 	}
+}
+
+// Given a pair of loops where A contains B, test various identities
+// involving A, B, and their complements.
+func testLoopNestedPair(t *testing.T, a, b *Loop) {
+	a1 := cloneLoop(a)
+	a1.Invert()
+	b1 := cloneLoop(b)
+	b1.Invert()
+	testLoopOneNestedPair(t, a, b)
+	testLoopOneNestedPair(t, b1, a1)
+	testLoopOneDisjointPair(t, a1, b)
+	testLoopOneCoveringPair(t, a, b1)
+}
+
+// Given a pair of loops where A contains B, check various identities.
+func testLoopOneNestedPair(t *testing.T, a, b *Loop) {
+	if !a.Contains(b) {
+		t.Errorf("%v.Contains(%v) = false, want true", a, b)
+	}
+	// TODO(roberts): Uncomment as these functions get completed.
+	// if got, want := b.Contains(a), a.BoundaryEquals(b); got != want {
+	// 	t.Errorf("%v.Contains(%v) = %v, want %v", b, a, got, want)
+	// }
+	// if got, want := a.Intersects(b), !b.IsEmpty(); got != want {
+	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", a, b, got, want)
+	// }
+	// if got, want := b.Intersects(a), !b.IsEmpty(); got != want {
+	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", b, a, got, want)
+	// }
+}
+
+// Given a pair of disjoint loops A and B, check various identities.
+func testLoopOneDisjointPair(t *testing.T, a, b *Loop) {
+	// TODO(roberts): Uncomment as these functions get completed.
+	// if a.Intersects(b) {
+	// 	t.Errorf("%v.Intersects(%v) = true, want false", a, b)
+	// }
+	// if b.Intersects(a) {
+	// 	t.Errorf("%v.Intersects(%v) = true, want false", b, a)
+	// }
+	if got, want := a.Contains(b), b.IsEmpty(); got != want {
+		t.Errorf("%v.Contains(%v) = %v, want %v", a, b, got, want)
+	}
+	if got, want := b.Contains(a), a.IsEmpty(); got != want {
+		t.Errorf("%v.Contains(%v) = %v, want %v", b, a, got, want)
+	}
+}
+
+// Given loops A and B whose union covers the sphere, check various identities.
+func testLoopOneCoveringPair(t *testing.T, a, b *Loop) {
+	if got, want := a.Contains(b), a.IsFull(); got != want {
+		t.Errorf("%v.Contains(%v) = %v, want %v", a, b, got, want)
+	}
+	if got, want := b.Contains(a), b.IsFull(); got != want {
+		t.Errorf("%v.Contains(%v) = %v, want %v", b, a, got, want)
+	}
+	// TODO(roberts): Uncomment as these functions get completed.
+	// a1 := cloneLoop(a)
+	// a1.Invert()
+	// complementary := a1.BoundaryEquals(b)
+	// if got, want := a.Intersects(b), !complementary; got != want {
+	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", a, b, got, want)
+	// }
+	// if got, want := b.Intersects(a), !complementary; got != want {
+	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", b, a, got, want)
+	// }
+}
+
+// Given loops A and B such that both A and its complement intersect both B
+// and its complement, check various identities.
+func testLoopOneOverlappingPair(t *testing.T, a, b *Loop) {
+	if a.Contains(b) {
+		t.Errorf("%v.Contains(%v) = true want false", a, b)
+	}
+	if b.Contains(a) {
+		t.Errorf("%v.Contains(%v) = true want false", b, a)
+	}
+	// TODO(roberts): Uncomment as these functions get completed.
+	// if !a.Intersects(b) {
+	// 	t.Errorf("%v.Intersects(%v) = false, want true", a, b)
+	// }
+	// if !b.Intersects(a) {
+	// 	t.Errorf("%v.Intersects(%v) = false, want true", b, a)
+	// }
 }
 
 func TestLoopTurningAngle(t *testing.T) {
