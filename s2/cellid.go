@@ -79,12 +79,19 @@ func (c cellIDs) Less(i, j int) bool { return c[i] < c[j] }
 const (
 	faceBits = 3
 	numFaces = 6
+
+	// This is the number of levels needed to specify a leaf cell.
 	maxLevel = 30
+
 	// The extra position bit (61 rather than 60) lets us encode each cell as its
 	// Hilbert curve position at the cell center (which is halfway along the
 	// portion of the Hilbert curve that fills that cell).
-	posBits    = 2*maxLevel + 1
-	maxSize    = 1 << maxLevel
+	posBits = 2*maxLevel + 1
+
+	// The maximum index of a valid leaf cell plus one. The range of valid leaf
+	// cell indices is [0..maxSize-1].
+	maxSize = 1 << maxLevel
+
 	wrapOffset = uint64(numFaces) << posBits
 )
 
@@ -492,8 +499,16 @@ func (ci CellID) faceIJOrientation() (f, i, j, orientation int) {
 	orientation = f & swapMask
 	nbits := maxLevel - 7*lookupBits // first iteration
 
+	// Each iteration maps 8 bits of the Hilbert curve position into
+	// 4 bits of "i" and "j". The lookup table transforms a key of the
+	// form "ppppppppoo" to a value of the form "iiiijjjjoo", where the
+	// letters [ijpo] represents bits of "i", "j", the Hilbert curve
+	// position, and the Hilbert curve orientation respectively.
+	//
+	// On the first iteration we need to be careful to clear out the bits
+	// representing the cube face.
 	for k := 7; k >= 0; k-- {
-		orientation += (int(uint64(ci)>>uint64(k*2*lookupBits+1)) & ((1 << uint((2 * nbits))) - 1)) << 2
+		orientation += (int(uint64(ci)>>uint64(k*2*lookupBits+1)) & ((1 << uint(2*nbits)) - 1)) << 2
 		orientation = lookupIJ[orientation]
 		i += (orientation >> (lookupBits + 2)) << uint(k*lookupBits)
 		j += ((orientation >> 2) & ((1 << lookupBits) - 1)) << uint(k*lookupBits)
@@ -501,6 +516,13 @@ func (ci CellID) faceIJOrientation() (f, i, j, orientation int) {
 		nbits = lookupBits // following iterations
 	}
 
+	// The position of a non-leaf cell at level "n" consists of a prefix of
+	// 2*n bits that identifies the cell, followed by a suffix of
+	// 2*(maxLevel-n)+1 bits of the form 10*. If n==maxLevel, the suffix is
+	// just "1" and has no effect. Otherwise, it consists of "10", followed
+	// by (maxLevel-n-1) repetitions of "00", followed by "0". The "10" has
+	// no effect, while each occurrence of "00" has the effect of reversing
+	// the swapMask bit.
 	if ci.lsb()&0x1111111111111110 != 0 {
 		orientation ^= swapMask
 	}
@@ -637,6 +659,21 @@ const (
 	invertMask = 0x02
 )
 
+// The following lookup tables are used to convert efficiently between an
+// (i,j) cell index and the corresponding position along the Hilbert curve.
+//
+// lookupPos maps 4 bits of "i", 4 bits of "j", and 2 bits representing the
+// orientation of the current cell into 8 bits representing the order in which
+// that subcell is visited by the Hilbert curve, plus 2 bits indicating the
+// new orientation of the Hilbert curve within that subcell. (Cell
+// orientations are represented as combination of swapMask and invertMask.)
+//
+// lookupIJ is an inverted table used for mapping in the opposite
+// direction.
+//
+// We also experimented with looking up 16 bits at a time (14 bits of position
+// plus 2 of orientation) but found that smaller lookup tables gave better
+// performance. (2KB fits easily in the primary cache.)
 var (
 	ijToPos = [4][4]int{
 		{0, 1, 3, 2}, // canonical order

@@ -22,9 +22,133 @@ import (
 	"github.com/golang/geo/r3"
 )
 
+//
+// This file contains documentation of the various coordinate systems used
+// throughout the library. Most importantly, S2 defines a framework for
+// decomposing the unit sphere into a hierarchy of "cells". Each cell is a
+// quadrilateral bounded by four geodesics. The top level of the hierarchy is
+// obtained by projecting the six faces of a cube onto the unit sphere, and
+// lower levels are obtained by subdividing each cell into four children
+// recursively. Cells are numbered such that sequentially increasing cells
+// follow a continuous space-filling curve over the entire sphere. The
+// transformation is designed to make the cells at each level fairly uniform
+// in size.
+//
+////////////////////////// S2 Cell Decomposition /////////////////////////
+//
+// The following methods define the cube-to-sphere projection used by
+// the Cell decomposition.
+//
+// In the process of converting a latitude-longitude pair to a 64-bit cell
+// id, the following coordinate systems are used:
+//
+//  (id)
+//    An CellID is a 64-bit encoding of a face and a Hilbert curve position
+//    on that face. The Hilbert curve position implicitly encodes both the
+//    position of a cell and its subdivision level (see s2cellid.go).
+//
+//  (face, i, j)
+//    Leaf-cell coordinates. "i" and "j" are integers in the range
+//    [0,(2**30)-1] that identify a particular leaf cell on the given face.
+//    The (i, j) coordinate system is right-handed on each face, and the
+//    faces are oriented such that Hilbert curves connect continuously from
+//    one face to the next.
+//
+//  (face, s, t)
+//    Cell-space coordinates. "s" and "t" are real numbers in the range
+//    [0,1] that identify a point on the given face. For example, the point
+//    (s, t) = (0.5, 0.5) corresponds to the center of the top-level face
+//    cell. This point is also a vertex of exactly four cells at each
+//    subdivision level greater than zero.
+//
+//  (face, si, ti)
+//    Discrete cell-space coordinates. These are obtained by multiplying
+//    "s" and "t" by 2**31 and rounding to the nearest unsigned integer.
+//    Discrete coordinates lie in the range [0,2**31]. This coordinate
+//    system can represent the edge and center positions of all cells with
+//    no loss of precision (including non-leaf cells). In binary, each
+//    coordinate of a level-k cell center ends with a 1 followed by
+//    (30 - k) 0s. The coordinates of its edges end with (at least)
+//    (31 - k) 0s.
+//
+//  (face, u, v)
+//    Cube-space coordinates in the range [-1,1]. To make the cells at each
+//    level more uniform in size after they are projected onto the sphere,
+//    we apply a nonlinear transformation of the form u=f(s), v=f(t).
+//    The (u, v) coordinates after this transformation give the actual
+//    coordinates on the cube face (modulo some 90 degree rotations) before
+//    it is projected onto the unit sphere.
+//
+//  (face, u, v, w)
+//    Per-face coordinate frame. This is an extension of the (face, u, v)
+//    cube-space coordinates that adds a third axis "w" in the direction of
+//    the face normal. It is always a right-handed 3D coordinate system.
+//    Cube-space coordinates can be converted to this frame by setting w=1,
+//    while (u,v,w) coordinates can be projected onto the cube face by
+//    dividing by w, i.e. (face, u/w, v/w).
+//
+//  (x, y, z)
+//    Direction vector (Point). Direction vectors are not necessarily unit
+//    length, and are often chosen to be points on the biunit cube
+//    [-1,+1]x[-1,+1]x[-1,+1]. They can be be normalized to obtain the
+//    corresponding point on the unit sphere.
+//
+//  (lat, lng)
+//    Latitude and longitude (LatLng). Latitudes must be between -90 and
+//    90 degrees inclusive, and longitudes must be between -180 and 180
+//    degrees inclusive.
+//
+// Note that the (i, j), (s, t), (si, ti), and (u, v) coordinate systems are
+// right-handed on all six faces.
+//
+//
+// There are a number of different projections from cell-space (s,t) to
+// cube-space (u,v): linear, quadratic, and tangent. They have the following
+// tradeoffs:
+//
+//   Linear - This is the fastest transformation, but also produces the least
+//   uniform cell sizes. Cell areas vary by a factor of about 5.2, with the
+//   largest cells at the center of each face and the smallest cells in
+//   the corners.
+//
+//   Tangent - Transforming the coordinates via Atan makes the cell sizes
+//   more uniform. The areas vary by a maximum ratio of 1.4 as opposed to a
+//   maximum ratio of 5.2. However, each call to Atan is about as expensive
+//   as all of the other calculations combined when converting from points to
+//   cell ids, i.e. it reduces performance by a factor of 3.
+//
+//   Quadratic - This is an approximation of the tangent projection that
+//   is much faster and produces cells that are almost as uniform in size.
+//   It is about 3 times faster than the tangent projection for converting
+//   cell ids to points or vice versa. Cell areas vary by a maximum ratio of
+//   about 2.1.
+//
+// Here is a table comparing the cell uniformity using each projection. Area
+// Ratio is the maximum ratio over all subdivision levels of the largest cell
+// area to the smallest cell area at that level, Edge Ratio is the maximum
+// ratio of the longest edge of any cell to the shortest edge of any cell at
+// the same level, and Diag Ratio is the ratio of the longest diagonal of
+// any cell to the shortest diagonal of any cell at the same level.
+//
+//               Area    Edge    Diag
+//              Ratio   Ratio   Ratio
+// -----------------------------------
+// Linear:      5.200   2.117   2.959
+// Tangent:     1.414   1.414   1.704
+// Quadratic:   2.082   1.802   1.932
+//
+// The worst-case cell aspect ratios are about the same with all three
+// projections. The maximum ratio of the longest edge to the shortest edge
+// within the same cell is about 1.4 and the maximum ratio of the diagonals
+// within the same cell is about 1.7.
+//
+// For Go we have chosen to use only the Quadratic approach. Other language
+// implementations may offer other choices.
+
 const (
 	// maxSiTi is the maximum value of an si- or ti-coordinate.
-	// It is one shift more than maxSize.
+	// It is one shift more than maxSize. The range of valid (si,ti)
+	// values is [0..maxSiTi].
 	maxSiTi = maxSize << 1
 )
 
