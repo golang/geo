@@ -282,10 +282,31 @@ func TestTextFormatParseRect(t *testing.T) {
 	}
 }
 
+func TestTextFormatMakeLaxPolyline(t *testing.T) {
+	l := makeLaxPolyline("-20:150, -20:151, -19:150")
+
+	// No easy equality check for laxPolylines; check vertices instead.
+	if len(l.vertices) != 3 {
+		t.Errorf("len(l.vertices) = %d, want 3", len(l.vertices))
+	}
+	if got, want := LatLngFromPoint(l.vertices[0]), LatLngFromDegrees(-20, 150); !latLngsApproxEqual(got, want, epsilon) {
+		t.Errorf("vertex(0) = %v, want %v", got, want)
+	}
+	if got, want := LatLngFromPoint(l.vertices[1]), LatLngFromDegrees(-20, 151); !latLngsApproxEqual(got, want, epsilon) {
+		t.Errorf("vertex(1) = %v, want %v", got, want)
+	}
+	if got, want := LatLngFromPoint(l.vertices[2]), LatLngFromDegrees(-19, 150); !latLngsApproxEqual(got, want, epsilon) {
+		t.Errorf("vertex(2) = %v, want %v", got, want)
+	}
+
+	// TODO(roberts): test out an invalid value
+	// makeLaxPolyline("blah")
+}
+
 // TODO(roberts): Remaining tests
 // to debug string tests for
 //   SpecialCases, EmptyLoop, EmptyPolyline, Empty Othertypes, ShapeIndex
 //
 // make type tests for ValidInput and InvalidInput for
 //   LatLngs, Points, Rect, Loop, Polyline, Polygon,
-//   LaxPolyline, LaxPolygon, ShapeIndex
+//   LaxPolygon, ShapeIndex

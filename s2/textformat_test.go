@@ -195,6 +195,20 @@ func makePolyline(s string) *Polyline {
 	return &p
 }
 
+// makeLaxPolyline constructs a laxPolyline from the given string.
+func makeLaxPolyline(s string) *laxPolyline {
+	return laxPolylineFromPoints(parsePoints(s))
+}
+
+// laxPolylineToString returns a string representation suitable for reconstruction
+// by the makeLaxPolyline method.
+func laxPolylineToString(l *laxPolyline) string {
+	var buf bytes.Buffer
+	writePoints(&buf, l.vertices)
+	return buf.String()
+
+}
+
 // TODO(roberts): Remaining C++ textformat related methods
 // make$S2TYPE methods for missing types.
 // to debug string for many types

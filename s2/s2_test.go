@@ -155,6 +155,12 @@ func randomCap(minArea, maxArea float64) Cap {
 	return CapFromCenterArea(randomPoint(), capArea)
 }
 
+// latLngsApproxEqual reports of the two LatLngs are within the given epsilon.
+func latLngsApproxEqual(a, b LatLng, epsilon float64) bool {
+	return float64Near(float64(a.Lat), float64(b.Lat), epsilon) &&
+		float64Near(float64(a.Lng), float64(b.Lng), epsilon)
+}
+
 // pointsApproxEqual reports whether the two points are within the given distance
 // of each other. This is the same as Point.ApproxEqual but permits specifying
 // the epsilon.
