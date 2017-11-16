@@ -99,20 +99,6 @@ type candidate struct {
 	priority    int          // Priority of the candiate.
 }
 
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
-func max(x, y int) int {
-	if x > y {
-		return x
-	}
-	return y
-}
-
 type priorityQueue []*candidate
 
 func (pq priorityQueue) Len() int {
@@ -273,7 +259,7 @@ func (c *coverer) adjustCellLevels(cells *CellUnion) {
 // initialCandidates computes a set of initial candidates that cover the given region.
 func (c *coverer) initialCandidates() {
 	// Optimization: start with a small (usually 4 cell) covering of the region's bounding cap.
-	temp := &RegionCoverer{MaxLevel: c.maxLevel, LevelMod: 1, MaxCells: min(4, c.maxCells)}
+	temp := &RegionCoverer{MaxLevel: c.maxLevel, LevelMod: 1, MaxCells: minInt(4, c.maxCells)}
 
 	cells := temp.FastCovering(c.region)
 	c.adjustCellLevels(&cells)
@@ -329,9 +315,9 @@ func (c *coverer) coveringInternal(region Region) {
 // newCoverer returns an instance of coverer.
 func (rc *RegionCoverer) newCoverer() *coverer {
 	return &coverer{
-		minLevel: max(0, min(maxLevel, rc.MinLevel)),
-		maxLevel: max(0, min(maxLevel, rc.MaxLevel)),
-		levelMod: max(1, min(3, rc.LevelMod)),
+		minLevel: maxInt(0, minInt(maxLevel, rc.MinLevel)),
+		maxLevel: maxInt(0, minInt(maxLevel, rc.MaxLevel)),
+		levelMod: maxInt(1, minInt(3, rc.LevelMod)),
 		maxCells: rc.MaxCells,
 	}
 }
@@ -339,14 +325,14 @@ func (rc *RegionCoverer) newCoverer() *coverer {
 // Covering returns a CellUnion that covers the given region and satisfies the various restrictions.
 func (rc *RegionCoverer) Covering(region Region) CellUnion {
 	covering := rc.CellUnion(region)
-	covering.Denormalize(max(0, min(maxLevel, rc.MinLevel)), max(1, min(3, rc.LevelMod)))
+	covering.Denormalize(maxInt(0, minInt(maxLevel, rc.MinLevel)), maxInt(1, minInt(3, rc.LevelMod)))
 	return covering
 }
 
 // InteriorCovering returns a CellUnion that is contained within the given region and satisfies the various restrictions.
 func (rc *RegionCoverer) InteriorCovering(region Region) CellUnion {
 	intCovering := rc.InteriorCellUnion(region)
-	intCovering.Denormalize(max(0, min(maxLevel, rc.MinLevel)), max(1, min(3, rc.LevelMod)))
+	intCovering.Denormalize(maxInt(0, minInt(maxLevel, rc.MinLevel)), maxInt(1, minInt(3, rc.LevelMod)))
 	return intCovering
 }
 
@@ -407,7 +393,7 @@ func (c *coverer) normalizeCovering(covering *CellUnion) {
 	if c.maxLevel < maxLevel || c.levelMod > 1 {
 		for i, ci := range *covering {
 			level := ci.Level()
-			newLevel := c.adjustLevel(min(level, c.maxLevel))
+			newLevel := c.adjustLevel(minInt(level, c.maxLevel))
 			if newLevel != level {
 				(*covering)[i] = ci.Parent(newLevel)
 			}

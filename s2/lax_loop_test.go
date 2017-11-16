@@ -76,7 +76,7 @@ func (l *laxLoop) ReferencePoint() ReferencePoint {
 	}
 	return referencePointForShape(l)
 }
-func (l *laxLoop) NumChains() int    { return min(1, l.numVertices) }
+func (l *laxLoop) NumChains() int    { return minInt(1, l.numVertices) }
 func (l *laxLoop) Chain(i int) Chain { return Chain{0, l.numVertices} }
 func (l *laxLoop) ChainEdge(i, j int) Edge {
 	var k int

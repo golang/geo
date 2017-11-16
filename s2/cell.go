@@ -467,28 +467,6 @@ func edgeDistance(ij, uv float64) s1.ChordAngle {
 	return s1.ChordAngleFromSquaredLength(pq2 + qr*qr)
 }
 
-// minChordAngle returns the smallest of the given values.
-func minChordAngle(x s1.ChordAngle, others ...s1.ChordAngle) s1.ChordAngle {
-	min := x
-	for _, y := range others {
-		if y < min {
-			min = y
-		}
-	}
-	return min
-}
-
-// minFloat64 returns the smallest of the given values.
-func minFloat64(x float64, others ...float64) float64 {
-	min := x
-	for _, y := range others {
-		if y < min {
-			min = y
-		}
-	}
-	return min
-}
-
 // distanceInternal reports the distance from the given point to the interior of
 // the cell if toInterior is true or to the boundary of the cell otherwise.
 func (c Cell) distanceInternal(targetXYZ Point, toInterior bool) s1.ChordAngle {

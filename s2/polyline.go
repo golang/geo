@@ -178,7 +178,7 @@ func (p *Polyline) ReferencePoint() ReferencePoint {
 
 // NumChains reports the number of contiguous edge chains in this Polyline.
 func (p *Polyline) NumChains() int {
-	return min(1, p.NumEdges())
+	return minInt(1, p.NumEdges())
 }
 
 // Chain returns the i-th edge Chain in the Shape.

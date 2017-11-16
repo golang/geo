@@ -559,8 +559,8 @@ func cellIDFromFaceIJWrap(f, i, j int) CellID {
 	// Convert i and j to the coordinates of a leaf cell just beyond the
 	// boundary of this face.  This prevents 32-bit overflow in the case
 	// of finding the neighbors of a face cell.
-	i = clamp(i, -1, maxSize)
-	j = clamp(j, -1, maxSize)
+	i = clampInt(i, -1, maxSize)
+	j = clampInt(j, -1, maxSize)
 
 	// We want to wrap these coordinates onto the appropriate adjacent face.
 	// The easiest way to do this is to convert the (i,j) coordinates to (x,y,z)
@@ -593,17 +593,6 @@ func cellIDFromFaceIJSame(f, i, j int, sameFace bool) CellID {
 	return cellIDFromFaceIJWrap(f, i, j)
 }
 
-// clamp returns number closest to x within the range min..max.
-func clamp(x, min, max int) int {
-	if x < min {
-		return min
-	}
-	if x > max {
-		return max
-	}
-	return x
-}
-
 // ijToSTMin converts the i- or j-index of a leaf cell to the minimum corresponding
 // s- or t-value contained by that cell. The argument must be in the range
 // [0..2**30], i.e. up to one position beyond the normal range of valid leaf
@@ -614,7 +603,7 @@ func ijToSTMin(i int) float64 {
 
 // stToIJ converts value in ST coordinates to a value in IJ coordinates.
 func stToIJ(s float64) int {
-	return clamp(int(math.Floor(maxSize*s)), 0, maxSize-1)
+	return clampInt(int(math.Floor(maxSize*s)), 0, maxSize-1)
 }
 
 // cellIDFromPoint returns a leaf cell containing point p. Usually there is

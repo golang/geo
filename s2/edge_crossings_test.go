@@ -127,13 +127,6 @@ func TestEdgeutilIntersectionError(t *testing.T) {
 	}
 }
 
-func maxAngle(a, b s1.Angle) s1.Angle {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // TODO(roberts): Differences from C++:
 // TestEdgeCrossingsGrazingIntersections
 // TestEdgeCrossingsGetIntersectionInvariants

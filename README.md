@@ -102,6 +102,7 @@ Approximately ~40% complete.
 *   s2edge_crossings
 *   edgeVectorShape
 *   laxLoop
+*   laxPolyline
 *   s2rect_bounder
 *   s2stuv.go (s2coords.h in C++) - This file is a collection of helper and
     conversion methods to and from ST-space, UV-space, and XYZ-space.
@@ -140,25 +141,30 @@ started.
 *   BooleanOperation - used when assembling polygons and loops.
 *   Builder - This is a robust tool for creating the various Shape types from
     collection of simpler S2 types.
+*   BuilderClosedSetNormalizer
+*   BuilderFindPolygonDegneracies
 *   BuilderGraph
 *   BuilderLayers
 *   BuilderSnapFunctions
+*   BuilderTesting
+*   Centroids
 *   ClosestEdgeQuery
 *   ClosestPointQuery
 *   ContainsPointQuery - ShapeContainsPoint and FindContainingShapes
 *   ContainsVertexQuery
 *   ConvexHullQuery
 *   EdgeTesselator
+*   MinDistanceTargets
 *   PointCompression
 *   PointIndex
 *   PointRegion
 *   PointUtil
 *   RegionIntersection
+*   RegionTermIndexer
 *   RegionUnion
 *   Projections
 *   ShapeIndexRegion - Allows ShapeIndexes to be used as Regions for things like
     RegionCoverer
-*   laxPolyline
 *   laxPolygon
 *   lexicon
 
