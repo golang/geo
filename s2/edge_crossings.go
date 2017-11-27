@@ -67,30 +67,6 @@ func (c Crossing) String() string {
 	}
 }
 
-// SimpleCrossing reports whether edge AB crosses CD at a point that is interior
-// to both edges. Properties:
-//
-//  (1) SimpleCrossing(b,a,c,d) == SimpleCrossing(a,b,c,d)
-//  (2) SimpleCrossing(c,d,a,b) == SimpleCrossing(a,b,c,d)
-//
-// DEPRECATED: Use CrossingSign(a,b,c,d) == Cross instead.
-func SimpleCrossing(a, b, c, d Point) bool {
-	// We compute the equivalent of Sign for triangles ACB, CBD, BDA,
-	// and DAC. All of these triangles need to have the same orientation
-	// (CW or CCW) for an intersection to exist.
-	ab := a.Vector.Cross(b.Vector)
-	acb := -(ab.Dot(c.Vector))
-	bda := ab.Dot(d.Vector)
-	if acb*bda <= 0 {
-		return false
-	}
-
-	cd := c.Vector.Cross(d.Vector)
-	cbd := -(cd.Dot(b.Vector))
-	dac := cd.Dot(a.Vector)
-	return (acb*cbd > 0) && (acb*dac > 0)
-}
-
 // CrossingSign reports whether the edge AB intersects the edge CD.
 // If AB crosses CD at a point that is interior to both edges, Cross is returned.
 // If any two vertices from different edges are the same it returns MaybeCross.

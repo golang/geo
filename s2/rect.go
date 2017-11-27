@@ -360,8 +360,8 @@ func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
 func intersectsLngEdge(a, b Point, lat r1.Interval, lng s1.Angle) bool {
 	// The nice thing about edges of constant longitude is that
 	// they are straight lines on the sphere (geodesics).
-	return SimpleCrossing(a, b, PointFromLatLng(LatLng{s1.Angle(lat.Lo), lng}),
-		PointFromLatLng(LatLng{s1.Angle(lat.Hi), lng}))
+	return CrossingSign(a, b, PointFromLatLng(LatLng{s1.Angle(lat.Lo), lng}),
+		PointFromLatLng(LatLng{s1.Angle(lat.Hi), lng})) == Cross
 }
 
 // IntersectsCell reports whether this rectangle intersects the given cell. This is an

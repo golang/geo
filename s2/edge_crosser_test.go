@@ -33,7 +33,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 		a, b, c, d   Point
 		robust       Crossing
 		edgeOrVertex bool
-		simple       bool
 	}{
 		{
 			msg:          "two regular edges that cross",
@@ -43,7 +42,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{0.1, 0.5, 3}},
 			robust:       Cross,
 			edgeOrVertex: true,
-			simple:       true,
 		},
 		{
 			msg:          "two regular edges that intersect antipodal points",
@@ -53,7 +51,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{-0.1, -0.5, -3}},
 			robust:       DoNotCross,
 			edgeOrVertex: false,
-			simple:       true,
 		},
 		{
 			msg:          "two edges on the same great circle that start at antipodal points",
@@ -63,7 +60,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{0, 1, 1}},
 			robust:       DoNotCross,
 			edgeOrVertex: false,
-			simple:       true,
 		},
 		{
 			msg:          "two edges that cross where one vertex is the OriginPoint",
@@ -73,7 +69,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{1, 1, -0.1}},
 			robust:       Cross,
 			edgeOrVertex: true,
-			simple:       true,
 		},
 		{
 			msg:          "two edges that intersect antipodal points where one vertex is the OriginPoint",
@@ -83,7 +78,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{1, 1, -0.1}},
 			robust:       DoNotCross,
 			edgeOrVertex: false,
-			simple:       true,
 		},
 		{
 			msg:          "two edges that cross antipodal points",
@@ -93,7 +87,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{-1, -1, 1}},
 			robust:       DoNotCross,
 			edgeOrVertex: false,
-			simple:       true,
 		},
 		{
 			// The Ortho() direction is (-4,0,2) and edge CD
@@ -105,7 +98,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{2, 3, 4}},
 			robust:       MaybeCross,
 			edgeOrVertex: false,
-			simple:       true,
 		},
 		{
 			// The edge AB is approximately in the x=y plane, while CD is approximately
@@ -117,7 +109,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{10, 10, 1}},
 			robust:       Cross,
 			edgeOrVertex: true,
-			simple:       false,
 		},
 		{
 			msg:          "two edges that barely cross near the middle separated by a distance of about 1e-15",
@@ -127,7 +118,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{1, 1, 0}},
 			robust:       DoNotCross,
 			edgeOrVertex: false,
-			simple:       false,
 		},
 		{
 			// This example cannot be handled using regular double-precision
@@ -139,7 +129,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{1e-323, 0, 1}},
 			robust:       Cross,
 			edgeOrVertex: true,
-			simple:       false,
 		},
 		{
 			msg:          "two edges that barely cross each other near the end separated by a distance of about 1e-640",
@@ -149,7 +138,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{1e-323, 0, 1}},
 			robust:       DoNotCross,
 			edgeOrVertex: false,
-			simple:       false,
 		},
 		{
 			msg: "two edges that barely cross each other near the middle of one edge",
@@ -161,7 +149,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{1, 1, 0}},
 			robust:       Cross,
 			edgeOrVertex: true,
-			simple:       false,
 		},
 		{
 			msg:          "two edges that barely cross each other near the middle separated by a distance of about 1e-640",
@@ -171,7 +158,6 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			d:            Point{r3.Vector{1, 1, 0}},
 			robust:       DoNotCross,
 			edgeOrVertex: false,
-			simple:       false,
 		},
 	}
 
@@ -181,33 +167,28 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 		b := Point{test.b.Normalize()}
 		c := Point{test.c.Normalize()}
 		d := Point{test.d.Normalize()}
-		testCrossing(t, test.msg, a, b, c, d, test.robust, test.edgeOrVertex, test.simple)
-		testCrossing(t, test.msg, b, a, c, d, test.robust, test.edgeOrVertex, test.simple)
-		testCrossing(t, test.msg, a, b, d, c, test.robust, test.edgeOrVertex, test.simple)
-		testCrossing(t, test.msg, b, a, d, c, test.robust, test.edgeOrVertex, test.simple)
+		testCrossing(t, test.msg, a, b, c, d, test.robust, test.edgeOrVertex)
+		testCrossing(t, test.msg, b, a, c, d, test.robust, test.edgeOrVertex)
+		testCrossing(t, test.msg, a, b, d, c, test.robust, test.edgeOrVertex)
+		testCrossing(t, test.msg, b, a, d, c, test.robust, test.edgeOrVertex)
 
 		// test degenerate cases
-		testCrossing(t, test.msg, a, a, c, d, DoNotCross, false, false)
-		testCrossing(t, test.msg, a, b, c, c, DoNotCross, false, false)
-		testCrossing(t, test.msg, a, a, c, c, DoNotCross, false, false)
+		testCrossing(t, test.msg, a, a, c, d, DoNotCross, false)
+		testCrossing(t, test.msg, a, b, c, c, DoNotCross, false)
+		testCrossing(t, test.msg, a, a, c, c, DoNotCross, false)
 
-		testCrossing(t, test.msg, a, b, a, b, MaybeCross, true, false)
-		testCrossing(t, test.msg, c, d, a, b, test.robust, test.edgeOrVertex != (test.robust == MaybeCross), test.simple)
+		testCrossing(t, test.msg, a, b, a, b, MaybeCross, true)
+		testCrossing(t, test.msg, c, d, a, b, test.robust, test.edgeOrVertex != (test.robust == MaybeCross))
 	}
 }
 
-func testCrossing(t *testing.T, msg string, a, b, c, d Point, robust Crossing, edgeOrVertex, simple bool) {
+func testCrossing(t *testing.T, msg string, a, b, c, d Point, robust Crossing, edgeOrVertex bool) {
 	// Modify the expected result if two vertices from different edges match.
 	if a == c || a == d || b == c || b == d {
 		robust = MaybeCross
 	}
 
 	input := fmt.Sprintf("%s: a: %v, b: %v, c: %v, d: %v", msg, a, b, c, d)
-	if simple {
-		if got, want := SimpleCrossing(a, b, c, d), robust == Cross; got != want {
-			t.Errorf("%v, SimpleCrossing(a, b, c, d) = %t, want %t", input, got, want)
-		}
-	}
 
 	crosser := NewChainEdgeCrosser(a, b, c)
 	if got, want := crosser.ChainCrossingSign(d), robust; got != want {
