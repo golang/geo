@@ -1289,32 +1289,28 @@ func TestLoopRelations(t *testing.T) {
 			}
 		}
 
-		// TODO(roberts): Uncomment once CompareBoundary is implemented.
+		// A contains the boundary of B if either A contains B, or the two loops
+		// contain each other's boundaries and there are no shared edges (since at
+		// least one such edge must be reversed, and therefore is not considered to
+		// be contained according to the rules of compareBoundary).
+		comparison := 0
+		if test.contains || (test.covers && !test.sharedEdge) {
+			comparison = 1
+		}
 
-		/*
-			// A contains the boundary of B if either A contains B, or the two loops
-			// contain each other's boundaries and there are no shared edges (since at
-			// least one such edge must be reversed, and therefore is not considered to
-			// be contained according to the rules of CompareBoundary).
-			comparison := 0
-			if test.contains || (test.covers && !test.sharedEdge) {
-				comparison = 1
-			}
+		// Similarly, A excludes the boundary of B if either A and B are disjoint,
+		// or B contains A and there are no shared edges (since A is considered to
+		// contain such edges according to the rules of compareBoundary).
+		if test.disjoint || (test.contained && !test.sharedEdge) {
+			comparison = -1
+		}
 
-			// Similarly, A excludes the boundary of B if either A and B are disjoint,
-			// or B contains A and there are no shared edges (since A is considered to
-			// contain such edges according to the rules of CompareBoundary).
-			if test.disjoint || (test.contained && !test.sharedEdge) {
-				comparison = -1
+		// compareBoundary requires that neither loop is empty.
+		if !test.a.IsEmpty() && !test.b.IsEmpty() {
+			if got := test.a.compareBoundary(test.b); got != comparison {
+				t.Errorf("%v.compareBoundary(%v) = %v, want %v", test.a, test.b, got, comparison)
 			}
-
-			// CompareBoundary requires that neither loop is empty.
-			if !test.a.IsEmpty() && !test.b.IsEmpty() {
-				if got := test.a.CompareBoundary(test.b); got != comparison {
-					t.Errorf("%v.CompareBoundary(%v) = %v, want %v", test.a, test.b, got, comparison)
-				}
-			}
-		*/
+		}
 	}
 }
 
@@ -1336,10 +1332,10 @@ func testLoopOneNestedPair(t *testing.T, a, b *Loop) {
 	if !a.Contains(b) {
 		t.Errorf("%v.Contains(%v) = false, want true", a, b)
 	}
+	if got, want := b.Contains(a), a.BoundaryEqual(b); got != want {
+		t.Errorf("%v.Contains(%v) = %v, want %v", b, a, got, want)
+	}
 	// TODO(roberts): Uncomment as these functions get completed.
-	// if got, want := b.Contains(a), a.BoundaryEquals(b); got != want {
-	// 	t.Errorf("%v.Contains(%v) = %v, want %v", b, a, got, want)
-	// }
 	// if got, want := a.Intersects(b), !b.IsEmpty(); got != want {
 	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", a, b, got, want)
 	// }
@@ -1376,7 +1372,7 @@ func testLoopOneCoveringPair(t *testing.T, a, b *Loop) {
 	// TODO(roberts): Uncomment as these functions get completed.
 	// a1 := cloneLoop(a)
 	// a1.Invert()
-	// complementary := a1.BoundaryEquals(b)
+	// complementary := a1.BoundaryEqual(b)
 	// if got, want := a.Intersects(b), !complementary; got != want {
 	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", a, b, got, want)
 	// }

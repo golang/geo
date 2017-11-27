@@ -267,7 +267,7 @@ func (l *Loop) findValidationErrorNoIndex() error {
 // Contains reports whether the region contained by this loop is a superset of the
 // region contained by the given other loop.
 func (l *Loop) Contains(o *Loop) bool {
-	// For this loop A to contains the given loop B, all of the following must
+	// For a loop A to contain the loop B, all of the following must
 	// be true:
 	//
 	//  (1) There are no edge crossings between A and B except at vertices.
@@ -318,6 +318,91 @@ func (l *Loop) Contains(o *Loop) bool {
 		return false
 	}
 	return true
+}
+
+// BoundaryEqual reports whether the two loops have the same boundary. This is
+// true if and only if the loops have the same vertices in the same cyclic order
+// (i.e., the vertices may be cyclically rotated). The empty and full loops are
+// considered to have different boundaries.
+func (l *Loop) BoundaryEqual(o *Loop) bool {
+	if len(l.vertices) != len(o.vertices) {
+		return false
+	}
+
+	// Special case to handle empty or full loops.  Since they have the same
+	// number of vertices, if one loop is empty/full then so is the other.
+	if l.isEmptyOrFull() {
+		return l.IsEmpty() == o.IsEmpty()
+	}
+
+	// Loop through the vertices to find the first of ours that matches the
+	// starting vertex of the other loop. Use that offset to then 'align' the
+	// vertices for comparison.
+	for offset, vertex := range l.vertices {
+		if vertex == o.Vertex(0) {
+			// There is at most one starting offset since loop vertices are unique.
+			for i := 0; i < len(l.vertices); i++ {
+				if l.Vertex(i+offset) != o.Vertex(i) {
+					return false
+				}
+			}
+			return true
+		}
+	}
+	return false
+}
+
+// compareBoundary returns +1 if this loop contains the boundary of the other loop,
+// -1 if it excludes the boundary of the other, and 0 if the boundaries of the two
+// loops cross. Shared edges are handled as follows:
+//
+//   If XY is a shared edge, define Reversed(XY) to be true if XY
+//     appears in opposite directions in both loops.
+//   Then this loop contains XY if and only if Reversed(XY) == the other loop is a hole.
+//   (Intuitively, this checks whether this loop contains a vanishingly small region
+//   extending from the boundary of the other toward the interior of the polygon to
+//   which the other belongs.)
+//
+// This function is used for testing containment and intersection of
+// multi-loop polygons. Note that this method is not symmetric, since the
+// result depends on the direction of this loop but not on the direction of
+// the other loop (in the absence of shared edges).
+//
+// This requires that neither loop is empty, and if other loop IsFull, then it must not
+// be a hole.
+func (l *Loop) compareBoundary(o *Loop) int {
+	// The bounds must intersect for containment or crossing.
+	if !l.bound.Intersects(o.bound) {
+		return -1
+	}
+
+	// Full loops are handled as though the loop surrounded the entire sphere.
+	if l.IsFull() {
+		return 1
+	}
+	if o.IsFull() {
+		return -1
+	}
+
+	// Check whether there are any edge crossings, and also check the loop
+	// relationship at any shared vertices.
+	relation := newCompareBoundaryRelation(o.IsHole())
+	if hasCrossingRelation(l, o, relation) {
+		return 0
+	}
+	if relation.foundSharedVertex {
+		if relation.containsEdge {
+			return 1
+		}
+		return -1
+	}
+
+	// There are no edge intersections or shared vertices, so we can check
+	// whether A contains an arbitrary vertex of B.
+	if l.ContainsPoint(o.Vertex(0)) {
+		return 1
+	}
+	return -1
 }
 
 // ContainsOrigin reports true if this loop contains s2.OriginPoint().
@@ -812,11 +897,11 @@ func (l *Loop) ContainsNested(other *Loop) bool {
 	// loop contains the other or they do not intersect.
 	m, ok := l.findVertex(other.Vertex(1))
 	if !ok {
-		// Since b.vertex(1) is not shared, we can check whether A contains it.
+		// Since other.vertex(1) is not shared, we can check whether A contains it.
 		return l.ContainsPoint(other.Vertex(1))
 	}
 
-	// Check whether the edge order around b.Vertex(1) is compatible with
+	// Check whether the edge order around other.Vertex(1) is compatible with
 	// A containing B.
 	return WedgeContains(l.Vertex(m-1), l.Vertex(m), l.Vertex(m+1), other.Vertex(0), other.Vertex(2))
 }
@@ -1576,15 +1661,94 @@ func (c *containsRelation) wedgesCross(a0, ab1, a2, b0, b2 Point) bool {
 	return !WedgeContains(a0, ab1, a2, b0, b2)
 }
 
+// compareBoundaryRelation implements loopRelation for comparing boundaries.
+//
+// The compare boundary relation does not have a useful early-exit condition,
+// so we return crossingTargetDontCare for both crossing targets.
+//
+// Aside: A possible early exit condition could be based on the following.
+//   If A contains a point of both B and ~B, then A intersects Boundary(B).
+//   If ~A contains a point of both B and ~B, then ~A intersects Boundary(B).
+//   So if the intersections of {A, ~A} with {B, ~B} are all non-empty,
+//   the return value is 0, i.e., Boundary(A) intersects Boundary(B).
+// Unfortunately it isn't worth detecting this situation because by the
+// time we have seen a point in all four intersection regions, we are also
+// guaranteed to have seen at least one pair of crossing edges.
+type compareBoundaryRelation struct {
+	reverse           bool // True if the other loop should be reversed.
+	foundSharedVertex bool // True if any wedge was processed.
+	containsEdge      bool // True if any edge of the other loop is contained by this loop.
+	excludesEdge      bool // True if any edge of the other loop is excluded by this loop.
+}
+
+func newCompareBoundaryRelation(reverse bool) *compareBoundaryRelation {
+	return &compareBoundaryRelation{reverse: reverse}
+}
+
+func (c *compareBoundaryRelation) aCrossingTarget() crossingTarget { return crossingTargetDontCare }
+func (c *compareBoundaryRelation) bCrossingTarget() crossingTarget { return crossingTargetDontCare }
+func (c *compareBoundaryRelation) wedgesCross(a0, ab1, a2, b0, b2 Point) bool {
+	// Because we don't care about the interior of the other, only its boundary,
+	// it is sufficient to check whether this one contains the semiwedge (ab1, b2).
+	c.foundSharedVertex = true
+	if wedgeContainsSemiwedge(a0, ab1, a2, b2, c.reverse) {
+		c.containsEdge = true
+	} else {
+		c.excludesEdge = true
+	}
+	return c.containsEdge && c.excludesEdge
+}
+
+// wedgeContainsSemiwedge reports whether the wedge (a0, ab1, a2) contains the
+// "semiwedge" defined as any non-empty open set of rays immediately CCW from
+// the edge (ab1, b2). If reverse is true, then substitute clockwise for CCW;
+// this simulates what would happen if the direction of the other loop was reversed.
+func wedgeContainsSemiwedge(a0, ab1, a2, b2 Point, reverse bool) bool {
+	if b2 == a0 || b2 == a2 {
+		// We have a shared or reversed edge.
+		return (b2 == a0) == reverse
+	}
+	return OrderedCCW(a0, a2, b2, ab1)
+}
+
+// containsNonCrossingBoundary reports whether given two loops whose boundaries
+// do not cross (see compareBoundary), if this loop contains the boundary of the
+// other loop. If reverse is true, the boundary of the other loop is reversed
+// first (which only affects the result when there are shared edges). This method
+// is cheaper than compareBoundary because it does not test for edge intersections.
+//
+// This function requires that neither loop is empty, and that if the other is full,
+// then reverse == false.
+func (l *Loop) containsNonCrossingBoundary(other *Loop, reverseOther bool) bool {
+	// The bounds must intersect for containment.
+	if !l.bound.Intersects(other.bound) {
+		return false
+	}
+
+	// Full loops are handled as though the loop surrounded the entire sphere.
+	if l.IsFull() {
+		return true
+	}
+	if other.IsFull() {
+		return false
+	}
+
+	m, ok := l.findVertex(other.Vertex(0))
+	if !ok {
+		// Since the other loops vertex 0 is not shared, we can check if this contains it.
+		return l.ContainsPoint(other.Vertex(0))
+	}
+	// Otherwise check whether the edge (b0, b1) is contained by this loop.
+	return wedgeContainsSemiwedge(l.Vertex(m-1), l.Vertex(m), l.Vertex(m+1),
+		other.Vertex(1), reverseOther)
+}
+
 // TODO(roberts): Differences from the C++ version:
 // DistanceToPoint
 // DistanceToBoundary
 // Project
 // ProjectToBoundary
-// Intersects
 // Equal
 // BoundaryEqual
 // BoundaryApproxEqual
 // BoundaryNear
-// CompareBoundary
-// ContainsNonCrossingBoundary
