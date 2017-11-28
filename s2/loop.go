@@ -845,8 +845,8 @@ func (l *Loop) findVertex(p Point) (index int, ok bool) {
 	const notFound = 0
 	if len(l.vertices) < 10 {
 		// Exhaustive search for loops below a small threshold.
-		for i, v := range l.vertices {
-			if i > 0 && v == p {
+		for i := 1; i <= len(l.vertices); i++ {
+			if l.Vertex(i) == p {
 				return i, true
 			}
 		}
