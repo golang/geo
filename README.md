@@ -134,6 +134,7 @@ Approximately ~40% complete.
 *   Metric
 *   PaddedCell
 *   Point
+*   PointCompression
 *   Region
 *   s2edge_clipping
 *   s2edge_crosser
@@ -193,7 +194,6 @@ started.
 *   ConvexHullQuery
 *   EdgeTesselator
 *   MinDistanceTargets
-*   PointCompression
 *   PointIndex
 *   PointRegion
 *   PointUtil
@@ -209,5 +209,5 @@ started.
 ### Encode/Decode
 
 Encoding of S2 Go types is committed and is interoperable with C++ and Java.
-Decoding for Loops, Polygons, Polylines, and Rects is now completed. The
-remaining types will be worked on in the future.
+Decoding for CellIDs, CellUnions, Loops, Polygons, Polylines, and Rects is now
+completed. The remaining types will be worked on in the future.

@@ -462,6 +462,17 @@ func (ci CellID) encode(e *encoder) {
 	e.writeUint64(uint64(ci))
 }
 
+// Decode encodes the CellID.
+func (ci *CellID) Decode(r io.Reader) error {
+	d := &decoder{r: asByteReader(r)}
+	ci.decode(d)
+	return d.err
+}
+
+func (ci *CellID) decode(d *decoder) {
+	*ci = CellID(d.readUint64())
+}
+
 // TODO: the methods below are not exported yet.  Settle on the entire API design
 // before doing this.  Do we want to mirror the C++ one as closely as possible?
 

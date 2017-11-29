@@ -17,6 +17,7 @@ limitations under the License.
 package s2
 
 import (
+	"fmt"
 	"io"
 	"sort"
 
@@ -556,5 +557,36 @@ func (cu *CellUnion) encode(e *encoder) {
 	e.writeInt64(int64(len(*cu)))
 	for _, ci := range *cu {
 		ci.encode(e)
+	}
+}
+
+// Decode encodes the CellUnion.
+func (cu *CellUnion) Decode(r io.Reader) error {
+	d := &decoder{r: asByteReader(r)}
+	cu.decode(d)
+	return d.err
+}
+
+func (cu *CellUnion) decode(d *decoder) {
+	version := d.readInt8()
+	if d.err != nil {
+		return
+	}
+	if version != encodingVersion {
+		d.err = fmt.Errorf("only version %d is supported", encodingVersion)
+		return
+	}
+	n := d.readInt64()
+	if d.err != nil {
+		return
+	}
+	const maxCells = 1000000
+	if n > maxCells {
+		d.err = fmt.Errorf("too many cells (%d; max is %d)", n, maxCells)
+		return
+	}
+	*cu = make([]CellID, n)
+	for i := range *cu {
+		(*cu)[i].decode(d)
 	}
 }
