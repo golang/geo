@@ -320,6 +320,49 @@ func (l *Loop) Contains(o *Loop) bool {
 	return true
 }
 
+// Intersects reports whether the region contained by this loop intersects the region
+// contained by the other loop.
+func (l *Loop) Intersects(o *Loop) bool {
+	// Given two loops, A and B, A.Intersects(B) if and only if !A.Complement().Contains(B).
+	//
+	// This code is similar to Contains, but is optimized for the case
+	// where both loops enclose less than half of the sphere.
+	if !l.bound.Intersects(o.bound) {
+		return false
+	}
+
+	// Check whether there are any edge crossings, and also check the loop
+	// relationship at any shared vertices.
+	relation := &intersectsRelation{}
+	if hasCrossingRelation(l, o, relation) {
+		return true
+	}
+	if relation.foundSharedVertex {
+		return false
+	}
+
+	// Since there are no edge intersections or shared vertices, the loops
+	// intersect only if A contains B, B contains A, or the two loops contain
+	// each other's boundaries.  These checks are usually cheap because of the
+	// bounding box preconditions.  Note that neither loop is empty (because of
+	// the bounding box check above), so it is safe to access vertex(0).
+
+	// Check whether A contains B, or A and B contain each other's boundaries.
+	// (Note that A contains all the vertices of B in either case.)
+	if l.subregionBound.Contains(o.bound) || l.bound.Union(o.bound).IsFull() {
+		if l.ContainsPoint(o.Vertex(0)) {
+			return true
+		}
+	}
+	// Check whether B contains A.
+	if o.subregionBound.Contains(l.bound) {
+		if o.ContainsPoint(l.Vertex(0)) {
+			return true
+		}
+	}
+	return false
+}
+
 // BoundaryEqual reports whether the two loops have the same boundary. This is
 // true if and only if the loops have the same vertices in the same cyclic order
 // (i.e., the vertices may be cyclically rotated). The empty and full loops are
@@ -1659,6 +1702,20 @@ func (c *containsRelation) bCrossingTarget() crossingTarget { return crossingTar
 func (c *containsRelation) wedgesCross(a0, ab1, a2, b0, b2 Point) bool {
 	c.foundSharedVertex = true
 	return !WedgeContains(a0, ab1, a2, b0, b2)
+}
+
+// intersectsRelation implements loopRelation for an intersects operation. Given
+// two loops, A and B, if A.ContainsPoint(P) == true && B.ContainsPoint(P) == true,
+// it is equivalent to having an edge crossing (i.e., Intersects returns true).
+type intersectsRelation struct {
+	foundSharedVertex bool
+}
+
+func (i *intersectsRelation) aCrossingTarget() crossingTarget { return crossingTargetCross }
+func (i *intersectsRelation) bCrossingTarget() crossingTarget { return crossingTargetCross }
+func (i *intersectsRelation) wedgesCross(a0, ab1, a2, b0, b2 Point) bool {
+	i.foundSharedVertex = true
+	return WedgeIntersects(a0, ab1, a2, b0, b2)
 }
 
 // compareBoundaryRelation implements loopRelation for comparing boundaries.

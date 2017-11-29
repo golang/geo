@@ -1335,24 +1335,22 @@ func testLoopOneNestedPair(t *testing.T, a, b *Loop) {
 	if got, want := b.Contains(a), a.BoundaryEqual(b); got != want {
 		t.Errorf("%v.Contains(%v) = %v, want %v", b, a, got, want)
 	}
-	// TODO(roberts): Uncomment as these functions get completed.
-	// if got, want := a.Intersects(b), !b.IsEmpty(); got != want {
-	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", a, b, got, want)
-	// }
-	// if got, want := b.Intersects(a), !b.IsEmpty(); got != want {
-	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", b, a, got, want)
-	// }
+	if got, want := a.Intersects(b), !b.IsEmpty(); got != want {
+		t.Errorf("%v.Intersects(%v) = %v, want %v", a, b, got, want)
+	}
+	if got, want := b.Intersects(a), !b.IsEmpty(); got != want {
+		t.Errorf("%v.Intersects(%v) = %v, want %v", b, a, got, want)
+	}
 }
 
 // Given a pair of disjoint loops A and B, check various identities.
 func testLoopOneDisjointPair(t *testing.T, a, b *Loop) {
-	// TODO(roberts): Uncomment as these functions get completed.
-	// if a.Intersects(b) {
-	// 	t.Errorf("%v.Intersects(%v) = true, want false", a, b)
-	// }
-	// if b.Intersects(a) {
-	// 	t.Errorf("%v.Intersects(%v) = true, want false", b, a)
-	// }
+	if a.Intersects(b) {
+		t.Errorf("%v.Intersects(%v) = true, want false", a, b)
+	}
+	if b.Intersects(a) {
+		t.Errorf("%v.Intersects(%v) = true, want false", b, a)
+	}
 	if got, want := a.Contains(b), b.IsEmpty(); got != want {
 		t.Errorf("%v.Contains(%v) = %v, want %v", a, b, got, want)
 	}
@@ -1390,13 +1388,12 @@ func testLoopOneOverlappingPair(t *testing.T, a, b *Loop) {
 	if b.Contains(a) {
 		t.Errorf("%v.Contains(%v) = true want false", b, a)
 	}
-	// TODO(roberts): Uncomment as these functions get completed.
-	// if !a.Intersects(b) {
-	// 	t.Errorf("%v.Intersects(%v) = false, want true", a, b)
-	// }
-	// if !b.Intersects(a) {
-	// 	t.Errorf("%v.Intersects(%v) = false, want true", b, a)
-	// }
+	if !a.Intersects(b) {
+		t.Errorf("%v.Intersects(%v) = false, want true", a, b)
+	}
+	if !b.Intersects(a) {
+		t.Errorf("%v.Intersects(%v) = false, want true", b, a)
+	}
 }
 
 func TestLoopTurningAngle(t *testing.T) {
