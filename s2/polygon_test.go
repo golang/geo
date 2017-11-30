@@ -337,6 +337,609 @@ func TestPolygonContainsPoint(t *testing.T) {
 	}
 }
 
+// Given a pair of polygons where A contains B, check that various identities
+// involving union, intersection, and difference operations hold true.
+func testPolygonOneNestedPair(t *testing.T, a, b *Polygon) {
+	if !a.Contains(b) {
+		t.Errorf("%v.Contains(%v) = false, want true", a, b)
+	}
+	if got, want := a.Intersects(b), !b.IsEmpty(); got != want {
+		t.Errorf("%v.Intersects(%v) = %v, want %v", a, b, got, want)
+	}
+	if got, want := b.Intersects(a), !b.IsEmpty(); got != want {
+		t.Errorf("%v.Intersects(%v) = %v, want %v", b, a, got, want)
+	}
+
+	// TODO(roberts): Add the remaining checks related to construction
+	// via union, intersection, and difference.
+}
+
+// Given a pair of disjoint polygons A and B, check that various identities
+// involving union, intersection, and difference operations hold true.
+func testPolygonOneDisjointPair(t *testing.T, a, b *Polygon) {
+	if a.Intersects(b) {
+		t.Errorf("%v.Intersects(%v) = true, want false", a, b)
+	}
+	if b.Intersects(a) {
+		t.Errorf("%v.Intersects(%v) = true, want false", b, a)
+	}
+	if got, want := a.Contains(b), b.IsEmpty(); got != want {
+		t.Errorf("%v.Contains(%v) = %v, want %v", b, a, got, want)
+	}
+
+	if got, want := b.Contains(a), a.IsEmpty(); got != want {
+		t.Errorf("%v.Contains(%v) = %v, want %v", b, a, got, want)
+	}
+
+	// TODO(roberts): Add the remaining checks related to construction
+	// via builder, union, intersection, and difference.
+}
+
+// Given polygons A and B whose union covers the sphere, check that various
+// identities involving union, intersection, and difference hold true.
+func testPolygonOneCoveringPair(t *testing.T, a, b *Polygon) {
+	if got, want := a.Contains(b), a.IsFull(); got != want {
+		t.Errorf("%v.Contains(%v) = %v, want %v", a, b, got, want)
+	}
+	if got, want := b.Contains(a), b.IsFull(); got != want {
+		t.Errorf("%v.Contains(%v) = %v, want %v", a, b, got, want)
+	}
+	// TODO(roberts): Add the remaining checks related to construction via union
+
+}
+
+// Given polygons A and B such that both A and its complement intersect both B
+// and its complement, check that various identities involving union,
+// intersection, and difference hold true.
+func testPolygonOneOverlappingPair(t *testing.T, a, b *Polygon) {
+	if a.Contains(b) {
+		t.Errorf("%v.Contains(%v) = true, want false", a, b)
+	}
+	if b.Contains(a) {
+		t.Errorf("%v.Contains(%v) = true, want false", b, a)
+	}
+	if !a.Intersects(b) {
+		t.Errorf("%v.Intersects(%v) = false, want true", a, b)
+	}
+
+	// TODO(roberts): Add the remaining checks related to construction
+	// via builder, union, intersection, and difference.
+}
+
+// Given a pair of polygons where A contains B, test various identities
+// involving A, B, and their complements.
+func testPolygonNestedPair(t *testing.T, a, b *Polygon) {
+	// TODO(roberts): Uncomment once complement is completed
+	// a1 := InitToComplement(a)
+	// b1 := InitToComplement(b)
+
+	testPolygonOneNestedPair(t, a, b)
+	// testPolygonOneNestedPair(t, b1, a1)
+	// testPolygonOneDisjointPair(t, a1, b)
+	// testPolygonOneCoveringPair(t, a, b1)
+}
+
+// Given a pair of disjoint polygons A and B, test various identities
+// involving A, B, and their complements.
+func testPolygonDisjointPair(t *testing.T, a, b *Polygon) {
+	// TODO(roberts): Uncomment once complement is completed
+	// a1 := InitToComplement(a)
+	// b1 := InitToComplement(b)
+
+	testPolygonOneDisjointPair(t, a, b)
+	// testPolygonOneCoveringPair(t, a1, b1)
+	// testPolygonOneNestedPair(t, a1, b)
+	// testPolygonOneNestedPair(t, b1, a)
+}
+
+// Given polygons A and B such that both A and its complement intersect both B
+// and its complement, test various identities involving these four polygons.
+func testPolygonOverlappingPair(t *testing.T, a, b *Polygon) {
+	// TODO(roberts): Uncomment once complement is completed
+	// a1 := InitToComplement(a);
+	// b1 := InitToComplement(b);
+
+	testPolygonOneOverlappingPair(t, a, b)
+	// testPolygonOneOverlappingPair(t, a1, b1);
+	// testPolygonOneOverlappingPair(t, a1, b);
+	// testPolygonOneOverlappingPair(t, a, b1);
+}
+
+// Test identities that should hold for any pair of polygons A, B and their
+// complements.
+func testPolygonComplements(t *testing.T, a, b *Polygon) {
+	// TODO(roberts): Uncomment once complement is completed
+	// a1 := InitToComplement(a);
+	// b1 := InitToComplement(b);
+
+	// testOneComplementPair(t, a, a1, b, b1)
+	// testOneComplementPair(t, a1, a, b, b1)
+	// testOneComplementPair(t, a, a1, b1, b)
+	// testOneComplementPair(t, a1, a, b1, b)
+
+	// TODO(roberts): Add the checks related to construction via union, etc.
+}
+
+func testPolygonDestructiveUnion(t *testing.T, a, b *Polygon) {
+	// TODO(roberts): Add the checks related to construction via union, etc.
+}
+
+func TestPolygonRelations(t *testing.T) {
+	tests := []struct {
+		a, b       *Polygon
+		contains   bool // A contains B
+		contained  bool // B contains A
+		intersects bool // A and B intersect
+	}{
+		{
+			a:          near01Polygon,
+			b:          emptyPolygon,
+			contains:   true,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          near01Polygon,
+			b:          near01Polygon,
+			contains:   true,
+			contained:  true,
+			intersects: true,
+		},
+		{
+			a:          fullPolygon,
+			b:          near01Polygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          near01Polygon,
+			b:          near30Polygon,
+			contains:   false,
+			contained:  true,
+			intersects: true,
+		},
+		{
+			a:          near01Polygon,
+			b:          near23Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          near01Polygon,
+			b:          near0231Polygon,
+			contains:   false,
+			contained:  true,
+			intersects: true,
+		},
+		{
+			a:          near01Polygon,
+			b:          near023H1Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          near30Polygon,
+			b:          near23Polygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          near30Polygon,
+			b:          near0231Polygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          near30Polygon,
+			b:          near023H1Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          near23Polygon,
+			b:          near0231Polygon,
+			contains:   false,
+			contained:  true,
+			intersects: true,
+		},
+		{
+			a:          near23Polygon,
+			b:          near023H1Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          near0231Polygon,
+			b:          near023H1Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+
+		{
+			a:          far01Polygon,
+			b:          far21Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          far01Polygon,
+			b:          far231Polygon,
+			contains:   false,
+			contained:  true,
+			intersects: true,
+		},
+		{
+			a:          far01Polygon,
+			b:          far2H0Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          far01Polygon,
+			b:          far2H013Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          far21Polygon,
+			b:          far231Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          far21Polygon,
+			b:          far2H0Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          far21Polygon,
+			b:          far2H013Polygon,
+			contains:   false,
+			contained:  true,
+			intersects: true,
+		},
+		{
+			a:          far231Polygon,
+			b:          far2H0Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          far231Polygon,
+			b:          far2H013Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          far2H0Polygon,
+			b:          far2H013Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+
+		{
+			a:          south0abPolygon,
+			b:          south2Polygon,
+			contains:   false,
+			contained:  true,
+			intersects: true,
+		},
+		{
+			a:          south0abPolygon,
+			b:          south20b1Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          south0abPolygon,
+			b:          south2H1Polygon,
+			contains:   false,
+			contained:  true,
+			intersects: true,
+		},
+		{
+			a:          south0abPolygon,
+			b:          south20bH0acPolygon,
+			contains:   false,
+			contained:  true,
+			intersects: true,
+		},
+		{
+			a:          south2Polygon,
+			b:          south20b1Polygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          south2Polygon,
+			b:          south2H1Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          south2Polygon,
+			b:          south20bH0acPolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          south20b1Polygon,
+			b:          south2H1Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          south20b1Polygon,
+			b:          south20bH0acPolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          south2H1Polygon,
+			b:          south20bH0acPolygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+
+		{
+			a:          nf1N10F2S10abcPolygon,
+			b:          nf2N2F210S210abPolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          nf1N10F2S10abcPolygon,
+			b:          near23Polygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          nf1N10F2S10abcPolygon,
+			b:          far21Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          nf1N10F2S10abcPolygon,
+			b:          south0abPolygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          nf1N10F2S10abcPolygon,
+			b:          f32n0Polygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+
+		{
+			a:          nf2N2F210S210abPolygon,
+			b:          near01Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: false,
+		},
+		{
+			a:          nf2N2F210S210abPolygon,
+			b:          far01Polygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          nf2N2F210S210abPolygon,
+			b:          south20b1Polygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          nf2N2F210S210abPolygon,
+			b:          south0abPolygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          nf2N2F210S210abPolygon,
+			b:          n32s0bPolygon,
+			contains:   true,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          cross1Polygon,
+			b:          cross2Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          cross1SideHolePolygon,
+			b:          cross2Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          cross1CenterHolePolygon,
+			b:          cross2Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          cross1Polygon,
+			b:          cross2SideHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          cross1Polygon,
+			b:          cross2CenterHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          cross1SideHolePolygon,
+			b:          cross2SideHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          cross1CenterHolePolygon,
+			b:          cross2SideHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          cross1SideHolePolygon,
+			b:          cross2CenterHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          cross1CenterHolePolygon,
+			b:          cross2CenterHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		// These cases, when either polygon has a hole, test a different code path
+		// from the other cases.
+		{
+			a:          overlap1Polygon,
+			b:          overlap2Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          overlap1SideHolePolygon,
+			b:          overlap2Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          overlap1CenterHolePolygon,
+			b:          overlap2Polygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          overlap1Polygon,
+			b:          overlap2SideHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          overlap1Polygon,
+			b:          overlap2CenterHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          overlap1SideHolePolygon,
+			b:          overlap2SideHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          overlap1CenterHolePolygon,
+			b:          overlap2SideHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          overlap1SideHolePolygon,
+			b:          overlap2CenterHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+		{
+			a:          overlap1CenterHolePolygon,
+			b:          overlap2CenterHolePolygon,
+			contains:   false,
+			contained:  false,
+			intersects: true,
+		},
+	}
+
+	for i, test := range tests {
+		if got := test.a.Contains(test.b); got != test.contains {
+			t.Errorf("%d. %v.Contains(%v) = %v, want %v", i, test.a, test.b, got, test.contains)
+		}
+
+		if got := test.b.Contains(test.a); got != test.contained {
+			t.Errorf("%d. %v.Contains(%v) = %v, want %v", i, test.b, test.a, got, test.contained)
+		}
+
+		if got := test.a.Intersects(test.b); got != test.intersects {
+			t.Errorf("%v.Intersects(%v) = %v, want %v", test.a, test.b, got, test.intersects)
+		}
+
+		if test.contains {
+			testPolygonNestedPair(t, test.a, test.b)
+		}
+		if test.contained {
+			testPolygonNestedPair(t, test.b, test.a)
+		}
+		if !test.intersects {
+			testPolygonDisjointPair(t, test.a, test.b)
+		}
+		if test.intersects && !(test.contains || test.contained) {
+			testPolygonOverlappingPair(t, test.a, test.b)
+		}
+		testPolygonDestructiveUnion(t, test.a, test.b)
+		testPolygonComplements(t, test.a, test.b)
+	}
+
+	testPolygonNestedPair(t, emptyPolygon, emptyPolygon)
+	testPolygonNestedPair(t, fullPolygon, emptyPolygon)
+	testPolygonNestedPair(t, fullPolygon, fullPolygon)
+}
+
 // TODO(roberts): Remaining Tests
 // TestInit
 // TestMultipleInit
@@ -346,7 +949,6 @@ func TestPolygonContainsPoint(t *testing.T) {
 // TestOverlapFractions
 // TestOriginNearPole
 // TestTestApproxContainsAndDisjoint
-// TestRelations
 // TestOneLoopPolygonShape
 // TestSeveralLoopPolygonShape
 // TestManyLoopPolygonShape

@@ -645,6 +645,191 @@ func (p *Polygon) ChainPosition(edgeID int) ChainPosition {
 // dimension returns the dimension of the geometry represented by this Polygon.
 func (p *Polygon) dimension() dimension { return polygonGeometry }
 
+// Contains reports whether this polygon contains the other polygon.
+// Specifically, it reports whether all the points in the other polygon
+// are also in this polygon.
+func (p *Polygon) Contains(o *Polygon) bool {
+	// If both polygons have one loop, use the more efficient Loop method.
+	// Note that Loop's Contains does its own bounding rectangle check.
+	if len(p.loops) == 1 && len(o.loops) == 1 {
+		return p.loops[0].Contains(o.loops[0])
+	}
+
+	// Otherwise if neither polygon has holes, we can still use the more
+	// efficient Loop's Contains method (rather than compareBoundary),
+	// but it's worthwhile to do our own bounds check first.
+	if !p.subregionBound.Contains(o.bound) {
+		// Even though Bound(A) does not contain Bound(B), it is still possible
+		// that A contains B. This can only happen when union of the two bounds
+		// spans all longitudes. For example, suppose that B consists of two
+		// shells with a longitude gap between them, while A consists of one shell
+		// that surrounds both shells of B but goes the other way around the
+		// sphere (so that it does not intersect the longitude gap).
+		if !p.bound.Lng.Union(o.bound.Lng).IsFull() {
+			return false
+		}
+	}
+
+	if !p.hasHoles && !o.hasHoles {
+		for _, l := range o.loops {
+			if !p.anyLoopContains(l) {
+				return false
+			}
+		}
+		return true
+	}
+
+	// Polygon A contains B iff B does not intersect the complement of A. From
+	// the intersection algorithm below, this means that the complement of A
+	// must exclude the entire boundary of B, and B must exclude all shell
+	// boundaries of the complement of A. (It can be shown that B must then
+	// exclude the entire boundary of the complement of A.) The first call
+	// below returns false if the boundaries cross, therefore the second call
+	// does not need to check for any crossing edges (which makes it cheaper).
+	return p.containsBoundary(o) && o.excludesNonCrossingComplementShells(p)
+}
+
+// Intersects reports whether this polygon intersects the other polygon, i.e.
+// if there is a point that is contained by both polygons.
+func (p *Polygon) Intersects(o *Polygon) bool {
+	// If both polygons have one loop, use the more efficient Loop method.
+	// Note that Loop Intersects does its own bounding rectangle check.
+	if len(p.loops) == 1 && len(o.loops) == 1 {
+		return p.loops[0].Intersects(o.loops[0])
+	}
+
+	// Otherwise if neither polygon has holes, we can still use the more
+	// efficient Loop.Intersects method. The polygons intersect if and
+	// only if some pair of loop regions intersect.
+	if !p.bound.Intersects(o.bound) {
+		return false
+	}
+
+	if !p.hasHoles && !o.hasHoles {
+		for _, l := range o.loops {
+			if p.anyLoopIntersects(l) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Polygon A is disjoint from B if A excludes the entire boundary of B and B
+	// excludes all shell boundaries of A. (It can be shown that B must then
+	// exclude the entire boundary of A.) The first call below returns false if
+	// the boundaries cross, therefore the second call does not need to check
+	// for crossing edges.
+	return !p.excludesBoundary(o) || !o.excludesNonCrossingShells(p)
+}
+
+// compareBoundary returns +1 if this polygon contains the boundary of B, -1 if A
+// excludes the boundary of B, and 0 if the boundaries of A and B cross.
+func (p *Polygon) compareBoundary(o *Loop) int {
+	result := -1
+	for i := 0; i < len(p.loops) && result != 0; i++ {
+		// If B crosses any loop of A, the result is 0. Otherwise the result
+		// changes sign each time B is contained by a loop of A.
+		result *= -p.loops[i].compareBoundary(o)
+	}
+	return result
+}
+
+// containsBoundary reports whether this polygon contains the entire boundary of B.
+func (p *Polygon) containsBoundary(o *Polygon) bool {
+	for _, l := range o.loops {
+		if p.compareBoundary(l) <= 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// excludesBoundary reports whether this polygon excludes the entire boundary of B.
+func (p *Polygon) excludesBoundary(o *Polygon) bool {
+	for _, l := range o.loops {
+		if p.compareBoundary(l) >= 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// containsNonCrossingBoundary reports whether polygon A contains the boundary of
+// loop B. Shared edges are handled according to the rule described in loops
+// containsNonCrossingBoundary.
+func (p *Polygon) containsNonCrossingBoundary(o *Loop, reverse bool) bool {
+	var inside bool
+	for _, l := range p.loops {
+		x := l.containsNonCrossingBoundary(o, reverse)
+		inside = (inside != x)
+	}
+	return inside
+}
+
+// excludesNonCrossingShells reports wheterh given two polygons A and B such that the
+// boundary of A does not cross any loop of B, if A excludes all shell boundaries of B.
+func (p *Polygon) excludesNonCrossingShells(o *Polygon) bool {
+	for _, l := range o.loops {
+		if l.IsHole() {
+			continue
+		}
+		if p.containsNonCrossingBoundary(l, false) {
+			return false
+		}
+	}
+	return true
+}
+
+// excludesNonCrossingComplementShells reports whether given two polygons A and B
+// such that the boundary of A does not cross any loop of B, if A excludes all
+// shell boundaries of the complement of B.
+func (p *Polygon) excludesNonCrossingComplementShells(o *Polygon) bool {
+	// Special case to handle the complement of the empty or full polygons.
+	if o.IsEmpty() {
+		return !p.IsFull()
+	}
+	if o.IsFull() {
+		return true
+	}
+
+	// Otherwise the complement of B may be obtained by inverting loop(0) and
+	// then swapping the shell/hole status of all other loops. This implies
+	// that the shells of the complement consist of loop 0 plus all the holes of
+	// the original polygon.
+	for j, l := range o.loops {
+		if j > 0 && !l.IsHole() {
+			continue
+		}
+
+		// The interior of the complement is to the right of loop 0, and to the
+		// left of the loops that were originally holes.
+		if p.containsNonCrossingBoundary(l, j == 0) {
+			return false
+		}
+	}
+	return true
+}
+
+// anyLoopContains reports whether any loop in this polygon contains the given loop.
+func (p *Polygon) anyLoopContains(o *Loop) bool {
+	for _, l := range p.loops {
+		if l.Contains(o) {
+			return true
+		}
+	}
+	return false
+}
+
+// anyLoopIntersects reports whether any loop in this polygon intersects the given loop.
+func (p *Polygon) anyLoopIntersects(o *Loop) bool {
+	for _, l := range p.loops {
+		if l.Intersects(o) {
+			return true
+		}
+	}
+	return false
+}
+
 // Encode encodes the Polygon
 func (p *Polygon) Encode(w io.Writer) error {
 	e := &encoder{w: w}
@@ -834,7 +1019,7 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 // DistanceToBoundary
 // Project
 // ProjectToBoundary
-// Contains/ApproxContains/Intersects/ApproxDisjoint for Polygons
+// ApproxContains/ApproxDisjoint for Polygons
 // InitTo{Intersection/ApproxIntersection/Union/ApproxUnion/Diff/ApproxDiff}
 // InitToSimplified
 // InitToSnapped
@@ -853,11 +1038,4 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 // findLoopNestingError
 // initToSimplifiedInternal
 // internalClipPolyline
-// compareBoundary
-// containsBoundary
-// excludesBoundary
-// containsNonCrossingBoundary
-// excludesNonCrossingShells
-// anyLoopContains(Loop)
-// anyLoopIntersects(Loop)
 // clipBoundary
