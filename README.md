@@ -9,6 +9,9 @@ shapes drawn on a sphere rather than on a planar 2D map. (In fact, the name S2
 is derived from the mathematical notation for the unit sphere *S²*.) This makes
 it especially suitable for working with geographic data.
 
+More details about S2 in general are available on the S2 Geometry Website
+[s2geometry.io](https://s2geometry.io/).
+
 ## Scope
 
 The library provides the following:
@@ -78,20 +81,16 @@ etc).
 
 See http://godoc.org/github.com/golang/geo for specific package documentation.
 
-For an analogous library in C++, see
-https://code.google.com/archive/p/s2-geometry-library/, and in Java, see
-https://github.com/google/s2-geometry-library-java
+For an analogous library in C++, see https://github.com/google/s2geometry, in
+Java, see https://github.com/google/s2-geometry-library-java, and Python, see
+https://github.com/google/s2geometry/tree/master/src/python
 
 # Status of the Go Library
 
-This library is principally a port of [the C++ S2
-library](https://code.google.com/archive/p/s2-geometry-library), adapting to Go
-idioms where it makes sense. We detail the progress of this port below relative
-to that C++ library.
-
-*Note*: The C++ code on `code.google.com` is an out-of-date snapshot of the
-Google-internal version, and isn't the basis of this Go library. When the C++
-library is re-released, we will update this document.
+This library is principally a port of the [C++ S2
+library](https://github.com/google/s2geometry), adapting to Go idioms where it
+makes sense. We detail the progress of this port below relative to that C++
+library.
 
 ## [ℝ¹](https://godoc.org/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
 
