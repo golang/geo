@@ -153,6 +153,12 @@ func TestEncodeDecode(t *testing.T) {
 		CellID(0x91230abcdef83427),
 	})
 
+	capPtr := func(c Cap) *Cap { return &c }
+	cidPtr := func(c CellID) *CellID { return &c }
+	cellPtr := func(c Cell) *Cell { return &c }
+	ptPtr := func(pt Point) *Point { return &pt }
+	rectPtr := func(r Rect) *Rect { return &r }
+
 	// Polyline inputs
 	// semiEquator := Polyline([]Point{
 	//	PointFromLatLng(LatLngFromDegrees(0, 0)),
@@ -175,26 +181,26 @@ func TestEncodeDecode(t *testing.T) {
 		reg    encodableRegion
 	}{
 		// Caps
-		{encodedCapEmpty, EmptyCap()},
-		{encodedCapFull, FullCap()},
-		{encodedCapFromPoint, CapFromPoint(PointFromCoords(3, 2, 1))},
-		{encodedCapFromCenterHeight, CapFromCenterHeight(PointFromCoords(0, 0, 1), 5)},
-		{encodedCapFromCenterHeight2, CapFromCenterHeight(PointFromCoords(0, 0, 1), 0.5)},
+		{encodedCapEmpty, capPtr(EmptyCap())},
+		{encodedCapFull, capPtr(FullCap())},
+		{encodedCapFromPoint, capPtr(CapFromPoint(PointFromCoords(3, 2, 1)))},
+		{encodedCapFromCenterHeight, capPtr(CapFromCenterHeight(PointFromCoords(0, 0, 1), 5))},
+		{encodedCapFromCenterHeight2, capPtr(CapFromCenterHeight(PointFromCoords(0, 0, 1), 0.5))},
 
 		// CellIDs
-		{encodedCellIDFace0, CellIDFromFace(0)},
-		{encodedCellIDFace5, CellIDFromFace(5)},
-		{encodedCellIDFace0MaxLevel, CellIDFromFace(0).ChildEndAtLevel(maxLevel)},
-		{encodedCellIDFace5MaxLevel, CellIDFromFace(5).ChildEndAtLevel(maxLevel)},
-		{encodedCellIDFacePosLevel, CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)},
-		{encodedCellIDInvalid, CellID(0)},
+		{encodedCellIDFace0, cidPtr(CellIDFromFace(0))},
+		{encodedCellIDFace5, cidPtr(CellIDFromFace(5))},
+		{encodedCellIDFace0MaxLevel, cidPtr(CellIDFromFace(0).ChildEndAtLevel(maxLevel))},
+		{encodedCellIDFace5MaxLevel, cidPtr(CellIDFromFace(5).ChildEndAtLevel(maxLevel))},
+		{encodedCellIDFacePosLevel, cidPtr(CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4))},
+		{encodedCellIDInvalid, cidPtr(CellID(0))},
 
 		// Cells
-		{encodedCellFromPoint, CellFromPoint(Point{r3.Vector{1, 2, 3}})},
+		{encodedCellFromPoint, cellPtr(CellFromPoint(Point{r3.Vector{1, 2, 3}}))},
 		// Lake Tahoe CA/NV border corner
-		{encodedCellFromLatLng, CellFromLatLng(LatLngFromDegrees(39.0, -120.0))},
-		{encodedCellFromFacePosLevel, CellFromCellID(CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4))},
-		{encodedCellFace0, CellFromCellID(CellIDFromFace(0))},
+		{encodedCellFromLatLng, cellPtr(CellFromLatLng(LatLngFromDegrees(39.0, -120.0)))},
+		{encodedCellFromFacePosLevel, cellPtr(CellFromCellID(CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)))},
+		{encodedCellFace0, cellPtr(CellFromCellID(CellIDFromFace(0)))},
 
 		// CellUnions
 		{encodedCellUnionEmpty, &cu},
@@ -207,8 +213,8 @@ func TestEncodeDecode(t *testing.T) {
 		{encodedLoopCross, LoopFromPoints(parsePoints(cross1))},
 
 		// Points
-		{encodedPointOrigin, OriginPoint()},
-		{encodedPointTesting, PointFromCoords(12.34, 56.78, 9.1011)},
+		{encodedPointOrigin, ptPtr(OriginPoint())},
+		{encodedPointTesting, ptPtr(PointFromCoords(12.34, 56.78, 9.1011))},
 
 		// Polygons.
 		{encodedPolygonEmpty, emptyPolygon()},
@@ -217,7 +223,7 @@ func TestEncodeDecode(t *testing.T) {
 		{encodedPolygon2Loops, makePolygon(cross1+";"+crossCenterHole, false)},
 
 		// Polylines
-		{encodedPolylineEmpty, (Polyline{})},
+		{encodedPolylineEmpty, (&Polyline{})},
 		// TODO(nsch): Comment these lines back in once all decoders are implemented.
 		// Then, switch the test from encode->decode->deepequal to
 		// decode->approxequal->encode
@@ -225,9 +231,9 @@ func TestEncodeDecode(t *testing.T) {
 		// {encodedPolyline3Segments, threeSegments},
 
 		// Rects
-		{encodedRectEmpty, EmptyRect()},
-		{encodedRectFull, FullRect()},
-		{encodedRectCentersize, RectFromCenterSize(LatLngFromDegrees(80, 170), LatLngFromDegrees(40, 60))},
+		{encodedRectEmpty, rectPtr(EmptyRect())},
+		{encodedRectFull, rectPtr(FullRect())},
+		{encodedRectCentersize, rectPtr(RectFromCenterSize(LatLngFromDegrees(80, 170), LatLngFromDegrees(40, 60)))},
 	}
 
 	for _, test := range tests {
@@ -242,20 +248,15 @@ func TestEncodeDecode(t *testing.T) {
 			t.Errorf("%#v.Encode() = %q, want %q", test.reg, encoded, test.golden)
 		}
 
-		// Test decode if supported.
-		_, ok := test.reg.(decodableRegion)
-		if !ok {
-			continue
-		}
-
-		// Create a struct of the same type as test.reg, to have a target to decode into.
+		// Create target for decoding.
 		decoded := reflect.New(reflect.TypeOf(test.reg).Elem()).Interface().(decodableRegion)
+
 		if err := decoded.Decode(buf); err != nil {
 			t.Errorf("decode(%#v): %v", test.reg, err)
 			continue
 		}
 		if !reflect.DeepEqual(decoded, test.reg) {
-			t.Errorf("decode = %v, want %v", decoded, test.reg)
+			t.Errorf("decode = %#v, want %#v", decoded, test.reg)
 		}
 	}
 }

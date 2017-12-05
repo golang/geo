@@ -207,6 +207,5 @@ started.
 
 ### Encode/Decode
 
-Encoding of S2 Go types is committed and is interoperable with C++ and Java.
-Decoding for CellIDs, CellUnions, Loops, Polygons, Polylines, and Rects is now
-completed. The remaining types will be worked on in the future.
+Encoding and decoding of S2 types is fully implemented and interoperable with
+C++ and Java.

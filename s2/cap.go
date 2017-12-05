@@ -505,3 +505,17 @@ func (c Cap) encode(e *encoder) {
 	e.writeFloat64(c.center.Z)
 	e.writeFloat64(float64(c.radius))
 }
+
+// Decode decodes the Cap.
+func (c *Cap) Decode(r io.Reader) error {
+	d := &decoder{r: asByteReader(r)}
+	c.decode(d)
+	return d.err
+}
+
+func (c *Cap) decode(d *decoder) {
+	c.center.X = d.readFloat64()
+	c.center.Y = d.readFloat64()
+	c.center.Z = d.readFloat64()
+	c.radius = s1.ChordAngle(d.readFloat64())
+}

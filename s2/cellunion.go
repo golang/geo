@@ -560,7 +560,7 @@ func (cu *CellUnion) encode(e *encoder) {
 	}
 }
 
-// Decode encodes the CellUnion.
+// Decode decodes the CellUnion.
 func (cu *CellUnion) Decode(r io.Reader) error {
 	d := &decoder{r: asByteReader(r)}
 	cu.decode(d)

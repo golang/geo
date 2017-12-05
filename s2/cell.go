@@ -403,6 +403,18 @@ func (c Cell) encode(e *encoder) {
 	c.id.encode(e)
 }
 
+// Decode decodes the Cell.
+func (c *Cell) Decode(r io.Reader) error {
+	d := &decoder{r: asByteReader(r)}
+	c.decode(d)
+	return d.err
+}
+
+func (c *Cell) decode(d *decoder) {
+	c.id.decode(d)
+	*c = CellFromCellID(c.id)
+}
+
 // vertexChordDist2 returns the squared chord distance from point P to the
 // given corner vertex specified by the Hi or Lo values of each.
 func (c Cell) vertexChordDist2(p Point, xHi, yHi bool) float64 {
