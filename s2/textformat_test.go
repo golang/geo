@@ -49,10 +49,10 @@ func writePoint(w io.Writer, p Point) {
 // writePoints formats the given points in debug format and writes them to the given writer.
 func writePoints(w io.Writer, pts []Point) {
 	for i, pt := range pts {
-		writePoint(w, pt)
-		if i < len(pts) {
-			fmt.Fprintf(w, ", ")
+		if i > 0 {
+			fmt.Fprint(w, ", ")
 		}
+		writePoint(w, pt)
 	}
 }
 

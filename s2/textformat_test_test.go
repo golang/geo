@@ -17,12 +17,45 @@ limitations under the License.
 package s2
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
+
+func TestTextFormatWritePoints(t *testing.T) {
+	tests := []struct {
+		have []Point
+		want string
+	}{
+		{
+			have: nil,
+			want: "",
+		},
+		{
+			have: []Point{},
+			want: "",
+		},
+		{
+			have: []Point{PointFromCoords(1, 0, 0)},
+			want: "0:0",
+		},
+		{
+			have: []Point{PointFromCoords(1, 0, 0), PointFromCoords(0, -1, 0)},
+			want: "0:0, 0:-90",
+		},
+	}
+
+	for _, test := range tests {
+		var buf bytes.Buffer
+		writePoints(&buf, test.have)
+		if got := buf.String(); got != test.want {
+			t.Errorf("writePoints(%v) = %q, want %q", test.have, got, test.want)
+		}
+	}
+}
 
 func TestTextFormatParsePointRoundtrip(t *testing.T) {
 	tests := []struct {
