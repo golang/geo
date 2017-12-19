@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/bits"
 	"sort"
 	"strconv"
 	"strings"
@@ -737,37 +738,23 @@ func (ci CellID) CommonAncestorLevel(other CellID) (level int, ok bool) {
 }
 
 // findMSBSetNonZero64 returns the index (between 0 and 63) of the most
-// significant set bit. Passing zero to this function has undefined behavior.
-func findMSBSetNonZero64(bits uint64) int {
-	val := []uint64{0x2, 0xC, 0xF0, 0xFF00, 0xFFFF0000, 0xFFFFFFFF00000000}
-	shift := []uint64{1, 2, 4, 8, 16, 32}
-	var msbPos uint64
-	for i := 5; i >= 0; i-- {
-		if bits&val[i] != 0 {
-			bits >>= shift[i]
-			msbPos |= shift[i]
-		}
+// significant set bit.
+func findMSBSetNonZero64(value uint64) int {
+	if value == 0 {
+		return 0
 	}
-	return int(msbPos)
-}
 
-const deBruijn64 = 0x03f79d71b4ca8b09
-const digitMask = uint64(1<<64 - 1)
-
-var deBruijn64Lookup = []byte{
-	0, 1, 56, 2, 57, 49, 28, 3, 61, 58, 42, 50, 38, 29, 17, 4,
-	62, 47, 59, 36, 45, 43, 51, 22, 53, 39, 33, 30, 24, 18, 12, 5,
-	63, 55, 48, 27, 60, 41, 37, 16, 46, 35, 44, 21, 52, 32, 23, 11,
-	54, 26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9, 13, 8, 7, 6,
+	return 63 - bits.LeadingZeros64(value)
 }
 
 // findLSBSetNonZero64 returns the index (between 0 and 63) of the least
-// significant set bit. Passing zero to this function has undefined behavior.
-//
-// This code comes from trailingZeroBits in https://golang.org/src/math/big/nat.go
-// which references (Knuth, volume 4, section 7.3.1).
-func findLSBSetNonZero64(bits uint64) int {
-	return int(deBruijn64Lookup[((bits&-bits)*(deBruijn64&digitMask))>>58])
+// significant set bit.
+func findLSBSetNonZero64(value uint64) int {
+	if value == 0 {
+		return 0
+	}
+
+	return bits.TrailingZeros64(value)
 }
 
 // Advance advances or retreats the indicated number of steps along the
