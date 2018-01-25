@@ -141,6 +141,7 @@ Approximately ~40% complete.
 *   edgeVectorShape
 *   laxLoop
 *   laxPolyline
+*   s2projections - Helpers for projecting points between R2 and S2.
 *   s2rect_bounder
 *   s2stuv.go (s2coords.h in C++) - This file is a collection of helper and
     conversion methods to and from ST-space, UV-space, and XYZ-space.
