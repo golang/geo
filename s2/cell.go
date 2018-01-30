@@ -62,6 +62,11 @@ func (c Cell) Face() int {
 	return int(c.face)
 }
 
+// oppositeFace returns the face opposite the given face.
+func oppositeFace(face int) int {
+	return (face + 3) % 6
+}
+
 // Level returns the level of this cell.
 func (c Cell) Level() int {
 	return int(c.level)
@@ -415,7 +420,7 @@ func (c *Cell) decode(d *decoder) {
 
 // vertexChordDist2 returns the squared chord distance from point P to the
 // given corner vertex specified by the Hi or Lo values of each.
-func (c Cell) vertexChordDist2(p Point, xHi, yHi bool) float64 {
+func (c Cell) vertexChordDist2(p Point, xHi, yHi bool) s1.ChordAngle {
 	x := c.uv.X.Lo
 	y := c.uv.Y.Lo
 	if xHi {
@@ -425,7 +430,7 @@ func (c Cell) vertexChordDist2(p Point, xHi, yHi bool) float64 {
 		y = c.uv.Y.Hi
 	}
 
-	return p.Sub(PointFromCoords(x, y, 1).Vector).Norm2()
+	return ChordAngleBetweenPoints(p, PointFromCoords(x, y, 1))
 }
 
 // uEdgeIsClosest reports whether a point P is closer to the interior of the specified
@@ -535,17 +540,36 @@ func (c Cell) distanceInternal(targetXYZ Point, toInterior bool) s1.ChordAngle {
 	// tests above, because (1) the edges don't meet at right angles and (2)
 	// there are points on the far side of the sphere that are both above *and*
 	// below the cell, etc.
-	chordDist2 := minFloat64(c.vertexChordDist2(target, false, false),
+	return minChordAngle(c.vertexChordDist2(target, false, false),
 		c.vertexChordDist2(target, true, false),
 		c.vertexChordDist2(target, false, true),
 		c.vertexChordDist2(target, true, true))
-	return s1.ChordAngleFromSquaredLength(chordDist2)
 }
 
 // Distance reports the distance from the cell to the given point. Returns zero if
 // the point is inside the cell.
 func (c Cell) Distance(target Point) s1.ChordAngle {
 	return c.distanceInternal(target, true)
+}
+
+// MaxDistance reports the maximum distance from the cell (including its interior) to the
+// given point.
+func (c Cell) MaxDistance(target Point) s1.ChordAngle {
+	// First check the 4 cell vertices.  If all are within the hemisphere
+	// centered around target, the max distance will be to one of these vertices.
+	targetUVW := faceXYZtoUVW(int(c.face), target)
+	maxDist := maxChordAngle(c.vertexChordDist2(targetUVW, false, false),
+		c.vertexChordDist2(targetUVW, true, false),
+		c.vertexChordDist2(targetUVW, false, true),
+		c.vertexChordDist2(targetUVW, true, true))
+
+	if maxDist <= s1.RightChordAngle {
+		return maxDist
+	}
+
+	// Otherwise, find the minimum distance dMin to the antipodal point and the
+	// maximum distance will be pi - dMin.
+	return s1.StraightChordAngle - c.BoundaryDistance(Point{target.Mul(-1)})
 }
 
 // BoundaryDistance reports the distance from the cell boundary to the given point.
@@ -576,7 +600,7 @@ func (c Cell) DistanceToEdge(a, b Point) s1.ChordAngle {
 	// Otherwise, check whether the edge crosses the cell boundary.
 	crosser := NewChainEdgeCrosser(a, b, c.Vertex(3))
 	for i := 0; i < 4; i++ {
-		if crosser.ChainCrossingSign(c.Vertex(i)) >= 0 {
+		if crosser.ChainCrossingSign(c.Vertex(i)) != DoNotCross {
 			return 0
 		}
 	}
@@ -592,4 +616,83 @@ func (c Cell) DistanceToEdge(a, b Point) s1.ChordAngle {
 		minDist, _ = UpdateMinDistance(c.Vertex(i), a, b, minDist)
 	}
 	return minDist
+}
+
+// MaxDistanceToEdge returns the maximum distance from the cell (including its interior)
+// to the given edge AB.
+func (c Cell) MaxDistanceToEdge(a, b Point) s1.ChordAngle {
+	// If the maximum distance from both endpoints to the cell is less than π/2
+	// then the maximum distance from the edge to the cell is the maximum of the
+	// two endpoint distances.
+	maxDist := maxChordAngle(c.MaxDistance(a), c.MaxDistance(b))
+	if maxDist <= s1.RightChordAngle {
+		return maxDist
+	}
+
+	return s1.StraightChordAngle - c.DistanceToEdge(Point{a.Mul(-1)}, Point{b.Mul(-1)})
+}
+
+// DistanceToCell returns the minimum distance from this cell to the given cell.
+// It returns zero if one cell contains the other.
+func (c Cell) DistanceToCell(target Cell) s1.ChordAngle {
+	// If the cells intersect, the distance is zero.  We use the (u,v) ranges
+	// rather than CellID intersects so that cells that share a partial edge or
+	// corner are considered to intersect.
+	if c.face == target.face && c.uv.Intersects(target.uv) {
+		return 0
+	}
+
+	// Otherwise, the minimum distance always occurs between a vertex of one
+	// cell and an edge of the other cell (including the edge endpoints).  This
+	// represents a total of 32 possible (vertex, edge) pairs.
+	//
+	// TODO(roberts): This could be optimized to be at least 5x faster by pruning
+	// the set of possible closest vertex/edge pairs using the faces and (u,v)
+	// ranges of both cells.
+	var va, vb [4]Point
+	for i := 0; i < 4; i++ {
+		va[i] = c.Vertex(i)
+		vb[i] = target.Vertex(i)
+	}
+	minDist := s1.InfChordAngle()
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 4; j++ {
+			minDist, _ = UpdateMinDistance(va[i], vb[j], vb[(j+1)&3], minDist)
+			minDist, _ = UpdateMinDistance(vb[i], va[j], va[(j+1)&3], minDist)
+		}
+	}
+	return minDist
+}
+
+// MaxDistanceToCell returns the maximum distance from the cell (including its
+// interior) to the given target cell.
+func (c Cell) MaxDistanceToCell(target Cell) s1.ChordAngle {
+	// Need to check the antipodal target for intersection with the cell. If it
+	// intersects, the distance is the straight ChordAngle.
+	// antipodalUV is the transpose of the original UV, interpreted within the opposite face.
+	antipodalUV := r2.Rect{target.uv.Y, target.uv.X}
+	if int(c.face) == oppositeFace(int(target.face)) && c.uv.Intersects(antipodalUV) {
+		return s1.StraightChordAngle
+	}
+
+	// Otherwise, the maximum distance always occurs between a vertex of one
+	// cell and an edge of the other cell (including the edge endpoints).  This
+	// represents a total of 32 possible (vertex, edge) pairs.
+	//
+	// TODO(roberts): When the maximum distance is at most π/2, the maximum is
+	// always attained between a pair of vertices, and this could be made much
+	// faster by testing each vertex pair once rather than the current 4 times.
+	var va, vb [4]Point
+	for i := 0; i < 4; i++ {
+		va[i] = c.Vertex(i)
+		vb[i] = target.Vertex(i)
+	}
+	maxDist := s1.NegativeChordAngle
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 4; j++ {
+			maxDist, _ = UpdateMaxDistance(va[i], vb[j], vb[(j+1)&3], maxDist)
+			maxDist, _ = UpdateMaxDistance(vb[i], va[j], va[(j+1)&3], maxDist)
+		}
+	}
+	return maxDist
 }

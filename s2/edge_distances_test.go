@@ -163,6 +163,108 @@ func TestEdgeDistancesCheckDistance(t *testing.T) {
 		}
 	}
 }
+
+func TestEdgeDistancesCheckMaxDistance(t *testing.T) {
+	tests := []struct {
+		x, a, b r3.Vector
+		distRad float64
+	}{
+		{
+			x:       r3.Vector{1, 0, 1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Pi / 2,
+		},
+		{
+			x:       r3.Vector{1, 0, -1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Pi / 2,
+		},
+		{
+			x:       r3.Vector{0, 1, 1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Pi / 2,
+		},
+		{
+			x:       r3.Vector{0, 1, -1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Pi / 2,
+		},
+		{
+			x:       r3.Vector{1, 1, 1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Asin(math.Sqrt(2. / 3)),
+		},
+		{
+			x:       r3.Vector{1, 1, -1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{0, 1, 0},
+			distRad: math.Asin(math.Sqrt(2. / 3)),
+		},
+		{
+			x:       r3.Vector{1, 0, 0},
+			a:       r3.Vector{1, 1, 0},
+			b:       r3.Vector{1, -1, 0},
+			distRad: math.Pi / 4,
+		},
+		{
+			x:       r3.Vector{0, 1, 0},
+			a:       r3.Vector{1, 1, 0},
+			b:       r3.Vector{1, 1, 0},
+			distRad: math.Pi / 4,
+		},
+		{
+			x:       r3.Vector{0, 0, 1},
+			a:       r3.Vector{0, 1, 1},
+			b:       r3.Vector{0, -1, 1},
+			distRad: math.Pi / 4,
+		},
+		{
+			x:       r3.Vector{0, 0, 1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{1, 0, -1},
+			distRad: 3 * math.Pi / 4,
+		},
+		{
+			x:       r3.Vector{0, 0, 1},
+			a:       r3.Vector{1, 0, 0},
+			b:       r3.Vector{1, 1, -math.Sqrt2},
+			distRad: 3 * math.Pi / 4,
+		},
+		{
+			x:       r3.Vector{0, 0, 1},
+			a:       r3.Vector{0, 0, -1},
+			b:       r3.Vector{0, 0, -1},
+			distRad: math.Pi,
+		},
+	}
+
+	for _, test := range tests {
+		x := Point{test.x.Normalize()}
+		a := Point{test.a.Normalize()}
+		b := Point{test.b.Normalize()}
+
+		var ok bool
+		maxDistance := s1.StraightChordAngle
+		if maxDistance, ok = UpdateMaxDistance(x, a, b, maxDistance); ok {
+			t.Errorf("UpdateMaxDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, s1.StraightChordAngle, maxDistance, s1.StraightChordAngle)
+		}
+
+		maxDistance = s1.NegativeChordAngle
+		if maxDistance, ok = UpdateMaxDistance(x, a, b, maxDistance); !ok {
+			t.Errorf("UpdateMaxDistance(%v, %v, %v, %v) = %v, want > %v", x, a, b, s1.NegativeChordAngle, maxDistance, s1.NegativeChordAngle)
+		}
+
+		if !float64Near(test.distRad, maxDistance.Angle().Radians(), 1e-15) {
+			t.Errorf("MaxDistance between %v and %v, %v = %v, want %v within %v", x, a, b, maxDistance.Angle().Radians(), test.distRad, 1e-15)
+		}
+	}
+}
+
 func TestEdgeDistancesInterpolate(t *testing.T) {
 	// Choose test points designed to expose floating-point errors.
 	p1 := PointFromCoords(0.1, 1e-30, 0.3)

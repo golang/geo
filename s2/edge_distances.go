@@ -43,7 +43,7 @@ func IsDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
 }
 
 // UpdateMinDistance checks if the distance from X to the edge AB is less
-// then minDist, and if so, returns the updated value and true.
+// than minDist, and if so, returns the updated value and true.
 // The case A == B is handled correctly.
 //
 // Use this method when you want to compute many distances and keep track of
@@ -53,6 +53,22 @@ func IsDistanceLess(x, a, b Point, limit s1.ChordAngle) bool {
 // obviously larger than the current minimum.
 func UpdateMinDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
 	return updateMinDistance(x, a, b, minDist, false)
+}
+
+// UpdateMaxDistance checks if the distance from X to the edge AB is greater
+// than maxDist, and if so, returns the updated value and true.
+// Otherwise it returns false. The case A == B is handled correctly.
+func UpdateMaxDistance(x, a, b Point, maxDist s1.ChordAngle) (s1.ChordAngle, bool) {
+	dist := maxChordAngle(ChordAngleBetweenPoints(x, a), ChordAngleBetweenPoints(x, b))
+	if dist > s1.RightChordAngle {
+		dist, _ = updateMinDistance(Point{x.Mul(-1)}, a, b, dist, true)
+		dist = s1.StraightChordAngle - dist
+	}
+	if maxDist < dist {
+		return dist, true
+	}
+
+	return maxDist, false
 }
 
 // IsInteriorDistanceLess reports whether the minimum distance from X to the
