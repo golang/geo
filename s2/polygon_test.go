@@ -15,7 +15,11 @@
 package s2
 
 import (
+	"math"
+	"math/rand"
 	"testing"
+
+	"github.com/golang/geo/s1"
 )
 
 const (
@@ -263,6 +267,120 @@ func TestPolygonShape(t *testing.T) {
 		}
 	}
 }
+
+// reverseLoopVertices reverses the order of all vertices in the given loop.
+func reverseLoopVertices(l *Loop) {
+	for i := 0; i < len(l.vertices)/2; i++ {
+		l.vertices[i], l.vertices[len(l.vertices)-i-1] = l.vertices[len(l.vertices)-i-1], l.vertices[i]
+	}
+}
+
+// shuffleLoops randomizes the slice of loops using Fisher-Yates shuffling.
+func shuffleLoops(loops []*Loop) {
+	n := len(loops)
+	for i := 0; i < n; i++ {
+		// choose index uniformly in [i, n-1]
+		r := i + rand.Intn(n-i)
+		loops[r], loops[i] = loops[i], loops[r]
+	}
+}
+
+// modifyPolygonFunc declares a function that can tweak a Polygon for testing.
+type modifyPolygonFunc func(p *Polygon)
+
+// polygonSetInvalidLoopNesting flips a random loops orientation within the polygon.
+func polygonSetInvalidLoopNesting(p *Polygon) {
+	if len(p.loops) > 0 {
+		i := randomUniformInt(len(p.loops))
+		p.loops[i].Invert()
+	}
+}
+
+// polygonSetInvalidLoopDepth randomly changes a loops depth value in the given polygon
+func polygonSetInvalidLoopDepth(p *Polygon) {
+	i := randomUniformInt(len(p.loops))
+	if i == 0 || oneIn(3) {
+		p.loops[i].depth = -1
+	} else {
+		p.loops[i].depth = p.loops[i-1].depth + 2
+	}
+}
+
+// generatePolygonConcentricTestLoops creates the given number of nested regular
+// loops around a common center point. All loops will have the same number of
+// vertices (at least minVertices). Furthermore, the vertices at the same index
+// position are collinear with the common center point of all the loops. The
+// loop radii decrease exponentially in order to prevent accidental loop crossings
+// when one of the loops is modified.
+func generatePolygonConcentricTestLoops(numLoops, minVertices int) []*Loop {
+	var loops []*Loop
+	center := randomPoint()
+	numVertices := minVertices + randomUniformInt(10)
+	for i := 0; i < numLoops; i++ {
+		radius := s1.Angle(80*math.Pow(0.1, float64(i))) * s1.Degree
+		loops = append(loops, RegularLoop(center, radius, numVertices))
+	}
+	return loops
+}
+
+func checkPolygonInvalid(t *testing.T, label string, loops []*Loop, initOriented bool, f modifyPolygonFunc) {
+	shuffleLoops(loops)
+	var polygon *Polygon
+	if initOriented {
+		// TODO(roberts): Uncomment when oriented loops support is added.
+		//polygon = PolygonFromOrientedLoops(loops)
+	} else {
+		polygon = PolygonFromLoops(loops)
+	}
+
+	if f != nil {
+		f(polygon)
+	}
+
+	err := polygon.validate()
+	if err == nil {
+		t.Errorf("%s: %v.validate() = nil, want non-nil", label, polygon)
+	}
+}
+
+func TestPolygonUnitializedIsValid(t *testing.T) {
+	p := &Polygon{}
+	if !p.IsValid() {
+		t.Errorf("an uninitialized polygon should pass the validation checks.")
+	}
+}
+
+func TestPolygonIsValidLoopNestingInvalid(t *testing.T) {
+	const iters = 1000
+
+	for iter := 0; iter < iters; iter++ {
+		loops := generatePolygonConcentricTestLoops(2+randomUniformInt(4), 3)
+		// Randomly invert all the loops in order to generate cases where the
+		// outer loop encompasses almost the entire sphere. This tests different
+		// code paths because bounding box checks are not as useful.
+		if oneIn(2) {
+			for _, loop := range loops {
+				reverseLoopVertices(loop)
+			}
+		}
+		checkPolygonInvalid(t, "invalid nesting", loops, false, polygonSetInvalidLoopNesting)
+	}
+}
+
+// TODO(roberts): Implement remaining validity tests.
+// IsValidTests
+//   TestUnitLength
+//   TestVertexCount
+//   TestDuplicateVertex
+//   TestSelfIntersection
+//   TestEmptyLoop
+//   TestFullLoop
+//   TestLoopsCrossing
+//   TestDuplicateEdge
+//   TestInconsistentOrientations
+//   TestLoopDepthNegative
+//   TestLoopNestingInvalid
+//   TestFuzzTest
 
 func TestPolygonParent(t *testing.T) {
 	p1 := PolygonFromLoops([]*Loop{&Loop{}})
@@ -943,7 +1061,6 @@ func TestPolygonRelations(t *testing.T) {
 // TestMultipleInit
 // TestInitSingleLoop
 // TestCellConstructorAndContains
-// TestUninitializedIsValid
 // TestOverlapFractions
 // TestOriginNearPole
 // TestTestApproxContainsAndDisjoint
@@ -969,20 +1086,6 @@ func TestPolygonRelations(t *testing.T) {
 // TestInitToSnappedIsValid_D
 // TestProject
 // TestDistance
-//
-// IsValidTests
-//   TestUnitLength
-//   TestVertexCount
-//   TestDuplicateVertex
-//   TestSelfIntersection
-//   TestEmptyLoop
-//   TestFullLoop
-//   TestLoopsCrossing
-//   TestDuplicateEdge
-//   TestInconsistentOrientations
-//   TestLoopDepthNegative
-//   TestLoopNestingInvalid
-//   TestFuzzTest
 //
 // PolygonSimplifier
 //   TestNoSimplification

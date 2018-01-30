@@ -330,6 +330,84 @@ func FullPolygon() *Polygon {
 	return ret
 }
 
+// IsValid reports whether this is a valid polygon (including checking whether all
+// the loops are themselves valid).
+func (p *Polygon) IsValid() bool {
+	// TODO(roberts): If we want to expose the error, add a Validate() error method.
+	return p.validate() == nil
+}
+
+// validate reports any error if this is not a valid polygon.
+//
+// Note that in the returned error messages, loops that represent holes have their
+// edges numbered in reverse order, starting from the last vertex of the loop.
+func (p *Polygon) validate() error {
+	for i, l := range p.loops {
+		// Check for loop errors that don't require building a ShapeIndex.
+		if err := l.findValidationErrorNoIndex(); err != nil {
+			return fmt.Errorf("loop %d: %v", i, err)
+		}
+		// Check that no loop is empty, and that the full loop only appears in the
+		// full polygon.
+		if l.IsEmpty() {
+			return fmt.Errorf("loop %d: empty loops are not allowed", i)
+		}
+		if l.IsFull() && len(p.loops) > 1 {
+			return fmt.Errorf("loop %d: full loop appears in non-full polygon", i)
+		}
+	}
+
+	// TODO(roberts): Uncomment the remaining checks when they are completed.
+
+	// Check for loop self-intersections and loop pairs that cross
+	// (including duplicate edges and vertices).
+	// if findSelfIntersection(p.index) {
+	//	return fmt.Errorf("polygon has loop pairs that cross")
+	// }
+
+	// Check whether initOriented detected inconsistent loop orientations.
+	// if p.hasInconsistentLoopOrientations {
+	// 	return fmt.Errorf("inconsistent loop orientations detected")
+	// }
+
+	// Finally, verify the loop nesting hierarchy.
+	return p.findLoopNestingError()
+}
+
+// findLoopNestingError reports if there is an error in the loop nesting hierarchy.
+func (p *Polygon) findLoopNestingError() error {
+	// First check that the loop depths make sense.
+	lastDepth := -1
+	for i, l := range p.loops {
+		depth := l.depth
+		if depth < 0 || depth > lastDepth+1 {
+			return fmt.Errorf("loop %d: invalid loop depth (%d)", i, depth)
+		}
+		lastDepth = depth
+	}
+	// Then check that they correspond to the actual loop nesting.  This test
+	// is quadratic in the number of loops but the cost per iteration is small.
+	for i, l := range p.loops {
+		last := p.LastDescendant(i)
+		for j, l2 := range p.loops {
+			if i == j {
+				continue
+			}
+			nested := (j >= i+1) && (j <= last)
+			const reverseB = false
+
+			if l.containsNonCrossingBoundary(l2, reverseB) != nested {
+				nestedStr := ""
+				if !nested {
+					nestedStr = "not "
+				}
+				return fmt.Errorf("invalid nesting: loop %d should %scontain loop %d", i, nestedStr, j)
+			}
+		}
+	}
+	return nil
+}
+
 // IsEmpty reports whether this is the special "empty" polygon (consisting of no loops).
 func (p *Polygon) IsEmpty() bool {
 	return len(p.loops) == 0
@@ -1009,7 +1087,6 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 }
 
 // TODO(roberts): Differences from C++
-// IsValid
 // Area
 // Centroid
 // SnapLevel
