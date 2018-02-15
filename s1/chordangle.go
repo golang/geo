@@ -161,9 +161,10 @@ func (c ChordAngle) Predecessor() ChordAngle {
 // the true distance after the points are projected to lie exactly on the sphere.
 func (c ChordAngle) MaxPointError() float64 {
 	// There is a relative error of (2.5*dblEpsilon) when computing the squared
-	// distance, plus an absolute error of (16 * dblEpsilon**2) because the
-	// lengths of the input points may differ from 1 by up to (2*dblEpsilon) each.
-	return 2.5*dblEpsilon*float64(c) + 16*dblEpsilon*dblEpsilon
+	// distance, plus a relative error of 2 * dblEpsilon, plus an absolute error
+	// of (16 * dblEpsilon**2) because the lengths of the input points may differ
+	// from 1 by up to (2*dblEpsilon) each. (This is the maximum error in Normalize).
+	return 4.5*dblEpsilon*float64(c) + 16*dblEpsilon*dblEpsilon
 }
 
 // MaxAngleError returns the maximum error for a ChordAngle constructed

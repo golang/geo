@@ -400,13 +400,13 @@ func TestEdgeDistanceMinUpdateDistanceMaxError(t *testing.T) {
 		maxErr s1.Angle
 	}{
 		{0, 1.5e-15},
-		{1e-8, 1e-22},
-		{1e-5, 1e-20},
-		{0.05, 1e-16},
-		{math.Pi/2 - 1e-8, 1e-15},
-		{math.Pi / 2, 1e-15},
-		{math.Pi/2 + 1e-8, 1e-15},
-		{math.Pi - 1e-5, 1e-10},
+		{1e-8, 1e-15},
+		{1e-5, 1e-15},
+		{0.05, 1e-15},
+		{math.Pi/2 - 1e-8, 2e-15},
+		{math.Pi / 2, 2e-15},
+		{math.Pi/2 + 1e-8, 2e-15},
+		{math.Pi - 1e-5, 2e-10},
 		{math.Pi, 0},
 	}
 
