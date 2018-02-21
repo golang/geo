@@ -147,14 +147,14 @@ type MercatorProjection struct {
 	fromRadians float64 // Multiplier to convert coordinates from radians.
 }
 
-// NewMercatorProjection constructs a Mercator projection where "x" corresponds to
-// longitude in the range [-maxX, maxX], and "y" corresponds to latitude and can be
-// any real number. The horizontal and vertical scales are equal locally.
-func NewMercatorProjection(maxX float64) Projection {
+// NewMercatorProjection constructs a Mercator projection with the given maximum
+// longitude axis value corresponding to a range of [-maxLng, maxLng].
+// The horizontal and vertical axes are scaled equally.
+func NewMercatorProjection(maxLng float64) Projection {
 	return &MercatorProjection{
-		xWrap:       2 * maxX,
-		toRadians:   math.Pi / maxX,
-		fromRadians: maxX / math.Pi,
+		xWrap:       2 * maxLng,
+		toRadians:   math.Pi / maxLng,
+		fromRadians: maxLng / math.Pi,
 	}
 }
 
