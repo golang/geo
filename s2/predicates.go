@@ -407,20 +407,175 @@ func symbolicallyPerturbedSign(a, b, c, bCrossC r3.PreciseVector) Direction {
 	return CounterClockwise // dc.Z * db.Y * da.X
 }
 
+// CompareDistances returns -1, 0, or +1 according to whether AX < BX, A == B,
+// or AX > BX respectively. Distances are measured with respect to the positions
+// of X, A, and B as though they were reprojected to lie exactly on the surface of
+// the unit sphere. Furthermore, this method uses symbolic perturbations to
+// ensure that the result is non-zero whenever A != B, even when AX == BX
+// exactly, or even when A and B project to the same point on the sphere.
+// Such results are guaranteed to be self-consistent, i.e. if AB < BC and
+// BC < AC, then AB < AC.
+func CompareDistances(x, a, b Point) int {
+	// We start by comparing distances using dot products (i.e., cosine of the
+	// angle), because (1) this is the cheapest technique, and (2) it is valid
+	// over the entire range of possible angles. (We can only use the sin^2
+	// technique if both angles are less than 90 degrees or both angles are
+	// greater than 90 degrees.)
+	sign := triageCompareCosDistances(x, a, b)
+	if sign != 0 {
+		return sign
+	}
+
+	// Optimization for (a == b) to avoid falling back to exact arithmetic.
+	if a == b {
+		return 0
+	}
+
+	// It is much better numerically to compare distances using cos(angle) if
+	// the distances are near 90 degrees and sin^2(angle) if the distances are
+	// near 0 or 180 degrees. We only need to check one of the two angles when
+	// making this decision because the fact that the test above failed means
+	// that angles "a" and "b" are very close together.
+	cosAX := a.Dot(x.Vector)
+	if cosAX > 1/math.Sqrt2 {
+		// Angles < 45 degrees.
+		sign = triageCompareSin2Distances(x, a, b)
+	} else if cosAX < -1/math.Sqrt2 {
+		// Angles > 135 degrees. sin^2(angle) is decreasing in this range.
+		sign = -triageCompareSin2Distances(x, a, b)
+	}
+	// C++ adds an additional check here using 80-bit floats.
+	// This is skipped in Go because we only have 32 and 64 bit floats.
+
+	if sign != 0 {
+		return sign
+	}
+
+	sign = exactCompareDistances(r3.PreciseVectorFromVector(x.Vector), r3.PreciseVectorFromVector(a.Vector), r3.PreciseVectorFromVector(b.Vector))
+	if sign != 0 {
+		return sign
+	}
+	return symbolicCompareDistances(x, a, b)
+}
+
+// cosDistance returns cos(XY) where XY is the angle between X and Y, and the
+// maximum error amount in the result. This requires X and Y be normalized.
+func cosDistance(x, y Point) (cos, err float64) {
+	cos = x.Dot(y.Vector)
+	return cos, 9.5*dblEpsilon*math.Abs(cos) + 1.5*dblEpsilon
+}
+
+// sin2Distance returns sin**2(XY), where XY is the angle between X and Y,
+// and the maximum error amount in the result. This requires X and Y be normalized.
+func sin2Distance(x, y Point) (sin2, err float64) {
+	// The (x-y).Cross(x+y) trick eliminates almost all of error due to x
+	// and y being not quite unit length. This method is extremely accurate
+	// for small distances; the *relative* error in the result is O(dblEpsilon) for
+	// distances as small as dblEpsilon.
+	n := x.Sub(y.Vector).Cross(x.Add(y.Vector))
+	sin2 = 0.25 * n.Norm2()
+	err = ((21+4*math.Sqrt(3))*dblEpsilon*sin2 +
+		32*math.Sqrt(3)*dblEpsilon*dblEpsilon*math.Sqrt(sin2) +
+		768*dblEpsilon*dblEpsilon*dblEpsilon*dblEpsilon)
+	return sin2, err
+}
+
+// triageCompareCosDistances returns -1, 0, or +1 according to whether AX < BX,
+// A == B, or AX > BX by comparing the distances between them using cosDistance.
+func triageCompareCosDistances(x, a, b Point) int {
+	cosAX, cosAXerror := cosDistance(a, x)
+	cosBX, cosBXerror := cosDistance(b, x)
+	diff := cosAX - cosBX
+	err := cosAXerror + cosBXerror
+	if diff > err {
+		return -1
+	}
+	if diff < -err {
+		return 1
+	}
+	return 0
+}
+
+// triageCompareSin2Distances returns -1, 0, or +1 according to whether AX < BX,
+// A == B, or AX > BX by comparing the distances between them using sin2Distance.
+func triageCompareSin2Distances(x, a, b Point) int {
+	sin2AX, sin2AXerror := sin2Distance(a, x)
+	sin2BX, sin2BXerror := sin2Distance(b, x)
+	diff := sin2AX - sin2BX
+	err := sin2AXerror + sin2BXerror
+	if diff > err {
+		return 1
+	}
+	if diff < -err {
+		return -1
+	}
+	return 0
+}
+
+// exactCompareDistances returns -1, 0, or 1 after comparing using the values as
+// PreciseVectors.
+func exactCompareDistances(x, a, b r3.PreciseVector) int {
+	// This code produces the same result as though all points were reprojected
+	// to lie exactly on the surface of the unit sphere. It is based on testing
+	// whether x.Dot(a.Normalize()) < x.Dot(b.Normalize()), reformulated
+	// so that it can be evaluated using exact arithmetic.
+	cosAX := x.Dot(a)
+	cosBX := x.Dot(b)
+
+	// If the two values have different signs, we need to handle that case now
+	// before squaring them below.
+	aSign := cosAX.Sign()
+	bSign := cosBX.Sign()
+	if aSign != bSign {
+		// If cos(AX) > cos(BX), then AX < BX.
+		if aSign > bSign {
+			return -1
+		}
+		return 1
+	}
+	cosAX2 := new(big.Float).Mul(cosAX, cosAX)
+	cosBX2 := new(big.Float).Mul(cosBX, cosBX)
+	cmp := new(big.Float).Sub(cosBX2.Mul(cosBX2, a.Norm2()), cosAX2.Mul(cosAX2, b.Norm2()))
+	return aSign * cmp.Sign()
+}
+
+// symbolicCompareDistances returns -1, 0, or +1 given three points such that AX == BX
+// (exactly) according to whether AX < BX, AX == BX, or AX > BX after symbolic
+// perturbations are taken into account.
+func symbolicCompareDistances(x, a, b Point) int {
+	// Our symbolic perturbation strategy is based on the following model.
+	// Similar to "simulation of simplicity", we assign a perturbation to every
+	// point such that if A < B, then the symbolic perturbation for A is much,
+	// much larger than the symbolic perturbation for B. We imagine that
+	// rather than projecting every point to lie exactly on the unit sphere,
+	// instead each point is positioned on its own tiny pedestal that raises it
+	// just off the surface of the unit sphere. This means that the distance AX
+	// is actually the true distance AX plus the (symbolic) heights of the
+	// pedestals for A and X. The pedestals are infinitesmally thin, so they do
+	// not affect distance measurements except at the two endpoints. If several
+	// points project to exactly the same point on the unit sphere, we imagine
+	// that they are placed on separate pedestals placed close together, where
+	// the distance between pedestals is much, much less than the height of any
+	// pedestal. (There are a finite number of Points, and therefore a finite
+	// number of pedestals, so this is possible.)
+	//
+	// If A < B, then A is on a higher pedestal than B, and therefore AX > BX.
+	switch a.Cmp(b.Vector) {
+	case -1:
+		return 1
+	case 1:
+		return -1
+	default:
+		return 0
+	}
+}
+
 // TODO(roberts): Differences from C++
-// CompareDistance(s)
+// CompareDistance
 // CompareEdgeDistance
 // CompareEdgeDirections
 // EdgeCircumcenterSign
 // GetVoronoiSiteExclusion
-// GetCosDistance
-// GetSinDistance
-// GetSin2Distance
-// TriageCompareCosDistances
-// ExactCompareDistances
-// SymbolicCompareDistances
-// CompareSin2Distances
-// TriageCompareSin2Distance
 // GetClosestVertex
 // TriageCompareLineSin2Distance
 // TriageCompareLineCos2Distance

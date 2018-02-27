@@ -15,10 +15,12 @@
 package s2
 
 import (
+	"fmt"
 	"math"
 	"testing"
 
 	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
 
 func TestPredicatesSign(t *testing.T) {
@@ -415,6 +417,320 @@ func TestPredicatesSymbolicallyPerturbedSign(t *testing.T) {
 		}
 		if got := expensiveSign(test.a, test.c, test.b); got != -test.want {
 			t.Errorf("expensiveSign(%v, %v, %v) = %v, want %v", test.a, test.c, test.b, got, -test.want)
+		}
+	}
+}
+
+// compareDistancesFunc defines a type of function that can be used in the compare distances tests.
+type compareDistancesFunc func(x, a, b Point) int
+
+// triageCompareMinusSin2Distance wrapper to invert X for use when angles > 90.
+func triageCompareMinusSin2Distance(x, a, b Point) int {
+	return -triageCompareSin2Distances(Point{x.Mul(-1)}, a, b)
+}
+
+type precision int
+
+const (
+	doublePrecision precision = iota
+	exactPrecision
+	symbolicPrecision
+)
+
+func (p precision) String() string {
+	switch p {
+	case doublePrecision:
+		return "double"
+	case exactPrecision:
+		return "exact"
+	case symbolicPrecision:
+		return "symbolic"
+	default:
+		panic(fmt.Sprintf("invalid precision value %d", p))
+	}
+}
+
+func TestPredicatesCompareDistancesCoverage(t *testing.T) {
+	// This test attempts to exercise all the code paths in all precisions.
+	tests := []struct {
+		x, a, b  Point
+		distFunc compareDistancesFunc
+		wantSign int
+		wantPrec precision
+	}{
+		// Test triageCompareSin2Distances.
+		{
+			x:        PointFromCoords(1, 1, 1),
+			a:        PointFromCoords(1, 1-1e-15, 1),
+			b:        PointFromCoords(1, 1, 1+2e-15),
+			distFunc: triageCompareSin2Distances,
+			wantSign: -1,
+			wantPrec: doublePrecision,
+		},
+		{
+			x:        PointFromCoords(1, 1, 0),
+			a:        PointFromCoords(1, 1-1e-15, 1e-21),
+			b:        PointFromCoords(1, 1-1e-15, 0),
+			distFunc: triageCompareSin2Distances,
+			wantSign: 1,
+			wantPrec: doublePrecision,
+		},
+		{
+			x:        Point{r3.Vector{2, 0, 0}},
+			a:        Point{r3.Vector{2, -1, 0}},
+			b:        Point{r3.Vector{2, 1, 1e-100}},
+			distFunc: triageCompareSin2Distances,
+			wantSign: -1,
+			wantPrec: exactPrecision,
+		},
+		{
+			x:        PointFromCoords(1, 0, 0),
+			a:        PointFromCoords(1, -1, 0),
+			b:        PointFromCoords(1, 1, 0),
+			distFunc: triageCompareSin2Distances,
+			wantSign: 1,
+			wantPrec: symbolicPrecision,
+		},
+		{
+			x:        PointFromCoords(1, 0, 0),
+			a:        PointFromCoords(1, 0, 0),
+			b:        PointFromCoords(1, 0, 0),
+			distFunc: triageCompareSin2Distances,
+			wantSign: 0,
+			wantPrec: symbolicPrecision,
+		},
+
+		// triageCompareCosDistances
+		{
+			x:        PointFromCoords(1, 1, 1),
+			a:        PointFromCoords(1, -1, 0),
+			b:        PointFromCoords(-1, 1, 3e-15),
+			distFunc: triageCompareCosDistances,
+			wantSign: 1,
+			wantPrec: doublePrecision,
+		},
+		{
+			x:        PointFromCoords(1, 0, 0),
+			a:        PointFromCoords(1, 1e-30, 0),
+			b:        PointFromCoords(-1, 1e-40, 0),
+			wantSign: -1,
+			wantPrec: doublePrecision,
+			distFunc: triageCompareCosDistances,
+		},
+		{
+			x:        PointFromCoords(1, 1, 1),
+			a:        PointFromCoords(1, -1, 0),
+			b:        PointFromCoords(-1, 1, 1e-100),
+			wantSign: 1,
+			wantPrec: exactPrecision,
+			distFunc: triageCompareCosDistances,
+		},
+		{
+			x:        PointFromCoords(1, 1, 1),
+			a:        PointFromCoords(1, -1, 0),
+			b:        PointFromCoords(-1, 1, 0),
+			wantSign: -1,
+			wantPrec: symbolicPrecision,
+			distFunc: triageCompareCosDistances,
+		},
+		{
+			x:        PointFromCoords(1, 1, 1),
+			a:        PointFromCoords(1, -1, 0),
+			b:        PointFromCoords(1, -1, 0),
+			distFunc: triageCompareCosDistances,
+			wantSign: 0,
+			wantPrec: symbolicPrecision,
+		},
+		// Test triageCompareSin2Distances using distances greater than 90 degrees.
+		{
+			x:        PointFromCoords(1, 1, 0),
+			a:        PointFromCoords(-1, -1+1e-15, 0),
+			b:        PointFromCoords(-1, -1, 0),
+			distFunc: triageCompareMinusSin2Distance,
+			wantSign: -1,
+			wantPrec: doublePrecision,
+		},
+		{
+			x:        PointFromCoords(-1, -1, 0),
+			a:        PointFromCoords(1, 1-1e-15, 0),
+			b:        PointFromCoords(1, 1-1e-15, 1e-21),
+			distFunc: triageCompareMinusSin2Distance,
+			wantSign: 1,
+			wantPrec: doublePrecision,
+		},
+		{
+			x:        PointFromCoords(-1, -1, 0),
+			a:        PointFromCoords(2, 1, 0),
+			b:        PointFromCoords(2, 1, 1e-30),
+			distFunc: triageCompareMinusSin2Distance,
+			wantSign: 1,
+			wantPrec: exactPrecision,
+		},
+		{
+			x:        PointFromCoords(-1, -1, 0),
+			a:        PointFromCoords(2, 1, 0),
+			b:        PointFromCoords(1, 2, 0),
+			distFunc: triageCompareMinusSin2Distance,
+			wantSign: -1,
+			wantPrec: symbolicPrecision,
+		},
+	}
+
+	for _, test := range tests {
+		x := test.x
+		a := test.a
+		b := test.b
+
+		// Verifies that CompareDistances(x, a, b) == wantSign, and furthermore
+		// checks that the minimum required precision is wantPrec when the
+		// distance calculation method for distFunc is used.
+
+		// Don't normalize the arguments unless necessary (to allow testing points
+		// that differ only in magnitude).
+		if !x.IsUnit() {
+			x = Point{x.Normalize()}
+		}
+		if !a.IsUnit() {
+			a = Point{a.Normalize()}
+		}
+		if !b.IsUnit() {
+			b = Point{b.Normalize()}
+		}
+
+		sign := test.distFunc(x, a, b)
+		exactSign := exactCompareDistances(r3.PreciseVectorFromVector(x.Vector), r3.PreciseVectorFromVector(a.Vector), r3.PreciseVectorFromVector(b.Vector))
+
+		actualSign := exactSign
+		if exactSign == 0 {
+			actualSign = symbolicCompareDistances(x, a, b)
+		}
+
+		// Check that the signs are correct (if non-zero), and also that if sign
+		// is non-zero then so are the rest, etc.
+		if test.wantSign != actualSign {
+			t.Errorf("actual sign = %v, want %d", actualSign, test.wantSign)
+		}
+		if exactSign != 0 && exactSign != actualSign {
+			t.Errorf("symbolic comparison was used, got sign %v, want %v", actualSign, exactSign)
+		}
+
+		var actualPrec precision
+		if sign != 0 {
+			actualPrec = doublePrecision
+		} else if exactSign != 0 {
+			actualPrec = exactPrecision
+		} else {
+			actualPrec = symbolicPrecision
+		}
+
+		if test.wantPrec != actualPrec {
+			t.Errorf("got precision %s, want %s", test.wantPrec, actualPrec)
+		}
+
+		// Make sure that the top-level function returns the expected result.
+		if got := CompareDistances(x, a, b); got != test.wantSign {
+			t.Errorf("CompareDistances(%v, %v, %v) = %v, want %v", x, a, b, got, test.wantSign)
+		}
+
+		// Check that reversing the arguments negates the result.
+		if got := CompareDistances(x, b, a); got != -test.wantSign {
+			t.Errorf("CompareDistances(%v, %v, %v) = %v, want %v", x, b, a, got, -test.wantSign)
+		}
+	}
+}
+
+// testCompareDistancesConsistency checks that the result at one level of precision
+// is consistent with the result at the next higher level of precision. It returns
+// the minimum precision that yielded a non-zero result.
+func testCompareDistancesConsistency(t *testing.T, x, a, b Point, distFunc compareDistancesFunc) precision {
+	dblSign := distFunc(x, a, b)
+	exactSign := exactCompareDistances(r3.PreciseVectorFromVector(x.Vector), r3.PreciseVectorFromVector(a.Vector), r3.PreciseVectorFromVector(b.Vector))
+	if dblSign != 0 {
+		if exactSign != dblSign {
+			t.Errorf("triageCompareDistances(%v, %v, %v) should be consistent with exactCompareDistances. got %v, want %v", x, a, b, dblSign, exactSign)
+		}
+		return symbolicPrecision
+	}
+
+	if exactSign != 0 {
+		if got := CompareDistances(x, a, b); exactSign != got {
+			t.Errorf("exactCompareDistances(%v, %v, %v) should have symbolicCompareDistance result agree. got %v, want %v", x, a, b, got, exactSign)
+		}
+		return exactPrecision
+	}
+
+	// Unlike the other methods, SymbolicCompareDistances has the
+	// precondition that the exact sign must be zero.
+	symbolicSign := symbolicCompareDistances(x, a, b)
+	if got, want := CompareDistances(x, a, b), symbolicSign; got != want {
+		t.Errorf("symbolicCompareDistances(%v, %v, %v) should be consistent with CompareDistances. got %v, want %v", x, a, b, got, want)
+	}
+	return symbolicPrecision
+}
+
+// choosePointNearPlaneOrAxes returns a random Point that is often near the
+// intersection of one of the coodinates planes or coordinate axes with the unit
+// sphere. (It is possible to represent very small perturbations near such points.)
+func choosePointNearPlaneOrAxes() Point {
+	p := randomPoint()
+	if oneIn(3) {
+		p.X *= math.Pow(1e-50, randomFloat64())
+	}
+	if oneIn(3) {
+		p.Y *= math.Pow(1e-50, randomFloat64())
+	}
+	if oneIn(3) {
+		p.Z *= math.Pow(1e-50, randomFloat64())
+	}
+	return Point{p.Normalize()}
+}
+
+func TestPredicatesCompareDistancesConsistency(t *testing.T) {
+	const iters = 1000
+
+	// This test chooses random point pairs that are nearly equidistant from a
+	// target point, and then checks that the answer given by a method at one
+	// level of precision is consistent with the answer given at the next higher
+	// level of precision.
+	//
+	// The code below checks that the Cos, Sin2, and MinusSin2 methods
+	// are consistent across their entire valid range of inputs, and also
+	// simulates the logic in CompareDistance that chooses which method to use.
+
+	// Test a specific case for equidistant points.
+	if got, want := testCompareDistancesConsistency(t, PointFromCoords(1, 0, 0), PointFromCoords(0, -1, 0), PointFromCoords(0, 1, 0), triageCompareCosDistances), symbolicPrecision; got != want {
+		t.Errorf("CompareDistances with 2 equidistant points didn't use symbolic compare, got %q want %q", got, want)
+	}
+
+	for iter := 0; iter < iters; iter++ {
+		x := choosePointNearPlaneOrAxes()
+		dir := choosePointNearPlaneOrAxes()
+		r := s1.Angle(math.Pi / 2 * math.Pow(1e-30, randomFloat64()))
+		if oneIn(2) {
+			r = s1.Angle(math.Pi/2) - r
+		}
+		if oneIn(2) {
+			r = s1.Angle(math.Pi/2) + r
+		}
+
+		a := InterpolateAtDistance(r, x, dir)
+		b := InterpolateAtDistance(r, x, Point{dir.Mul(-1)})
+		testCompareDistancesConsistency(t, x, a, b, triageCompareCosDistances)
+
+		// The Sin2 method is only valid if both distances are less than 90
+		// degrees, and similarly for the MinusSin2 method. (In the actual
+		// implementation these methods are only used if both distances are less
+		// than 45 degrees or greater than 135 degrees respectively.)
+		if r.Radians() < math.Pi/2-1e-14 {
+			prec := testCompareDistancesConsistency(t, x, a, b, triageCompareSin2Distances)
+			if r.Degrees() < 45 {
+				if a == b && symbolicPrecision != prec {
+					t.Errorf("CompareDistances(%v, %v, %v) method for degenerate points = %s, want %s", x, a, b, prec, symbolicPrecision)
+				}
+			}
+		} else if r.Radians() > math.Pi/2+1e-14 {
+			// Use minus sin for > 45.
+			testCompareDistancesConsistency(t, x, a, b, triageCompareMinusSin2Distance)
 		}
 	}
 }
