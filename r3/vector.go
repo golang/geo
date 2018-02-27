@@ -42,10 +42,11 @@ func (v Vector) Norm2() float64 { return v.Dot(v) }
 
 // Normalize returns a unit vector in the same direction as v.
 func (v Vector) Normalize() Vector {
-	if v == (Vector{0, 0, 0}) {
-		return v
+	n2 := v.Norm2()
+	if n2 == 0 {
+		return Vector{0, 0, 0}
 	}
-	return v.Mul(1 / v.Norm())
+	return v.Mul(1 / math.Sqrt(n2))
 }
 
 // IsUnit returns whether this vector is of approximately unit length.
