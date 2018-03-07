@@ -317,9 +317,176 @@ func readLoops(filename string) ([]*Loop, error) {
 	return loops, nil
 }
 
+// fractal is a simple type that generates "Koch snowflake" fractals (see Wikipedia
+// for an introduction). There is an option to control the fractal dimension
+// (between 1.0 and 2.0); values between 1.02 and 1.50 are reasonable simulations
+// of various coastlines. The default dimension (about 1.26) corresponds to the
+// standard Koch snowflake. (The west coast of Britain has a fractal dimension
+// of approximately 1.25.)
+//
+// The fractal is obtained by starting with an equilateral triangle and
+// recursively subdividing each edge into four segments of equal length.
+// Therefore the shape at level "n" consists of 3*(4**n) edges. Multi-level
+// fractals are also supported: if you set MinLevel to a non-negative
+// value, then the recursive subdivision has an equal probability of
+// stopping at any of the levels between the given min and max (inclusive).
+// This yields a fractal where the perimeter of the original triangle is
+// approximately equally divided between fractals at the various possible
+// levels. If there are k distinct levels {min,..,max}, the expected number
+// of edges at each level "i" is approximately 3*(4**i)/k.
+type fractal struct {
+	maxLevel int
+	// minLevel defines the minimum subdivision level of the fractal
+	// A min level of 0 should be avoided since this creates a
+	// significant chance that none of the edges will end up subdivided.
+	minLevel int
+
+	// dimension of the fractal. A value of approximately 1.26 corresponds
+	// to the stardard Koch curve. The value must lie in the range [1.0, 2.0).
+	dimension float64
+
+	// The ratio of the sub-edge length to the original edge length at each
+	// subdivision step.
+	edgeFraction float64
+
+	// The distance from the original edge to the middle vertex at each
+	// subdivision step, as a fraction of the original edge length.
+	offsetFraction float64
+}
+
+// newFractal returns a new instance of the fractal type with appropriate defaults.
+func newFractal() *fractal {
+	return &fractal{
+		maxLevel:       -1,
+		minLevel:       -1,
+		dimension:      math.Log(4) / math.Log(3), // standard Koch curve
+		edgeFraction:   0,
+		offsetFraction: 0,
+	}
+}
+
+// setLevelForApproxMinEdges sets the min level to produce approximately the
+// given number of edges. The values are rounded to a nearby value of 3*(4**n).
+func (f *fractal) setLevelForApproxMinEdges(minEdges int) {
+	// Map values in the range [3*(4**n)/2, 3*(4**n)*2) to level n.
+	f.minLevel = int(math.Round(0.5 * math.Log2(float64(minEdges)/3)))
+}
+
+// setLevelForApproxMaxEdges sets the max level to produce approximately the
+// given number of edges. The values are rounded to a nearby value of 3*(4**n).
+func (f *fractal) setLevelForApproxMaxEdges(maxEdges int) {
+	// Map values in the range [3*(4**n)/2, 3*(4**n)*2) to level n.
+	f.maxLevel = int(math.Round(0.5 * math.Log2(float64(maxEdges)/3)))
+}
+
+// minRadiusFactor returns a lower bound on the ratio (Rmin / R), where "R" is the
+// radius passed to makeLoop and Rmin is the minimum distance from the
+// fractal boundary to its center, where all distances are measured in the
+// tangent plane at the fractal's center. This can be used to inscribe
+// another geometric figure within the fractal without intersection.
+func (f *fractal) minRadiusFactor() float64 {
+	// The minimum radius is attained at one of the vertices created by the
+	// first subdivision step as long as the dimension is not too small (at
+	// least minDimensionForMinRadiusAtLevel1, see below). Otherwise we fall
+	// back on the incircle radius of the original triangle, which is always a
+	// lower bound (and is attained when dimension = 1).
+	//
+	// The value below was obtained by letting AE be an original triangle edge,
+	// letting ABCDE be the corresponding polyline after one subdivision step,
+	// and then letting BC be tangent to the inscribed circle at the center of
+	// the fractal O. This gives rise to a pair of similar triangles whose edge
+	// length ratios can be used to solve for the corresponding "edge fraction".
+	// This method is slightly conservative because it is computed using planar
+	// rather than spherical geometry. The value below is equal to
+	// -math.Log(4)/math.Log((2 + math.Cbrt(2) - math.Cbrt(4))/6).
+	const minDimensionForMinRadiusAtLevel1 = 1.0852230903040407
+	if f.dimension >= minDimensionForMinRadiusAtLevel1 {
+		return math.Sqrt(1 + 3*f.edgeFraction*(f.edgeFraction-1))
+	}
+	return 0.5
+}
+
+// maxRadiusFactor returns the ratio (Rmax / R), where "R" is the radius passed
+// to makeLoop and Rmax is the maximum distance from the fractal boundary
+// to its center, where all distances are measured in the tangent plane at
+// the fractal's center. This can be used to inscribe the fractal within
+// some other geometric figure without intersection.
+func (f *fractal) maxRadiusFactor() float64 {
+	// The maximum radius is always attained at either an original triangle
+	// vertex or at a middle vertex from the first subdivision step.
+	return math.Max(1.0, f.offsetFraction*math.Sqrt(3)+0.5)
+}
+
+// r2VerticesHelper recursively subdivides the edge to the desired level given
+// the two endpoints (v0,v4) of an edge, and returns all vertices of the resulting
+// curve up to but not including the endpoint v4.
+func (f *fractal) r2VerticesHelper(v0, v4 r2.Point, level int) []r2.Point {
+	if level >= f.minLevel && oneIn(f.maxLevel-level+1) {
+		// stop at this level
+		return []r2.Point{v0}
+	}
+
+	var vertices []r2.Point
+
+	// Otherwise compute the intermediate vertices v1, v2, and v3.
+	dir := v4.Sub(v0)
+	v1 := v0.Add(dir.Mul(f.edgeFraction))
+	v2 := v0.Add(v4).Mul(0.5).Sub(dir.Ortho().Mul(f.offsetFraction))
+	v3 := v4.Sub(dir.Mul(f.edgeFraction))
+
+	// And recurse on the four sub-edges.
+	vertices = append(vertices, f.r2VerticesHelper(v0, v1, level+1)...)
+	vertices = append(vertices, f.r2VerticesHelper(v1, v2, level+1)...)
+	vertices = append(vertices, f.r2VerticesHelper(v2, v3, level+1)...)
+	vertices = append(vertices, f.r2VerticesHelper(v3, v4, level+1)...)
+
+	return vertices
+}
+
+// generateR2Vertices returns the set of r2 plane vertices for the fractal
+// based on its current settings.
+func (f *fractal) generateR2Vertices() []r2.Point {
+	var vertices []r2.Point
+
+	// The Koch "snowflake" consists of three Koch curves whose initial edges
+	// form an equilateral triangle.
+	v0 := r2.Point{1.0, 0.0}
+	v1 := r2.Point{-0.5, math.Sqrt(3) / 2}
+	v2 := r2.Point{-0.5, -math.Sqrt(3) / 2}
+	vertices = append(vertices, f.r2VerticesHelper(v0, v1, 0)...)
+	vertices = append(vertices, f.r2VerticesHelper(v1, v2, 0)...)
+	vertices = append(vertices, f.r2VerticesHelper(v2, v0, 0)...)
+
+	return vertices
+}
+
+// makeLoop returns a fractal loop centered around the z-axis of the given
+// coordinate frame, with the first vertex in the direction of the
+// positive x-axis. In order to avoid self-intersections, the fractal is
+// generated by first drawing it in a 2D tangent plane to the unit sphere
+// (touching at the fractal's center point) and then projecting the edges
+// onto the sphere. This has the side effect of shrinking the fractal
+// slightly compared to its nominal radius.
+func (f *fractal) makeLoop(frame *matrix3x3, nominalRadius s1.Angle) *Loop {
+	// update dependent values before making the loop.
+	if f.minLevel < 0 || f.minLevel > f.maxLevel {
+		f.minLevel = f.maxLevel
+	}
+
+	f.edgeFraction = math.Pow(4.0, -1.0/f.dimension)
+	f.offsetFraction = math.Sqrt(f.edgeFraction - 0.25)
+
+	r2pts := f.generateR2Vertices()
+	verts := make([]Point, 0, len(r2pts))
+	r := nominalRadius.Radians()
+
+	for _, pt := range r2pts {
+		verts = append(verts, fromFrame(*frame, PointFromCoords(pt.X*r, pt.Y*r, 1)))
+	}
+	return LoopFromPoints(verts)
+}
+
 // TODO(roberts): Items remaining to port:
-// AppendLoopVertices
-// Fractal generation types
 // CheckCovering
 // CheckResultSet
 // CheckDistanceResults
