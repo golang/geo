@@ -427,7 +427,7 @@ func TestEdgeDistanceMinUpdateDistanceMaxError(t *testing.T) {
 	}
 }
 
-func TestEdgeDistancesEdgePairDistance(t *testing.T) {
+func TestEdgeDistancesEdgePairMinDistance(t *testing.T) {
 	var zero Point
 	tests := []struct {
 		a0, a1   Point
@@ -578,7 +578,7 @@ func TestEdgeDistancesEdgePairDistance(t *testing.T) {
 	// between them is distRads, and that EdgePairClosestPoints returns
 	// wantA and wantB as the points that achieve this distance.
 	// Point{0, 0, 0} may be passed for wantA or wantB to indicate
-	// that both endpoints of the corresponding edge are equally distance,
+	// that both endpoints of the corresponding edge are equally distant,
 	// and therefore either one might be returned.
 	for _, test := range tests {
 		actualA, actualB := EdgePairClosestPoints(test.a0, test.a1, test.b0, test.b1)
@@ -617,8 +617,107 @@ func TestEdgeDistancesEdgePairDistance(t *testing.T) {
 			t.Errorf("updateEdgePairMinDistance(%v, %v, %v, %v, %v) = %v, want updated to be true", test.a0, test.a1, test.b0, test.b1, s1.InfChordAngle(), minDist)
 		}
 
-		if !float64Near(test.distRads, minDist.Angle().Radians(), 1e-15) {
-			t.Errorf("mindDist %v - %v = %v, want < %v", test.distRads, minDist.Angle().Radians(), (test.distRads - minDist.Angle().Radians()), 1e-15)
+		if !float64Near(test.distRads, minDist.Angle().Radians(), epsilon) {
+			t.Errorf("minDist %v - %v = %v, want < %v", test.distRads, minDist.Angle().Radians(), (test.distRads - minDist.Angle().Radians()), epsilon)
+		}
+	}
+}
+
+func TestEdgeDistancesEdgePairMaxDistance(t *testing.T) {
+	tests := []struct {
+		a0, a1   Point
+		b0, b1   Point
+		distRads float64
+	}{
+		{
+			// Standard situation. Same hemisphere, not degenerate.
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(0, 1, 0),
+			b0:       PointFromCoords(1, 1, 0),
+			b1:       PointFromCoords(1, 1, 1),
+			distRads: math.Acos(1 / math.Sqrt(3)),
+		},
+		{
+
+			// One edge is degenerate.
+			a0:       PointFromCoords(1, 0, 1),
+			a1:       PointFromCoords(1, 0, 1),
+			b0:       PointFromCoords(1, -1, 0),
+			b1:       PointFromCoords(1, 1, 0),
+			distRads: math.Acos(0.5),
+		},
+		{
+			a0:       PointFromCoords(1, -1, 0),
+			a1:       PointFromCoords(1, 1, 0),
+			b0:       PointFromCoords(1, 0, 1),
+			b1:       PointFromCoords(1, 0, 1),
+			distRads: math.Acos(0.5),
+		},
+		{
+			// Both edges are degenerate.
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(1, 0, 0),
+			b0:       PointFromCoords(0, 1, 0),
+			b1:       PointFromCoords(0, 1, 0),
+			distRads: math.Pi / 2,
+		},
+		{
+			// Both edges are degenerate and antipodal.
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(1, 0, 0),
+			b0:       PointFromCoords(-1, 0, 0),
+			b1:       PointFromCoords(-1, 0, 0),
+			distRads: math.Pi,
+		},
+		{
+			// Two identical edges.
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(0, 1, 0),
+			b0:       PointFromCoords(1, 0, 0),
+			b1:       PointFromCoords(0, 1, 0),
+			distRads: math.Pi / 2,
+		},
+		{
+			// Both edges are degenerate and identical.
+			a0:       PointFromCoords(1, 0, 0),
+			a1:       PointFromCoords(1, 0, 0),
+			b0:       PointFromCoords(1, 0, 0),
+			b1:       PointFromCoords(1, 0, 0),
+			distRads: 0,
+		},
+		{
+			// Antipodal reflection of one edge crosses the other edge.
+			a0:       PointFromCoords(1, 0, 1),
+			a1:       PointFromCoords(1, 0, -1),
+			b0:       PointFromCoords(-1, -1, 0),
+			b1:       PointFromCoords(-1, 1, 0),
+			distRads: math.Pi,
+		},
+		{
+			// One vertex of one edge touches the interior of the antipodal reflection
+			// of the other edge.
+			a0:       PointFromCoords(1, 0, 1),
+			a1:       PointFromCoords(1, 0, 0),
+			b0:       PointFromCoords(-1, -1, 0),
+			b1:       PointFromCoords(-1, 1, 0),
+			distRads: math.Pi,
+		},
+	}
+
+	for _, test := range tests {
+		// Given two edges a0a1 and b0b1, check that the maximum distance between them
+		// is distancerads.
+		if maxDist, ok := updateEdgePairMaxDistance(test.a0, test.a1, test.b0, test.b1, s1.StraightChordAngle); ok {
+			t.Errorf("updateEdgePairMaxDistance(%v, %v, %v, %v, %v) = %v, want updated to be false", test.a0, test.a1, test.b0, test.b1, s1.StraightChordAngle, maxDist)
+		}
+
+		maxDist, ok := updateEdgePairMaxDistance(test.a0, test.a1, test.b0, test.b1, s1.NegativeChordAngle)
+		if !ok {
+			t.Errorf("updateEdgePairMaxDistance(%v, %v, %v, %v, %v) = %v, want updated to be false", test.a0, test.a1, test.b0, test.b1, s1.NegativeChordAngle, maxDist)
+		}
+		if !float64Near(test.distRads, maxDist.Angle().Radians(), epsilon) {
+			t.Errorf("maxDist %v - %v = %v, want < %v", test.distRads, maxDist.Angle().Radians(), (test.distRads - maxDist.Angle().Radians()), epsilon)
+
 		}
 	}
 }

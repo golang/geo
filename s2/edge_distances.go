@@ -290,6 +290,9 @@ func interiorDist(x, a, b Point, minDist s1.ChordAngle, alwaysUpdate bool) (s1.C
 	return dist, true
 }
 
+// updateEdgePairMinDistance computes the minimum distance between the given
+// pair of edges. If the two edges cross, the distance is zero. The cases
+// a0 == a1 and b0 == b1 are handled correctly.
 func updateEdgePairMinDistance(a0, a1, b0, b1 Point, minDist s1.ChordAngle) (s1.ChordAngle, bool) {
 	if minDist == 0 {
 		return 0, false
@@ -310,6 +313,29 @@ func updateEdgePairMinDistance(a0, a1, b0, b1 Point, minDist s1.ChordAngle) (s1.
 	minDist, ok3 = UpdateMinDistance(b0, a0, a1, minDist)
 	minDist, ok4 = UpdateMinDistance(b1, a0, a1, minDist)
 	return minDist, ok1 || ok2 || ok3 || ok4
+}
+
+// updateEdgePairMaxDistance reports the minimum distance between the given pair of edges.
+// If one edge crosses the antipodal reflection of the other, the distance is pi.
+func updateEdgePairMaxDistance(a0, a1, b0, b1 Point, maxDist s1.ChordAngle) (s1.ChordAngle, bool) {
+	if maxDist == s1.StraightChordAngle {
+		return s1.StraightChordAngle, false
+	}
+	if CrossingSign(a0, a1, Point{b0.Mul(-1)}, Point{b1.Mul(-1)}) == Cross {
+		return s1.StraightChordAngle, true
+	}
+
+	// Otherwise, the maximum distance is achieved at an endpoint of at least
+	// one of the two edges. We ensure that all four possibilities are always checked.
+	//
+	// The calculation below computes each of the six vertex-vertex distances
+	// twice (this could be optimized).
+	var ok1, ok2, ok3, ok4 bool
+	maxDist, ok1 = UpdateMaxDistance(a0, b0, b1, maxDist)
+	maxDist, ok2 = UpdateMaxDistance(a1, b0, b1, maxDist)
+	maxDist, ok3 = UpdateMaxDistance(b0, a0, a1, maxDist)
+	maxDist, ok4 = UpdateMaxDistance(b1, a0, a1, maxDist)
+	return maxDist, ok1 || ok2 || ok3 || ok4
 }
 
 // EdgePairClosestPoints returns the pair of points (a, b) that achieves the
