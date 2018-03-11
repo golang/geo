@@ -1616,10 +1616,10 @@ func TestLoopNormalizedCompatibleWithContains(t *testing.T) {
 
 		flip.Invert()
 		if norm, contains := loop.IsNormalized(), loop.ContainsPoint(p); norm == contains {
-			t.Errorf("loop.IsNormalized() = %b == loop.ContainsPoint(%v) = %v, want !=", norm, p, contains)
+			t.Errorf("loop.IsNormalized() = %t == loop.ContainsPoint(%v) = %v, want !=", norm, p, contains)
 		}
 		if norm, contains := flip.IsNormalized(), flip.ContainsPoint(p); norm == contains {
-			t.Errorf("flip.IsNormalized() = %b == flip.ContainsPoint(%v) = %v, want !=", norm, p, contains)
+			t.Errorf("flip.IsNormalized() = %t == flip.ContainsPoint(%v) = %v, want !=", norm, p, contains)
 		}
 		if a, b := loop.IsNormalized(), flip.IsNormalized(); a == b {
 			t.Errorf("a loop and it's invert can not both be normalized")

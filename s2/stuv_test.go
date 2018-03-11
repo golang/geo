@@ -70,7 +70,7 @@ func TestFaceUVToXYZ(t *testing.T) {
 
 		// Check that each face has a right-handed coordinate system.
 		if got := uAxis(face).Vector.Cross(vAxis(face).Vector).Dot(unitNorm(face).Vector); got != 1 {
-			t.Errorf("right-handed check failed. uAxis(%d).Cross(vAxis(%d)).Dot(unitNorm%v) = %d, want 1", face, face, face, got)
+			t.Errorf("right-handed check failed. uAxis(%d).Cross(vAxis(%d)).Dot(unitNorm%v) = %f, want 1", face, face, face, got)
 		}
 
 		// Check that the Hilbert curves on each face combine to form a
@@ -183,7 +183,7 @@ func TestUVWAxis(t *testing.T) {
 
 		// Check that every face coordinate frame is right-handed.
 		if got := uAxis(face).Vector.Cross(vAxis(face).Vector).Dot(unitNorm(face).Vector); got != 1 {
-			t.Errorf("right-handed check failed. got %d, want 1", got)
+			t.Errorf("right-handed check failed. got %f, want 1", got)
 		}
 
 		// Check that GetUVWAxis is consistent with GetUAxis, GetVAxis, GetNorm.
