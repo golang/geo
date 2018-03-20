@@ -258,10 +258,9 @@ func TestPredicatesStableSignFailureRate(t *testing.T) {
 		c := Point{a.Add(x.Mul(m)).Normalize()}
 		sign := stableSign(a, b, c)
 		if sign != Indeterminate {
-			// TODO(roberts): Once exactSign is implemented, uncomment this case.
-			//if got := exactSign(a, b, c, true); got != sign {
-			//	t.Errorf("exactSign(%v, %v, %v, true) = %v, want %v", a, b, c, got, sign)
-			//}
+			if got := exactSign(a, b, c, true); got != sign {
+				t.Errorf("exactSign(%v, %v, %v, true) = %v, want %v", a, b, c, got, sign)
+			}
 		} else {
 			failureCount++
 		}

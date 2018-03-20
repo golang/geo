@@ -20,25 +20,23 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-// TODO(roberts): Uncomment once LaxPolyline and LaxPolygon are added to here.
-/*
 func TestShapeutilContainsBruteForceNoInterior(t *testing.T) {
 	// Defines a polyline that almost entirely encloses the point 0:0.
 	polyline := makeLaxPolyline("0:0, 0:1, 1:-1, -1:-1, -1e9:1")
-	if containsBruteForce(polyline, parsePoint("0:0")) {
-		t.Errorf("containsBruteForce(%v, %v) = true, want false")
+	point := parsePoint("0:0")
+	if containsBruteForce(polyline, point) {
+		t.Errorf("containsBruteForce(%v, %v) = true, want false", polyline, point)
 	}
 }
 
 func TestShapeutilContainsBruteForceContainsReferencePoint(t *testing.T) {
 	// Checks that containsBruteForce agrees with ReferencePoint.
 	polygon := makeLaxPolygon("0:0, 0:1, 1:-1, -1:-1, -1e9:1")
-	ref, _ := polygon.ReferencePoint()
-	if got := containsBruteForce(polygon, ref.point); got != ref.contained {
-		t.Errorf("containsBruteForce(%v, %v) = %v, want %v", polygon, ref.Point, got, ref.contained)
+	ref := polygon.ReferencePoint()
+	if got := containsBruteForce(polygon, ref.Point); got != ref.Contained {
+		t.Errorf("containsBruteForce(%v, %v) = %v, want %v", polygon, ref.Point, got, ref.Contained)
 	}
 }
-*/
 
 func TestShapeutilContainsBruteForceConsistentWithLoop(t *testing.T) {
 	// Checks that containsBruteForce agrees with Loop Contains.
@@ -53,10 +51,7 @@ func TestShapeutilContainsBruteForceConsistentWithLoop(t *testing.T) {
 
 func TestShapeutilRangeIteratorNext(t *testing.T) {
 	// Create an index with one point each on CellID faces 0, 1, and 2.
-	// TODO(roberts): Convert this to makeIndex once it's added to textformat.
-	// index := makeIndex("0:0 | 0:90 | 90:0 # #")
-	index := NewShapeIndex()
-	index.Add(makePolyline("0:0, 0:90, 90:0"))
+	index := makeShapeIndex("0:0 | 0:90 | 90:0 # #")
 	it := newRangeIterator(index)
 
 	if got, want := it.cellID().Face(), 0; got != want {
@@ -80,12 +75,8 @@ func TestShapeutilRangeIteratorNext(t *testing.T) {
 }
 
 func TestShapeutilRangeIteratorEmptyIndex(t *testing.T) {
-	// TODO(roberts): Convert these to makeIndex once it's added to textformat.
-	// empty := makeIndex("# #")
-	empty := NewShapeIndex()
-	// nonEmpty := makeIndex("0:0 # #")
-	nonEmpty := NewShapeIndex()
-	nonEmpty.Add(makePolyline("0:0"))
+	empty := makeShapeIndex("# #")
+	nonEmpty := makeShapeIndex("0:0 # #")
 
 	emptyIter := newRangeIterator(empty)
 	nonEmptyIter := newRangeIterator(nonEmpty)

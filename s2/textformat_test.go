@@ -190,8 +190,7 @@ func makePolygon(s string, normalize bool) *Polygon {
 		}
 		loop := makeLoop(strings.TrimSpace(str))
 		if normalize && !loop.IsFull() {
-			// TODO(roberts): Uncomment once Normalize is implemented.
-			// loop.Normalize()
+			loop.Normalize()
 		}
 		loops = append(loops, loop)
 	}
