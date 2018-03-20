@@ -334,6 +334,45 @@ func TestTextFormatMakeLaxPolyline(t *testing.T) {
 	// makeLaxPolyline("blah")
 }
 
+func TestTextFormatMakeLaxPolygonEmpty(t *testing.T) {
+	// Verify that "" and "empty" both create empty polygons.
+	shape := makeLaxPolygon("")
+	if got, want := shape.numLoops, 0; got != want {
+		t.Errorf("laxPolygon.numLoops = %d, want %d", got, want)
+	}
+	shape = makeLaxPolygon("empty")
+	if got, want := shape.numLoops, 0; got != want {
+		t.Errorf("laxPolygon.numLoops = %d, want %d", got, want)
+	}
+}
+
+func TestTextFormatMakeLaxPolygonFull(t *testing.T) {
+	shape := makeLaxPolygon("full")
+	if got, want := shape.numLoops, 1; got != want {
+		t.Errorf("laxPolygon.numLoops = %d, want %d", got, want)
+	}
+	if got, want := shape.numLoopVertices(0), 0; got != want {
+		t.Errorf("laxPolygon.numLoopVertices(%d) = %d, want %d", 0, got, want)
+	}
+}
+
+func TestTextFormatMakeLaxPolygonFullWithHole(t *testing.T) {
+	shape := makeLaxPolygon("full; 0:0")
+	if got, want := shape.numLoops, 2; got != want {
+		t.Errorf("laxPolygon.numLoops = %d, want %d", got, want)
+	}
+	if got, want := shape.numLoopVertices(0), 0; got != want {
+		t.Errorf("laxPolygon.numLoopVertices(%d) = %d, want %d", 0, got, want)
+	}
+	if got, want := shape.numLoopVertices(1), 1; got != want {
+		t.Errorf("laxPolygon.numLoopVertices(%d) = %d, want %d", 1, got, want)
+
+	}
+	if got, want := shape.NumEdges(), 1; got != want {
+		t.Errorf("laxPolygon.NumEdges() = %d, want %d", got, want)
+	}
+}
+
 // TODO(roberts): Remaining tests
 // to debug string tests for
 //   SpecialCases, EmptyLoop, EmptyPolyline, Empty Othertypes, ShapeIndex

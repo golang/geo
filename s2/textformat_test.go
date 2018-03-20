@@ -76,6 +76,9 @@ func pointToString(point Point) string {
 // parsePoints returns the values in the input string as Points.
 func parsePoints(s string) []Point {
 	lls := parseLatLngs(s)
+	if len(lls) == 0 {
+		return nil
+	}
 	points := make([]Point, len(lls))
 	for i, ll := range lls {
 		points[i] = PointFromLatLng(ll)
@@ -93,9 +96,11 @@ func pointsToString(points []Point) string {
 
 // parseLatLngs returns the values in the input string as LatLngs.
 func parseLatLngs(s string) []LatLng {
-	pieces := strings.Split(s, ",")
 	var lls []LatLng
-	for _, piece := range pieces {
+	if s == "" {
+		return lls
+	}
+	for _, piece := range strings.Split(s, ",") {
 		piece = strings.TrimSpace(piece)
 
 		// Skip empty strings.
@@ -168,12 +173,18 @@ func makeLoop(s string) *Loop {
 //     "empty"  // the empty polygon (consisting of no loops)
 //     "full"   // the full polygon (consisting of one full loop)
 func makePolygon(s string, normalize bool) *Polygon {
-	if s == "empty" {
-		s = ""
-	}
-	strs := strings.Split(s, ";")
 	var loops []*Loop
-	for _, str := range strs {
+	// Avoid the case where strings.Split on empty string will still return
+	// one empty value, where we want no values.
+	if s == "empty" || s == "" {
+		return PolygonFromLoops(loops)
+	}
+
+	for _, str := range strings.Split(s, ";") {
+		// The polygon test strings mostly have a trailing semicolon
+		// (to make concatenating them for tests easy). The C++
+		// SplitString doesn't return empty elements where as Go does,
+		// so we need to check before using it.
 		if str == "" {
 			continue
 		}
@@ -205,6 +216,26 @@ func laxPolylineToString(l *laxPolyline) string {
 	writePoints(&buf, l.vertices)
 	return buf.String()
 
+}
+
+// makeLaxPolygon creates a laxPolygon from the given debug formatted string.
+// Similar to makePolygon, except that loops must be oriented so that the
+// interior of the loop is always on the left, and polygons with degeneracies
+// are supported. As with makePolygon, "full" denotes the full polygon and "empty"
+// is not allowed (instead, simply create a laxPolygon with no loops).
+func makeLaxPolygon(s string) *laxPolygon {
+	var points [][]Point
+	if s == "" {
+		return laxPolygonFromPoints(points)
+	}
+	for _, l := range strings.Split(s, ";") {
+		if l == "full" {
+			points = append(points, []Point{})
+		} else if l != "empty" {
+			points = append(points, parsePoints(l))
+		}
+	}
+	return laxPolygonFromPoints(points)
 }
 
 // TODO(roberts): Remaining C++ textformat related methods
