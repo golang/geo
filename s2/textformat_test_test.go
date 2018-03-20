@@ -373,9 +373,30 @@ func TestTextFormatMakeLaxPolygonFullWithHole(t *testing.T) {
 	}
 }
 
+func TestTextFormatShapeIndexDebugStringRoundTrip(t *testing.T) {
+	tests := []string{
+		"# #",
+		"0:0 # #",
+		"0:0 | 1:0 # #",
+		"0:0 | 1:0 # #",
+		"# 0:0, 0:0 #",
+		"# 0:0, 0:0 | 1:0, 2:0 #",
+		"# # 0:0",
+		"# # 0:0, 0:1",
+		"# # 0:0, 0:1, 1:0",
+		"# # 0:0, 0:1, 1:0, 2:2",
+	}
+
+	for _, want := range tests {
+		if got := shapeIndexDebugString(makeShapeIndex(want)); got != want {
+			t.Errorf("ShapeIndex failed roundtrip to string. got %q, want %q", got, want)
+		}
+	}
+}
+
 // TODO(roberts): Remaining tests
 // to debug string tests for
-//   SpecialCases, EmptyLoop, EmptyPolyline, Empty Othertypes, ShapeIndex
+//   SpecialCases, EmptyLoop, EmptyPolyline, Empty Othertypes
 //
 // make type tests for ValidInput and InvalidInput for
 //   LatLngs, Points, Rect, Loop, Polyline, Polygon,

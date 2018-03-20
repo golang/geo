@@ -238,7 +238,131 @@ func makeLaxPolygon(s string) *laxPolygon {
 	return laxPolygonFromPoints(points)
 }
 
+// makeShapeIndex builds a ShapeIndex from the given debug string containing
+// the points, polylines, and loops (in the form of a single polygon)
+// described by the following format:
+//
+//   point1|point2|... # line1|line2|... # polygon1|polygon2|...
+//
+// Examples:
+//   1:2 | 2:3 # #                     // Two points
+//   # 0:0, 1:1, 2:2 | 3:3, 4:4 #      // Two polylines
+//   # # 0:0, 0:3, 3:0; 1:1, 2:1, 1:2  // Two nested loops (one polygon)
+//   5:5 # 6:6, 7:7 # 0:0, 0:1, 1:0    // One of each
+//   # # empty                         // One empty polygon
+//   # # empty | full                  // One empty polygon, one full polygon
+//
+// Loops should be directed so that the region's interior is on the left.
+// Loops can be degenerate (they do not need to meet Loop requirements).
+//
+// Note: Because whitespace is ignored, empty polygons must be specified
+// as the string "empty" rather than as the empty string ("").
+func makeShapeIndex(s string) *ShapeIndex {
+	fields := strings.Split(s, "#")
+	if len(fields) != 3 {
+		panic("shapeIndex debug string must contain 2 '#' characters")
+	}
+
+	index := NewShapeIndex()
+
+	var points []Point
+	for _, p := range strings.Split(fields[0], "|") {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		points = append(points, parsePoint(p))
+	}
+	if len(points) > 0 {
+		index.Add(pointVectorShape(points))
+	}
+
+	for _, p := range strings.Split(fields[1], "|") {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if polyline := makeLaxPolyline(p); polyline != nil {
+			index.Add(polyline)
+		}
+	}
+
+	for _, p := range strings.Split(fields[2], "|") {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if polygon := makeLaxPolygon(p); polygon != nil {
+			index.Add(polygon)
+		}
+	}
+
+	return index
+}
+
+// shapeIndexDebugString outputs the contents of this ShapeIndex in debug
+// format. The index may contain Shapes of any type. Shapes are reordered
+// if necessary so that all point geometry (shapes of dimension 0) are first,
+// followed by all polyline geometry, followed by all polygon geometry.
+func shapeIndexDebugString(index *ShapeIndex) string {
+	var buf bytes.Buffer
+
+	for dim := pointGeometry; dim <= polygonGeometry; dim++ {
+		if dim > pointGeometry {
+			buf.WriteByte('#')
+		}
+
+		var count int
+
+		// Use shapes ordered by id rather than ranging over the
+		// index.shapes map to ensure that the ordering of shapes in the
+		// generated string matches the C++ generated strings.
+		for i := int32(0); i < index.nextID; i++ {
+			shape := index.Shape(i)
+			// Only use shapes that are still in the index and at the
+			// current geometry level we are outputting.
+			if shape == nil || shape.dimension() != dim {
+				continue
+			}
+			if count > 0 {
+				buf.WriteString(" | ")
+			} else {
+				if dim > pointGeometry {
+					buf.WriteByte(' ')
+				}
+			}
+
+			for c := 0; c < shape.NumChains(); c++ {
+				if c > 0 {
+					if dim == polygonGeometry {
+						buf.WriteString("; ")
+					} else {
+						buf.WriteString(" | ")
+					}
+				}
+				chain := shape.Chain(c)
+				pts := []Point{shape.Edge(chain.Start).V0}
+				limit := chain.Start + chain.Length
+				if dim != polylineGeometry {
+					limit--
+				}
+
+				for e := chain.Start; e < limit; e++ {
+					pts = append(pts, shape.Edge(e).V1)
+				}
+				writePoints(&buf, pts)
+				count++
+			}
+		}
+
+		if dim == polylineGeometry || (dim == pointGeometry && count > 0) {
+			buf.WriteByte(' ')
+		}
+	}
+
+	return buf.String()
+}
+
 // TODO(roberts): Remaining C++ textformat related methods
 // make$S2TYPE methods for missing types.
 // to debug string for many types
-// to/from debug for ShapeIndex
