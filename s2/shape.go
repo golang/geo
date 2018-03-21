@@ -59,6 +59,42 @@ func (e edges) Len() int           { return len(e) }
 func (e edges) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
 func (e edges) Less(i, j int) bool { return e[i].Cmp(e[j]) == -1 }
 
+// ShapeEdgeID is a unique identifier for an Edge within an ShapeIndex,
+// consisting of a (shapeID, edgeID) pair.
+type ShapeEdgeID struct {
+	ShapeID int32
+	EdgeID  int32
+}
+
+// Cmp compares the two ShapeEdgeIDs and returns
+//
+//   -1 if s <  other
+//    0 if s == other
+//   +1 if s >  other
+//
+// The two are compared first by shape id and then by edge id.
+func (s ShapeEdgeID) Cmp(other ShapeEdgeID) int {
+	switch {
+	case s.ShapeID < other.ShapeID:
+		return -1
+	case s.ShapeID > other.ShapeID:
+		return 1
+	}
+	switch {
+	case s.EdgeID < other.EdgeID:
+		return -1
+	case s.EdgeID > other.EdgeID:
+		return 1
+	}
+	return 0
+}
+
+// ShapeEdge represents a ShapeEdgeID with the two endpoints of that Edge.
+type ShapeEdge struct {
+	ID   ShapeEdgeID
+	Edge Edge
+}
+
 // Chain represents a range of edge IDs corresponding to a chain of connected
 // edges, specified as a (start, length) pair. The chain is defined to consist of
 // edge IDs {start, start + 1, ..., start + length - 1}.
