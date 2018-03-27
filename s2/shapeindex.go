@@ -684,6 +684,22 @@ func (s *ShapeIndex) NumEdges() int {
 // Shape returns the shape with the given ID, or nil if the shape has been removed from the index.
 func (s *ShapeIndex) Shape(id int32) Shape { return s.shapes[id] }
 
+// idForShape returns the id of the given shape in this index, or -1 if it is
+// not in the index.
+//
+// TODO(roberts): Need to figure out an appropriate way to expose this on a Shape.
+// C++ allows a given S2 type (Loop, Polygon, etc) to be part of multiple indexes.
+// By having each type extend S2Shape which has an id element, they all inherit their
+// own id field rather than having to track it themselves.
+func (s *ShapeIndex) idForShape(shape Shape) int32 {
+	for k, v := range s.shapes {
+		if v == shape {
+			return k
+		}
+	}
+	return -1
+}
+
 // Add adds the given shape to the index and returns the assigned ID..
 func (s *ShapeIndex) Add(shape Shape) int32 {
 	s.shapes[s.nextID] = shape
@@ -696,13 +712,7 @@ func (s *ShapeIndex) Add(shape Shape) int32 {
 func (s *ShapeIndex) Remove(shape Shape) {
 	// The index updates itself lazily because it is much more efficient to
 	// process additions and removals in batches.
-	// Lookup the id of this shape in the index.
-	id := int32(-1)
-	for k, v := range s.shapes {
-		if v == shape {
-			id = k
-		}
-	}
+	id := s.idForShape(shape)
 
 	// If the shape wasn't found, it's already been removed or was not in the index.
 	if s.shapes[id] == nil {
@@ -723,7 +733,7 @@ func (s *ShapeIndex) Remove(shape Shape) {
 		shapeID:               id,
 		hasInterior:           shape.HasInterior(),
 		containsTrackerOrigin: shape.ReferencePoint().Contained,
-		edges: make([]Edge, numEdges),
+		edges:                 make([]Edge, numEdges),
 	}
 
 	for e := 0; e < numEdges; e++ {
