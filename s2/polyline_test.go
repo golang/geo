@@ -74,24 +74,36 @@ func TestPolylineShape(t *testing.T) {
 	if want := PointFromLatLng(LatLngFromDegrees(2, 1)); !e.V1.ApproxEqual(want) {
 		t.Errorf("%v.Edge(%d) point B = %v  want %v", shape, 2, e.V1, want)
 	}
-
 	if shape.HasInterior() {
 		t.Errorf("polylines should not have an interior")
 	}
 	if shape.ReferencePoint().Contained {
 		t.Errorf("polylines should not contain their reference points")
 	}
-
 	if shape.dimension() != polylineGeometry {
 		t.Errorf("polylines should have PolylineGeometry")
 	}
+}
 
-	empty := &Polyline{}
-	if got, want := empty.NumEdges(), 0; got != want {
-		t.Errorf("%v.NumEdges() = %d, want %d", empty, got, want)
+func TestPolylineEmpty(t *testing.T) {
+	shape := &Polyline{}
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("%v.NumEdges() = %d, want %d", shape, got, want)
 	}
-	if got, want := empty.NumChains(), 0; got != want {
-		t.Errorf("%v.NumChains() = %d, want %d", empty, got, want)
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("%v.NumChains() = %d, want %d", shape, got, want)
+	}
+	if shape.HasInterior() {
+		t.Errorf("polylines should not have an interior")
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("polylines should not contain their reference points")
 	}
 }
 

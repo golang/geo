@@ -168,6 +168,8 @@ func (p *laxPolygon) Edge(e int) Edge {
 
 func (p *laxPolygon) HasInterior() bool              { return p.dimension() == polygonGeometry }
 func (p *laxPolygon) dimension() dimension           { return polygonGeometry }
+func (p *laxPolygon) IsEmpty() bool                  { return defaultShapeIsEmpty(p) }
+func (p *laxPolygon) IsFull() bool                   { return defaultShapeIsFull(p) }
 func (p *laxPolygon) ReferencePoint() ReferencePoint { return referencePointForShape(p) }
 func (p *laxPolygon) NumChains() int                 { return p.numLoops }
 func (p *laxPolygon) Chain(i int) Chain {

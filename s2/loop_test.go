@@ -164,58 +164,75 @@ var (
 	}
 )
 
-func TestLoopEmptyAndFull(t *testing.T) {
-	emptyLoop := EmptyLoop()
+func TestLoopEmptyLoop(t *testing.T) {
+	shape := EmptyLoop()
 
-	if !emptyLoop.IsEmpty() {
-		t.Errorf("empty loop should be empty")
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-	if emptyLoop.IsFull() {
-		t.Errorf("empty loop should not be full")
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if !emptyLoop.isEmptyOrFull() {
-		t.Errorf("empty loop should pass IsEmptyOrFull")
+	if got, want := shape.dimension(), polygonGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
 	}
+	if !shape.HasInterior() {
+		t.Errorf("shape.HasInterior() = false, want true")
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if !shape.isEmptyOrFull() {
+		t.Errorf("shape.isEmptyOrFull = false, want true")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = true, want false")
+	}
+}
 
-	fullLoop := FullLoop()
+func TestLoopFullLoop(t *testing.T) {
+	shape := FullLoop()
 
-	if fullLoop.IsEmpty() {
-		t.Errorf("full loop should not be empty")
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-	if !fullLoop.IsFull() {
-		t.Errorf("full loop should be full")
+	if got, want := shape.NumChains(), 1; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if !fullLoop.isEmptyOrFull() {
-		t.Errorf("full loop should pass IsEmptyOrFull")
+	if got, want := shape.dimension(), polygonGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
 	}
-	if emptyLoop.NumEdges() != 0 {
-		t.Errorf("empty loops should have no edges")
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
 	}
-	if emptyLoop.NumChains() != 0 {
-		t.Errorf("empty loops should have no edge chains")
+	if !shape.IsFull() {
+		t.Errorf("shape.IsFull() = false, want true")
 	}
-	if fullLoop.NumEdges() != 0 {
-		t.Errorf("full loops should have no edges")
+	if !shape.isEmptyOrFull() {
+		t.Errorf("shape.isEmptyOrFull = false, want true")
 	}
-	if fullLoop.NumChains() != 0 {
-		t.Errorf("full loops should have no edge chains")
+	if !shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = false, want true")
 	}
 }
 
 func TestLoopBasic(t *testing.T) {
 	shape := Shape(makeLoop("0:0, 0:1, 1:0"))
 
-	if got := shape.NumEdges(); got != 3 {
-		t.Errorf("shape.NumEdges = %d, want 3", got)
+	if got, want := shape.NumEdges(), 3; got != want {
+		t.Errorf("shape.NumEdges() = %d, want %d", got, want)
 	}
-	if got := shape.NumChains(); got != 1 {
-		t.Errorf("shape.NumChains = %d, want 1", got)
+	if got, want := shape.NumChains(), 1; got != 1 {
+		t.Errorf("shape.NumChains() = %d, want %d", got, want)
 	}
-	if got := shape.Chain(0).Start; got != 0 {
-		t.Errorf("shape.Chain(0).Start = %d, want 3", got)
+	if got, want := shape.Chain(0).Start, 0; got != 0 {
+		t.Errorf("shape.Chain(0).Start = %d, want %d", got, want)
 	}
-	if got := shape.Chain(0).Length; got != 3 {
-		t.Errorf("shape.Chain(0).Length = %d, want 3", got)
+	if got, want := shape.Chain(0).Length, 3; got != want {
+		t.Errorf("shape.Chain(0).Length = %d, want %d", got, want)
 	}
 
 	e := shape.Edge(2)
@@ -223,15 +240,19 @@ func TestLoopBasic(t *testing.T) {
 		t.Errorf("shape.Edge(2) end A = %v, want %v", e.V0, want)
 	}
 	if want := PointFromLatLng(LatLngFromDegrees(0, 0)); !e.V1.ApproxEqual(want) {
-
 		t.Errorf("shape.Edge(2) end B = %v, want %v", e.V1, want)
 	}
-
 	if got := shape.dimension(); got != polygonGeometry {
 		t.Errorf("shape.dimension() = %d, want %v", got, polygonGeometry)
 	}
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
 	}
 	if shape.ReferencePoint().Contained {
 		t.Errorf("shape.ReferencePoint().Contained = true, want false")

@@ -671,10 +671,6 @@ func (p *Polygon) ReferencePoint() ReferencePoint {
 
 // NumChains reports the number of contiguous edge chains in the Polygon.
 func (p *Polygon) NumChains() int {
-	if p.IsFull() {
-		return 0
-	}
-
 	return p.NumLoops()
 }
 
@@ -687,7 +683,13 @@ func (p *Polygon) Chain(chainID int) Chain {
 	for j := 0; j < chainID; j++ {
 		e += len(p.Loop(j).vertices)
 	}
-	return Chain{e, len(p.Loop(chainID).vertices)}
+
+	// Polygon represents a full loop as a loop with one vertex, while
+	// Shape represents a full loop as a chain with no vertices.
+	if numVertices := p.Loop(chainID).NumVertices(); numVertices != 1 {
+		return Chain{e, numVertices}
+	}
+	return Chain{e, 0}
 }
 
 // ChainEdge returns the j-th edge of the i-th edge Chain (loop).

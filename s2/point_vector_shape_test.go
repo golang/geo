@@ -35,3 +35,5 @@ func (p pointVectorShape) Chain(i int) Chain                 { return Chain{i, 1
 func (p pointVectorShape) ChainEdge(i, j int) Edge           { return Edge{p[i], p[j]} }
 func (p pointVectorShape) ChainPosition(e int) ChainPosition { return ChainPosition{e, 0} }
 func (p pointVectorShape) dimension() dimension              { return pointGeometry }
+func (p pointVectorShape) IsEmpty() bool                     { return defaultShapeIsEmpty(p) }
+func (p pointVectorShape) IsFull() bool                      { return defaultShapeIsFull(p) }

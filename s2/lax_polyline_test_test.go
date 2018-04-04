@@ -20,54 +20,70 @@ import (
 
 func TestLaxPolylineNoVertices(t *testing.T) {
 	shape := Shape(laxPolylineFromPoints([]Point{}))
-	if shape.NumEdges() != 0 {
-		t.Errorf("shape.NumEdges() = %d, want 0", shape.NumEdges())
-	}
 
-	if shape.NumChains() != 0 {
-		t.Errorf("shape.NumChains() = %d, want 0", shape.NumEdges())
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-
-	if shape.dimension() != 1 {
-		t.Errorf("shape.dimension() = %v, want %v", shape.NumEdges(), polylineGeometry)
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-
+	if got, want := shape.dimension(), polylineGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = true, want false")
+	}
 }
 
 func TestLaxPolylineOneVertex(t *testing.T) {
 	shape := Shape(laxPolylineFromPoints([]Point{PointFromCoords(1, 0, 0)}))
-	if shape.NumEdges() != 0 {
-		t.Errorf("shape.NumEdges() = %d, want 0", shape.NumEdges())
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-
-	if shape.NumChains() != 0 {
-		t.Errorf("shape.NumChains() = %d, want 0", shape.NumChains())
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-
-	if shape.dimension() != polylineGeometry {
-		t.Errorf("shape.dimension() = %v, want %v", shape.NumEdges(), polylineGeometry)
+	if got, want := shape.dimension(), polylineGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
 	}
-
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
 }
 
 func TestLaxPolylineEdgeAccess(t *testing.T) {
 	vertices := parsePoints("0:0, 0:1, 1:1")
 	shape := Shape(laxPolylineFromPoints(vertices))
 
-	if shape.NumEdges() != 2 {
-		t.Errorf("shape.NumEdges() = %d, want 2", shape.NumEdges())
+	if got, want := shape.NumEdges(), 2; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-	if shape.NumChains() != 1 {
-		t.Errorf("shape.NumChains() = %d, want 1", shape.NumChains())
+	if got, want := shape.NumChains(), 1; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if shape.Chain(0).Start != 0 {
-		t.Errorf("shape.Chain(%d).Start = %d, want 0", 0, shape.Chain(0).Start)
+	if got, want := shape.Chain(0).Start, 0; got != want {
+		t.Errorf("shape.Chain(%d).Start = %d, want 0", got, want)
 	}
-	if shape.Chain(0).Length != 2 {
-		t.Errorf("shape.Chain(%d).Length = %d, want 2", 0, shape.Chain(0).Length)
+	if got, want := shape.Chain(0).Length, 2; got != want {
+		t.Errorf("shape.Chain(%d).Length = %d, want 2", got, want)
 	}
-	if shape.dimension() != 1 {
-		t.Errorf("shape.NumEdges() = %v, want %v", shape.dimension(), polylineGeometry)
+	if got, want := shape.dimension(), polylineGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
 	}
 
 	edge0 := shape.Edge(0)

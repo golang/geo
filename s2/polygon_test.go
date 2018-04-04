@@ -162,46 +162,54 @@ func TestPolygonInitSingleLoop(t *testing.T) {
 }
 
 func TestPolygonEmpty(t *testing.T) {
-	if !emptyPolygon.IsEmpty() {
-		t.Errorf("empty polygon should be empty")
-	}
-	if emptyPolygon.IsFull() {
-		t.Errorf("empty polygon should not be full")
-	}
+	shape := emptyPolygon
 
-	if emptyPolygon.ReferencePoint().Contained {
-		t.Errorf("emptyPolygon.ReferencePoint().Contained = true, want false")
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-	if got, want := emptyPolygon.NumEdges(), 0; got != want {
-		t.Errorf("emptyPolygon.NumEdges() = %v, want %v", got, want)
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got := emptyPolygon.dimension(); got != polygonGeometry {
-		t.Errorf("emptyPolygon.dimension() = %v, want %v", got, polygonGeometry)
+	if got, want := shape.dimension(), polygonGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
 	}
-	if got, want := emptyPolygon.NumChains(), 0; got != want {
-		t.Errorf("emptyPolygon.NumChains() = %v, want %v", got, want)
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = true, want false")
 	}
 }
 
 func TestPolygonFull(t *testing.T) {
-	if fullPolygon.IsEmpty() {
-		t.Errorf("full polygon should not be emtpy")
-	}
-	if !fullPolygon.IsFull() {
-		t.Errorf("full polygon should be full")
-	}
+	shape := fullPolygon
 
-	if !fullPolygon.ReferencePoint().Contained {
-		t.Errorf("fullPolygon.ReferencePoint().Contained = false, want true")
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-	if got, want := fullPolygon.NumEdges(), 0; got != want {
-		t.Errorf("fullPolygon.NumEdges() = %v, want %v", got, want)
+	if got, want := shape.NumChains(), 1; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got := fullPolygon.dimension(); got != polygonGeometry {
-		t.Errorf("fullPolygon.dimension() = %v, want %v", got, polygonGeometry)
+	if got, want := shape.Chain(0).Start, 0; got != want {
+		t.Errorf("fullPolygon.Chain(0).Start = %d, want %d", got, want)
 	}
-	if got, want := fullPolygon.NumChains(), 0; got != want {
-		t.Errorf("fullPolygon.NumChains() = %v, want %v", got, want)
+	if got, want := shape.Chain(0).Length, 0; got != want {
+		t.Errorf("fullPolygon.Chain(0).Length = %d, want %d", got, want)
+	}
+	if got, want := shape.dimension(), polygonGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if !shape.IsFull() {
+		t.Errorf("shape.IsFull() = false, want true")
+	}
+	if !shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = false, want true")
 	}
 }
 
@@ -221,12 +229,11 @@ func TestPolygonShape(t *testing.T) {
 	for _, test := range tests {
 		shape := Shape(test.p)
 
-		if test.p.numVertices != shape.NumEdges() {
-			t.Errorf("the number of vertices in a polygon should equal the number of edges. got %v, want %v", test.p.numVertices, shape.NumEdges())
+		if got, want := shape.NumEdges(), test.p.numVertices; got != want {
+			t.Errorf("the number of vertices in a polygon should equal the number of edges. got %v, want %v", got, want)
 		}
-
-		if test.p.NumLoops() != shape.NumChains() {
-			t.Errorf("the number of loops in a polygon should equal the number of chains. got %v, want %v", test.p.NumLoops(), shape.NumChains())
+		if got, want := shape.NumChains(), test.p.NumLoops(); got != want {
+			t.Errorf("the number of loops in a polygon should equal the number of chains. got %v, want %v", got, want)
 		}
 
 		edgeID := 0
@@ -248,12 +255,19 @@ func TestPolygonShape(t *testing.T) {
 				edgeID++
 			}
 		}
-		if shape.dimension() != polygonGeometry {
-			t.Errorf("dimension = %v, want %v", shape.dimension(), polygonGeometry)
+		if got, want := shape.dimension(), polygonGeometry; got != want {
+			t.Errorf("shape.dimension() = %v, want %v", got, want)
 		}
 		if !shape.HasInterior() {
-			t.Errorf("polygons should always have interiors")
+			t.Errorf("shape.HasInterior() = false, want true")
 		}
+		if shape.IsEmpty() {
+			t.Errorf("shape.IsEmpty() = true, want false")
+		}
+		if shape.IsFull() {
+			t.Errorf("shape.IsFull() = true, want false")
+		}
+
 		if got, want := test.p.ContainsPoint(OriginPoint()), shape.ReferencePoint().Contained; got != want {
 			t.Errorf("p.ContainsPoint(OriginPoint()) != shape.ReferencePoint().Contained")
 		}

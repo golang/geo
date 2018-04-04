@@ -18,6 +18,28 @@ import (
 	"testing"
 )
 
+func TestEdgeVectorShapeEmpty(t *testing.T) {
+	var shape edgeVectorShape
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.dimension(), polylineGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained should be false")
+	}
+}
+
 func TestEdgeVectorShapeSingletonConstructor(t *testing.T) {
 	a := PointFromCoords(1, 0, 0)
 	b := PointFromCoords(0, 1, 0)
@@ -36,6 +58,12 @@ func TestEdgeVectorShapeSingletonConstructor(t *testing.T) {
 	}
 	if edge.V1 != b {
 		t.Errorf("vertex 1 of the edge should be the same as was used to create it. got %v, want %v", edge.V1, b)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
 	}
 }
 

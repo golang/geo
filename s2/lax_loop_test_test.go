@@ -21,17 +21,26 @@ import (
 func TestLaxLoopEmptyLoop(t *testing.T) {
 	shape := Shape(laxLoopFromLoop(EmptyLoop()))
 
-	if shape.NumEdges() != 0 {
-		t.Errorf("empty laxLoop.NumEdges() = %v, want 0", shape.NumEdges())
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-	if shape.NumChains() != 0 {
-		t.Errorf("empty laxLoop.NumChains() = %v, want 0", shape.NumChains())
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if shape.dimension() != polygonGeometry {
-		t.Errorf("laxLoop.dimension() = %v, want %v", shape.dimension(), polygonGeometry)
+	if got, want := shape.dimension(), polygonGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	}
+	if !shape.HasInterior() {
+		t.Errorf("shape.HasInterior() = false, want true")
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
 	}
 	if shape.ReferencePoint().Contained {
-		t.Errorf("empty laxLoop.ReferencePoint().Contained should be false")
+		t.Errorf("shape.ReferencePoint().Contained should be false")
 	}
 }
 
@@ -39,7 +48,7 @@ func TestLaxLoopNonEmptyLoop(t *testing.T) {
 	vertices := parsePoints("0:0, 0:1, 1:1, 1:0")
 	shape := Shape(laxLoopFromPoints(vertices))
 	if got, want := len(shape.(*laxLoop).vertices), len(vertices); got != want {
-		t.Errorf("laxLoop.numVertices = %v, want %v", got, want)
+		t.Errorf("shape.numVertices = %v, want %v", got, want)
 	}
 	if got, want := shape.NumEdges(), len(vertices); got != want {
 		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
@@ -70,6 +79,12 @@ func TestLaxLoopNonEmptyLoop(t *testing.T) {
 	}
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
 	}
 	if shape.ReferencePoint().Contained {
 		t.Errorf("shape.ReferencePoint().Contained = true, want false")

@@ -49,4 +49,6 @@ func (e *edgeVectorShape) NumChains() int                         { return len(e
 func (e *edgeVectorShape) Chain(chainID int) Chain                { return Chain{chainID, 1} }
 func (e *edgeVectorShape) ChainEdge(chainID, offset int) Edge     { return e.edges[chainID] }
 func (e *edgeVectorShape) ChainPosition(edgeID int) ChainPosition { return ChainPosition{edgeID, 0} }
+func (e *edgeVectorShape) IsEmpty() bool                          { return defaultShapeIsEmpty(e) }
+func (e *edgeVectorShape) IsFull() bool                           { return defaultShapeIsFull(e) }
 func (e *edgeVectorShape) dimension() dimension                   { return polylineGeometry }

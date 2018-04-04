@@ -113,7 +113,7 @@ func (r *rangeIterator) refresh() {
 func referencePointForShape(shape Shape) ReferencePoint {
 	if shape.NumEdges() == 0 {
 		// A shape with no edges is defined to be full if and only if it
-		// contains an empty loop.
+		// contains at least one chain.
 		return OriginReferencePoint(shape.NumChains() > 0)
 	}
 	// Define a "matched" edge as one that can be paired with a corresponding
@@ -156,8 +156,9 @@ func referencePointForShape(shape Shape) ReferencePoint {
 		}
 	}
 
-	// All vertices are balanced, so this polygon is either empty or full. By
-	// convention it is defined to be full if it contains any empty loop.
+	// All vertices are balanced, so this polygon is either empty or full except
+	// for degeneracies. By convention it is defined to be full if it contains
+	// any chain with no edges.
 	for i := 0; i < shape.NumChains(); i++ {
 		if shape.Chain(i).Length == 0 {
 			return OriginReferencePoint(true)

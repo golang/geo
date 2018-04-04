@@ -65,17 +65,11 @@ func (l *laxLoop) Edge(e int) Edge {
 	return Edge{l.vertices[e], l.vertices[e1]}
 
 }
-func (l *laxLoop) dimension() dimension { return polygonGeometry }
-func (l *laxLoop) HasInterior() bool    { return l.dimension() == polygonGeometry }
-func (l *laxLoop) ReferencePoint() ReferencePoint {
-	// ReferencePoint interprets a loop with no vertices as full.
-	if l.numVertices == 0 {
-		return OriginReferencePoint(false)
-	}
-	return referencePointForShape(l)
-}
-func (l *laxLoop) NumChains() int    { return minInt(1, l.numVertices) }
-func (l *laxLoop) Chain(i int) Chain { return Chain{0, l.numVertices} }
+func (l *laxLoop) dimension() dimension           { return polygonGeometry }
+func (l *laxLoop) HasInterior() bool              { return l.dimension() == polygonGeometry }
+func (l *laxLoop) ReferencePoint() ReferencePoint { return referencePointForShape(l) }
+func (l *laxLoop) NumChains() int                 { return minInt(1, l.numVertices) }
+func (l *laxLoop) Chain(i int) Chain              { return Chain{0, l.numVertices} }
 func (l *laxLoop) ChainEdge(i, j int) Edge {
 	var k int
 	if j+1 == l.numVertices {
@@ -83,6 +77,6 @@ func (l *laxLoop) ChainEdge(i, j int) Edge {
 	}
 	return Edge{l.vertices[j], l.vertices[k]}
 }
-func (l *laxLoop) ChainPosition(e int) ChainPosition {
-	return ChainPosition{0, e}
-}
+func (l *laxLoop) ChainPosition(e int) ChainPosition { return ChainPosition{0, e} }
+func (l *laxLoop) IsEmpty() bool                     { return defaultShapeIsEmpty(l) }
+func (l *laxLoop) IsFull() bool                      { return defaultShapeIsFull(l) }

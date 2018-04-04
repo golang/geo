@@ -19,6 +19,29 @@ import (
 	"testing"
 )
 
+func TestPointVectorShapeEmpty(t *testing.T) {
+	var shape pointVectorShape
+
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.dimension(), pointGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = true, want false")
+	}
+}
+
 func TestPointVectorShapeBasics(t *testing.T) {
 	const seed = 8675309
 	rand.Seed(seed)
@@ -31,24 +54,29 @@ func TestPointVectorShapeBasics(t *testing.T) {
 	}
 
 	shape := Shape(p)
-
-	if shape.NumEdges() != numPoints {
-		t.Errorf("shape.NumEdges() = %v, want %v", shape.NumEdges(), numPoints)
+	if got, want := shape.NumEdges(), numPoints; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-	if shape.NumChains() != numPoints {
-		t.Errorf("shape.NumChains() = %v, want %v", shape.NumChains(), numPoints)
+	if got, want := shape.NumChains(), numPoints; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if shape.dimension() != pointGeometry {
-		t.Errorf("shape.dimension() = %v, want %v", shape.dimension(), pointGeometry)
+	if got, want := shape.dimension(), pointGeometry; got != want {
+		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
 	}
 
 	rand.Seed(seed)
 	for i := 0; i < numPoints; i++ {
-		if shape.Chain(i).Start != i {
-			t.Errorf("shape.Chain(%d).Start = %v, want %v", i, shape.Chain(i).Start, i)
+		if got, want := shape.Chain(i).Start, i; got != want {
+			t.Errorf("shape.Chain(%d).Start = %d, want %d", i, got, want)
 		}
-		if shape.Chain(i).Length != 1 {
-			t.Errorf("shape.Chain(%d).Length = %v, want 1", i, shape.Chain(i).Length)
+		if got, want := shape.Chain(i).Length, 1; got != want {
+			t.Errorf("shape.Chain(%d).Length = %v, want %d", i, got, want)
 		}
 		edge := shape.Edge(i)
 		pt := randomPoint()

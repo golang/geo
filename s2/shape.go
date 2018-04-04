@@ -215,11 +215,31 @@ type Shape interface {
 	//      of edge chains where each chain represents one polygon loop.
 	//      Polygons may have degeneracies (e.g., degenerate edges or sibling
 	//      pairs consisting of an edge and its corresponding reversed edge).
+	//      A polygon loop may also be full (containing all points on the
+	//      sphere); by convention this is represented as a chain with no edges.
+	//      (See laxPolygon for more details.)
 	//
 	// Note that this method allows degenerate geometry of different dimensions
 	// to be distinguished, e.g. it allows a point to be distinguished from a
 	// polyline or polygon that has been simplified to a single point.
 	dimension() dimension
+
+	// IsEmpty reports whether the Shape contains no points. (Note that the full
+	// polygon is represented as a chain with zero edges.)
+	IsEmpty() bool
+
+	// IsFull reports whether the Shape contains all points on the sphere.
+	IsFull() bool
+}
+
+// defaultShapeIsEmpty reports whether this shape contains no points.
+func defaultShapeIsEmpty(s Shape) bool {
+	return s.NumEdges() == 0 && (!s.HasInterior() || s.NumChains() == 0)
+}
+
+// defaultShapeIsFull reports whether this shape contains all points on the sphere.
+func defaultShapeIsFull(s Shape) bool {
+	return s.NumEdges() == 0 && s.HasInterior() && s.NumChains() > 0
 }
 
 // A minimal check for types that should satisfy the Shape interface.

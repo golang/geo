@@ -476,7 +476,7 @@ func (l *Loop) Edge(i int) Edge {
 
 // NumChains reports the number of contiguous edge chains in the Loop.
 func (l *Loop) NumChains() int {
-	if l.isEmptyOrFull() {
+	if l.IsEmpty() {
 		return 0
 	}
 	return 1
@@ -501,12 +501,12 @@ func (l *Loop) ChainPosition(edgeID int) ChainPosition {
 // dimension returns the dimension of the geometry represented by this Loop.
 func (l *Loop) dimension() dimension { return polygonGeometry }
 
-// IsEmpty reports true if this is the special "empty" loop that contains no points.
+// IsEmpty reports true if this is the special empty loop that contains no points.
 func (l *Loop) IsEmpty() bool {
 	return l.isEmptyOrFull() && !l.ContainsOrigin()
 }
 
-// IsFull reports true if this is the special "full" loop that contains all points.
+// IsFull reports true if this is the special full loop that contains all points.
 func (l *Loop) IsFull() bool {
 	return l.isEmptyOrFull() && l.ContainsOrigin()
 }
