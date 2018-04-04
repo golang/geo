@@ -61,16 +61,8 @@ const (
 	// Loop that results from intersection of other loops.
 	farHemiSouthHemiLoop = "0:-180, 0:90, -60:90, 0:-90;"
 
-	// Rectangles that form a cross, with only shared vertices, no crossing edges.
-	// Optional holes outside the intersecting region. 1 is the horizontal rectangle,
-	// and 2 is the vertical. The intersections are shared vertices.
-	//       x---x
-	//       | 2 |
-	//   +---*---*---+
-	//   | 1 |1+2| 1 |
-	//   +---*---*---+
-	//       | 2 |
-	//       x---x
+	// Rectangles that form a cross, with only shared vertices, no crossing
+	// edges. Optional holes outside the intersecting region.
 	loopCross1          = "-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1;"
 	loopCross1SideHole  = "-1.5:0.5, -1.2:0.5, -1.2:-0.5, -1.5:-0.5;"
 	loopCrossCenterHole = "-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5;"
@@ -1054,6 +1046,38 @@ func TestPolygonRelations(t *testing.T) {
 	testPolygonNestedPair(t, emptyPolygon, emptyPolygon)
 	testPolygonNestedPair(t, fullPolygon, emptyPolygon)
 	testPolygonNestedPair(t, fullPolygon, fullPolygon)
+}
+
+func TestPolygonArea(t *testing.T) {
+	tests := []struct {
+		have *Polygon
+		want float64
+	}{
+		{have: emptyPolygon, want: 0},
+		{have: fullPolygon, want: 4 * math.Pi},
+		{have: southHemiPolygon, want: 2 * math.Pi},
+		{have: farSouthHemiPolygon, want: math.Pi},
+		{
+			// compare the polygon of two shells to the sum of its loops.
+			have: makePolygon(loopCross1SideHole+loopCrossCenterHole, true),
+			// the strings for the loops contain ';' so copy and paste without it
+			want: makeLoop("-1.5:0.5, -1.2:0.5, -1.2:-0.5, -1.5:-0.5").Area() +
+				makeLoop("-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5").Area(),
+		},
+		{
+			// test that polygon with a shell and a hole matches its loop parts.
+			have: makePolygon(loopCross1+loopCrossCenterHole, true),
+			// the strings for the loops contain ';' so copy and paste without it
+			want: makeLoop("-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1").Area() -
+				makeLoop("-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5").Area(),
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.have.Area(); !float64Eq(got, test.want) {
+			t.Errorf("%v.Area() = %v, want %v", test.have, got, test.want)
+		}
+	}
 }
 
 // TODO(roberts): Remaining Tests

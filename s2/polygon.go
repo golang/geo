@@ -906,6 +906,16 @@ func (p *Polygon) anyLoopIntersects(o *Loop) bool {
 	return false
 }
 
+// Area returns the area of the polygon interior, i.e. the region on the left side
+// of an odd number of loops. The return value is between 0 and 4*Pi.
+func (p *Polygon) Area() float64 {
+	var area float64
+	for _, loop := range p.loops {
+		area += float64(loop.Sign()) * loop.Area()
+	}
+	return area
+}
+
 // Encode encodes the Polygon
 func (p *Polygon) Encode(w io.Writer) error {
 	e := &encoder{w: w}
@@ -1087,7 +1097,6 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 }
 
 // TODO(roberts): Differences from C++
-// Area
 // Centroid
 // SnapLevel
 // DistanceToPoint
