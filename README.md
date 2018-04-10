@@ -127,6 +127,7 @@ Approximately ~40% complete.
 *   Cell
 *   CellID
 *   CellUnion
+*   ContainsVertexQuery
 *   CrossingEdgeQuery
 *   LatLng
 *   matrix3x3
@@ -138,6 +139,7 @@ Approximately ~40% complete.
 *   s2edge_clipping
 *   s2edge_crosser
 *   s2edge_crossings
+*   s2edge_distances
 *   edgeVectorShape
 *   laxLoop
 *   laxPolyline
@@ -165,6 +167,7 @@ listing of the incomplete methods are documented at the end of each file.
 **In Progress** Files that have some work done, but are probably not complete
 enough for general use in production code.
 
+*   ContainsPointQuery - About half done
 *   Polygon - Polygons with multiple loops are supported. It fully implements
     Shape and Region, but it's missing most other methods. (Area, Centroid,
     Distance, Projection, Intersection, Union, Contains, Normalized, etc.)
@@ -189,8 +192,6 @@ started.
 *   Centroids
 *   ClosestEdgeQuery
 *   ClosestPointQuery
-*   ContainsPointQuery - ShapeContainsPoint and FindContainingShapes
-*   ContainsVertexQuery
 *   ConvexHullQuery
 *   EdgeTesselator
 *   MinDistanceTargets
@@ -200,7 +201,6 @@ started.
 *   RegionIntersection
 *   RegionTermIndexer
 *   RegionUnion
-*   Projections
 *   ShapeIndexRegion - Allows ShapeIndexes to be used as Regions for things like
     RegionCoverer
 *   laxPolygon
