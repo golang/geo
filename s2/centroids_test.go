@@ -21,7 +21,7 @@ import (
 	"github.com/golang/geo/r3"
 )
 
-func TestPointPlanarCentroid(t *testing.T) {
+func TestCentroidsPlanarCentroid(t *testing.T) {
 	tests := []struct {
 		name             string
 		p0, p1, p2, want Point
@@ -50,11 +50,9 @@ func TestPointPlanarCentroid(t *testing.T) {
 	}
 }
 
-func TestPointTrueCentroid(t *testing.T) {
+func TestCentroidsTrueCentroid(t *testing.T) {
 	// Test TrueCentroid with very small triangles. This test assumes that
 	// the triangle is small enough so that it is nearly planar.
-	// The centroid of a planar triangle is at the intersection of its
-	// medians, which is two-thirds of the way along each median.
 	for i := 0; i < 100; i++ {
 		f := randomFrame()
 		p := f.col(0)
@@ -68,6 +66,8 @@ func TestPointTrueCentroid(t *testing.T) {
 		p2 := Point{p.Add(y.Mul(d * 3)).Normalize()}
 		want := Point{p.Add(y.Mul(d)).Normalize()}
 
+		// The centroid of a planar triangle is at the intersection of its
+		// medians, which is two-thirds of the way along each median.
 		got := TrueCentroid(p0, p1, p2).Normalize()
 		if got.Distance(want.Vector) >= 2e-8 {
 			t.Errorf("TrueCentroid(%v, %v, %v).Normalize() = %v, want %v", p0, p1, p2, got, want)
@@ -82,6 +82,53 @@ func TestPointTrueCentroid(t *testing.T) {
 		got = TrueCentroid(p0, p1, p2).Normalize()
 		if got.Distance(want.Vector) >= 2e-8 {
 			t.Errorf("TrueCentroid(%v, %v, %v).Normalize() = %v, want %v", p0, p1, p2, got, want)
+		}
+	}
+}
+
+func TestCentroidsEdgeTrueCentroidSemiCircles(t *testing.T) {
+	// Test the centroid of polyline ABC that follows the equator and consists
+	// of two 90 degree edges (i.e., C = -A).  The centroid (multiplied by
+	// length) should point toward B and have a norm of 2.0.  (The centroid
+	// itself has a norm of 2/Pi, and the total edge length is Pi.)
+	a := PointFromCoords(0, -1, 0)
+	b := PointFromCoords(1, 0, 0)
+	c := PointFromCoords(0, 1, 0)
+	centroid := Point{EdgeTrueCentroid(a, b).Add(EdgeTrueCentroid(b, c).Vector)}
+
+	if !b.ApproxEqual(Point{centroid.Normalize()}) {
+		t.Errorf("EdgeTrueCentroid(%v, %v) + EdgeTrueCentroid(%v, %v) = %v, want %v", a, b, b, c, centroid, b)
+	}
+	if got, want := centroid.Norm(), 2.0; !float64Eq(got, want) {
+		t.Errorf("%v.Norm() = %v, want %v", centroid, got, want)
+	}
+}
+
+func TestCentroidsEdgeTrueCentroidGreatCircles(t *testing.T) {
+	// Construct random great circles and divide them randomly into segments.
+	// Then make sure that the centroid is approximately at the center of the
+	// sphere.  Note that because of the way the centroid is computed, it does
+	// not matter how we split the great circle into segments.
+	//
+	// Note that this is a direct test of the properties that the centroid
+	// should have, rather than a test that it matches a particular formula.
+	for iter := 0; iter < 100; iter++ {
+		f := randomFrameAtPoint(randomPoint())
+		x := f.col(0)
+		y := f.col(1)
+
+		var centroid Point
+
+		v0 := x
+		for theta := 0.0; theta < 2*math.Pi; theta += math.Pow(randomFloat64(), 10) {
+			v1 := Point{x.Mul(math.Cos(theta)).Add(y.Mul(math.Sin(theta)))}
+			centroid = Point{centroid.Add(EdgeTrueCentroid(v0, v1).Vector)}
+			v0 = v1
+		}
+		// Close the circle.
+		centroid = Point{centroid.Add(EdgeTrueCentroid(v0, x).Vector)}
+		if got, want := centroid.Norm(), 2e-14; got > want {
+			t.Errorf("%v.Norm() = %v, want <= %v", centroid, got, want)
 		}
 	}
 }

@@ -55,6 +55,9 @@ import (
 // multiplying by the signed area are (1) this is the quantity that needs to be
 // summed to compute the centroid of a union or difference of triangles, and
 // (2) it's actually easier to calculate this way. All points must have unit length.
+//
+// Note that the result of this function is defined to be Point(0, 0, 0) if
+// the triangle is degenerate.
 func TrueCentroid(a, b, c Point) Point {
 	// Use Distance to get accurate results for small triangles.
 	ra := float64(1)
@@ -80,6 +83,9 @@ func TrueCentroid(a, b, c Point) Point {
 	// other two rows; this reduces the cancellation error when A, B, and C are
 	// very close together. Then we solve it using Cramer's rule.
 	//
+	// The result is the true centroid of the triangle multiplied by the
+	// triangle's area.
+	//
 	// This code still isn't as numerically stable as it could be.
 	// The biggest potential improvement is to compute B-A and C-A more
 	// accurately so that (B-A)x(C-A) is always inside triangle ABC.
@@ -89,6 +95,32 @@ func TrueCentroid(a, b, c Point) Point {
 	r := r3.Vector{ra, rb - ra, rc - ra}
 
 	return Point{r3.Vector{y.Cross(z).Dot(r), z.Cross(x).Dot(r), x.Cross(y).Dot(r)}.Mul(0.5)}
+}
+
+// EdgeTrueCentroid returns the true centroid of the spherical geodesic edge AB
+// multiplied by the length of the edge AB. As with triangles, the true centroid
+// of a collection of line segments may be computed simply by summing the result
+// of this method for each segment.
+//
+// Note that the planar centroid of a line segment is simply 0.5 * (a + b),
+// while the surface centroid is (a + b).Normalize(). However neither of
+// these values is appropriate for computing the centroid of a collection of
+// edges (such as a polyline).
+//
+// Also note that the result of this function is defined to be Point(0, 0, 0)
+// if the edge is degenerate.
+func EdgeTrueCentroid(a, b Point) Point {
+	// The centroid (multiplied by length) is a vector toward the midpoint
+	// of the edge, whose length is twice the sine of half the angle between
+	// the two vertices. Defining theta to be this angle, we have:
+	vDiff := a.Sub(b.Vector) // Length == 2*sin(theta)
+	vSum := a.Add(b.Vector)  // Length == 2*cos(theta)
+	sin2 := vDiff.Norm2()
+	cos2 := vSum.Norm2()
+	if cos2 == 0 {
+		return Point{} // Ignore antipodal edges.
+	}
+	return Point{vSum.Mul(math.Sqrt(sin2 / cos2))} // Length == 2*sin(theta)
 }
 
 // PlanarCentroid returns the centroid of the planar triangle ABC. This can be
