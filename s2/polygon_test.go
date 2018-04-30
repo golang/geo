@@ -343,16 +343,15 @@ func checkPolygonInvalid(t *testing.T, label string, loops []*Loop, initOriented
 		f(polygon)
 	}
 
-	err := polygon.validate()
-	if err == nil {
-		t.Errorf("%s: %v.validate() = nil, want non-nil", label, polygon)
+	if err := polygon.Validate(); err == nil {
+		t.Errorf("%s: %v.Validate() = %v, want non-nil", label, polygon, err)
 	}
 }
 
 func TestPolygonUnitializedIsValid(t *testing.T) {
 	p := &Polygon{}
-	if !p.IsValid() {
-		t.Errorf("an uninitialized polygon should pass the validation checks.")
+	if err := p.Validate(); err != nil {
+		t.Errorf("an uninitialized polygon failed validation: %v", err)
 	}
 }
 

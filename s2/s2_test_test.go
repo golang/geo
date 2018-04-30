@@ -123,8 +123,8 @@ func TestTestingFractal(t *testing.T) {
 		frame := randomFrame()
 		loop := f.makeLoop(frame, nominalRadius)
 
-		if !loop.IsValid() {
-			t.Errorf("%s. fractal loop should be valid.", test.label)
+		if err := loop.Validate(); err != nil {
+			t.Errorf("%s. fractal loop was not valid: %v", test.label, err)
 		}
 
 		// If minLevel and maxLevel are not equal, then the number of vertices and

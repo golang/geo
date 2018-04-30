@@ -1580,7 +1580,7 @@ func TestLoopAreaConsistentWithTurningAngle(t *testing.T) {
 }
 
 func TestLoopGetAreaConsistentWithSign(t *testing.T) {
-	// TODO(roberts): Uncomment when Loop has IsValid
+	// TODO(roberts): Uncomment when Loop has Validate
 	/*
 		// Test that Area() returns an area near 0 for degenerate loops that
 		// contain almost no points, and an area near 4*pi for degenerate loops that
@@ -1592,7 +1592,7 @@ func TestLoopGetAreaConsistentWithSign(t *testing.T) {
 			// Repeatedly choose N vertices that are exactly on the equator until we
 			// find some that form a valid loop.
 			var loop = Loop{}
-			for !loop.IsValid() {
+			for !loop.Validate() {
 				var vertices []Point
 				for i := 0; i < numVertices; i++ {
 					// We limit longitude to the range [0, 90] to ensure that the loop is
@@ -1652,7 +1652,7 @@ func TestLoopNormalizedCompatibleWithContains(t *testing.T) {
 	}
 }
 
-func TestLoopIsValidDetectsInvalidLoops(t *testing.T) {
+func TestLoopValidateDetectsInvalidLoops(t *testing.T) {
 	tests := []struct {
 		msg    string
 		points []Point
@@ -1709,9 +1709,8 @@ func TestLoopIsValidDetectsInvalidLoops(t *testing.T) {
 
 	for _, test := range tests {
 		loop := LoopFromPoints(test.points)
-		err := loop.findValidationError()
-		if err == nil {
-			t.Errorf("%s. %v.findValidationError() = nil, want err to be non-nil", test.msg, loop)
+		if err := loop.Validate(); err == nil {
+			t.Errorf("%s. %v.Validate() = %v, want nil", test.msg, loop, err)
 		}
 		// The C++ tests also tests that the returned error message string contains
 		// a specific set of text. That part of the test is skipped here.

@@ -203,21 +203,16 @@ func (l *Loop) initBound() {
 	l.subregionBound = ExpandForSubregions(l.bound)
 }
 
-// IsValid reports whether this is a valid loop or not.
-func (l *Loop) IsValid() bool {
-	return l.findValidationError() == nil
-}
-
-// findValidationError reports whether this is not a valid loop and if so
-// returns an error describing why. This function requires the Loops ShapeIndex
-// to have been intialized.
-func (l *Loop) findValidationError() error {
+// Validate checks whether this is a valid loop.
+func (l *Loop) Validate() error {
 	if err := l.findValidationErrorNoIndex(); err != nil {
 		return err
 	}
+
 	// Check for intersections between non-adjacent edges (including at vertices)
 	// TODO(roberts): Once shapeutil gets findAnyCrossing uncomment this.
 	// return findAnyCrossing(l.index)
+
 	return nil
 }
 

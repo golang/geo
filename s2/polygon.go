@@ -330,18 +330,9 @@ func FullPolygon() *Polygon {
 	return ret
 }
 
-// IsValid reports whether this is a valid polygon (including checking whether all
-// the loops are themselves valid).
-func (p *Polygon) IsValid() bool {
-	// TODO(roberts): If we want to expose the error, add a Validate() error method.
-	return p.validate() == nil
-}
-
-// validate reports any error if this is not a valid polygon.
-//
-// Note that in the returned error messages, loops that represent holes have their
-// edges numbered in reverse order, starting from the last vertex of the loop.
-func (p *Polygon) validate() error {
+// Validate checks whether this is a valid polygon,
+// including checking whether all the loops are themselves valid.
+func (p *Polygon) Validate() error {
 	for i, l := range p.loops {
 		// Check for loop errors that don't require building a ShapeIndex.
 		if err := l.findValidationErrorNoIndex(); err != nil {
