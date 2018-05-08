@@ -273,7 +273,7 @@ func makeShapeIndex(s string) *ShapeIndex {
 		points = append(points, parsePoint(p))
 	}
 	if len(points) > 0 {
-		index.Add(pointVectorShape(points))
+		index.Add(PointVector(points))
 	}
 
 	for _, p := range strings.Split(fields[1], "|") {
