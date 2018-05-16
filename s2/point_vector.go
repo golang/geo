@@ -34,6 +34,7 @@ func (p PointVector) NumChains() int                    { return len(p) }
 func (p PointVector) Chain(i int) Chain                 { return Chain{i, 1} }
 func (p PointVector) ChainEdge(i, j int) Edge           { return Edge{p[i], p[j]} }
 func (p PointVector) ChainPosition(e int) ChainPosition { return ChainPosition{e, 0} }
-func (p PointVector) dimension() dimension              { return pointGeometry }
+func (p PointVector) Dimension() int                    { return 0 }
 func (p PointVector) IsEmpty() bool                     { return defaultShapeIsEmpty(p) }
 func (p PointVector) IsFull() bool                      { return defaultShapeIsFull(p) }
+func (p PointVector) privateInterface()                 {}

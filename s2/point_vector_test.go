@@ -28,8 +28,8 @@ func TestPointVectorEmpty(t *testing.T) {
 	if got, want := shape.NumChains(), 0; got != want {
 		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got, want := shape.dimension(), pointGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 0; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = false, want true")
@@ -60,8 +60,8 @@ func TestPointVectorBasics(t *testing.T) {
 	if got, want := shape.NumChains(), numPoints; got != want {
 		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got, want := shape.dimension(), pointGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 0; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = true, want false")

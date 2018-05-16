@@ -27,8 +27,8 @@ func TestLaxLoopEmptyLoop(t *testing.T) {
 	if got, want := shape.NumChains(), 0; got != want {
 		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got, want := shape.dimension(), polygonGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")
@@ -74,8 +74,8 @@ func TestLaxLoopNonEmptyLoop(t *testing.T) {
 			t.Errorf("%d. edge.V1 = %v, want %v", i, got, want)
 		}
 	}
-	if got, want := shape.dimension(), polygonGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")

@@ -27,8 +27,8 @@ func TestLaxPolylineNoVertices(t *testing.T) {
 	if got, want := shape.NumChains(), 0; got != want {
 		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got, want := shape.dimension(), polylineGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 1; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = false, want true")
@@ -49,8 +49,8 @@ func TestLaxPolylineOneVertex(t *testing.T) {
 	if got, want := shape.NumChains(), 0; got != want {
 		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got, want := shape.dimension(), polylineGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 1; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = false, want true")
@@ -76,8 +76,8 @@ func TestLaxPolylineEdgeAccess(t *testing.T) {
 	if got, want := shape.Chain(0).Length, 2; got != want {
 		t.Errorf("shape.Chain(%d).Length = %d, want 2", got, want)
 	}
-	if got, want := shape.dimension(), polylineGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 1; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = true, want false")

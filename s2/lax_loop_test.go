@@ -65,8 +65,8 @@ func (l *laxLoop) Edge(e int) Edge {
 	return Edge{l.vertices[e], l.vertices[e1]}
 
 }
-func (l *laxLoop) dimension() dimension           { return polygonGeometry }
-func (l *laxLoop) HasInterior() bool              { return l.dimension() == polygonGeometry }
+func (l *laxLoop) Dimension() int                 { return 2 }
+func (l *laxLoop) HasInterior() bool              { return l.Dimension() == 2 }
 func (l *laxLoop) ReferencePoint() ReferencePoint { return referencePointForShape(l) }
 func (l *laxLoop) NumChains() int                 { return minInt(1, l.numVertices) }
 func (l *laxLoop) Chain(i int) Chain              { return Chain{0, l.numVertices} }
@@ -80,3 +80,4 @@ func (l *laxLoop) ChainEdge(i, j int) Edge {
 func (l *laxLoop) ChainPosition(e int) ChainPosition { return ChainPosition{0, e} }
 func (l *laxLoop) IsEmpty() bool                     { return defaultShapeIsEmpty(l) }
 func (l *laxLoop) IsFull() bool                      { return defaultShapeIsFull(l) }
+func (l *laxLoop) privateInterface()                 {}

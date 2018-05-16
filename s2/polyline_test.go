@@ -80,8 +80,8 @@ func TestPolylineShape(t *testing.T) {
 	if shape.ReferencePoint().Contained {
 		t.Errorf("polylines should not contain their reference points")
 	}
-	if shape.dimension() != polylineGeometry {
-		t.Errorf("polylines should have PolylineGeometry")
+	if got, want := shape.Dimension(), 1; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 }
 

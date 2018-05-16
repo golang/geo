@@ -170,8 +170,8 @@ func TestPolygonEmpty(t *testing.T) {
 	if got, want := shape.NumChains(), 0; got != want {
 		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got, want := shape.dimension(), polygonGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = false, want true")
@@ -199,8 +199,8 @@ func TestPolygonFull(t *testing.T) {
 	if got, want := shape.Chain(0).Length, 0; got != want {
 		t.Errorf("fullPolygon.Chain(0).Length = %d, want %d", got, want)
 	}
-	if got, want := shape.dimension(), polygonGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = true, want false")
@@ -255,8 +255,8 @@ func TestPolygonShape(t *testing.T) {
 				edgeID++
 			}
 		}
-		if got, want := shape.dimension(), polygonGeometry; got != want {
-			t.Errorf("shape.dimension() = %v, want %v", got, want)
+		if got, want := shape.Dimension(), 2; got != want {
+			t.Errorf("shape.Dimension() = %v, want %v", got, want)
 		}
 		if !shape.HasInterior() {
 			t.Errorf("shape.HasInterior() = false, want true")

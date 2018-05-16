@@ -306,8 +306,8 @@ func makeShapeIndex(s string) *ShapeIndex {
 func shapeIndexDebugString(index *ShapeIndex) string {
 	var buf bytes.Buffer
 
-	for dim := pointGeometry; dim <= polygonGeometry; dim++ {
-		if dim > pointGeometry {
+	for dim := 0; dim <= 2; dim++ {
+		if dim > 0 {
 			buf.WriteByte('#')
 		}
 
@@ -320,20 +320,20 @@ func shapeIndexDebugString(index *ShapeIndex) string {
 			shape := index.Shape(i)
 			// Only use shapes that are still in the index and at the
 			// current geometry level we are outputting.
-			if shape == nil || shape.dimension() != dim {
+			if shape == nil || shape.Dimension() != dim {
 				continue
 			}
 			if count > 0 {
 				buf.WriteString(" | ")
 			} else {
-				if dim > pointGeometry {
+				if dim > 0 {
 					buf.WriteByte(' ')
 				}
 			}
 
 			for c := 0; c < shape.NumChains(); c++ {
 				if c > 0 {
-					if dim == polygonGeometry {
+					if dim == 2 {
 						buf.WriteString("; ")
 					} else {
 						buf.WriteString(" | ")
@@ -342,7 +342,7 @@ func shapeIndexDebugString(index *ShapeIndex) string {
 				chain := shape.Chain(c)
 				pts := []Point{shape.Edge(chain.Start).V0}
 				limit := chain.Start + chain.Length
-				if dim != polylineGeometry {
+				if dim != 1 {
 					limit--
 				}
 
@@ -354,7 +354,7 @@ func shapeIndexDebugString(index *ShapeIndex) string {
 			}
 		}
 
-		if dim == polylineGeometry || (dim == pointGeometry && count > 0) {
+		if dim == 1 || (dim == 0 && count > 0) {
 			buf.WriteByte(' ')
 		}
 	}

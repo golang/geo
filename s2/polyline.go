@@ -194,14 +194,16 @@ func (p *Polyline) ChainPosition(edgeID int) ChainPosition {
 	return ChainPosition{0, edgeID}
 }
 
-// dimension returns the dimension of the geometry represented by this Polyline.
-func (p *Polyline) dimension() dimension { return polylineGeometry }
+// Dimension returns the dimension of the geometry represented by this Polyline.
+func (p *Polyline) Dimension() int { return 1 }
 
 // IsEmpty reports whether this shape contains no points.
 func (p *Polyline) IsEmpty() bool { return defaultShapeIsEmpty(p) }
 
 // IsFull reports whether this shape contains all points on the sphere.
 func (p *Polyline) IsFull() bool { return defaultShapeIsFull(p) }
+
+func (p *Polyline) privateInterface() {}
 
 // findEndVertex reports the maximal end index such that the line segment between
 // the start index and this one such that the line segment between these two

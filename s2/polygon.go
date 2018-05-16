@@ -648,7 +648,7 @@ func (p *Polygon) Edge(e int) Edge {
 
 // HasInterior reports whether this Polygon has an interior.
 func (p *Polygon) HasInterior() bool {
-	return p.dimension() == polygonGeometry
+	return p.Dimension() == 2
 }
 
 // ReferencePoint returns the reference point for this polygon.
@@ -711,8 +711,10 @@ func (p *Polygon) ChainPosition(edgeID int) ChainPosition {
 	return ChainPosition{i, edgeID}
 }
 
-// dimension returns the dimension of the geometry represented by this Polygon.
-func (p *Polygon) dimension() dimension { return polygonGeometry }
+// Dimension returns the dimension of the geometry represented by this Polygon.
+func (p *Polygon) Dimension() int { return 2 }
+
+func (p *Polygon) privateInterface() {}
 
 // Contains reports whether this polygon contains the other polygon.
 // Specifically, it reports whether all the points in the other polygon

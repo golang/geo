@@ -32,8 +32,8 @@ func TestLaxPolygonShapeEmptyPolygon(t *testing.T) {
 	if got, want := shape.NumChains(), 0; got != want {
 		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got, want := shape.dimension(), polygonGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")
@@ -63,8 +63,8 @@ func TestLaxPolygonFull(t *testing.T) {
 	if got, want := shape.NumChains(), 1; got != want {
 		t.Errorf("shape.NumChains() = %v, want %v", got, want)
 	}
-	if got, want := shape.dimension(), polygonGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")
@@ -116,8 +116,8 @@ func TestLaxPolygonSingleVertexPolygon(t *testing.T) {
 	if edge != shape.ChainEdge(0, 0) {
 		t.Errorf("shape.Edge(0) should equal shape.ChainEdge(0, 0)")
 	}
-	if got, want := shape.dimension(), polygonGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")
@@ -178,8 +178,8 @@ func TestLaxPolygonShapeSingleLoopPolygon(t *testing.T) {
 			t.Errorf("shape.ChainEdge(0, %d).V1 = %v, want %v", i, got, want)
 		}
 	}
-	if got, want := shape.dimension(), polygonGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")
@@ -243,8 +243,8 @@ func TestLaxPolygonShapeMultiLoopPolygon(t *testing.T) {
 	if got, want := shape.NumEdges(), numVertices; got != want {
 		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-	if got, want := shape.dimension(), polygonGeometry; got != want {
-		t.Errorf("shape.dimension() = %v, want %v", got, want)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
 	if !shape.HasInterior() {
 		t.Errorf("shape.HasInterior() = false, want true")

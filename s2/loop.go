@@ -493,8 +493,10 @@ func (l *Loop) ChainPosition(edgeID int) ChainPosition {
 	return ChainPosition{0, edgeID}
 }
 
-// dimension returns the dimension of the geometry represented by this Loop.
-func (l *Loop) dimension() dimension { return polygonGeometry }
+// Dimension returns the dimension of the geometry represented by this Loop.
+func (l *Loop) Dimension() int { return 2 }
+
+func (l *Loop) privateInterface() {}
 
 // IsEmpty reports true if this is the special empty loop that contains no points.
 func (l *Loop) IsEmpty() bool {
