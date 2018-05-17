@@ -113,6 +113,7 @@ func TestNormalizeCorrectlyCanonicalizesAngles(t *testing.T) {
 		in, want float64 // both in degrees
 	}{
 		{360, 0},
+		{-90, -90},
 		{-180, 180},
 		{180, 180},
 		{540, 180},
