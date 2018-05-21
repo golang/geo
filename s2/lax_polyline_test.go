@@ -38,7 +38,6 @@ func laxPolylineFromPolyline(p Polyline) *laxPolyline {
 
 func (l *laxPolyline) NumEdges() int                     { return maxInt(0, len(l.vertices)-1) }
 func (l *laxPolyline) Edge(e int) Edge                   { return Edge{l.vertices[e], l.vertices[e+1]} }
-func (l *laxPolyline) HasInterior() bool                 { return false }
 func (l *laxPolyline) ReferencePoint() ReferencePoint    { return OriginReferencePoint(false) }
 func (l *laxPolyline) NumChains() int                    { return minInt(1, l.NumEdges()) }
 func (l *laxPolyline) Chain(i int) Chain                 { return Chain{0, l.NumEdges()} }

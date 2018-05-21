@@ -30,9 +30,6 @@ func TestLaxLoopEmptyLoop(t *testing.T) {
 	if got, want := shape.Dimension(), 2; got != want {
 		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
-	if !shape.HasInterior() {
-		t.Errorf("shape.HasInterior() = false, want true")
-	}
 	if !shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = false, want true")
 	}
@@ -76,9 +73,6 @@ func TestLaxLoopNonEmptyLoop(t *testing.T) {
 	}
 	if got, want := shape.Dimension(), 2; got != want {
 		t.Errorf("shape.Dimension() = %v, want %v", got, want)
-	}
-	if !shape.HasInterior() {
-		t.Errorf("shape.HasInterior() = false, want true")
 	}
 	if shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = true, want false")

@@ -646,11 +646,6 @@ func (p *Polygon) Edge(e int) Edge {
 	return Edge{p.Loop(i).OrientedVertex(e), p.Loop(i).OrientedVertex(e + 1)}
 }
 
-// HasInterior reports whether this Polygon has an interior.
-func (p *Polygon) HasInterior() bool {
-	return p.Dimension() == 2
-}
-
 // ReferencePoint returns the reference point for this polygon.
 func (p *Polygon) ReferencePoint() ReferencePoint {
 	containsOrigin := false

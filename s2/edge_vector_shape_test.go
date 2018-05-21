@@ -43,7 +43,6 @@ func (e *edgeVectorShape) Add(a, b Point) {
 }
 func (e *edgeVectorShape) NumEdges() int                          { return len(e.edges) }
 func (e *edgeVectorShape) Edge(id int) Edge                       { return e.edges[id] }
-func (e *edgeVectorShape) HasInterior() bool                      { return false }
 func (e *edgeVectorShape) ReferencePoint() ReferencePoint         { return OriginReferencePoint(false) }
 func (e *edgeVectorShape) NumChains() int                         { return len(e.edges) }
 func (e *edgeVectorShape) Chain(chainID int) Chain                { return Chain{chainID, 1} }

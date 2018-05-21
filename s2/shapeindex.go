@@ -168,7 +168,7 @@ type faceEdge struct {
 	shapeID     int32    // The ID of shape that this edge belongs to
 	edgeID      int      // Edge ID within that shape
 	maxLevel    int      // Not desirable to subdivide this edge beyond this level
-	hasInterior bool     // Belongs to a shape that has an interior
+	hasInterior bool     // Belongs to a shape that has a dimension of 2
 	a, b        r2.Point // The edge endpoints, clipped to a given face
 	edge        Edge     // The original edge.
 }
@@ -731,7 +731,7 @@ func (s *ShapeIndex) Remove(shape Shape) {
 	numEdges := shape.NumEdges()
 	removed := &removedShape{
 		shapeID:               id,
-		hasInterior:           shape.HasInterior(),
+		hasInterior:           shape.Dimension() == 2,
 		containsTrackerOrigin: shape.ReferencePoint().Contained,
 		edges:                 make([]Edge, numEdges),
 	}
@@ -825,7 +825,7 @@ func (s *ShapeIndex) addShapeInternal(shapeID int32, allEdges [][]faceEdge, t *t
 
 	faceEdge := faceEdge{
 		shapeID:     shapeID,
-		hasInterior: shape.HasInterior(),
+		hasInterior: shape.Dimension() == 2,
 	}
 
 	if faceEdge.hasInterior {
@@ -1374,7 +1374,7 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 		// line segment from the cell center to the entry vertex.
 		edge := &faceEdge{
 			shapeID:     shapeID,
-			hasInterior: shape.HasInterior(),
+			hasInterior: shape.Dimension() == 2,
 		}
 
 		if edge.hasInterior {

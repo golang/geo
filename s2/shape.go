@@ -148,9 +148,6 @@ type Shape interface {
 	// Edge returns the edge for the given edge index.
 	Edge(i int) Edge
 
-	// HasInterior reports whether this shape has an interior.
-	HasInterior() bool
-
 	// ReferencePoint returns an arbitrary reference point for the shape. (The
 	// containment boolean value must be false for shapes that do not have an interior.)
 	//
@@ -229,12 +226,12 @@ type Shape interface {
 
 // defaultShapeIsEmpty reports whether this shape contains no points.
 func defaultShapeIsEmpty(s Shape) bool {
-	return s.NumEdges() == 0 && (!s.HasInterior() || s.NumChains() == 0)
+	return s.NumEdges() == 0 && (s.Dimension() != 2 || s.NumChains() == 0)
 }
 
 // defaultShapeIsFull reports whether this shape contains all points on the sphere.
 func defaultShapeIsFull(s Shape) bool {
-	return s.NumEdges() == 0 && s.HasInterior() && s.NumChains() > 0
+	return s.NumEdges() == 0 && s.Dimension() == 2 && s.NumChains() > 0
 }
 
 // A minimal check for types that should satisfy the Shape interface.

@@ -451,11 +451,6 @@ func (l *Loop) ReferencePoint() ReferencePoint {
 	return OriginReferencePoint(l.originInside)
 }
 
-// HasInterior returns true because all loops have an interior.
-func (l *Loop) HasInterior() bool {
-	return true
-}
-
 // NumEdges returns the number of edges in this shape.
 func (l *Loop) NumEdges() int {
 	if l.isEmptyOrFull() {

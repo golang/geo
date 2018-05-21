@@ -90,7 +90,7 @@ func (q *ContainsPointQuery) shapeContains(clipped *clippedShape, center, p Poin
 	}
 
 	shape := q.index.Shape(clipped.shapeID)
-	if !shape.HasInterior() {
+	if shape.Dimension() != 2 {
 		// Points and polylines can be ignored unless the vertex model is Closed.
 		if q.model != VertexModelClosed {
 			return false

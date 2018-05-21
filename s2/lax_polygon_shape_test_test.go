@@ -35,9 +35,6 @@ func TestLaxPolygonShapeEmptyPolygon(t *testing.T) {
 	if got, want := shape.Dimension(), 2; got != want {
 		t.Errorf("shape.Dimension() = %v, want %v", got, want)
 	}
-	if !shape.HasInterior() {
-		t.Errorf("shape.HasInterior() = false, want true")
-	}
 	if !shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = false, want true")
 	}
@@ -65,9 +62,6 @@ func TestLaxPolygonFull(t *testing.T) {
 	}
 	if got, want := shape.Dimension(), 2; got != want {
 		t.Errorf("shape.Dimension() = %v, want %v", got, want)
-	}
-	if !shape.HasInterior() {
-		t.Errorf("shape.HasInterior() = false, want true")
 	}
 	if shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = true, want false")
@@ -118,9 +112,6 @@ func TestLaxPolygonSingleVertexPolygon(t *testing.T) {
 	}
 	if got, want := shape.Dimension(), 2; got != want {
 		t.Errorf("shape.Dimension() = %v, want %v", got, want)
-	}
-	if !shape.HasInterior() {
-		t.Errorf("shape.HasInterior() = false, want true")
 	}
 	if shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = true, want false")
@@ -180,9 +171,6 @@ func TestLaxPolygonShapeSingleLoopPolygon(t *testing.T) {
 	}
 	if got, want := shape.Dimension(), 2; got != want {
 		t.Errorf("shape.Dimension() = %v, want %v", got, want)
-	}
-	if !shape.HasInterior() {
-		t.Errorf("shape.HasInterior() = false, want true")
 	}
 	if shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = true, want false")
@@ -245,9 +233,6 @@ func TestLaxPolygonShapeMultiLoopPolygon(t *testing.T) {
 	}
 	if got, want := shape.Dimension(), 2; got != want {
 		t.Errorf("shape.Dimension() = %v, want %v", got, want)
-	}
-	if !shape.HasInterior() {
-		t.Errorf("shape.HasInterior() = false, want true")
 	}
 	if shape.IsEmpty() {
 		t.Errorf("shape.IsEmpty() = true, want false")

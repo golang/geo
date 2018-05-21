@@ -209,7 +209,7 @@ func referencePointAtVertex(shape Shape, vTest Point) (ReferencePoint, bool) {
 // Polygon boundaries are treated as being semi-open (see ContainsPointQuery
 // and VertexModel for other options).
 func containsBruteForce(shape Shape, point Point) bool {
-	if !shape.HasInterior() {
+	if shape.Dimension() != 2 {
 		return false
 	}
 

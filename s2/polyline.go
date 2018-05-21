@@ -164,11 +164,6 @@ func (p *Polyline) Edge(i int) Edge {
 	return Edge{(*p)[i], (*p)[i+1]}
 }
 
-// HasInterior returns false as Polylines are not closed.
-func (p *Polyline) HasInterior() bool {
-	return false
-}
-
 // ReferencePoint returns the default reference point with negative containment because Polylines are not closed.
 func (p *Polyline) ReferencePoint() ReferencePoint {
 	return OriginReferencePoint(false)

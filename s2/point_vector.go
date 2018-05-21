@@ -28,7 +28,6 @@ type PointVector []Point
 
 func (p PointVector) NumEdges() int                     { return len(p) }
 func (p PointVector) Edge(i int) Edge                   { return Edge{p[i], p[i]} }
-func (p PointVector) HasInterior() bool                 { return false }
 func (p PointVector) ReferencePoint() ReferencePoint    { return OriginReferencePoint(false) }
 func (p PointVector) NumChains() int                    { return len(p) }
 func (p PointVector) Chain(i int) Chain                 { return Chain{i, 1} }
