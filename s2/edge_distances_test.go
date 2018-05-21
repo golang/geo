@@ -164,6 +164,25 @@ func TestEdgeDistancesCheckDistance(t *testing.T) {
 	}
 }
 
+func TestEdgeDistancesDistanceOptimizationIsConservative(t *testing.T) {
+	// Verifies that alwaysUpdateMinInteriorDistance computes the lower bound
+	// on the true distance conservatively.  (This test used to fail.)
+	x := PointFromCoords(-0.017952729194524016, -0.30232422079175203, 0.95303607751077712)
+	a := PointFromCoords(-0.017894725505830295, -0.30229974986194175, 0.95304493075220664)
+	b := PointFromCoords(-0.017986591360900289, -0.30233851195954353, 0.95303090543659963)
+
+	minDistance, ok := UpdateMinDistance(x, a, b, s1.InfChordAngle())
+	if !ok {
+		t.Errorf("UpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, s1.InfChordAngle(), minDistance, s1.InfChordAngle())
+	}
+	minDistance = minDistance.Successor()
+	minDistance, ok = UpdateMinDistance(x, a, b, minDistance)
+	if !ok {
+		t.Errorf("UpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, s1.InfChordAngle(), minDistance, minDistance)
+	}
+
+}
+
 func TestEdgeDistancesCheckMaxDistance(t *testing.T) {
 	tests := []struct {
 		x, a, b r3.Vector

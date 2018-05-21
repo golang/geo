@@ -262,8 +262,11 @@ func interiorDist(x, a, b Point, minDist s1.ChordAngle, alwaysUpdate bool) (s1.C
 	c2 := c.Norm2()
 	xDotC := x.Dot(c.Vector)
 	xDotC2 := xDotC * xDotC
-	if !alwaysUpdate && xDotC2 >= c2*float64(minDist) {
-		// The closest point on the great circle AB is too far away.
+	if !alwaysUpdate && xDotC2 > c2*float64(minDist) {
+		// The closest point on the great circle AB is too far away.  We need to
+		// test this using ">" rather than ">=" because the actual minimum bound
+		// on the distance is (xDotC2 / c2), which can be rounded differently
+		// than the (more efficient) multiplicative test above.
 		return minDist, false
 	}
 
