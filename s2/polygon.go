@@ -17,6 +17,7 @@ package s2
 import (
 	"fmt"
 	"io"
+	"math"
 )
 
 // Polygon represents a sequence of zero or more loops; recall that the
@@ -97,61 +98,15 @@ func PolygonFromLoops(loops []*Loop) *Polygon {
 	p.loops = loops
 	p.initNested()
 	return p
-
 }
 
-// TODO(roberts): Implement initOriented
-/*
-// PolygonFromOrientedLoops, like PolygonFromLoops, returns a Polygon from the
-// given set of loops. It expects loops to be oriented such that the polygon
+// PolygonFromOrientedLoops returns a Polygon from the given set of loops,
+// like PolygonFromLoops. It expects loops to be oriented such that the polygon
 // interior is on the left-hand side of all loops. This implies that shells
 // and holes should have opposite orientations in the input to this method.
 // (During initialization, loops representing holes will automatically be
 // inverted.)
 func PolygonFromOrientedLoops(loops []*Loop) *Polygon {
-	panic("PolygonFromOrientedLoops not yet implemented")
-	p := &Polygon{
-		loops: loops,
-	}
-	p.initOriented()
-	return p
-}
-*/
-
-// PolygonFromCell returns a Polygon from a single loop created from the given Cell.
-func PolygonFromCell(cell Cell) *Polygon {
-	return PolygonFromLoops([]*Loop{LoopFromCell(cell)})
-}
-
-// initNested takes the set of loops in this polygon and performs the nesting
-// computations to set the proper nesting and parent/child relationships.
-func (p *Polygon) initNested() {
-	if len(p.loops) == 1 {
-		p.initOneLoop()
-		return
-	}
-
-	lm := make(loopMap)
-
-	for _, l := range p.loops {
-		lm.insertLoop(l, nil)
-	}
-	// The loops have all been added to the loopMap for ordering. Clear the
-	// loops slice because we add all the loops in-order in initLoops.
-	p.loops = nil
-
-	// Reorder the loops in depth-first traversal order.
-	p.initLoops(lm)
-	p.initLoopProperties()
-}
-
-// initOriented takes the loops in this polygon and performs the nesting
-// computations. It expects the loops to be oriented such that the polygon
-// interior is on the left-hand side of all loops. This implies that shells
-// and holes should have opposite orientations in the input to this method.
-// (During initialization, loops representing holes will automatically be
-// inverted.)
-func (p *Polygon) initOriented() {
 	// Here is the algorithm:
 	//
 	// 1. Remember which of the given loops contain OriginPoint.
@@ -187,7 +142,157 @@ func (p *Polygon) initOriented() {
 	//    that because we normalized all the loops initially, this step is only
 	//    necessary if the polygon requires at least one non-normalized loop to
 	//    represent it.
-	panic("initOriented not yet implemented")
+
+	containedOrigin := make(map[*Loop]bool)
+	for _, l := range loops {
+		containedOrigin[l] = l.ContainsOrigin()
+	}
+
+	for _, l := range loops {
+		angle := l.TurningAngle()
+		if math.Abs(angle) > l.turningAngleMaxError() {
+			// Normalize the loop.
+			if angle < 0 {
+				l.Invert()
+			}
+		} else {
+			// Ensure that the loop does not contain the origin.
+			if l.ContainsOrigin() {
+				l.Invert()
+			}
+		}
+	}
+
+	p := PolygonFromLoops(loops)
+
+	if p.NumLoops() > 0 {
+		originLoop := p.Loop(0)
+		polygonContainsOrigin := false
+		for _, l := range p.Loops() {
+			if l.ContainsOrigin() {
+				polygonContainsOrigin = !polygonContainsOrigin
+
+				originLoop = l
+			}
+		}
+		if containedOrigin[originLoop] != polygonContainsOrigin {
+			p.Invert()
+		}
+	}
+
+	return p
+}
+
+// Invert inverts the polygon (replaces it by its complement).
+func (p *Polygon) Invert() {
+	// Inverting any one loop will invert the polygon.  The best loop to invert
+	// is the one whose area is largest, since this yields the smallest area
+	// after inversion. The loop with the largest area is always at depth 0.
+	// The descendents of this loop all have their depth reduced by 1, while the
+	// former siblings of this loop all have their depth increased by 1.
+
+	// The empty and full polygons are handled specially.
+	if p.IsEmpty() {
+		*p = *FullPolygon()
+		return
+	}
+	if p.IsFull() {
+		*p = Polygon{}
+		return
+	}
+
+	// Find the loop whose area is largest (i.e., whose turning angle is
+	// smallest), minimizing calls to TurningAngle(). In particular, for
+	// polygons with a single shell at level 0 there is no need to call
+	// TurningAngle() at all. (This method is relatively expensive.)
+	best := 0
+	const none = 10.0 // Flag that means "not computed yet"
+	bestAngle := none
+	for i := 1; i < p.NumLoops(); i++ {
+		if p.Loop(i).depth != 0 {
+			continue
+		}
+		// We defer computing the turning angle of loop 0 until we discover
+		// that the polygon has another top-level shell.
+		if bestAngle == none {
+			bestAngle = p.Loop(best).TurningAngle()
+		}
+		angle := p.Loop(i).TurningAngle()
+		// We break ties deterministically in order to avoid having the output
+		// depend on the input order of the loops.
+		if angle < bestAngle || (angle == bestAngle && compareLoops(p.Loop(i), p.Loop(best)) < 0) {
+			best = i
+			bestAngle = angle
+		}
+	}
+	// Build the new loops vector, starting with the inverted loop.
+	p.Loop(best).Invert()
+	newLoops := make([]*Loop, 0, p.NumLoops())
+	// Add the former siblings of this loop as descendants.
+	lastBest := p.LastDescendant(best)
+	newLoops = append(newLoops, p.Loop(best))
+	for i, l := range p.Loops() {
+		if i < best || i > lastBest {
+			l.depth++
+			newLoops = append(newLoops, l)
+		}
+	}
+	// Add the former children of this loop as siblings.
+	for i, l := range p.Loops() {
+		if i > best && i <= lastBest {
+			l.depth--
+			newLoops = append(newLoops, l)
+		}
+	}
+	p.loops = newLoops
+	p.initLoopProperties()
+}
+
+// Defines a total ordering on Loops that does not depend on the cyclic
+// order of loop vertices. This function is used to choose which loop to
+// invert in the case where several loops have exactly the same area.
+func compareLoops(a, b *Loop) int {
+	if na, nb := a.NumVertices(), b.NumVertices(); na != nb {
+		return na - nb
+	}
+	ai, aDir := a.CanonicalFirstVertex()
+	bi, bDir := b.CanonicalFirstVertex()
+	if aDir != bDir {
+		return aDir - bDir
+	}
+	for n := a.NumVertices() - 1; n >= 0; n, ai, bi = n-1, ai+aDir, bi+bDir {
+		if cmp := a.Vertex(ai).Cmp(b.Vertex(bi).Vector); cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
+}
+
+// PolygonFromCell returns a Polygon from a single loop created from the given Cell.
+func PolygonFromCell(cell Cell) *Polygon {
+	return PolygonFromLoops([]*Loop{LoopFromCell(cell)})
+}
+
+// initNested takes the set of loops in this polygon and performs the nesting
+// computations to set the proper nesting and parent/child relationships.
+func (p *Polygon) initNested() {
+	if len(p.loops) == 1 {
+		p.initOneLoop()
+		return
+	}
+
+	lm := make(loopMap)
+
+	for _, l := range p.loops {
+		lm.insertLoop(l, nil)
+	}
+	// The loops have all been added to the loopMap for ordering. Clear the
+	// loops slice because we add all the loops in-order in initLoops.
+	p.loops = nil
+
+	// Reorder the loops in depth-first traversal order.
+	p.initLoops(lm)
+	p.initLoopProperties()
 }
 
 // loopMap is a map of a loop to its immediate children with respect to nesting.

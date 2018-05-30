@@ -330,8 +330,7 @@ func checkPolygonInvalid(t *testing.T, label string, loops []*Loop, initOriented
 	shuffleLoops(loops)
 	var polygon *Polygon
 	if initOriented {
-		// TODO(roberts): Uncomment when oriented loops support is added.
-		//polygon = PolygonFromOrientedLoops(loops)
+		polygon = PolygonFromOrientedLoops(loops)
 	} else {
 		polygon = PolygonFromLoops(loops)
 	}
