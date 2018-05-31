@@ -1169,7 +1169,7 @@ func (s *ShapeIndex) makeIndexCell(p *PaddedCell, edges []*clippedEdge, t *track
 		if eNext != len(edges) {
 			eshapeID = edges[eNext].faceEdge.shapeID
 		}
-		if cNextIdx != len(cshapeIDs) {
+		if cNextIdx < len(cshapeIDs) {
 			cshapeID = cshapeIDs[cNextIdx]
 		}
 		eBegin := eNext
