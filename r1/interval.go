@@ -59,7 +59,7 @@ func (i Interval) ContainsInterval(oi Interval) bool {
 	return i.Lo <= oi.Lo && oi.Hi <= i.Hi
 }
 
-// InteriorContains returns true iff the the interval strictly contains p.
+// InteriorContains returns true iff the interval strictly contains p.
 func (i Interval) InteriorContains(p float64) bool {
 	return i.Lo < p && p < i.Hi
 }

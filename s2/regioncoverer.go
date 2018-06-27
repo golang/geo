@@ -293,7 +293,7 @@ func (c *coverer) coveringInternal(region Region) {
 		// For exterior covering we cannot do this, because result has to cover the
 		// whole region, so all children have to be used.
 		// candidate.numChildren == 1 case takes care of the situation when we
-		// already have more then MaxCells in result (minLevel is too high).
+		// already have more than MaxCells in result (minLevel is too high).
 		// Subdividing of the candidate with one child does no harm in this case.
 		if c.interiorCovering || int(cand.cell.level) < c.minLevel || cand.numChildren == 1 || len(c.result)+c.pq.Len()+cand.numChildren <= c.maxCells {
 			for _, child := range cand.children {

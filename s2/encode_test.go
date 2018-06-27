@@ -68,7 +68,7 @@ const (
 	// Cell from Face 0.
 	encodedCellFace0 = "0000000000000010"
 
-	// An unitialized empty CellUnion.
+	// An uninitialized empty CellUnion.
 	encodedCellUnionEmpty = "010000000000000000"
 	// CellUnion from a CellID from Face 1.
 	encodedCellUnionFace1 = "0101000000000000000000000000000030"

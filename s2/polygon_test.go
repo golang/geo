@@ -344,7 +344,7 @@ func checkPolygonInvalid(t *testing.T, label string, loops []*Loop, initOriented
 	}
 }
 
-func TestPolygonUnitializedIsValid(t *testing.T) {
+func TestPolygonUninitializedIsValid(t *testing.T) {
 	p := &Polygon{}
 	if err := p.Validate(); err != nil {
 		t.Errorf("an uninitialized polygon failed validation: %v", err)
