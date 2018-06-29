@@ -53,7 +53,7 @@ func TestPointVectorBasics(t *testing.T) {
 		p[i] = randomPoint()
 	}
 
-	shape := Shape(p)
+	shape := Shape(&p)
 	if got, want := shape.NumEdges(), numPoints; got != want {
 		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
