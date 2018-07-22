@@ -123,7 +123,7 @@ func testConvexHullQueryNorthPoleLoop(radius s1.Angle, numVertices int, t *testi
 	loop := RegularLoop(PointFromCoords(0, 0, 1), radius, numVertices)
 	query.AddLoop(loop)
 	res := query.ConvexHull()
-	if radius.Radians() > 2*math.Pi {
+	if radius.Radians() > math.Pi/2 {
 		expectTrue(res.IsFull(), t)
 	} else {
 		expectTrue(res.BoundaryEqual(loop), t)
