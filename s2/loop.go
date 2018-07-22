@@ -379,6 +379,16 @@ func (l *Loop) BoundaryEqual(o *Loop) bool {
 			// There is at most one starting offset since loop vertices are unique.
 			for i := 0; i < len(l.vertices); i++ {
 				if l.Vertex(i+offset) != o.Vertex(i) {
+					if i == 1 {
+						// Try the other direction
+						for j := 0; j < len(l.vertices); j++ {
+							// Add len(l.vertices) for wrap-around
+							if l.Vertex(len(l.vertices)+offset-j) != o.Vertex(j) {
+								return false
+							}
+						}
+						return true
+					}
 					return false
 				}
 			}
