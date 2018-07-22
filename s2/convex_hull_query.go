@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package s2
 
 import (
@@ -42,7 +43,7 @@ import (
 //    then ensures that the convex hull also contains the polyline edges.)
 //
 // To use this class, call the Add*() methods to add your input geometry, and
-// then call GetConvexHull().  Note that GetConvexHull() does *not* reset the
+// then call ConvexHull().  Note that ConvexHull() does *not* reset the
 // state; you can continue adding geometry if desired and compute the convex
 // hull again.  If you want to start from scratch, simply declare a new
 // S2ConvexHullQuery object (they are cheap to create).
@@ -51,15 +52,22 @@ type ConvexHullQuery struct {
 	bound  Rect
 }
 
+// NewConvexHullQuery returns a new instance of a ConvexHullQuery.
+func NewConvexHullQuery() *ConvexHullQuery {
+	return &ConvexHullQuery{
+		bound: EmptyRect(),
+	}
+}
+
 // AddPoint adds one or more points to the input geometry.
 func (q *ConvexHullQuery) AddPoint(point Point) {
+	q.bound.AddPoint(LatLngFromPoint(point))
 	q.points = append(q.points, point)
 }
 
 // AddPolyline add a polyline to the input geometry.
 func (q *ConvexHullQuery) AddPolyline(polyline Polyline) {
 	q.bound = q.bound.Union(polyline.RectBound())
-
 	q.points = append(q.points, polyline...)
 }
 
@@ -142,11 +150,11 @@ func (q *ConvexHullQuery) ConvexHull() *Loop {
 	reversePoints(q.points)
 	q.getMonotoneChain(&upper)
 
-	lower = lower[:len(lower)-1]
-	upper = upper[:len(upper)-1]
-	lower = append(lower, upper...)
+	// Remove duplicates
+	lower = lower[1 : len(lower)-1]
 
-	return LoopFromPoints(lower)
+	// Combine chains and return loop
+	return LoopFromPoints(append(lower, upper...))
 }
 
 // pointsCcwAroundSorter implements the Sort interface for slices of Point
@@ -188,15 +196,14 @@ func reversePoints(points []Point) {
 	}
 }
 
-const singlePointLoopOffset = 1e-15
-
 func singlePointLoop(p Point) *Loop {
+	const offset = 1e-15
 	d0 := p.Ortho()
 	d1 := p.Cross(d0)
 	vertices := make([]Point, 3)
 	vertices[0] = p
-	vertices[1] = Point{p.Add(d0.Mul(singlePointLoopOffset)).Normalize()}
-	vertices[2] = Point{p.Add(d1.Mul(singlePointLoopOffset)).Normalize()}
+	vertices[1] = Point{p.Add(d0.Mul(offset)).Normalize()}
+	vertices[2] = Point{p.Add(d1.Mul(offset)).Normalize()}
 	return LoopFromPoints(vertices)
 }
 
@@ -210,8 +217,8 @@ func singleEdgeLoop(a, b Point) *Loop {
 
 func (q *ConvexHullQuery) getMonotoneChain(output *[]Point) {
 	for i := range q.points {
-		for outLen := len(*output); outLen >= 2 && Sign((*output)[outLen-2], (*output)[outLen-1], q.points[i]); outLen = len(*output) {
-			*output = (*output)[:outLen-1]
+		for len(*output) >= 2 && Sign((*output)[len(*output)-2], (*output)[len(*output)-1], q.points[i]) {
+			*output = (*output)[:len(*output)-1]
 		}
 		*output = append(*output, q.points[i])
 	}

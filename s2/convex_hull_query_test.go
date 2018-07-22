@@ -11,10 +11,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package s2
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
@@ -22,7 +22,7 @@ import (
 )
 
 func TestConvexHullQueryNoPoints(t *testing.T) {
-	q := new(ConvexHullQuery)
+	q := NewConvexHullQuery()
 	expectTrue(q.ConvexHull().IsEmpty(), t)
 }
 
@@ -32,7 +32,7 @@ func loopHasVertex(loop *Loop, point Point) bool {
 }
 
 func TestConvexHullQueryOnePoint(t *testing.T) {
-	query := new(ConvexHullQuery)
+	query := NewConvexHullQuery()
 	p := PointFromCoords(0, 0, 1)
 	query.AddPoint(p)
 
@@ -48,7 +48,7 @@ func TestConvexHullQueryOnePoint(t *testing.T) {
 }
 
 func TestConvexHullQueryTwoPoints(t *testing.T) {
-	query := new(ConvexHullQuery)
+	query := NewConvexHullQuery()
 	p := PointFromCoords(0, 0, 1)
 	q := PointFromCoords(0, 1, 0)
 	query.AddPoint(p)
@@ -67,21 +67,21 @@ func TestConvexHullQueryTwoPoints(t *testing.T) {
 }
 
 func TestConvexHullQueryEmptyLoop(t *testing.T) {
-	query := new(ConvexHullQuery)
+	query := NewConvexHullQuery()
 	query.AddLoop(EmptyLoop())
 	res := query.ConvexHull()
 	expectTrue(res.IsEmpty(), t)
 }
 
 func TestConvexHullQueryFullLoop(t *testing.T) {
-	query := new(ConvexHullQuery)
+	query := NewConvexHullQuery()
 	query.AddLoop(FullLoop())
 	res := query.ConvexHull()
 	expectTrue(res.IsFull(), t)
 }
 
 func TestConvexHullQueryEmptyPolygon(t *testing.T) {
-	query := new(ConvexHullQuery)
+	query := NewConvexHullQuery()
 	empty := PolygonFromLoops(make([]*Loop, 0))
 	query.AddPolygon(empty)
 	res := query.ConvexHull()
@@ -93,7 +93,7 @@ func TestConvexHullQueryNonConvexPoints(t *testing.T) {
 	// the entire sphere.  In other words, you can generate any point on the
 	// sphere by repeatedly linearly interpolating between the points.  (The
 	// four points of a tetrahedron would also work, but this is easier.)
-	query := new(ConvexHullQuery)
+	query := NewConvexHullQuery()
 	for i := 0; i < 6; i++ {
 		query.AddPoint(CellIDFromFace(i).Point())
 	}
@@ -104,9 +104,12 @@ func TestConvexHullQueryNonConvexPoints(t *testing.T) {
 func TestConvexHullQuerySimplePolyline(t *testing.T) {
 	// A polyline is handling identically to a point set, so there is no need
 	// for special testing other than code coverage.
-	query := new(ConvexHullQuery)
+	query := NewConvexHullQuery()
 	polyline := makePolyline("0:1, 0:9, 1:6, 2:6, 3:10, 4:10, 5:5, 4:0, 3:0, 2:5, 1:5")
-	query.AddPolyline(*polyline)
+	for _, p := range *polyline {
+		query.AddPoint(p)
+	}
+	//query.AddPolyline(*polyline)
 	res := query.ConvexHull()
 	expected := makeLoop("0:1, 0:9, 3:10, 4:10, 5:5, 4:0, 3:0")
 
@@ -116,15 +119,13 @@ func TestConvexHullQuerySimplePolyline(t *testing.T) {
 func testConvexHullQueryNorthPoleLoop(radius s1.Angle, numVertices int, t *testing.T) {
 	// A polyline is handling identically to a point set, so there is no need
 	// for special testing other than code coverage.
-	query := new(ConvexHullQuery)
+	query := NewConvexHullQuery()
 	loop := RegularLoop(PointFromCoords(0, 0, 1), radius, numVertices)
 	query.AddLoop(loop)
 	res := query.ConvexHull()
 	if radius.Radians() > 2*math.Pi {
-		fmt.Println("a")
 		expectTrue(res.IsFull(), t)
 	} else {
-		fmt.Println("b")
 		expectTrue(res.BoundaryEqual(loop), t)
 	}
 }
@@ -150,7 +151,7 @@ func TestConvexHullPointsInsideHull(t *testing.T) {
 		// Choose points from within a cap of random size, up to but not including
 		// an entire hemisphere.
 		cap := randomCap(1e-15, 1.999*math.Pi)
-		query := new(ConvexHullQuery)
+		query := NewConvexHullQuery()
 
 		numPts := randomUniformInt(100) + 3
 		for j := 0; j < numPts; j++ {
