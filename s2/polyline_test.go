@@ -290,3 +290,77 @@ func TestPolylineSubsample(t *testing.T) {
 		}
 	}
 }
+
+func TestProject(t *testing.T) {
+	latlngs := []LatLng{
+		LatLngFromDegrees(0, 0),
+		LatLngFromDegrees(0, 1),
+		LatLngFromDegrees(0, 2),
+		LatLngFromDegrees(1, 2),
+	}
+	line := PolylineFromLatLngs(latlngs)
+
+	tests := []struct {
+		haveLatLng     LatLng
+		wantProjection LatLng
+		wantNext       int
+	}{
+		{LatLngFromDegrees(0.5, -0.5), LatLngFromDegrees(0, 0), 1},
+		{LatLngFromDegrees(0.5, 0.5), LatLngFromDegrees(0, 0.5), 1},
+		{LatLngFromDegrees(0.5, 1), LatLngFromDegrees(0, 1), 2},
+		{LatLngFromDegrees(-0.5, 2.5), LatLngFromDegrees(0, 2), 3},
+		{LatLngFromDegrees(2, 2), LatLngFromDegrees(1, 2), 4},
+	}
+
+	for _, test := range tests {
+		projection, next := line.Project(PointFromLatLng(test.haveLatLng))
+		if !PointFromLatLng(test.wantProjection).ApproxEqual(projection) {
+			t.Errorf("line.Project(%v) = %v, want %v", test.haveLatLng, projection, test.wantProjection)
+		}
+		if next != test.wantNext {
+			t.Errorf("line.Project(%v) = %v, want %v", test.haveLatLng, next, test.wantNext)
+		}
+	}
+}
+
+func TestIsOnRight(t *testing.T) {
+	latlngs := []LatLng{
+		LatLngFromDegrees(0, 0),
+		LatLngFromDegrees(0, 1),
+		LatLngFromDegrees(0, 2),
+		LatLngFromDegrees(1, 2),
+	}
+	line1 := PolylineFromLatLngs(latlngs)
+
+	latlngs = []LatLng{
+		LatLngFromDegrees(0, 0),
+		LatLngFromDegrees(0, 1),
+		LatLngFromDegrees(-1, 0),
+	}
+	line2 := PolylineFromLatLngs(latlngs)
+
+	tests := []struct {
+		line        *Polyline
+		haveLatLng  LatLng
+		wantOnRight bool
+	}{
+		{line1, LatLngFromDegrees(-0.5, 0.5), true},
+		{line1, LatLngFromDegrees(0.5, -0.5), false},
+		{line1, LatLngFromDegrees(0.5, 0.5), false},
+		{line1, LatLngFromDegrees(0.5, 1.0), false},
+		{line1, LatLngFromDegrees(-0.5, 2.5), true},
+		{line1, LatLngFromDegrees(1.5, 2.5), true},
+		// Explicitly test the case where the closest point is an interior vertex.
+		// The points are chosen such that they are on different sides of the two
+		// edges that the interior vertex is on.
+		{line2, LatLngFromDegrees(-0.5, 5.0), false},
+		{line2, LatLngFromDegrees(5.5, 5.0), false},
+	}
+
+	for _, test := range tests {
+		onRight := test.line.IsOnRight(PointFromLatLng(test.haveLatLng))
+		if onRight != test.wantOnRight {
+			t.Errorf("line.IsOnRight(%v) = %v, want %v", test.haveLatLng, onRight, test.wantOnRight)
+		}
+	}
+}
