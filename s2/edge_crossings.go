@@ -29,7 +29,7 @@ const (
 	// radians. However, using a larger error tolerance makes the algorithm more
 	// efficient because it reduces the number of cases where exact arithmetic is
 	// needed.
-	intersectionError = s1.Angle(8 * dblEpsilon)
+	intersectionError = s1.Angle(8 * dblError)
 
 	// intersectionMergeRadius is used to ensure that intersection points that
 	// are supposed to be coincident are merged back together into a single
@@ -251,14 +251,14 @@ func projection(x, aNorm r3.Vector, aNormLen float64, a0, a1 Point) (proj, bound
 
 	// This calculation bounds the error from all sources: the computation of
 	// the normal, the subtraction of one endpoint, and the dot product itself.
-	// dblEpsilon appears because the input points are assumed to be
+	// dblError appears because the input points are assumed to be
 	// normalized in double precision.
 	//
 	// For reference, the bounds that went into this calculation are:
-	// ||N'-N|| <= ((1 + 2 * sqrt(3))||N|| + 32 * sqrt(3) * dblEpsilon) * epsilon
+	// ||N'-N|| <= ((1 + 2 * sqrt(3))||N|| + 32 * sqrt(3) * dblError) * epsilon
 	// |(A.B)'-(A.B)| <= (1.5 * (A.B) + 1.5 * ||A|| * ||B||) * epsilon
 	// ||(X-Y)'-(X-Y)|| <= ||X-Y|| * epsilon
-	bound = (((3.5+2*math.Sqrt(3))*aNormLen+32*math.Sqrt(3)*dblEpsilon)*dist + 1.5*math.Abs(proj)) * epsilon
+	bound = (((3.5+2*math.Sqrt(3))*aNormLen+32*math.Sqrt(3)*dblError)*dist + 1.5*math.Abs(proj)) * epsilon
 	return proj, bound
 }
 
@@ -363,8 +363,8 @@ func intersectionExact(a0, a1, b0, b1 Point) Point {
 	xP := aNormP.Cross(bNormP)
 
 	// The final Normalize() call is done in double precision, which creates a
-	// directional error of up to 2*dblEpsilon. (Precise conversion and Normalize()
-	// each contribute up to dblEpsilon of directional error.)
+	// directional error of up to 2*dblError. (Precise conversion and Normalize()
+	// each contribute up to dblError of directional error.)
 	x := xP.Vector()
 
 	if x == (r3.Vector{}) {

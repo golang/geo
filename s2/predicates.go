@@ -28,14 +28,21 @@ import (
 	"math/big"
 
 	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
 
 const (
+	// If any other machine architectures need to be suppported, these next three
+	// values will need to be updated.
+
 	// epsilon is a small number that represents a reasonable level of noise between two
 	// values that can be considered to be equal.
 	epsilon = 1e-15
 	// dblEpsilon is a smaller number for values that require more precision.
+	// This is the C++ DBL_EPSILON equivalent.
 	dblEpsilon = 2.220446049250313e-16
+	// dblError is the C++ value for S2 rounding_epsilon().
+	dblError = 1.110223024625156e-16
 
 	// maxDeterminantError is the maximum error in computing (AxB).C where all vectors
 	// are unit length. Using standard inequalities, it can be shown that
@@ -75,6 +82,9 @@ const (
 	Indeterminate              = 0
 	CounterClockwise           = 1
 )
+
+// newBigFloat constructs a new big.Float with maximum precision.
+func newBigFloat() *big.Float { return new(big.Float).SetPrec(big.MaxPrec) }
 
 // Sign returns true if the points A, B, C are strictly counterclockwise,
 // and returns false if the points are clockwise or collinear (i.e. if they are all
@@ -362,7 +372,7 @@ func symbolicallyPerturbedSign(a, b, c, bCrossC r3.PreciseVector) Direction {
 		return Direction(detSign)
 	}
 
-	detSign = new(big.Float).Sub(new(big.Float).Mul(c.X, a.Y), new(big.Float).Mul(c.Y, a.X)).Sign() // db.Z
+	detSign = newBigFloat().Sub(newBigFloat().Mul(c.X, a.Y), newBigFloat().Mul(c.Y, a.X)).Sign() // db.Z
 	if detSign != 0 {
 		return Direction(detSign)
 	}
@@ -375,7 +385,7 @@ func symbolicallyPerturbedSign(a, b, c, bCrossC r3.PreciseVector) Direction {
 		return Direction(detSign)
 	}
 
-	detSign = new(big.Float).Sub(new(big.Float).Mul(c.Z, a.X), new(big.Float).Mul(c.X, a.Z)).Sign() // db.Y
+	detSign = newBigFloat().Sub(newBigFloat().Mul(c.Z, a.X), newBigFloat().Mul(c.X, a.Z)).Sign() // db.Y
 	if detSign != 0 {
 		return Direction(detSign)
 	}
@@ -388,7 +398,7 @@ func symbolicallyPerturbedSign(a, b, c, bCrossC r3.PreciseVector) Direction {
 	// the previous tests guarantee that C == (0, 0, 0).
 	// (c.Y*a.Z - c.Z*a.Y).Sign() // db.X
 
-	detSign = new(big.Float).Sub(new(big.Float).Mul(a.X, b.Y), new(big.Float).Mul(a.Y, b.X)).Sign() // dc.Z
+	detSign = newBigFloat().Sub(newBigFloat().Mul(a.X, b.Y), newBigFloat().Mul(a.Y, b.X)).Sign() // dc.Z
 	if detSign != 0 {
 		return Direction(detSign)
 	}
@@ -462,7 +472,7 @@ func CompareDistances(x, a, b Point) int {
 // maximum error amount in the result. This requires X and Y be normalized.
 func cosDistance(x, y Point) (cos, err float64) {
 	cos = x.Dot(y.Vector)
-	return cos, 9.5*dblEpsilon*math.Abs(cos) + 1.5*dblEpsilon
+	return cos, 9.5*dblError*math.Abs(cos) + 1.5*dblError
 }
 
 // sin2Distance returns sin**2(XY), where XY is the angle between X and Y,
@@ -470,13 +480,13 @@ func cosDistance(x, y Point) (cos, err float64) {
 func sin2Distance(x, y Point) (sin2, err float64) {
 	// The (x-y).Cross(x+y) trick eliminates almost all of error due to x
 	// and y being not quite unit length. This method is extremely accurate
-	// for small distances; the *relative* error in the result is O(dblEpsilon) for
-	// distances as small as dblEpsilon.
+	// for small distances; the *relative* error in the result is O(dblError) for
+	// distances as small as dblError.
 	n := x.Sub(y.Vector).Cross(x.Add(y.Vector))
 	sin2 = 0.25 * n.Norm2()
-	err = ((21+4*math.Sqrt(3))*dblEpsilon*sin2 +
-		32*math.Sqrt(3)*dblEpsilon*dblEpsilon*math.Sqrt(sin2) +
-		768*dblEpsilon*dblEpsilon*dblEpsilon*dblEpsilon)
+	err = ((21+4*math.Sqrt(3))*dblError*sin2 +
+		32*math.Sqrt(3)*dblError*dblError*math.Sqrt(sin2) +
+		768*dblError*dblError*dblError*dblError)
 	return sin2, err
 }
 
@@ -533,9 +543,9 @@ func exactCompareDistances(x, a, b r3.PreciseVector) int {
 		}
 		return 1
 	}
-	cosAX2 := new(big.Float).Mul(cosAX, cosAX)
-	cosBX2 := new(big.Float).Mul(cosBX, cosBX)
-	cmp := new(big.Float).Sub(cosBX2.Mul(cosBX2, a.Norm2()), cosAX2.Mul(cosAX2, b.Norm2()))
+	cosAX2 := newBigFloat().Mul(cosAX, cosAX)
+	cosBX2 := newBigFloat().Mul(cosBX, cosBX)
+	cmp := newBigFloat().Sub(cosBX2.Mul(cosBX2, a.Norm2()), cosAX2.Mul(cosAX2, b.Norm2()))
 	return aSign * cmp.Sign()
 }
 
@@ -570,8 +580,104 @@ func symbolicCompareDistances(x, a, b Point) int {
 	}
 }
 
+var (
+	// ca45Degrees is a predefined ChordAngle representing (approximately) 45 degrees.
+	ca45Degrees = s1.ChordAngleFromSquaredLength(2 - math.Sqrt2)
+)
+
+// CompareDistance returns -1, 0, or +1 according to whether the distance XY is
+// respectively less than, equal to, or greater than the provided chord angle. Distances are measured
+// with respect to the positions of all points as though they are projected to lie
+// exactly on the surface of the unit sphere.
+func CompareDistance(x, y Point, r s1.ChordAngle) int {
+	// As with CompareDistances, we start by comparing dot products because
+	// the sin^2 method is only valid when the distance XY and the limit "r" are
+	// both less than 90 degrees.
+	sign := triageCompareCosDistance(x, y, float64(r))
+	if sign != 0 {
+		return sign
+	}
+
+	// Unlike with CompareDistances, it's not worth using the sin^2 method
+	// when the distance limit is near 180 degrees because the ChordAngle
+	// representation itself has has a rounding error of up to 2e-8 radians for
+	// distances near 180 degrees.
+	if r < ca45Degrees {
+		sign = triageCompareSin2Distance(x, y, float64(r))
+		if sign != 0 {
+			return sign
+		}
+	}
+	return exactCompareDistance(r3.PreciseVectorFromVector(x.Vector), r3.PreciseVectorFromVector(y.Vector), big.NewFloat(float64(r)).SetPrec(big.MaxPrec))
+}
+
+// triageCompareCosDistance returns -1, 0, or +1 according to whether the distance XY is
+// less than, equal to, or greater than r2 respectively using cos distance.
+func triageCompareCosDistance(x, y Point, r2 float64) int {
+	cosXY, cosXYError := cosDistance(x, y)
+	cosR := 1.0 - 0.5*r2
+	cosRError := 2.0 * dblError * cosR
+	diff := cosXY - cosR
+	err := cosXYError + cosRError
+	if diff > err {
+		return -1
+	}
+	if diff < -err {
+		return 1
+	}
+	return 0
+}
+
+// triageCompareSin2Distance returns -1, 0, or +1 according to whether the distance XY is
+// less than, equal to, or greater than r2 respectively using sin^2 distance.
+func triageCompareSin2Distance(x, y Point, r2 float64) int {
+	// Only valid for distance limits < 90 degrees.
+	sin2XY, sin2XYError := sin2Distance(x, y)
+	sin2R := r2 * (1.0 - 0.25*r2)
+	sin2RError := 3.0 * dblError * sin2R
+	diff := sin2XY - sin2R
+	err := sin2XYError + sin2RError
+	if diff > err {
+		return 1
+	}
+	if diff < -err {
+		return -1
+	}
+	return 0
+}
+
+var (
+	bigOne  = big.NewFloat(1.0).SetPrec(big.MaxPrec)
+	bigHalf = big.NewFloat(0.5).SetPrec(big.MaxPrec)
+)
+
+// exactCompareDistance returns -1, 0, or +1 after comparing using PreciseVectors.
+func exactCompareDistance(x, y r3.PreciseVector, r2 *big.Float) int {
+	// This code produces the same result as though all points were reprojected
+	// to lie exactly on the surface of the unit sphere.  It is based on
+	// comparing the cosine of the angle XY (when both points are projected to
+	// lie exactly on the sphere) to the given threshold.
+	cosXY := x.Dot(y)
+	cosR := newBigFloat().Sub(bigOne, newBigFloat().Mul(bigHalf, r2))
+
+	// If the two values have different signs, we need to handle that case now
+	// before squaring them below.
+	xySign := cosXY.Sign()
+	rSign := cosR.Sign()
+	if xySign != rSign {
+		if xySign > rSign {
+			return -1
+		}
+		return 1 // If cos(XY) > cos(r), then XY < r.
+	}
+	cmp := newBigFloat().Sub(
+		newBigFloat().Mul(
+			newBigFloat().Mul(cosR, cosR), newBigFloat().Mul(x.Norm2(), y.Norm2())),
+		newBigFloat().Mul(cosXY, cosXY))
+	return xySign * cmp.Sign()
+}
+
 // TODO(roberts): Differences from C++
-// CompareDistance
 // CompareEdgeDistance
 // CompareEdgeDirections
 // EdgeCircumcenterSign

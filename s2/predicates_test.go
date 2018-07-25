@@ -17,6 +17,7 @@ package s2
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -638,6 +639,167 @@ func TestPredicatesCompareDistancesCoverage(t *testing.T) {
 	}
 }
 
+// compareDistanceFunc defines a type of function that can be used in the compare distance tests.
+type compareDistanceFunc func(x, a Point, r float64) int
+
+func TestPredicatesCompareDistanceCoverage(t *testing.T) {
+	// This test attempts to exercise all the code paths in all precisions.
+	tests := []struct {
+		x, y     Point
+		r        s1.ChordAngle
+		distFunc compareDistanceFunc
+		wantSign int
+		wantPrec precision
+	}{
+		// Test triageCompareSin2Distance.
+		{
+			x:        PointFromCoords(1, 1, 1),
+			y:        PointFromCoords(1, 1-1e-15, 1),
+			r:        s1.ChordAngleFromAngle(1e-15),
+			distFunc: triageCompareSin2Distance,
+			wantSign: -1,
+			wantPrec: doublePrecision,
+		},
+		{
+			x:        PointFromCoords(1, 0, 0),
+			y:        PointFromCoords(1, 1, 0),
+			r:        s1.ChordAngleFromAngle(math.Pi / 4),
+			distFunc: triageCompareSin2Distance,
+			wantSign: -1,
+			wantPrec: exactPrecision,
+		},
+		{
+			x:        PointFromCoords(1, 1e-40, 0),
+			y:        PointFromCoords(1+dblEpsilon, 1e-40, 0),
+			r:        s1.ChordAngleFromAngle(0.9 * dblEpsilon * 1e-40),
+			distFunc: triageCompareSin2Distance,
+			wantSign: 1,
+			wantPrec: exactPrecision,
+		},
+		{
+			x:        PointFromCoords(1, 1e-40, 0),
+			y:        PointFromCoords(1+dblEpsilon, 1e-40, 0),
+			r:        s1.ChordAngleFromAngle(1.1 * dblEpsilon * 1e-40),
+			distFunc: triageCompareSin2Distance,
+			wantSign: -1,
+			wantPrec: exactPrecision,
+		},
+		{
+			x:        PointFromCoords(1, 0, 0),
+			y:        PointFromCoords(1+dblEpsilon, 0, 0),
+			r:        s1.ChordAngle(0),
+			distFunc: triageCompareSin2Distance,
+			wantSign: 0,
+			wantPrec: exactPrecision,
+		},
+		// Test TriageCompareCosDistance.
+		{
+			x:        PointFromCoords(1, 0, 0),
+			y:        PointFromCoords(1, 1e-8, 0),
+			r:        s1.ChordAngle(1e-7),
+			distFunc: triageCompareCosDistance,
+			wantSign: -1,
+			wantPrec: doublePrecision,
+		},
+		{
+			x:        PointFromCoords(1, 0, 0),
+			y:        PointFromCoords(-1, 1e-8, 0),
+			r:        s1.ChordAngle(math.Pi - 1e-7),
+			distFunc: triageCompareCosDistance,
+			wantSign: 1,
+			wantPrec: doublePrecision,
+		},
+		{
+			x:        PointFromCoords(1, 1, 0),
+			y:        PointFromCoords(1, -1-2*dblEpsilon, 0),
+			r:        s1.RightChordAngle,
+			distFunc: triageCompareCosDistance,
+			wantSign: 1,
+			wantPrec: doublePrecision,
+		},
+		{
+			x:        PointFromCoords(1, 1, 0),
+			y:        PointFromCoords(1, -1-dblEpsilon, 0),
+			r:        s1.RightChordAngle,
+			distFunc: triageCompareCosDistance,
+			wantSign: 1,
+			wantPrec: exactPrecision,
+		},
+		{
+			x:        PointFromCoords(1, 1, 0),
+			y:        PointFromCoords(1, -1, 1e-30),
+			r:        s1.RightChordAngle,
+			distFunc: triageCompareCosDistance,
+			wantSign: 0,
+			wantPrec: exactPrecision,
+		},
+		{
+			// The angle between these two points is exactly 60 degrees.
+			x:        PointFromCoords(1, 1, 0),
+			y:        PointFromCoords(0, 1, 1),
+			r:        s1.ChordAngleFromSquaredLength(1),
+			distFunc: triageCompareCosDistance,
+			wantSign: 0,
+			wantPrec: exactPrecision,
+		},
+	}
+
+	for d, test := range tests {
+		x := test.x
+		y := test.y
+		r := test.r
+
+		// Verifies that CompareDistance(x, y, r) == wantSign, and furthermore
+		// checks that the minimum required precision is wantPrec when the
+		// distance calculation method defined by distFunc is used.
+
+		// Don't normalize the arguments unless necessary (to allow testing points
+		// that differ only in magnitude).
+		if !x.IsUnit() {
+			x = Point{x.Normalize()}
+		}
+		if !y.IsUnit() {
+			y = Point{y.Normalize()}
+		}
+
+		sign := test.distFunc(x, y, float64(r))
+		exactSign := exactCompareDistance(r3.PreciseVectorFromVector(x.Vector), r3.PreciseVectorFromVector(y.Vector), big.NewFloat(float64(r)).SetPrec(big.MaxPrec))
+		actualSign := exactSign
+
+		// Check that the signs are correct (if non-zero), and also that if sign
+		// is non-zero then so are the rest, etc.
+		if test.wantSign != actualSign {
+			t.Errorf("%d. actual sign = %v, want %d", d, actualSign, test.wantSign)
+		}
+
+		var actualPrec precision
+		if sign != 0 {
+			actualPrec = doublePrecision
+		} else {
+			actualPrec = exactPrecision
+		}
+
+		if test.wantPrec != actualPrec {
+			t.Errorf("%d. got precision %s, want %s", d, actualPrec, test.wantPrec)
+		}
+
+		// Make sure that the top-level function returns the expected result.
+		if got := CompareDistance(x, y, r); got != test.wantSign {
+			t.Errorf("%d. CompareDistance(%v, %v, %v) = %v, want %v", d, x, y, r, got, test.wantSign)
+		}
+
+		// Mathematically, if d(X, Y) < r then d(-X, Y) > (Pi - r).  Unfortunately
+		// there can be rounding errors when computing the supplementary distance,
+		// so to ensure the two distances are exactly supplementary we need to do
+		// the following.
+		rSupp := s1.StraightChordAngle - r
+		r = s1.StraightChordAngle - rSupp
+		if got, want := -CompareDistance(x, y, r), CompareDistance(Point{x.Mul(-1)}, y, rSupp); got != want {
+			t.Errorf("%d. CompareDistance(%v, %v, %v) = %v, CompareDistance(%v, %v, %v) = %v, should be the same", d, x, y, r, got, x.Mul(-1), y, rSupp, want)
+		}
+	}
+}
+
 // testCompareDistancesConsistency checks that the result at one level of precision
 // is consistent with the result at the next higher level of precision. It returns
 // the minimum precision that yielded a non-zero result.
@@ -730,6 +892,48 @@ func TestPredicatesCompareDistancesConsistency(t *testing.T) {
 		} else if r.Radians() > math.Pi/2+1e-14 {
 			// Use minus sin for > 45.
 			testCompareDistancesConsistency(t, x, a, b, triageCompareMinusSin2Distance)
+		}
+	}
+}
+
+func TestPredicatesCompareDistanceConsistency(t *testing.T) {
+	// This test chooses random inputs such that the distance between points X
+	// and Y is very close to the threshold distance "r".  It then checks that
+	// the answer given by a method at one level of precision is consistent with
+	// the answer given at the next higher level of precision.  See also the
+	// comments in the CompareDistances consistency test.
+	const iters = 1000
+
+	for iter := 0; iter < iters; iter++ {
+		x := choosePointNearPlaneOrAxes()
+		dir := choosePointNearPlaneOrAxes()
+		r := s1.Angle(math.Pi / 2 * math.Pow(1e-30, randomFloat64()))
+		if oneIn(2) {
+			r = s1.Angle(math.Pi/2) - r
+		}
+		if oneIn(5) {
+			r = s1.Angle(math.Pi/2) + r
+		}
+		y := InterpolateAtDistance(r, x, dir)
+
+		// Checks that the result at one level of precision is consistent with the
+		// result at the next higher level of precision.  Returns the minimum
+		// precision that yielded a non-zero result.
+		dblSign := triageCompareCosDistance(x, y, float64(s1.ChordAngleFromAngle(r)))
+		exactSign := exactCompareDistance(r3.PreciseVectorFromVector(x.Vector), r3.PreciseVectorFromVector(y.Vector), big.NewFloat(float64(s1.ChordAngleFromAngle(r))).SetPrec(big.MaxPrec))
+		if dblSign != 0 && dblSign != exactSign {
+			t.Errorf("triageCompareCosDistance(%v, %v, %v) = %v, want %v", x, y, r, dblSign, exactSign)
+		}
+		if got := CompareDistance(x, y, s1.ChordAngleFromAngle(r)); exactSign != got {
+			t.Errorf("CompareDistance(%v, %v, %v) = %v, want %v", x, y, r, got, exactSign)
+		}
+
+		if r.Radians() < math.Pi/2-1e-14 {
+			dblSign = triageCompareSin2Distance(x, y, float64(s1.ChordAngleFromAngle(r)))
+			exactSign = exactCompareDistance(r3.PreciseVectorFromVector(x.Vector), r3.PreciseVectorFromVector(y.Vector), big.NewFloat(float64(s1.ChordAngleFromAngle(r))).SetPrec(big.MaxPrec))
+			if dblSign != 0 && dblSign != exactSign {
+				t.Errorf("triageCompareSin2Distance(%v, %v, %v) = %v, want %v", x, y, r, dblSign, exactSign)
+			}
 		}
 	}
 }
