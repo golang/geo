@@ -130,6 +130,8 @@ func (s *ShapeIndexCell) numEdges() int {
 
 // add adds the given clipped shape to this index cell.
 func (s *ShapeIndexCell) add(c *clippedShape) {
+	// C++ uses a set, so it's ordered and unique. We don't currently catch
+	// the case when a duplicate value is added.
 	s.shapes = append(s.shapes, c)
 }
 
@@ -1444,7 +1446,11 @@ func (s *ShapeIndex) testAllEdges(edges []*clippedEdge, t *tracker) {
 func (s *ShapeIndex) countShapes(edges []*clippedEdge, shapeIDs []int32) int {
 	count := 0
 	lastShapeID := int32(-1)
-	cNext := int32(0)
+
+	// next clipped shape id in the shapeIDs list.
+	clippedNext := int32(0)
+	// index of the current element in the shapeIDs list.
+	shapeIDidx := 0
 	for _, edge := range edges {
 		if edge.faceEdge.shapeID == lastShapeID {
 			continue
@@ -1455,18 +1461,19 @@ func (s *ShapeIndex) countShapes(edges []*clippedEdge, shapeIDs []int32) int {
 
 		// Skip over any containing shapes up to and including this one,
 		// updating count as appropriate.
-		for ; cNext < int32(len(shapeIDs)); cNext++ {
-			if cNext > lastShapeID {
+		for ; shapeIDidx < len(shapeIDs); shapeIDidx++ {
+			clippedNext = shapeIDs[shapeIDidx]
+			if clippedNext > lastShapeID {
 				break
 			}
-			if cNext < lastShapeID {
+			if clippedNext < lastShapeID {
 				count++
 			}
 		}
 	}
 
 	// Count any remaining containing shapes.
-	count += int(len(shapeIDs) - int(cNext))
+	count += int(len(shapeIDs)) - int(shapeIDidx)
 	return count
 }
 
