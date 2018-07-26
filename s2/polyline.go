@@ -381,12 +381,62 @@ func (p *Polyline) decode(d decoder) {
 	}
 }
 
+// Project returns a point on the polyline that is closest to the given point,
+// together with the index of the next vertex after the projected point.
+// The polyline must not be empty.
+func (p *Polyline) Project(point Point) (Point, int) {
+	if len(*p) == 1 {
+		// If there is only one vertex, it is always closest to any given point.
+		return (*p)[0], 1
+	}
+
+	min := s1.InfChordAngle()
+	next := -1
+	var less bool
+	for i := 1; i < len(*p); i++ {
+		if min, less = UpdateMinDistance(point, (*p)[i-1], (*p)[i], min); less {
+			next = i
+		}
+	}
+
+	closest := Project(point, (*p)[next-1], (*p)[next])
+	if closest == (*p)[next] {
+		next++
+	}
+
+	return closest, next
+}
+
+// IsOnRight returns true if the point given is on the right hand side of the
+// polyline, using a naive definition of "right-hand-sideness" where the point
+// is on the RHS of the polyline iff the point is on the RHS of the line segment
+// in the polyline which it is closest to.
+// The polyline must have at least 2 vertices.
+func (p *Polyline) IsOnRight(point Point) bool {
+	// If the closest point C is an interior vertex of the polyline, let B and D
+	// be the previous and next vertices.  The given point P is on the right of
+	// the polyline (locally) if B, P, D are ordered CCW around vertex C.
+	closest, next := p.Project(point)
+	if closest == (*p)[next-1] && next > 1 && next < len(*p) {
+		if point == (*p)[next-1] {
+			return false
+		}
+		return OrderedCCW((*p)[next-2], point, (*p)[next], (*p)[next-1])
+	}
+
+	// Otherwise, the closest point C is incident to exactly one polyline edge.
+	// We test the point P against that edge.
+	if next == len(*p) {
+		next--
+	}
+
+	return Sign(point, (*p)[next], (*p)[next-1])
+}
+
 // TODO(roberts): Differences from C++.
 // IsValid
 // Suffix
 // Interpolate/UnInterpolate
-// Project
-// IsPointOnRight
 // Intersects(Polyline)
 // Reverse
 // ApproxEqual
