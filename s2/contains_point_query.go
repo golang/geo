@@ -45,7 +45,9 @@ const (
 // modeled as Open, SemiOpen, or Closed (this affects whether or not shapes are
 // considered to contain their vertices).
 //
-// Note that if you need to do a large number of point containment
+// This type is not safe for concurrent use.
+//
+// However, note that if you need to do a large number of point containment
 // tests, it is more efficient to re-use the query rather than creating a new
 // one each time.
 type ContainsPointQuery struct {
@@ -149,9 +151,40 @@ func (q *ContainsPointQuery) ShapeContains(shape Shape, p Point) bool {
 	return q.shapeContains(clipped, q.iter.Center(), p)
 }
 
+// shapeVisitorFunc is a type of function that can be called against shaped in an index.
+type shapeVisitorFunc func(shape Shape) bool
+
+// visitContainingShapes visits all shapes in the given index that contain the
+// given point p, terminating early if the given visitor function returns false,
+// in which case visitContainingShapes returns false. Each shape is
+// visited at most once.
+func (q *ContainsPointQuery) visitContainingShapes(p Point, f shapeVisitorFunc) bool {
+	// This function returns false only if the algorithm terminates early
+	// because the visitor function returned false.
+	if !q.iter.LocatePoint(p) {
+		return true
+	}
+
+	cell := q.iter.IndexCell()
+	for _, clipped := range cell.shapes {
+		if q.shapeContains(clipped, q.iter.Center(), p) &&
+			!f(q.index.Shape(clipped.shapeID)) {
+			return false
+		}
+	}
+	return true
+}
+
+// ContainingShapes returns a slice of all shapes that contain the given point.
+func (q *ContainsPointQuery) ContainingShapes(p Point) []Shape {
+	var shapes []Shape
+	q.visitContainingShapes(p, func(shape Shape) bool {
+		shapes = append(shapes, shape)
+		return true
+	})
+	return shapes
+}
+
 // TODO(roberts): Remaining methods from C++
-// func (q *ContainsPointQuery) ContainingShapes(p Point) []Shape
-// type shapeVisitorFunc func(shape Shape) bool
-// func (q *ContainsPointQuery) VisitContainingShapes(p Point, v shapeVisitorFunc) bool
 // type edgeVisitorFunc func(shape ShapeEdge) bool
-// func (q *ContainsPointQuery) VisitIncidentEdges(p Point, v edgeVisitorFunc) bool
+// func (q *ContainsPointQuery) visitIncidentEdges(p Point, v edgeVisitorFunc) bool

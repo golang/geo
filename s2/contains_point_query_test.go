@@ -15,7 +15,10 @@
 package s2
 
 import (
+	"reflect"
 	"testing"
+
+	"github.com/golang/geo/s1"
 )
 
 func TestContainsPointQueryVertexModelOpen(t *testing.T) {
@@ -133,6 +136,43 @@ func TestContainsPointQueryVertexModelClosed(t *testing.T) {
 	}
 }
 
+func TestContainsPointQueryContainingShapes(t *testing.T) {
+	const numVerticesPerLoop = 10
+	maxLoopRadius := kmToAngle(10)
+	centerCap := CapFromCenterAngle(randomPoint(), maxLoopRadius)
+	index := NewShapeIndex()
+
+	for i := 0; i < 100; i++ {
+		index.Add(RegularLoop(samplePointFromCap(centerCap), s1.Angle(randomFloat64())*maxLoopRadius, numVerticesPerLoop))
+	}
+
+	query := NewContainsPointQuery(index, VertexModelSemiOpen)
+
+	for i := 0; i < 100; i++ {
+		p := samplePointFromCap(centerCap)
+		var want []Shape
+
+		for j := int32(0); j < int32(len(index.shapes)); j++ {
+			shape := index.Shape(j)
+			// All the shapes we added were of type loop.
+			loop := shape.(*Loop)
+			if loop.ContainsPoint(p) {
+				if !query.ShapeContains(shape, p) {
+					t.Errorf("index.Shape(%d).ContainsPoint(%v) = true, but query.ShapeContains(%v) = false", j, p, p)
+				}
+				want = append(want, shape)
+			} else {
+				if query.ShapeContains(shape, p) {
+					t.Errorf("query.ShapeContains(shape, %v) = true, but the original loop does not contain the point.", p)
+				}
+			}
+		}
+		got := query.ContainingShapes(p)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%d query.ContainingShapes(%v) = %+v, want %+v", i, p, got, want)
+		}
+	}
+}
+
 // TODO(roberts): Remaining tests
-// TestContainsPointQueryContainingShapes
 // TestContainsPointQueryVisitIncidentEdges
