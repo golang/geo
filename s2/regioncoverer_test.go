@@ -147,3 +147,36 @@ func TestCovererRandomCaps(t *testing.T) {
 		checkCovering(t, rc, r, covering, false)
 	}
 }
+
+func TestRegionCovererInteriorCovering(t *testing.T) {
+	// We construct the region the following way. Start with Cell of level l.
+	// Remove from it one of its grandchildren (level l+2). If we then set
+	//   minLevel < l + 1
+	//   maxLevel > l + 2
+	//   maxCells = 3
+	// the best interior covering should contain 3 children of the initial cell,
+	// that were not effected by removal of a grandchild.
+	const level = 12
+	smallCell := cellIDFromPoint(randomPoint()).Parent(level + 2)
+	largeCell := smallCell.Parent(level)
+
+	smallCellUnion := CellUnion([]CellID{smallCell})
+	largeCellUnion := CellUnion([]CellID{largeCell})
+	diff := CellUnionFromDifference(largeCellUnion, smallCellUnion)
+
+	coverer := &RegionCoverer{
+		MaxCells: 3,
+		MaxLevel: level + 3,
+		MinLevel: level,
+	}
+
+	interior := coverer.InteriorCovering(&diff)
+	if len(interior) != 3 {
+		t.Fatalf("len(coverer.InteriorCovering(%v)) = %v, want 3", diff, len(interior))
+	}
+	for i := 0; i < 3; i++ {
+		if got, want := interior[i].Level(), level+1; got != want {
+			t.Errorf("interior[%d].Level() = %v, want %v", i, got, want)
+		}
+	}
+}
