@@ -356,6 +356,21 @@ func (l *Loop) Intersects(o *Loop) bool {
 	return false
 }
 
+// Equal reports whether two loops have the same vertices in the same linear order
+// (i.e., cyclic rotations are not allowed).
+func (l *Loop) Equal(other *Loop) bool {
+	if len(l.vertices) != len(other.vertices) {
+		return false
+	}
+
+	for i, v := range l.vertices {
+		if v != other.Vertex(i) {
+			return false
+		}
+	}
+	return true
+}
+
 // BoundaryEqual reports whether the two loops have the same boundary. This is
 // true if and only if the loops have the same vertices in the same cyclic order
 // (i.e., the vertices may be cyclically rotated). The empty and full loops are
@@ -1795,7 +1810,5 @@ func (l *Loop) containsNonCrossingBoundary(other *Loop, reverseOther bool) bool 
 // DistanceToBoundary
 // Project
 // ProjectToBoundary
-// Equal
-// BoundaryEqual
 // BoundaryApproxEqual
 // BoundaryNear

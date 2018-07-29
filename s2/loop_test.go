@@ -647,6 +647,71 @@ func cloneLoop(l *Loop) *Loop {
 	return c
 }
 
+func TestLoopEqual(t *testing.T) {
+	tests := []struct {
+		a, b *Loop
+		want bool
+	}{
+		{
+			a:    EmptyLoop(),
+			b:    EmptyLoop(),
+			want: true,
+		},
+		{
+			a:    FullLoop(),
+			b:    FullLoop(),
+			want: true,
+		},
+		{
+			a:    EmptyLoop(),
+			b:    FullLoop(),
+			want: false,
+		},
+		{
+			a:    candyCane,
+			b:    candyCane,
+			want: true,
+		},
+		{
+			a:    candyCane,
+			b:    rotate(candyCane),
+			want: false,
+		},
+		{
+			a:    candyCane,
+			b:    rotate(rotate(candyCane)),
+			want: false,
+		},
+		{
+			a:    candyCane,
+			b:    rotate(rotate(rotate(candyCane))),
+			want: false,
+		},
+		{
+			a:    candyCane,
+			b:    rotate(rotate(rotate(rotate(candyCane)))),
+			want: false,
+		},
+		{
+			a:    candyCane,
+			b:    rotate(rotate(rotate(rotate(rotate(candyCane))))),
+			want: false,
+		},
+		{
+			// candyCane has 6 points, so 6 rotates should line up again.
+			a:    candyCane,
+			b:    rotate(rotate(rotate(rotate(rotate(rotate(candyCane)))))),
+			want: true,
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.a.Equal(test.b); got != test.want {
+			t.Errorf("%v.Equal(%v) = %t, want %t", test.a, test.b, got, test.want)
+		}
+	}
+}
+
 func TestLoopContainsMatchesCrossingSign(t *testing.T) {
 	// This test demonstrates a former incompatibility between CrossingSign
 	// and ContainsPoint. It constructs a Cell-based loop L and
