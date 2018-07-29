@@ -1380,16 +1380,15 @@ func testLoopOneCoveringPair(t *testing.T, a, b *Loop) {
 	if got, want := b.Contains(a), b.IsFull(); got != want {
 		t.Errorf("%v.Contains(%v) = %v, want %v", b, a, got, want)
 	}
-	// TODO(roberts): Uncomment as these functions get completed.
-	// a1 := cloneLoop(a)
-	// a1.Invert()
-	// complementary := a1.BoundaryEqual(b)
-	// if got, want := a.Intersects(b), !complementary; got != want {
-	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", a, b, got, want)
-	// }
-	// if got, want := b.Intersects(a), !complementary; got != want {
-	// 	t.Errorf("%v.Intersects(%v) = %v, want %v", b, a, got, want)
-	// }
+	a1 := cloneLoop(a)
+	a1.Invert()
+	complementary := a1.BoundaryEqual(b)
+	if got, want := a.Intersects(b), !complementary; got != want {
+		t.Errorf("%v.Intersects(%v) = %v, want %v", a, b, got, want)
+	}
+	if got, want := b.Intersects(a), !complementary; got != want {
+		t.Errorf("%v.Intersects(%v) = %v, want %v", b, a, got, want)
+	}
 }
 
 // Given loops A and B such that both A and its complement intersect both B
@@ -1447,7 +1446,6 @@ func TestLoopTurningAngle(t *testing.T) {
 		}
 	}
 
-	// TODO(roberts): Uncomment once Area is implemented.
 	// Build a narrow spiral loop starting at the north pole. This is designed
 	// to test that the error in TurningAngle is linear in the number of
 	// vertices even when the partial sum of the turning angles gets very large.
