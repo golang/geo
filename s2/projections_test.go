@@ -80,6 +80,9 @@ func TestPlateCarreeProjectionProjectUnproject(t *testing.T) {
 		if got := proj.Project(test.have); !r2pointsApproxEqual(test.want, got) {
 			t.Errorf("proj.Project(%v) = %v, want %v", test.have, got, test.want)
 		}
+		if got := proj.Unproject(test.want); !got.ApproxEqual(test.have) {
+			t.Errorf("proj.Unproject(%v) = %v, want %v", test.want, got, test.have)
+		}
 	}
 }
 
@@ -101,6 +104,9 @@ func TestMercatorProjectionProjectUnproject(t *testing.T) {
 	for _, test := range tests {
 		if got := proj.Project(test.have); !r2pointsApproxEqual(test.want, got) {
 			t.Errorf("proj.Project(%v) = %v, want %v", test.have, got, test.want)
+		}
+		if got := proj.Unproject(test.want); !got.ApproxEqual(test.have) {
+			t.Errorf("proj.Unproject(%v) = %v, want %v", test.want, got, test.have)
 		}
 	}
 

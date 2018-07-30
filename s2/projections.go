@@ -111,8 +111,8 @@ func (p *PlateCarreeProjection) FromLatLng(ll LatLng) r2.Point {
 // ToLatLng returns the LatLng projected from the given R2 Point.
 func (p *PlateCarreeProjection) ToLatLng(pt r2.Point) LatLng {
 	return LatLng{
-		Lat: s1.Angle(p.fromRadians * pt.Y),
-		Lng: s1.Angle(p.fromRadians * math.Remainder(pt.X, p.xWrap)),
+		Lat: s1.Angle(p.toRadians * pt.Y),
+		Lng: s1.Angle(p.toRadians * math.Remainder(pt.X, p.xWrap)),
 	}
 }
 
