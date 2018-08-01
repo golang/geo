@@ -353,3 +353,84 @@ func TestIsOnRight(t *testing.T) {
 		}
 	}
 }
+
+func TestPolylineValidate(t *testing.T) {
+	p := makePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6")
+	if p.Validate() != nil {
+		t.Errorf("valid polygon should Validate")
+	}
+
+	p1 := Polyline([]Point{
+		PointFromCoords(0, 1, 0),
+		Point{r3.Vector{10, 3, 7}},
+		PointFromCoords(0, 0, 1),
+	})
+
+	if err := p1.Validate(); err == nil {
+		t.Errorf("polyline with non-normalized points shouldn't validate")
+	}
+
+	// adjacent equal vertices
+	p2 := Polyline([]Point{
+		PointFromCoords(0, 1, 0),
+		PointFromCoords(0, 0, 1),
+		PointFromCoords(0, 0, 1),
+		PointFromCoords(1, 0, 0),
+	})
+
+	if err := p2.Validate(); err == nil {
+		t.Errorf("polyline with repeated vertices shouldn't validate")
+	}
+
+	pt := PointFromCoords(1, 1, 0)
+	antiPt := Point{pt.Mul(-1)}
+
+	// non-adjacent antipodal points.
+	p3 := Polyline([]Point{
+		PointFromCoords(0, 1, 0),
+		pt,
+		PointFromCoords(0, 0, 1),
+		antiPt,
+	})
+
+	if err := p3.Validate(); err != nil {
+		t.Errorf("polyline with non-adjacent antipodal points should validate")
+	}
+
+	// non-adjacent antipodal points.
+	p4 := Polyline([]Point{
+		PointFromCoords(0, 1, 0),
+		PointFromCoords(0, 0, 1),
+		pt,
+		antiPt,
+	})
+
+	if err := p4.Validate(); err == nil {
+		t.Errorf("polyline with antipodal adjacent points shouldn't validate")
+	}
+}
+
+// TODO(roberts): Test differences from C++:
+// Interpolate
+// UnInterpolate
+// IntersectsEmptyPolyline
+// IntersectsOnePointPolyline
+// Intersects
+// IntersectsAtVertex
+// IntersectsVertexOnEdge
+// ApproxEquals
+//
+// PolylineCoveringTest
+//    PolylineOverlapsSelf
+//    PolylineDoesNotOverlapReverse
+//    PolylineOverlapsEquivalent
+//    ShortCoveredByLong
+//    PartialOverlapOnly
+//    ShortBacktracking
+//    LongBacktracking
+//    IsResilientToDuplicatePoints
+//    CanChooseBetweenTwoPotentialStartingPoints
+//    StraightAndWigglyPolylinesCoverEachOther
+//    MatchStartsAtLastVertex
+//    MatchStartsAtDuplicatedLastVertex
+//    EmptyPolylines

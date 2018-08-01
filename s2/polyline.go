@@ -437,8 +437,30 @@ func (p *Polyline) IsOnRight(point Point) bool {
 	return Sign(point, (*p)[next], (*p)[next-1])
 }
 
+// Validate checks whether this is a valid polyline or not.
+func (p *Polyline) Validate() error {
+	// All vertices must be unit length.
+	for i, pt := range *p {
+		if !pt.IsUnit() {
+			return fmt.Errorf("vertex %d is not unit length", i)
+		}
+	}
+
+	// Adjacent vertices must not be identical or antipodal.
+	for i := 1; i < len(*p); i++ {
+		prev, cur := (*p)[i-1], (*p)[i]
+		if prev == cur {
+			return fmt.Errorf("vertices %d and %d are identical", i-1, i)
+		}
+		if prev == (Point{cur.Mul(-1)}) {
+			return fmt.Errorf("vertices %d and %d are antipodal", i-1, i)
+		}
+	}
+
+	return nil
+}
+
 // TODO(roberts): Differences from C++.
-// IsValid
 // Suffix
 // Interpolate/UnInterpolate
 // Intersects(Polyline)
