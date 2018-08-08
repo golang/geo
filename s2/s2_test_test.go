@@ -212,3 +212,42 @@ func TestTestingFractal(t *testing.T) {
 		}
 	}
 }
+
+// TestChordAngleMaxPointError is located in here to work around circular
+// import issues. This s1 test needs s2.Points which wont work with our
+// packages. The test is in this file since while it uses Points, it's not
+// part of Points methods so it shouldn't be in s2point_test.
+func TestChordAngleMaxPointError(t *testing.T) {
+	// Check that the error bound returned by s1.MaxPointError() is
+	// large enough.
+	const iters = 100000
+	for iter := 0; iter < iters; iter++ {
+		x := randomPoint()
+		y := randomPoint()
+		if oneIn(10) {
+			// Occasionally test a point pair that is nearly identical or antipodal.
+			r := s1.Angle(1e-15 * randomFloat64())
+			y = InterpolateAtDistance(r, x, y)
+			if oneIn(2) {
+				y = Point{y.Mul(-1)}
+			}
+		}
+		dist := ChordAngleBetweenPoints(x, y)
+		err := dist.MaxPointError()
+		if got, want := CompareDistance(x, y, dist.Expanded(err)), 0; got > 0 {
+			t.Errorf("CompareDistance(%v, %v, %v.Expanded(%v)) = %v, want <= %v", x, y, dist, err, got, want)
+		}
+		if got, want := CompareDistance(x, y, dist.Expanded(-err)), 0; got < 0 {
+			t.Errorf("CompareDistance(%v, %v, %v.Expanded(-%v)) = %v, want >= %v", x, y, dist, err, got, want)
+		}
+	}
+}
+
+// TODO(roberts): Remaining tests
+// TriangleFractal
+// TriangleMultiFractal
+// SpaceFillingFractal
+// KochCurveFractal
+// KochCurveMultiFractal
+// CesaroFractal
+// CesaroMultiFractal

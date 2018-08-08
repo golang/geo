@@ -194,7 +194,7 @@ func minUpdateInteriorDistanceMaxError(dist s1.ChordAngle) float64 {
 	// This bound includes all source of error, assuming that the input points
 	// are normalized. a and b are components of chord length that are
 	// perpendicular and parallel to a plane containing the edge respectively.
-	b := math.Min(1.0, 0.5*float64(dist)*float64(dist))
+	b := math.Min(1.0, 0.5*float64(dist))
 	a := math.Sqrt(b * (2 - b))
 	return ((2.5+2*math.Sqrt(3)+8.5*a)*a +
 		(2+2*math.Sqrt(3)/3+6.5*(1-b))*b +

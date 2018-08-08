@@ -446,6 +446,9 @@ func TestEdgeDistanceMinUpdateDistanceMaxError(t *testing.T) {
 	}
 }
 
+// TODO(roberts): TestEdgeDistanceUpdateMinInteriorDistanceMaxError once s2predicates
+// CompareEdgeDistance
+
 func TestEdgeDistancesEdgePairMinDistance(t *testing.T) {
 	var zero Point
 	tests := []struct {
