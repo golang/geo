@@ -125,15 +125,17 @@ func VertexCrossing(a, b, c, d Point) bool {
 	// if OrderedCCW indicates that the edge AB is further CCW around the
 	// shared vertex O (either A or B) than the edge CD, starting from an
 	// arbitrary fixed reference point.
+
+	// Optimization: if AB=CD or AB=DC, we can avoid most of the calculations.
 	switch {
-	case a == d:
-		return OrderedCCW(Point{a.Ortho()}, c, b, a)
-	case b == c:
-		return OrderedCCW(Point{b.Ortho()}, d, a, b)
 	case a == c:
-		return OrderedCCW(Point{a.Ortho()}, d, b, a)
+		return (b == d) || OrderedCCW(Point{a.Ortho()}, d, b, a)
 	case b == d:
 		return OrderedCCW(Point{b.Ortho()}, c, a, b)
+	case a == d:
+		return (b == c) || OrderedCCW(Point{a.Ortho()}, c, b, a)
+	case b == c:
+		return OrderedCCW(Point{b.Ortho()}, d, a, b)
 	}
 
 	return false
