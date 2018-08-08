@@ -503,6 +503,49 @@ func TestShapeIndexLoopSpanningThreeFaces(t *testing.T) {
 	testIteratorMethods(t, index)
 }
 
+func TestShapeIndexNumEdgesUpTo(t *testing.T) {
+	index := makeShapeIndex("0:0 | 0:1 | 0:2 | 0:3 | 0:4 # 1:0, 1:1 | 1:2, 1:3 | 1:4, 1:5, 1:6 #")
+
+	if got, want := len(index.shapes), 4; got != want {
+		t.Errorf("len(index.shapes) = %v, want %v", got, want)
+	}
+
+	numEdgesTests := []struct {
+		shapeID int32
+		want    int
+	}{
+		{shapeID: 0, want: 5},
+		{shapeID: 1, want: 1},
+		{shapeID: 2, want: 1},
+		{shapeID: 3, want: 2},
+	}
+
+	for _, test := range numEdgesTests {
+		if got := index.Shape(test.shapeID).NumEdges(); got != test.want {
+			t.Errorf("index.Shape(%d).NumEdges() = %d, want %d", test.shapeID, got, test.want)
+		}
+	}
+
+	if got, want := index.NumEdges(), 9; got != want {
+		t.Errorf("index.NumEdges() = %d, want %d", got, want)
+	}
+
+	countTests := []struct {
+		limit int
+		want  int
+	}{
+		{limit: 1, want: 5},
+		{limit: 5, want: 5},
+		{limit: 6, want: 6},
+		{limit: 8, want: 9},
+	}
+	for _, test := range countTests {
+		if got := index.NumEdgesUpTo(test.limit); got != test.want {
+			t.Errorf("index.NumEdgesUpTo(%d) = %d, want %d", test.limit, got, test.want)
+		}
+	}
+}
+
 // TODO(roberts): Differences from C++:
 // TestShapeIndexSimpleUpdates(t *testing.T) {}
 // TestShapeIndexRandomUpdates(t *testing.T) {}

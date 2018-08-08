@@ -683,6 +683,28 @@ func (s *ShapeIndex) NumEdges() int {
 	return numEdges
 }
 
+// NumEdgesUpTo returns the number of edges in the given index, up to the given
+// limit. If the limit is encountered, the current running total is returned,
+// which may be more than the limit.
+func (s *ShapeIndex) NumEdgesUpTo(limit int) int {
+	var numEdges int
+	// We choose to iterate over the shapes in order to match the counting
+	// up behavior in C++ and for test compatibility instead of using a
+	// more idiomatic range over the shape map.
+	for i := int32(0); i <= s.nextID; i++ {
+		s := s.Shape(i)
+		if s == nil {
+			continue
+		}
+		numEdges += s.NumEdges()
+		if numEdges >= limit {
+			break
+		}
+	}
+
+	return numEdges
+}
+
 // Shape returns the shape with the given ID, or nil if the shape has been removed from the index.
 func (s *ShapeIndex) Shape(id int32) Shape { return s.shapes[id] }
 
