@@ -32,7 +32,7 @@ import (
 //
 // For covering, only cells where (level - MinLevel) is a multiple of LevelMod will be used.
 // This effectively allows the branching factor of the S2 CellID hierarchy to be increased.
-// Currently the only parameter values allowed are 0/1, 2, or 3, corresponding to
+// Currently the only parameter values allowed are 1, 2, or 3, corresponding to
 // branching factors of 4, 16, and 64 respectively.
 //
 // Note the following:
@@ -430,4 +430,48 @@ func (c *coverer) normalizeCovering(covering *CellUnion) {
 	}
 }
 
-// BUG(akashagrawal): The differences from the C++ version FloodFill, SimpleCovering
+// SimpleRegionCovering returns a set of cells at the given level that cover
+// the connected region and a starting point on the boundary or inside the
+// region. The cells are returned in arbitrary order.
+//
+// Note that this method is not faster than the regular Covering
+// method for most region types, such as Cap or Polygon, and in fact it
+// can be much slower when the output consists of a large number of cells.
+// Currently it can be faster at generating coverings of long narrow regions
+// such as polylines, but this may change in the future.
+func SimpleRegionCovering(region Region, start Point, level int) []CellID {
+	return FloodFillRegionCovering(region, cellIDFromPoint(start).Parent(level))
+}
+
+// FloodFillRegionCovering returns all edge-connected cells at the same level as
+// the given CellID that intersect the given region, in arbitrary order.
+func FloodFillRegionCovering(region Region, start CellID) []CellID {
+	var output []CellID
+	all := map[CellID]bool{
+		start: true,
+	}
+	frontier := []CellID{start}
+	for len(frontier) > 0 {
+		id := frontier[len(frontier)-1]
+		frontier = frontier[:len(frontier)-1]
+		if !region.IntersectsCell(CellFromCellID(id)) {
+			continue
+		}
+		output = append(output, id)
+		for _, nbr := range id.EdgeNeighbors() {
+			if !all[nbr] {
+				all[nbr] = true
+				frontier = append(frontier, nbr)
+			}
+		}
+	}
+
+	return output
+}
+
+// TODO(roberts): The differences from the C++ version
+// finish up FastCovering to match C++
+// IsCanonical
+// CanonicalizeCovering
+// containsAllChildren
+// replaceCellsWithAncestor

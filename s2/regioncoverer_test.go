@@ -180,3 +180,34 @@ func TestRegionCovererInteriorCovering(t *testing.T) {
 		}
 	}
 }
+
+func TestRegionCovererSimpleRegionCovering(t *testing.T) {
+	const maxLevel = maxLevel
+	for i := 0; i < 100; i++ {
+		level := randomUniformInt(maxLevel + 1)
+		maxArea := math.Min(4*math.Pi, 1000.0*AvgAreaMetric.Value(level))
+		c := randomCap(0.1*AvgAreaMetric.Value(maxLevel), maxArea)
+		covering := SimpleRegionCovering(c, c.Center(), level)
+		rc := &RegionCoverer{MaxLevel: level, MinLevel: level, MaxCells: math.MaxInt32, LevelMod: 1}
+		checkCovering(t, rc, c, covering, false)
+	}
+}
+
+// TODO(roberts): Differences from C++
+//  func TestRegionCovererAccuracy(t *testing.T) {
+//  func TestRegionCovererFastCoveringHugeFixedLevelCovering(t *testing.T) {
+//  func TestRegionCovererIsCanonicalInvalidS2CellId(t *testing.T) {
+//  func TestRegionCovererIsCanonicalUnsorted(t *testing.T) {
+//  func TestRegionCovererIsCanonicalOverlapping(t *testing.T) {
+//  func TestRegionCovererIsCanonicalMinLevel(t *testing.T) {
+//  func TestRegionCovererIsCanonicalMaxLevel(t *testing.T) {
+//  func TestRegionCovererIsCanonicalLevelMod(t *testing.T) {
+//  func TestRegionCovererIsCanonicalMaxCells(t *testing.T) {
+//  func TestRegionCovererIsCanonicalNormalized(t *testing.T) {
+//  func TestRegionCovererCanonicalizeCoveringUnsortedDuplicateCells(t *testing.T) {
+//  func TestRegionCovererCanonicalizeCoveringMaxLevelExceeded(t *testing.T) {
+//  func TestRegionCovererCanonicalizeCoveringWrongLevelMod(t *testing.T) {
+//  func TestRegionCovererCanonicalizeCoveringReplacedByParent(t *testing.T) {
+//  func TestRegionCovererCanonicalizeCoveringDenormalizedCellUnion(t *testing.T) {
+//  func TestRegionCovererCanonicalizeCoveringMaxCellsMergesSmallest(t *testing.T) {
+//  func TestRegionCovererCanonicalizeCoveringMaxCellsMergesRepeatedly(t *testing.T) {
