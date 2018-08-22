@@ -392,7 +392,7 @@ func (p *Polyline) Project(point Point) (Point, int) {
 	}
 
 	// Initial value larger than any possible distance on the unit sphere.
-	minDist := 10 * s1.Degree
+	minDist := 10 * s1.Radian
 	minIndex := -1
 
 	// Find the line segment in the polyline that is closest to the point given.

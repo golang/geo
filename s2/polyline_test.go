@@ -303,6 +303,7 @@ func TestProject(t *testing.T) {
 		{LatLngFromDegrees(0.5, 1), LatLngFromDegrees(0, 1), 2},
 		{LatLngFromDegrees(-0.5, 2.5), LatLngFromDegrees(0, 2), 3},
 		{LatLngFromDegrees(2, 2), LatLngFromDegrees(1, 2), 4},
+		{LatLngFromDegrees(-50, 0.5), LatLngFromDegrees(0, 0.5), 1},
 	}
 	for _, test := range tests {
 		projection, next := line.Project(PointFromLatLng(test.haveLatLng))
