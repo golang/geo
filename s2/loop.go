@@ -562,7 +562,7 @@ func (l *Loop) OrientedVertex(i int) Point {
 	if l.IsHole() {
 		j = len(l.vertices) - 1 - j
 	}
-	return l.Vertex(i)
+	return l.Vertex(j)
 }
 
 // NumVertices returns the number of vertices in this loop.
