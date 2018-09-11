@@ -282,6 +282,8 @@ func TestLoopHoleAndSign(t *testing.T) {
 }
 
 func TestLoopRectBound(t *testing.T) {
+	rectError := NewRectBounder().maxErrorForTests()
+
 	if !EmptyLoop().RectBound().IsEmpty() {
 		t.Errorf("empty loop's RectBound should be empty")
 	}
@@ -300,17 +302,17 @@ func TestLoopRectBound(t *testing.T) {
 	if !smallNECW.RectBound().IsFull() {
 		t.Errorf("small northeast clockwise loop's RectBound should be full")
 	}
-	if got, want := arctic80.RectBound(), rectFromDegrees(80, -180, 90, 180); !rectsApproxEqual(got, want, rectErrorLat, rectErrorLng) {
+	if got, want := arctic80.RectBound(), rectFromDegrees(80, -180, 90, 180); !rectsApproxEqual(got, want, rectError.Lat.Radians(), rectError.Lng.Radians()) {
 		t.Errorf("arctic 80 loop's RectBound (%v) should be %v", got, want)
 	}
-	if got, want := antarctic80.RectBound(), rectFromDegrees(-90, -180, -80, 180); !rectsApproxEqual(got, want, rectErrorLat, rectErrorLng) {
+	if got, want := antarctic80.RectBound(), rectFromDegrees(-90, -180, -80, 180); !rectsApproxEqual(got, want, rectError.Lat.Radians(), rectError.Lng.Radians()) {
 		t.Errorf("antarctic 80 loop's RectBound (%v) should be %v", got, want)
 	}
+
 	if !southHemi.RectBound().Lng.IsFull() {
 		t.Errorf("south hemi loop's RectBound should have a full longitude range")
 	}
-	got, want := southHemi.RectBound().Lat, r1.Interval{-math.Pi / 2, 0}
-	if !got.ApproxEqual(want) {
+	if got, want := southHemi.RectBound().Lat, (r1.Interval{-math.Pi / 2, 0}); !r1IntervalsApproxEqual(got, want, rectError.Lat.Radians()) {
 		t.Errorf("south hemi loop's RectBound latitude interval (%v) should be %v", got, want)
 	}
 
@@ -319,7 +321,7 @@ func TestLoopRectBound(t *testing.T) {
 	arctic80Inv.Invert()
 	// The highest latitude of each edge is attained at its midpoint.
 	mid := Point{arctic80Inv.vertices[0].Vector.Add(arctic80Inv.vertices[1].Vector).Mul(.5)}
-	if got, want := arctic80Inv.RectBound().Lat.Hi, float64(LatLngFromPoint(mid).Lat); math.Abs(got-want) > 10*dblEpsilon {
+	if got, want := arctic80Inv.RectBound().Lat.Hi, float64(LatLngFromPoint(mid).Lat); !float64Near(got, want, 10*dblEpsilon) {
 		t.Errorf("arctic 80 inverse loop's RectBound should have a latutude hi of %v, got %v", got, want)
 	}
 }

@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"os"
 
+	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r2"
 	"github.com/golang/geo/s1"
 )
@@ -164,6 +165,19 @@ func latLngsApproxEqual(a, b LatLng, epsilon float64) bool {
 // the epsilon.
 func pointsApproxEqual(a, b Point, epsilon float64) bool {
 	return float64(a.Vector.Angle(b.Vector)) <= epsilon
+}
+
+// r1IntervalsApproxEqual reports whether the two r1.Intervals are within the given
+// epsilon of each other. This adds a test changeable value for epsilon
+func r1IntervalsApproxEqual(a, b r1.Interval, epsilon float64) bool {
+	if a.IsEmpty() {
+		return b.Length() <= 2*epsilon
+	}
+	if b.IsEmpty() {
+		return a.Length() <= 2*epsilon
+	}
+	return math.Abs(b.Lo-a.Lo) <= epsilon &&
+		math.Abs(b.Hi-a.Hi) <= epsilon
 }
 
 var (

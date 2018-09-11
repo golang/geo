@@ -306,6 +306,11 @@ func TestIntervalString(t *testing.T) {
 }
 
 func TestApproxEqual(t *testing.T) {
+	// Choose two values lo and hi such that it's okay to shift an endpoint by
+	// kLo (i.e., the resulting interval is equivalent) but not by kHi.
+	const lo = 4 * dblEpsilon // < max_error default
+	const hi = 6 * dblEpsilon // > max_error default
+
 	tests := []struct {
 		interval Interval
 		other    Interval
@@ -318,29 +323,31 @@ func TestApproxEqual(t *testing.T) {
 		{Interval{1, 1}, EmptyInterval(), true},
 		{EmptyInterval(), Interval{1, 1}, true},
 		{EmptyInterval(), Interval{0, 1}, false},
-		{EmptyInterval(), Interval{1, 1 + 2*epsilon}, true},
+		{EmptyInterval(), Interval{1, 1 + 2*lo}, true},
+		{EmptyInterval(), Interval{1, 1 + 2*hi}, false},
 
 		// Singleton intervals.
 		{Interval{1, 1}, Interval{1, 1}, true},
-		{Interval{1, 1}, Interval{1 - epsilon, 1 - epsilon}, true},
-		{Interval{1, 1}, Interval{1 + epsilon, 1 + epsilon}, true},
-		{Interval{1, 1}, Interval{1 - 3*epsilon, 1}, false},
-		{Interval{1, 1}, Interval{1, 1 + 3*epsilon}, false},
-		{Interval{1, 1}, Interval{1 - epsilon, 1 + epsilon}, true},
+		{Interval{1, 1}, Interval{1 - lo, 1 - lo}, true},
+		{Interval{1, 1}, Interval{1 + lo, 1 + lo}, true},
+		{Interval{1, 1}, Interval{1 - hi, 1}, false},
+		{Interval{1, 1}, Interval{1, 1 + hi}, false},
+		{Interval{1, 1}, Interval{1 - lo, 1 + lo}, true},
 		{Interval{0, 0}, Interval{1, 1}, false},
 
 		// Other intervals.
-		{Interval{1 - epsilon, 2 + epsilon}, Interval{1, 2}, false},
-		{Interval{1 + epsilon, 2 - epsilon}, Interval{1, 2}, true},
-		{Interval{1 - 3*epsilon, 2 + epsilon}, Interval{1, 2}, false},
-		{Interval{1 + 3*epsilon, 2 - epsilon}, Interval{1, 2}, false},
-		{Interval{1 - epsilon, 2 + 3*epsilon}, Interval{1, 2}, false},
-		{Interval{1 + epsilon, 2 - 3*epsilon}, Interval{1, 2}, false},
+		{Interval{1 - lo, 2 + lo}, Interval{1, 2}, true},
+		{Interval{1 + lo, 2 - lo}, Interval{1, 2}, true},
+
+		{Interval{1 - hi, 2 + lo}, Interval{1, 2}, false},
+		{Interval{1 + hi, 2 - lo}, Interval{1, 2}, false},
+		{Interval{1 - lo, 2 + hi}, Interval{1, 2}, false},
+		{Interval{1 + lo, 2 - hi}, Interval{1, 2}, false},
 	}
 
-	for _, test := range tests {
+	for d, test := range tests {
 		if got := test.interval.ApproxEqual(test.other); got != test.want {
-			t.Errorf("%v.ApproxEqual(%v) = %t, want %t",
+			t.Errorf("%d. %v.ApproxEqual(%v) = %t, want %t", d,
 				test.interval, test.other, got, test.want)
 		}
 	}
