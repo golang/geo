@@ -405,7 +405,7 @@ func (cu *CellUnion) Contains(o CellUnion) bool {
 // Intersects reports whether this CellUnion intersects any of the CellIDs of the given CellUnion.
 func (cu *CellUnion) Intersects(o CellUnion) bool {
 	for _, c := range *cu {
-		if o.ContainsCellID(c) {
+		if o.IntersectsCellID(c) {
 			return true
 		}
 	}
