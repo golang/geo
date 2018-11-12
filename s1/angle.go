@@ -98,7 +98,7 @@ func (a Angle) E7() int32 { return round(a.Degrees() * 1e7) }
 // Abs returns the absolute value of the angle.
 func (a Angle) Abs() Angle { return Angle(math.Abs(float64(a))) }
 
-// Normalized returns an equivalent angle in (-2π, 2π].
+// Normalized returns an equivalent angle in (-π, π].
 func (a Angle) Normalized() Angle {
 	rad := math.Remainder(float64(a), 2*math.Pi)
 	if rad <= -math.Pi {
