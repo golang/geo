@@ -384,7 +384,7 @@ func (p *Polygon) initOneLoop() {
 // initLoopProperties sets the properties for polygons with multiple loops.
 func (p *Polygon) initLoopProperties() {
 	// the loops depths are set by initNested/initOriented prior to this.
-
+	p.bound = EmptyRect()
 	p.hasHoles = false
 	for _, l := range p.loops {
 		if l.IsHole() {
@@ -1177,18 +1177,8 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 	for i := range p.loops {
 		p.loops[i] = new(Loop)
 		p.loops[i].decodeCompressed(d, snapLevel)
-		// TODO(roberts): Update this bound.Union call when initLoopProperties is implemented.
-		p.bound = p.bound.Union(p.loops[i].bound)
-		p.numVertices += len(p.loops[i].vertices)
 	}
-	if d.err != nil {
-		return
-	}
-	if p.numVertices == 0 {
-		p.bound = EmptyRect()
-	}
-	p.subregionBound = ExpandForSubregions(p.bound)
-	p.initEdgesAndIndex()
+	p.initLoopProperties()
 }
 
 // TODO(roberts): Differences from C++

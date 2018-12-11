@@ -213,6 +213,24 @@ func TestPolygonFull(t *testing.T) {
 	}
 }
 
+func TestPolygonInitLoopPropertiesGetsRightBounds(t *testing.T) {
+	// Before the change to initLoopProperties to start the bounds as an
+	// EmptyRect instead of it default to the zero rect, the bounds
+	// computations failed. Lo was set to min (0, 12.55) and Hi was set to
+	// max (0, -70.02).  So this poly would have a bounds of
+	//   Lo: [0, -70.05],     Hi: [12.58, 0]]      instead of:
+	//   Lo: [12.55, -70.05], Hi: [12.58, -70.02]]
+
+	p := PolygonFromLoops([]*Loop{
+		makeLoop("12.55:-70.05, 12.55:-70.02, 12.58:-70.02, 12.58:-70.05"),
+		makeLoop("12.56:-70.04, 12.56:-70.03, 12.58:-70.03, 12.58:-70.04"),
+	})
+	want := rectFromDegrees(12.55, -70.05, 12.58, -70.02)
+	if got := p.RectBound(); !rectsApproxEqual(got, want, 1e-6, 1e-6) {
+		t.Errorf("%v.RectBound() = %v, want %v", p, got, want)
+	}
+}
+
 func TestPolygonShape(t *testing.T) {
 	const numLoops = 100
 	const numVerticesPerLoop = 6
