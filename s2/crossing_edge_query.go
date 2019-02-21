@@ -26,6 +26,8 @@ import (
 // Note that if you need to query many edges, it is more efficient to declare
 // a single CrossingEdgeQuery instance and reuse it.
 //
+// This type is not safe for concurrent use.
+//
 // If you want to find *all* the pairs of crossing edges, it is more efficient to
 // use the not yet implemented VisitCrossings in shapeutil.
 type CrossingEdgeQuery struct {

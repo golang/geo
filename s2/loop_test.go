@@ -1750,18 +1750,18 @@ func TestLoopValidateDetectsInvalidLoops(t *testing.T) {
 			// Ensure points are not normalized.
 			msg: "loop with non-normalized vertices",
 			points: []Point{
-				Point{r3.Vector{2, 0, 0}},
-				Point{r3.Vector{0, 1, 0}},
-				Point{r3.Vector{0, 0, 1}},
+				{r3.Vector{2, 0, 0}},
+				{r3.Vector{0, 1, 0}},
+				{r3.Vector{0, 0, 1}},
 			},
 		},
 		{
 			// Adjacent antipodal vertices
 			msg: "loop with antipodal points",
 			points: []Point{
-				Point{r3.Vector{1, 0, 0}},
-				Point{r3.Vector{-1, 0, 0}},
-				Point{r3.Vector{0, 0, 1}},
+				{r3.Vector{1, 0, 0}},
+				{r3.Vector{-1, 0, 0}},
+				{r3.Vector{0, 0, 1}},
 			},
 		},
 	}

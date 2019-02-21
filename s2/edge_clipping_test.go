@@ -387,9 +387,9 @@ func TestEdgeClippingClipEdge(t *testing.T) {
 			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
 
 		// Also clip against one-dimensional, singleton, and empty rectangles.
-		r2.Rect{r1.Interval{-0.7, -0.7}, r1.Interval{0.3, 0.35}},
-		r2.Rect{r1.Interval{0.2, 0.5}, r1.Interval{0.3, 0.3}},
-		r2.Rect{r1.Interval{-0.7, 0.3}, r1.Interval{0, 0}},
+		{r1.Interval{-0.7, -0.7}, r1.Interval{0.3, 0.35}},
+		{r1.Interval{0.2, 0.5}, r1.Interval{0.3, 0.3}},
+		{r1.Interval{-0.7, 0.3}, r1.Interval{0, 0}},
 		r2.RectFromPoints(r2.Point{0.3, 0.8}),
 		r2.EmptyRect(),
 	}

@@ -363,7 +363,7 @@ func TestPolylineValidate(t *testing.T) {
 
 	p1 := Polyline([]Point{
 		PointFromCoords(0, 1, 0),
-		Point{r3.Vector{10, 3, 7}},
+		{r3.Vector{10, 3, 7}},
 		PointFromCoords(0, 0, 1),
 	})
 
