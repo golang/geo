@@ -343,6 +343,37 @@ func (i Interval) String() string {
 	return "[" + strconv.FormatFloat(i.Lo, 'f', 7, 64) + ", " + strconv.FormatFloat(i.Hi, 'f', 7, 64) + "]"
 }
 
+// DirectedHausdorffDistance returns the Hausdorff distance to the given interval.
+// For two intervals i and y, this distance is defined by
+//     h(i, y) = max_{p in i} min_{q in y} d(p, q),
+// where d(.,.) is measured along S1.
+func (i Interval) DirectedHausdorffDistance(y Interval) Angle {
+	if y.ContainsInterval(i) {
+		return 0 // This includes the case i is empty.
+	}
+	if y.IsEmpty() {
+		return Angle(math.Pi) // maximum possible distance on s1.
+	}
+	yComplementCenter := IntervalFromEndpoints(y.Hi, y.Lo).Center()
+	if i.Contains(yComplementCenter) {
+		return Angle(positiveDistance(y.Hi, yComplementCenter))
+	}
+
+	// The Hausdorff distance is realized by either two i.Hi endpoints or two
+	// i.Lo endpoints, whichever is farther apart.
+	hiHi := 0.0
+	if IntervalFromEndpoints(y.Hi, yComplementCenter).Contains(i.Hi) {
+		hiHi = positiveDistance(y.Hi, i.Hi)
+	}
+
+	loLo := 0.0
+	if IntervalFromEndpoints(yComplementCenter, y.Lo).Contains(i.Lo) {
+		loLo = positiveDistance(i.Lo, y.Lo)
+	}
+
+	return Angle(math.Max(hiHi, loLo))
+}
+
 // BUG(dsymonds): The major differences from the C++ version are:
 //   - no validity checking on construction, etc. (not a bug?)
 //   - a few operations
