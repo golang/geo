@@ -858,3 +858,86 @@ func TestRectIntersectsLngEdge(t *testing.T) {
 		}
 	}
 }
+
+// intervalDistance returns the minimum distance (in radians) from X to the latitude
+// line segment defined by the given latitude and longitude interval.
+func intervalDistance(x LatLng, lat s1.Angle, iv s1.Interval) s1.Angle {
+	// Is x inside the longitude interval?
+	if iv.Contains(float64(x.Lng)) {
+		return s1.Angle(math.Abs(float64(x.Lat - lat)))
+	}
+
+	return minAngle(
+		x.Distance(LatLng{lat, s1.Angle(iv.Lo)}),
+		x.Distance(LatLng{lat, s1.Angle(iv.Hi)}))
+}
+
+// Returns the minimum distance from X to the latitude line segment defined by
+// the given latitude and longitude interval.
+func bruteForceRectLatLngDistance(r Rect, ll LatLng) s1.Angle {
+	pt := PointFromLatLng(ll)
+	if r.ContainsPoint(pt) {
+		return 0
+	}
+
+	loLat := intervalDistance(ll, s1.Angle(r.Lat.Lo), r.Lng)
+	hiLat := intervalDistance(ll, s1.Angle(r.Lat.Hi), r.Lng)
+	loLng := DistanceFromSegment(PointFromLatLng(ll),
+		PointFromLatLng(LatLng{s1.Angle(r.Lat.Lo), s1.Angle(r.Lng.Lo)}),
+		PointFromLatLng(LatLng{s1.Angle(r.Lat.Hi), s1.Angle(r.Lng.Lo)}))
+	hiLng := DistanceFromSegment(PointFromLatLng(ll),
+		PointFromLatLng(LatLng{s1.Angle(r.Lat.Lo), s1.Angle(r.Lng.Hi)}),
+		PointFromLatLng(LatLng{s1.Angle(r.Lat.Hi), s1.Angle(r.Lng.Hi)}))
+
+	return minAngle(loLat, hiLat, loLng, hiLng)
+}
+
+func TestDistanceRectFromLatLng(t *testing.T) {
+	// Rect that spans 180.
+	a := RectFromLatLng(LatLngFromDegrees(-1, -1)).AddPoint(LatLngFromDegrees(2, 1))
+	// Rect near north pole.
+	b := RectFromLatLng(LatLngFromDegrees(86, 0)).AddPoint(LatLngFromDegrees(88, 2))
+	// Rect that touches north pole.
+	c := RectFromLatLng(LatLngFromDegrees(88, 0)).AddPoint(LatLngFromDegrees(90, 2))
+
+	tests := []struct {
+		r        Rect
+		lat, lng float64 // In degrees.
+	}{
+		{a, -2, -1},
+		{a, 1, 2},
+		{b, 87, 3},
+		{b, 87, -1},
+		{b, 89, 1},
+		{b, 89, 181},
+		{b, 85, 1},
+		{b, 85, 181},
+		{b, 90, 0},
+		{c, 89, 3},
+		{c, 89, 90},
+		{c, 89, 181},
+	}
+
+	for _, test := range tests {
+		ll := LatLngFromDegrees(test.lat, test.lng)
+		got := test.r.DistanceToLatLng(ll)
+		want := bruteForceRectLatLngDistance(test.r, ll)
+		if !float64Near(float64(got), float64(want), 1e-10) {
+			t.Errorf("dist from %v to %v = %v, want %v", test.r, ll, got, want)
+		}
+	}
+}
+
+func TestDistanceRectFromLatLngRandomPairs(t *testing.T) {
+	latlng := func() LatLng { return LatLngFromPoint(randomPoint()) }
+
+	for i := 0; i < 10000; i++ {
+		r := RectFromLatLng(latlng()).AddPoint(latlng())
+		ll := latlng()
+		got := r.DistanceToLatLng(ll)
+		want := bruteForceRectLatLngDistance(r, ll)
+		if !float64Near(float64(got), float64(want), 1e-10) {
+			t.Errorf("dist from %v to %v = %v, want %v", r, ll, got, want)
+		}
+	}
+}

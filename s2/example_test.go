@@ -17,8 +17,54 @@ package s2_test
 import (
 	"fmt"
 
+	"github.com/golang/geo/s1"
 	"github.com/golang/geo/s2"
 )
+
+func ExampleRect_DistanceToLatLng() {
+	r := s2.RectFromLatLng(s2.LatLngFromDegrees(-1, -1)).AddPoint(s2.LatLngFromDegrees(1, 1))
+
+	printDist := func(lat, lng float64) {
+		fmt.Printf("%f\n", r.DistanceToLatLng(s2.LatLngFromDegrees(lat, lng))/s1.Degree)
+	}
+
+	fmt.Println("Distances next to the rectangle.")
+	printDist(-2, 0)
+	printDist(0, -2)
+	printDist(2, 0)
+	printDist(0, 2)
+
+	fmt.Println("Distances beyond the corners of the rectangle.")
+	printDist(-2, -2)
+	printDist(-2, 2)
+	printDist(2, 2)
+	printDist(2, -2)
+
+	fmt.Println("Distance within the rectangle.")
+	printDist(0, 0)
+	printDist(0.5, 0)
+	printDist(0, 0.5)
+	printDist(-0.5, 0)
+	printDist(0, -0.5)
+
+	// Output:
+	// Distances next to the rectangle.
+	// 1.000000
+	// 1.000000
+	// 1.000000
+	// 1.000000
+	// Distances beyond the corners of the rectangle.
+	// 1.413962
+	// 1.413962
+	// 1.413962
+	// 1.413962
+	// Distance within the rectangle.
+	// 0.000000
+	// 0.000000
+	// 0.000000
+	// 0.000000
+	// 0.000000
+}
 
 func ExamplePolygonFromOrientedLoops() {
 	// Let's define three loops, in format World Geodetic System 1984,

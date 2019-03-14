@@ -461,5 +461,25 @@ func (r *Rect) decode(d *decoder) {
 	return
 }
 
+// DistanceToLatLng returns the minimum distance (measured along the surface of the sphere)
+// from a given point to the rectangle (both its boundary and its interior).
+// If r is empty, the result is meaningless.
+// The latlng must be valid.
+func (r *Rect) DistanceToLatLng(ll LatLng) s1.Angle {
+	if r.Lng.Contains(float64(ll.Lng)) {
+		return maxAngle(0, ll.Lat-s1.Angle(r.Lat.Hi), s1.Angle(r.Lat.Lo)-ll.Lat)
+	}
+
+	i := s1.IntervalFromEndpoints(r.Lng.Hi, s1.IntervalFromEndpoints(r.Lng.Hi, r.Lng.Lo).Center())
+	rectLng := r.Lng.Lo
+	if i.Contains(float64(ll.Lng)) {
+		rectLng = r.Lng.Hi
+	}
+
+	lo := LatLng{s1.Angle(r.Lat.Lo) * s1.Radian, s1.Angle(rectLng) * s1.Radian}
+	hi := LatLng{s1.Angle(r.Lat.Hi) * s1.Radian, s1.Angle(rectLng) * s1.Radian}
+	return DistanceFromSegment(PointFromLatLng(ll), PointFromLatLng(lo), PointFromLatLng(hi))
+}
+
 // BUG: The major differences from the C++ version are:
 //   - GetCentroid, Get*Distance, Vertex, InteriorContains(LatLng|Rect|Point)
