@@ -31,7 +31,7 @@ type edgeVectorShape struct {
 func edgeVectorShapeFromPoints(a, b Point) *edgeVectorShape {
 	e := &edgeVectorShape{
 		edges: []Edge{
-			Edge{a, b},
+			{a, b},
 		},
 	}
 	return e

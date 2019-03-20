@@ -271,7 +271,7 @@ func TestCrossingEdgeQueryCandidatesCapEdgesNearCubeVertex(t *testing.T) {
 func TestCrossingEdgeQueryCandidatesDegenerateEdgeOnCellVertexIsItsOwnCandidate(t *testing.T) {
 	for iter := 0; iter < 100; iter++ {
 		cell := CellFromCellID(randomCellID())
-		edges := []Edge{Edge{cell.Vertex(0), cell.Vertex(0)}}
+		edges := []Edge{{cell.Vertex(0), cell.Vertex(0)}}
 		testCrossingEdgeQueryAllCrossings(t, edges)
 	}
 }

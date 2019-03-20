@@ -402,7 +402,7 @@ func TestPolygonIsValidLoopNestingInvalid(t *testing.T) {
 //   TestFuzzTest
 
 func TestPolygonParent(t *testing.T) {
-	p1 := PolygonFromLoops([]*Loop{&Loop{}})
+	p1 := PolygonFromLoops([]*Loop{{}})
 	tests := []struct {
 		p    *Polygon
 		have int
@@ -424,7 +424,7 @@ func TestPolygonParent(t *testing.T) {
 }
 
 func TestPolygonLastDescendant(t *testing.T) {
-	p1 := PolygonFromLoops([]*Loop{&Loop{}})
+	p1 := PolygonFromLoops([]*Loop{{}})
 
 	tests := []struct {
 		p    *Polygon
