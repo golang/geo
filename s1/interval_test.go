@@ -20,6 +20,12 @@ import (
 )
 
 // Some standard intervals for use throughout the tests.
+// These include the intervals spanning one or more "quadrants" which are
+// numbered as follows:
+//    quad1 == [0, π/2]
+//    quad2 == [π/2, π]
+//    quad3 == [-π, -π/2]
+//    quad4 == [-π/2, 0]
 var (
 	empty = EmptyInterval()
 	full  = FullInterval()
@@ -451,5 +457,77 @@ func TestExpanded(t *testing.T) {
 func TestIntervalString(t *testing.T) {
 	if s, exp := pi.String(), "[3.1415927, 3.1415927]"; s != exp {
 		t.Errorf("pi.String() = %q, want %q", s, exp)
+	}
+}
+
+func TestIntervalApproxEqual(t *testing.T) {
+	// Choose two values lo and hi such that it's okay to shift an endpoint by
+	// lo (i.e., the resulting interval is equivalent) but not by hi.
+	lo := 4 * dblEpsilon // < epsilon default
+	hi := 6 * dblEpsilon // > epsilon default
+
+	tests := []struct {
+		a, b Interval
+		want bool
+	}{
+		// Empty intervals.
+		{a: empty, b: empty, want: true},
+		{a: zero, b: empty, want: true},
+		{a: empty, b: zero, want: true},
+		{a: pi, b: empty, want: true},
+		{a: empty, b: pi, want: true},
+		{a: mipi, b: empty, want: true},
+		{a: empty, b: mipi, want: true},
+		{a: empty, b: full, want: false},
+		{a: empty, b: Interval{1, 1 + 2*lo}, want: true},
+		{a: empty, b: Interval{1, 1 + 2*hi}, want: false},
+		{a: Interval{math.Pi - lo, -math.Pi + lo}, b: empty, want: true},
+
+		// Full intervals.
+		{a: full, b: full, want: true},
+		{a: full, b: empty, want: false},
+		{a: full, b: zero, want: false},
+		{a: full, b: pi, want: false},
+		{a: full, b: Interval{lo, -lo}, want: true},
+		{a: full, b: Interval{2 * hi, 0}, want: false},
+		{a: Interval{-math.Pi + lo, math.Pi - lo}, b: full, want: true},
+		{a: Interval{-math.Pi, math.Pi - 2*hi}, b: full, want: false},
+
+		// Singleton intervals.
+		{a: pi, b: pi, want: true},
+		{a: mipi, b: pi, want: true},
+		{a: pi, b: Interval{math.Pi - lo, math.Pi - lo}, want: true},
+		{a: pi, b: Interval{math.Pi - hi, math.Pi - hi}, want: false},
+		{a: pi, b: Interval{math.Pi - lo, -math.Pi + lo}, want: true},
+		{a: pi, b: Interval{math.Pi - hi, -math.Pi}, want: false},
+		{a: zero, b: pi, want: false},
+		{a: pi.Union(mid12).Union(zero), b: quad12, want: true},
+		{a: quad2.Intersection(quad3), b: pi, want: true},
+		{a: quad3.Intersection(quad2), b: pi, want: true},
+
+		// Intervals whose corresponding endpoints are nearly the same but where the
+		// endpoints are in opposite order (i.e., inverted intervals).
+		{a: Interval{0, lo}, b: Interval{lo, 0}, want: false},
+		{a: Interval{math.Pi - 0.5*lo, -math.Pi + 0.5*lo}, b: Interval{-math.Pi + 0.5*lo, math.Pi - 0.5*lo}, want: false},
+
+		// Other intervals.
+		{a: Interval{1 - lo, 2 + lo}, b: Interval{1, 2}, want: true},
+		{a: Interval{1 + lo, 2 - lo}, b: Interval{1, 2}, want: true},
+		{a: Interval{2 - lo, 1 + lo}, b: Interval{2, 1}, want: true},
+		{a: Interval{2 + lo, 1 - lo}, b: Interval{2, 1}, want: true},
+		{a: Interval{1 - hi, 2 + lo}, b: Interval{1, 2}, want: false},
+		{a: Interval{1 + hi, 2 - lo}, b: Interval{1, 2}, want: false},
+		{a: Interval{2 - hi, 1 + lo}, b: Interval{2, 1}, want: false},
+		{a: Interval{2 + hi, 1 - lo}, b: Interval{2, 1}, want: false},
+		{a: Interval{1 - lo, 2 + hi}, b: Interval{1, 2}, want: false},
+		{a: Interval{1 + lo, 2 - hi}, b: Interval{1, 2}, want: false},
+		{a: Interval{2 - lo, 1 + hi}, b: Interval{2, 1}, want: false},
+		{a: Interval{2 + lo, 1 - hi}, b: Interval{2, 1}, want: false},
+	}
+
+	for _, test := range tests {
+		if got := test.a.ApproxEqual(test.b); got != test.want {
+			t.Errorf("%v.ApproxEqual(%v) = %t, want %t", test.a, test.b, got, test.want)
+		}
 	}
 }
