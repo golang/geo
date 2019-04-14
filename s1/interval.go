@@ -384,6 +384,34 @@ func (i Interval) String() string {
 	return "[" + strconv.FormatFloat(i.Lo, 'f', 7, 64) + ", " + strconv.FormatFloat(i.Hi, 'f', 7, 64) + "]"
 }
 
+// Complement returns the complement of the interior of the interval. An interval and
+// its complement have the same boundary but do not share any interior
+// values. The complement operator is not a bijection, since the complement
+// of a singleton interval (containing a single value) is the same as the
+// complement of an empty interval.
+func (i Interval) Complement() Interval {
+	if i.Lo == i.Hi {
+		// Singleton. The interval just contains a single point.
+		return FullInterval()
+	}
+	// Handles empty and full.
+	return Interval{i.Hi, i.Lo}
+}
+
+// ComplementCenter returns the midpoint of the complement of the interval. For full and empty
+// intervals, the result is arbitrary. For a singleton interval (containing a
+// single point), the result is its antipodal point on S1.
+func (i Interval) ComplementCenter() float64 {
+	if i.Lo != i.Hi {
+		return i.Complement().Center()
+	}
+	// Singleton. The interval just contains a single point.
+	if i.Hi <= 0 {
+		return i.Hi + math.Pi
+	}
+	return i.Hi - math.Pi
+}
+
 // DirectedHausdorffDistance returns the Hausdorff distance to the given interval.
 // For two intervals i and y, this distance is defined by
 //     h(i, y) = max_{p in i} min_{q in y} d(p, q),
@@ -395,7 +423,7 @@ func (i Interval) DirectedHausdorffDistance(y Interval) Angle {
 	if y.IsEmpty() {
 		return Angle(math.Pi) // maximum possible distance on s1.
 	}
-	yComplementCenter := IntervalFromEndpoints(y.Hi, y.Lo).Center()
+	yComplementCenter := y.ComplementCenter()
 	if i.Contains(yComplementCenter) {
 		return Angle(positiveDistance(y.Hi, yComplementCenter))
 	}
@@ -417,6 +445,4 @@ func (i Interval) DirectedHausdorffDistance(y Interval) Angle {
 
 // BUG(dsymonds): The major differences from the C++ version are:
 // - no validity checking on construction. (not a bug?)
-// Complement
-// ComplementCenter
 // Project

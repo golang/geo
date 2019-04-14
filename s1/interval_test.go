@@ -531,3 +531,49 @@ func TestIntervalApproxEqual(t *testing.T) {
 		}
 	}
 }
+
+func TestIntervalComplement(t *testing.T) {
+	if !EmptyInterval().Complement().IsFull() {
+		t.Error("empty interval's complement is not full, but should be")
+	}
+	if !FullInterval().Complement().IsEmpty() {
+		t.Error("full interval's complement is not empty, but should be")
+	}
+	if !pi.Complement().IsFull() {
+		t.Errorf("pi's (%v) complement is not full, but should be", pi)
+	}
+	if !mipi.Complement().IsFull() {
+		t.Errorf("mipi's (%v) complement is not full, but should be", mipi)
+	}
+	if !zero.Complement().IsFull() {
+		t.Errorf("zero's (%v) complement is not full, but should be", zero)
+	}
+
+	if got := quad12.Complement(); !got.ApproxEqual(quad34) {
+		t.Errorf("%v.Complement = %v, want %v", quad12, got, quad34)
+	}
+	if got := quad34.Complement(); !got.ApproxEqual(quad12) {
+		t.Errorf("%v.Complement = %v, want %v", quad34, got, quad12)
+	}
+	if got := quad123.Complement(); !got.ApproxEqual(quad4) {
+		t.Errorf("%v.Complement = %v, want %v", quad123, got, quad4)
+	}
+}
+
+func TestIntervalDirectedHausdorff(t *testing.T) {
+	tests := []struct {
+		i, y Interval
+		want Angle
+	}{
+		{Interval{-0.139626, 0.349066}, Interval{0.139626, 0.139626}, 0.279252 * Radian},
+		{Interval{0.2, 0.4}, Interval{0.1, 0.5}, 0 * Radian},
+		{Interval{0, 0}, EmptyInterval(), math.Pi * Radian},
+	}
+
+	for _, test := range tests {
+		got := test.i.DirectedHausdorffDistance(test.y)
+		if math.Abs(float64(got-test.want)) > 1e-15 {
+			t.Errorf("%v.DirectedHausdorffDistance(%v) = %v, want %v", test.i, test.y, got.Radians(), test.want.Radians())
+		}
+	}
+}
