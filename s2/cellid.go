@@ -341,6 +341,27 @@ func (ci CellID) String() string {
 	return b.String()
 }
 
+// cellIDFromString returns a CellID from a string in the form "1/3210".
+func cellIDFromString(s string) CellID {
+	level := len(s) - 2
+	if level < 0 || level > maxLevel {
+		return CellID(0)
+	}
+	face := int(s[0] - '0')
+	if face < 0 || face > 5 || s[1] != '/' {
+		return CellID(0)
+	}
+	id := CellIDFromFace(face)
+	for i := 2; i < len(s); i++ {
+		childPos := s[i] - '0'
+		if childPos < 0 || childPos > 3 {
+			return CellID(0)
+		}
+		id = id.Children()[childPos]
+	}
+	return id
+}
+
 // Point returns the center of the s2 cell on the sphere as a Point.
 // The maximum directional error in Point (compared to the exact
 // mathematical result) is 1.5 * dblEpsilon radians, and the maximum length

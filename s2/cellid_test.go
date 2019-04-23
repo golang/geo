@@ -143,6 +143,30 @@ func TestCellIDString(t *testing.T) {
 	}
 }
 
+func TestCellIDFromString(t *testing.T) {
+	tests := []struct {
+		have string
+		want CellID
+	}{
+		{have: "3/", want: CellIDFromFace(3)},
+		{have: "0/21", want: CellIDFromFace(0).Children()[2].Children()[1]},
+		{have: "4/000000000000000000000000000000", want: CellIDFromFace(4).RangeMin()},
+		{have: "4/0000000000000000000000000000000", want: 0},
+		{have: "", want: 0},
+		{have: "7/", want: 0},
+		{have: " /", want: 0},
+		{have: "3:0", want: 0},
+		{have: "3/ 12", want: 0},
+		{have: "3/1241", want: 0},
+	}
+
+	for _, test := range tests {
+		if got := cellIDFromString(test.have); got != test.want {
+			t.Errorf("cellIDFromString(%q) = %v, want %v", test.have, got, test.want)
+		}
+	}
+}
+
 func TestCellIDLatLng(t *testing.T) {
 	// You can generate these with the s2cellid2latlngtestcase C++ program in this directory.
 	tests := []struct {
