@@ -260,7 +260,7 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 		it2 := NewShapeIndexIterator(index, IteratorEnd)
 		for i := 0; i < len(skipped); i++ {
 			if it2.LocatePoint(skipped[i].Point()) {
-				t.Errorf("iterator should not have been able to find the cell %v wihich was not in the index", skipped[i].Point())
+				t.Errorf("iterator should not have been able to find the cell %v which was not in the index", skipped[i].Point())
 			}
 
 			if got := it2.LocateCellID(skipped[i]); got != Disjoint {
