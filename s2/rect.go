@@ -497,6 +497,15 @@ func (r Rect) DirectedHausdorffDistance(other Rect) s1.Angle {
 	return directedHausdorffDistance(lng, r.Lat, other.Lat)
 }
 
+// HausdorffDistance returns the undirected Hausdorff distance (measured along the
+// surface of the sphere) to the given Rect.
+// The Hausdorff distance between rectangle A and rectangle B is given by
+//     H(A, B) = max{h(A, B), h(B, A)}.
+func (r Rect) HausdorffDistance(other Rect) s1.Angle {
+	return maxAngle(r.DirectedHausdorffDistance(other),
+		other.DirectedHausdorffDistance(r))
+}
+
 // directedHausdorffDistance returns the directed Hausdorff distance
 // from one longitudinal edge spanning latitude range 'a' to the other
 // longitudinal edge spanning latitude range 'b', with their longitudinal
