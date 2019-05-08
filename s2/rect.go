@@ -465,7 +465,7 @@ func (r *Rect) decode(d *decoder) {
 // from a given point to the rectangle (both its boundary and its interior).
 // If r is empty, the result is meaningless.
 // The latlng must be valid.
-func (r *Rect) DistanceToLatLng(ll LatLng) s1.Angle {
+func (r Rect) DistanceToLatLng(ll LatLng) s1.Angle {
 	if r.Lng.Contains(float64(ll.Lng)) {
 		return maxAngle(0, ll.Lat-s1.Angle(r.Lat.Hi), s1.Angle(r.Lat.Lo)-ll.Lat)
 	}
