@@ -164,7 +164,7 @@ func TestEdgeDistancesCheckDistance(t *testing.T) {
 	}
 }
 
-func TestEdgeDistancesDistanceOptimizationIsConservative(t *testing.T) {
+func TestEdgeDistancesUpdateMinInteriorDistanceLowerBoundOptimizationIsConservative(t *testing.T) {
 	// Verifies that alwaysUpdateMinInteriorDistance computes the lower bound
 	// on the true distance conservatively.  (This test used to fail.)
 	x := PointFromCoords(-0.017952729194524016, -0.30232422079175203, 0.95303607751077712)
@@ -181,6 +181,50 @@ func TestEdgeDistancesDistanceOptimizationIsConservative(t *testing.T) {
 		t.Errorf("UpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, s1.InfChordAngle(), minDistance, minDistance)
 	}
 
+}
+
+func TestEdgeDistancesUpdateMinInteriorDistanceRejectionTestIsConservative(t *testing.T) {
+	// This test checks several representative cases where previously
+	// UpdateMinInteriorDistance was failing to update the distance because a
+	// rejection test was not being done conservatively.
+	//
+	// Note that all of the edges AB in this test are nearly antipodal.
+	minDist := s1.ChordAngleFromSquaredLength(6.3897233584120815e-26)
+
+	tests := []struct {
+		x, a, b Point
+		minDist s1.ChordAngle
+		want    bool
+	}{
+		{
+
+			x:       Point{r3.Vector{1, -4.6547732744037044e-11, -5.6374428459823598e-89}},
+			a:       Point{r3.Vector{1, -8.9031850507928352e-11, 0}},
+			b:       Point{r3.Vector{-0.99999999999996347, 2.7030110029169596e-07, 1.555092348806121e-99}},
+			minDist: minDist,
+			want:    false,
+		},
+		{
+			x:       Point{r3.Vector{1, -4.7617930898495072e-13, 0}},
+			a:       Point{r3.Vector{-1, -1.6065916409055676e-10, 0}},
+			b:       Point{r3.Vector{1, 0, 9.9964883247706732e-35}},
+			minDist: minDist,
+			want:    false,
+		},
+		{
+			x:       Point{r3.Vector{1, 0, 0}},
+			a:       Point{r3.Vector{1, -8.4965026896454536e-11, 0}},
+			b:       Point{r3.Vector{-0.99999999999966138, 8.2297529603339328e-07, 9.6070344113320997e-21}},
+			minDist: minDist,
+			want:    false,
+		},
+	}
+
+	for _, test := range tests {
+		if _, ok := UpdateMinDistance(test.x, test.a, test.b, test.minDist); !ok {
+			t.Errorf("UpdateMinDistance(%v, %v, %v, %v) = %v, want %v", test.x, test.a, test.b, test.minDist, ok, test.want)
+		}
+	}
 }
 
 func TestEdgeDistancesCheckMaxDistance(t *testing.T) {
