@@ -87,10 +87,10 @@ https://github.com/google/s2geometry/tree/master/src/python
 
 # Status of the Go Library
 
-This library is principally a port of the [C++ S2
-library](https://github.com/google/s2geometry), adapting to Go idioms where it
-makes sense. We detail the progress of this port below relative to that C++
-library.
+This library is principally a port of the
+[C++ S2 library](https://github.com/google/s2geometry), adapting to Go idioms
+where it makes sense. We detail the progress of this port below relative to that
+C++ library.
 
 ## [ℝ¹](https://godoc.org/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
 
@@ -106,16 +106,7 @@ Full parity with C++.
 
 ## [S¹](https://godoc.org/github.com/golang/geo/s1) - Circular Geometry
 
-**Complete**
-
-*   ChordAngle
-
-**Mostly complete**
-
-*   Angle - Missing Arithmetic methods, Trigonometric methods, Conversion
-    to/from s2.Point, s2.LatLng, convenience methods from E5/E6/E7
-*   Interval - Missing ClampPoint, Complement, ComplementCenter,
-    HaussdorfDistance
+Full parity with C++.
 
 ## [S²](https://godoc.org/github.com/golang/geo/s2) - Spherical Geometry
 
@@ -128,6 +119,7 @@ Approximately ~40% complete.
 *   CellID
 *   CellUnion
 *   ContainsVertexQuery
+*   ConvexHullQuery
 *   CrossingEdgeQuery
 *   LatLng
 *   matrix3x3
@@ -154,12 +146,12 @@ Approximately ~40% complete.
 C++ code, and are reasonably complete enough to use in live code. Up to date
 listing of the incomplete methods are documented at the end of each file.
 
-*   Loop - Loop is mostly complete now. Missing Projection, Distance, Contains,
-    Intersects, Union, etc.
+*   ContainsPointQuery - missing visit edges
+*   laxPolygon
+*   Loop - Loop is mostly complete now. Missing Project, Distance, Union, etc.
 *   Polyline - Missing Projection, Intersects, Interpolate, etc.
-*   Rect (AKA s2latlngrect in C++) - Missing Centroid, Distance,
-    InteriorContains.
-*   RegionCoverer - Missing FloodFill and SimpleCovering.
+*   Rect (AKA s2latlngrect in C++) - Missing Centroid, InteriorContains.
+*   RegionCoverer - canonicalize
 *   s2_test.go (AKA s2testing and s2textformat in C++) - Missing Fractal test
     shape generation. This file is a collection of testing helper methods.
 *   s2edge_distances - Missing Intersection
@@ -167,7 +159,6 @@ listing of the incomplete methods are documented at the end of each file.
 **In Progress** Files that have some work done, but are probably not complete
 enough for general use in production code.
 
-*   ContainsPointQuery - About half done
 *   Polygon - Polygons with multiple loops are supported. It fully implements
     Shape and Region, but it's missing most other methods. (Area, Centroid,
     Distance, Projection, Intersection, Union, Contains, Normalized, etc.)
@@ -192,18 +183,17 @@ started.
 *   Centroids
 *   ClosestEdgeQuery
 *   ClosestPointQuery
-*   ConvexHullQuery
 *   EdgeTesselator
+*   LoopMeasures
 *   MinDistanceTargets
 *   PointIndex
 *   PointRegion
 *   PointUtil
+*   PolygonMeasures
 *   RegionIntersection
 *   RegionTermIndexer
 *   RegionUnion
 *   ShapeIndexRegion - Allows ShapeIndexes to be used as Regions for things like
-    RegionCoverer
-*   laxPolygon
 *   lexicon
 
 ### Encode/Decode

@@ -113,5 +113,3 @@ func (a Angle) String() string {
 
 // BUG(dsymonds): The major differences from the C++ version are:
 //   - no unsigned E5/E6/E7 methods
-//   - no S2Point or S2LatLng constructors
-//   - no comparison or arithmetic operators

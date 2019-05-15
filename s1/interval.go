@@ -443,6 +443,20 @@ func (i Interval) DirectedHausdorffDistance(y Interval) Angle {
 	return Angle(math.Max(hiHi, loLo))
 }
 
-// BUG(dsymonds): The major differences from the C++ version are:
-// - no validity checking on construction. (not a bug?)
-// Project
+// Project returns the closest point in the interval to the given point p.
+// The interval must be non-empty.
+func (i Interval) Project(p float64) float64 {
+	if p == -math.Pi {
+		p = math.Pi
+	}
+	if i.fastContains(p) {
+		return p
+	}
+	// Compute distance from p to each endpoint.
+	dlo := positiveDistance(p, i.Lo)
+	dhi := positiveDistance(i.Hi, p)
+	if dlo < dhi {
+		return i.Lo
+	}
+	return i.Hi
+}

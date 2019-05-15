@@ -561,6 +561,7 @@ func TestIntervalComplement(t *testing.T) {
 }
 
 func TestIntervalDirectedHausdorff(t *testing.T) {
+	in := Interval{3.0, -3.0}
 	tests := []struct {
 		i, y Interval
 		want Angle
@@ -568,12 +569,49 @@ func TestIntervalDirectedHausdorff(t *testing.T) {
 		{Interval{-0.139626, 0.349066}, Interval{0.139626, 0.139626}, 0.279252 * Radian},
 		{Interval{0.2, 0.4}, Interval{0.1, 0.5}, 0 * Radian},
 		{Interval{0, 0}, EmptyInterval(), math.Pi * Radian},
+		{empty, empty, 0.0},
+		{empty, mid12, 0.0},
+		{mid12, empty, math.Pi},
+		{quad12, quad123, 0.0},
+		{Interval{-0.1, 0.2}, in, 3.0},
+		{Interval{0.1, 0.2}, in, 3.0 - 0.1},
+		{Interval{-0.2, -0.1}, in, 3.0 - 0.1},
 	}
 
 	for _, test := range tests {
 		got := test.i.DirectedHausdorffDistance(test.y)
 		if math.Abs(float64(got-test.want)) > 1e-15 {
 			t.Errorf("%v.DirectedHausdorffDistance(%v) = %v, want %v", test.i, test.y, got.Radians(), test.want.Radians())
+		}
+	}
+}
+
+func TestIntervalProject(t *testing.T) {
+	r := IntervalFromEndpoints(-math.Pi, -math.Pi)
+	r1 := IntervalFromEndpoints(0, math.Pi)
+	r2 := IntervalFromEndpoints(math.Pi-0.1, -math.Pi+0.1)
+	tests := []struct {
+		interval Interval
+		have     float64
+		want     float64
+	}{
+		{r, -math.Pi, math.Pi},
+		{r, 0, math.Pi},
+
+		{r1, 0.1, 0.1},
+		{r1, -math.Pi/2 + 1e-15, 0},
+		{r1, -math.Pi/2 - 1e-15, math.Pi},
+		{r2, math.Pi, math.Pi},
+		{r2, 1e-15, math.Pi - 0.1},
+		{r2, -1e-15, -math.Pi + 0.1},
+		{full, 0, 0},
+		{full, math.Pi, math.Pi},
+		{full, -math.Pi, math.Pi},
+	}
+
+	for _, test := range tests {
+		if got := test.interval.Project(test.have); !float64Eq(got, test.want) {
+			t.Errorf("%v.Project(%v) = %v, want %v", test.interval, test.have, got, test.want)
 		}
 	}
 }

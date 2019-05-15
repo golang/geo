@@ -166,3 +166,6 @@ func TestDegreesVsRadians(t *testing.T) {
 		t.Errorf("Angle(60).Degrees() == 60, but should not (%f vs %f)", got, 60.0)
 	}
 }
+
+// TODO(roberts): Differences from C++
+//   Benchmarking code.
