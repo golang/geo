@@ -87,6 +87,25 @@ func (p *Polyline) Equal(b *Polyline) bool {
 	return true
 }
 
+// ApproxEqual reports whether two polylines have the same number of vertices,
+// and corresponding vertex pairs are separated by no more the standard margin.
+func (p *Polyline) ApproxEqual(o *Polyline) bool {
+	return p.approxEqual(o, s1.Angle(epsilon))
+}
+
+// approxEqual reports whether two polylines are equal within the given margin.
+func (p *Polyline) approxEqual(o *Polyline, maxError s1.Angle) bool {
+	if len(*p) != len(*o) {
+		return false
+	}
+	for offset, val := range *p {
+		if !val.approxEqual((*o)[offset], maxError) {
+			return false
+		}
+	}
+	return true
+}
+
 // CapBound returns the bounding Cap for this Polyline.
 func (p *Polyline) CapBound() Cap {
 	return p.RectBound().CapBound()
@@ -492,3 +511,8 @@ func (p *Polyline) Intersects(o *Polyline) bool {
 // Interpolate/UnInterpolate
 // ApproxEqual
 // NearlyCoversPolyline
+// InitToSnapped
+// InitToSimplified
+// IsValid
+// SnapLevel
+// encode/decode compressed

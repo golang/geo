@@ -471,10 +471,55 @@ func TestPolylineIntersects(t *testing.T) {
 	}
 }
 
+func TestPolylineApproxEqual(t *testing.T) {
+	degree := s1.Angle(1) * s1.Degree
+
+	tests := []struct {
+		a, b     string
+		maxError s1.Angle
+		want     bool
+	}{
+		{
+			// Close lines, differences within maxError.
+			a:        "0:0, 0:10, 5:5",
+			b:        "0:0.1, -0.1:9.9, 5:5.2",
+			maxError: 0.5 * degree,
+			want:     true,
+		},
+		{
+			// Close lines, differences outside maxError.
+			a:        "0:0, 0:10, 5:5",
+			b:        "0:0.1, -0.1:9.9, 5:5.2",
+			maxError: 0.01 * degree,
+			want:     false,
+		},
+		{
+			// Same line, but different number of vertices.
+			a:        "0:0, 0:10, 0:20",
+			b:        "0:0, 0:20",
+			maxError: 0.1 * degree,
+			want:     false,
+		},
+		{
+			// Same vertices, in different order.
+			a:        "0:0, 5:5, 0:10",
+			b:        "5:5, 0:10, 0:0",
+			maxError: 0.1 * degree,
+			want:     false,
+		},
+	}
+	for _, test := range tests {
+		a := makePolyline(test.a)
+		b := makePolyline(test.b)
+		if got := a.approxEqual(b, test.maxError); got != test.want {
+			t.Errorf("%v.approxEqual(%v, %v) = %v, want %v", a, b, test.maxError, got, test.want)
+		}
+	}
+}
+
 // TODO(roberts): Test differences from C++:
 // Interpolate
 // UnInterpolate
-// ApproxEquals
 //
 // PolylineCoveringTest
 //    PolylineOverlapsSelf
