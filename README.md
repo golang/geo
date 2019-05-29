@@ -149,7 +149,7 @@ listing of the incomplete methods are documented at the end of each file.
 *   ContainsPointQuery - missing visit edges
 *   laxPolygon
 *   Loop - Loop is mostly complete now. Missing Project, Distance, Union, etc.
-*   Polyline - Missing Projection, Intersects, Interpolate, etc.
+*   Polyline - Missing Interpolate, etc.
 *   Rect (AKA s2latlngrect in C++) - Missing Centroid, InteriorContains.
 *   RegionCoverer - canonicalize
 *   s2_test.go (AKA s2testing and s2textformat in C++) - Missing Fractal test

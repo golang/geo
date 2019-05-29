@@ -411,14 +411,69 @@ func TestPolylineValidate(t *testing.T) {
 	}
 }
 
+func TestPolylineIntersects(t *testing.T) {
+	// PolylineInterectsEmpty
+	empty := Polyline{}
+	line := makePolyline("1:1, 4:4")
+	if empty.Intersects(line) {
+		t.Errorf("%v.Intersects(%v) = true, want false", empty, line)
+	}
+
+	// PolylineIntersectsOnePointPolyline
+	line1 := makePolyline("1:1, 4:4")
+	line2 := makePolyline("1:1")
+	if line1.Intersects(line2) {
+		t.Errorf("%v.Intersects(%v) = true, want false", line1, line2)
+	}
+
+	// PolylineIntersects
+	line3 := makePolyline("1:1, 4:4")
+	smallCrossing := makePolyline("1:2, 2:1")
+	smallNoncrossing := makePolyline("1:2, 2:3")
+	bigCrossing := makePolyline("1:2, 2:3, 4:3")
+	if !line3.Intersects(smallCrossing) {
+		t.Errorf("%v.Intersects(%v) = false, want true", line3, smallCrossing)
+	}
+	if line3.Intersects(smallNoncrossing) {
+		t.Errorf("%v.Intersects(%v) = true, want false", line3, smallNoncrossing)
+	}
+	if !line3.Intersects(bigCrossing) {
+		t.Errorf("%v.Intersects(%v) = false, want true", line3, bigCrossing)
+	}
+
+	// PolylineIntersectsAtVertex
+	line4 := makePolyline("1:1, 4:4, 4:6")
+	line5 := makePolyline("1:1, 1:2")
+	line6 := makePolyline("5:1, 4:4, 2:2")
+	if !line4.Intersects(line5) {
+		t.Errorf("%v.Intersects(%v) = false, want true", line4, line5)
+	}
+	if !line4.Intersects(line6) {
+		t.Errorf("%v.Intersects(%v) = false, want true", line4, line6)
+	}
+
+	// TestPolylineIntersectsVertexOnEdge
+	horizontalLeftToRight := makePolyline("0:1, 0:3")
+	verticalBottomToTop := makePolyline("-1:2, 0:2, 1:2")
+	horizontalRightToLeft := makePolyline("0:3, 0:1")
+	verticalTopToBottom := makePolyline("1:2, 0:2, -1:2")
+	if !horizontalLeftToRight.Intersects(verticalBottomToTop) {
+		t.Errorf("%v.Intersects(%v) = false, want true", horizontalLeftToRight, verticalBottomToTop)
+	}
+	if !horizontalLeftToRight.Intersects(verticalTopToBottom) {
+		t.Errorf("%v.Intersects(%v) = false, want true", horizontalLeftToRight, verticalTopToBottom)
+	}
+	if !horizontalRightToLeft.Intersects(verticalBottomToTop) {
+		t.Errorf("%v.Intersects(%v) = false, want true", horizontalRightToLeft, verticalBottomToTop)
+	}
+	if !horizontalRightToLeft.Intersects(verticalTopToBottom) {
+		t.Errorf("%v.Intersects(%v) = false, want true", horizontalRightToLeft, verticalTopToBottom)
+	}
+}
+
 // TODO(roberts): Test differences from C++:
 // Interpolate
 // UnInterpolate
-// IntersectsEmptyPolyline
-// IntersectsOnePointPolyline
-// Intersects
-// IntersectsAtVertex
-// IntersectsVertexOnEdge
 // ApproxEquals
 //
 // PolylineCoveringTest

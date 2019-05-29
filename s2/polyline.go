@@ -460,9 +460,35 @@ func (p *Polyline) Validate() error {
 	return nil
 }
 
+// Intersects reports whether this polyline intersects the given polyline. If
+// the polylines share a vertex they are considered to be intersecting. When a
+// polyline endpoint is the only intersection with the other polyline, the
+// function may return true or false arbitrarily.
+//
+// The running time is quadratic in the number of vertices.
+func (p *Polyline) Intersects(o *Polyline) bool {
+	if len(*p) == 0 || len(*o) == 0 {
+		return false
+	}
+
+	if !p.RectBound().Intersects(o.RectBound()) {
+		return false
+	}
+
+	// TODO(roberts): Use ShapeIndex here.
+	for i := 1; i < len(*p); i++ {
+		crosser := NewChainEdgeCrosser((*p)[i-1], (*p)[i], (*o)[0])
+		for j := 1; j < len(*o); j++ {
+			if crosser.ChainCrossingSign((*o)[j]) != DoNotCross {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // TODO(roberts): Differences from C++.
 // Suffix
 // Interpolate/UnInterpolate
-// Intersects(Polyline)
 // ApproxEqual
 // NearlyCoversPolyline
