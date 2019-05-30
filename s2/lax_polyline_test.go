@@ -46,4 +46,5 @@ func (l *laxPolyline) ChainPosition(e int) ChainPosition { return ChainPosition{
 func (l *laxPolyline) Dimension() int                    { return 1 }
 func (l *laxPolyline) IsEmpty() bool                     { return defaultShapeIsEmpty(l) }
 func (l *laxPolyline) IsFull() bool                      { return defaultShapeIsFull(l) }
+func (l *laxPolyline) typeTag() typeTag                  { return typeTagLaxPolyline }
 func (l *laxPolyline) privateInterface()                 {}

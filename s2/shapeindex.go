@@ -1514,7 +1514,3 @@ func maxLevelForEdge(edge Edge) int {
 func (s *ShapeIndex) removeShapeInternal(removed *removedShape, allEdges [][]faceEdge, t *tracker) {
 	// TODO(roberts): finish the implementation of this.
 }
-
-// TODO(roberts): Differences from C++.
-// ShapeContainsPoint
-// FindContainingShapes

@@ -51,4 +51,5 @@ func (e *edgeVectorShape) ChainPosition(edgeID int) ChainPosition { return Chain
 func (e *edgeVectorShape) IsEmpty() bool                          { return defaultShapeIsEmpty(e) }
 func (e *edgeVectorShape) IsFull() bool                           { return defaultShapeIsFull(e) }
 func (e *edgeVectorShape) Dimension() int                         { return 1 }
+func (e *edgeVectorShape) typeTag() typeTag                       { return typeTagNone }
 func (e *edgeVectorShape) privateInterface()                      {}

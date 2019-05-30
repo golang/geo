@@ -79,4 +79,5 @@ func (l *laxLoop) ChainEdge(i, j int) Edge {
 func (l *laxLoop) ChainPosition(e int) ChainPosition { return ChainPosition{0, e} }
 func (l *laxLoop) IsEmpty() bool                     { return defaultShapeIsEmpty(l) }
 func (l *laxLoop) IsFull() bool                      { return defaultShapeIsFull(l) }
+func (l *laxLoop) typeTag() typeTag                  { return typeTagNone }
 func (l *laxLoop) privateInterface()                 {}

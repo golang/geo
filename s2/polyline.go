@@ -217,6 +217,8 @@ func (p *Polyline) IsEmpty() bool { return defaultShapeIsEmpty(p) }
 // IsFull reports whether this shape contains all points on the sphere.
 func (p *Polyline) IsFull() bool { return defaultShapeIsFull(p) }
 
+func (p *Polyline) typeTag() typeTag { return typeTagPolyline }
+
 func (p *Polyline) privateInterface() {}
 
 // findEndVertex reports the maximal end index such that the line segment between

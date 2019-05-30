@@ -167,6 +167,7 @@ func (p *laxPolygon) Edge(e int) Edge {
 }
 
 func (p *laxPolygon) Dimension() int                 { return 2 }
+func (p *laxPolygon) typeTag() typeTag               { return typeTagLaxPolygon }
 func (p *laxPolygon) privateInterface()              {}
 func (p *laxPolygon) IsEmpty() bool                  { return defaultShapeIsEmpty(p) }
 func (p *laxPolygon) IsFull() bool                   { return defaultShapeIsFull(p) }

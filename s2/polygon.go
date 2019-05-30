@@ -814,6 +814,8 @@ func (p *Polygon) ChainPosition(edgeID int) ChainPosition {
 // Dimension returns the dimension of the geometry represented by this Polygon.
 func (p *Polygon) Dimension() int { return 2 }
 
+func (p *Polygon) typeTag() typeTag { return typeTagPolygon }
+
 func (p *Polygon) privateInterface() {}
 
 // Contains reports whether this polygon contains the other polygon.

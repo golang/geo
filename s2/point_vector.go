@@ -38,4 +38,5 @@ func (p *PointVector) ChainPosition(e int) ChainPosition { return ChainPosition{
 func (p *PointVector) Dimension() int                    { return 0 }
 func (p *PointVector) IsEmpty() bool                     { return defaultShapeIsEmpty(p) }
 func (p *PointVector) IsFull() bool                      { return defaultShapeIsFull(p) }
+func (p *PointVector) typeTag() typeTag                  { return typeTagPointVector }
 func (p *PointVector) privateInterface()                 {}
