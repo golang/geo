@@ -43,9 +43,10 @@ func TestPolylineBasics(t *testing.T) {
 	}
 
 	semiEquator := PolylineFromLatLngs(latlngs)
-	//if got, want := semiEquator.Interpolate(0.5), Point{r3.Vector{0, 1, 0}}; !got.ApproxEqual(want) {
-	//	t.Errorf("semiEquator.Interpolate(0.5) = %v, want %v", got, want)
-	//}
+	want := PointFromCoords(0, 1, 0)
+	if got, _ := semiEquator.Interpolate(0.5); !got.ApproxEqual(want) {
+		t.Errorf("semiEquator.Interpolate(0.5) = %v, want %v", got, want)
+	}
 	semiEquator.Reverse()
 	if got, want := (*semiEquator)[2], (Point{r3.Vector{1, 0, 0}}); !got.ApproxEqual(want) {
 		t.Errorf("semiEquator[2] = %v, want %v", got, want)
@@ -517,8 +518,73 @@ func TestPolylineApproxEqual(t *testing.T) {
 	}
 }
 
+func TestPolylineInterpolate(t *testing.T) {
+	vertices := []Point{PointFromCoords(1, 0, 0),
+		PointFromCoords(0, 1, 0),
+		PointFromCoords(0, 1, 1),
+		PointFromCoords(0, 0, 1),
+	}
+	line := Polyline(vertices)
+
+	want := vertices[0]
+	point, next := line.Interpolate(-0.1)
+	if point != vertices[0] {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, -0.1, point, vertices[0])
+	}
+	if next != 1 {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, -0.1, next, 1)
+	}
+
+	want = PointFromCoords(1, math.Tan(0.2*math.Pi/2.0), 0)
+	if got, _ := line.Interpolate(0.1); !got.ApproxEqual(want) {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, 0.1, got, want)
+	}
+
+	want = PointFromCoords(1, 1, 0)
+	if got, _ := line.Interpolate(0.25); !got.ApproxEqual(want) {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, 0.25, got, want)
+	}
+
+	want = vertices[1]
+	if got, _ := line.Interpolate(0.5); got != want {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, 0.5, got, want)
+	}
+
+	want = vertices[2]
+	point, next = line.Interpolate(0.75)
+	if !point.ApproxEqual(want) {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, 0.75, point, want)
+	}
+	if next != 3 {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, 0.75, next, 3)
+	}
+
+	point, next = line.Interpolate(1.1)
+	if point != vertices[3] {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, 1.1, point, vertices[3])
+	}
+	if next != 4 {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, 1.1, next, 4)
+	}
+
+	// Check the case where the interpolation fraction is so close to 1 that
+	// the interpolated point is identical to the last vertex.
+	vertices2 := []Point{PointFromCoords(1, 1, 1),
+		PointFromCoords(1, 1, 1+1e-15),
+		PointFromCoords(1, 1, 1+2e-15),
+	}
+	shortLine := Polyline(vertices2)
+
+	point, next = shortLine.Interpolate(1.0 - 2e-16)
+	if point != vertices2[2] {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", shortLine, 1.0-2e-16, point, vertices2[2])
+	}
+	if next != 3 {
+		t.Errorf("%v.Interpolate(%v) = %v, want %v", shortLine, 1.0-2e-16, next, 3)
+	}
+}
+
 // TODO(roberts): Test differences from C++:
-// Interpolate
 // UnInterpolate
 //
 // PolylineCoveringTest

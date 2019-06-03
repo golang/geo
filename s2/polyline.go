@@ -508,10 +508,56 @@ func (p *Polyline) Intersects(o *Polyline) bool {
 	return false
 }
 
+// Interpolate returns the point whose distance from vertex 0 along the polyline is
+// the given fraction of the polyline's total length, and the index of
+// the next vertex after the interpolated point P. Fractions less than zero
+// or greater than one are clamped. The return value is unit length. The cost of
+// this function is currently linear in the number of vertices.
+//
+// This method allows the caller to easily construct a given suffix of the
+// polyline by concatenating P with the polyline vertices starting at that next
+// vertex. Note that P is guaranteed to be different than the point at the next
+// vertex, so this will never result in a duplicate vertex.
+//
+// The polyline must not be empty. Note that if fraction >= 1.0, then the next
+// vertex will be set to len(p) (indicating that no vertices from the polyline
+// need to be appended). The value of the next vertex is always between 1 and
+// len(p).
+//
+// This method can also be used to construct a prefix of the polyline, by
+// taking the polyline vertices up to next vertex-1 and appending the
+// returned point P if it is different from the last vertex (since in this
+// case there is no guarantee of distinctness).
+func (p *Polyline) Interpolate(fraction float64) (Point, int) {
+	// We intentionally let the (fraction >= 1) case fall through, since
+	// we need to handle it in the loop below in any case because of
+	// possible roundoff errors.
+	if fraction <= 0 {
+		return (*p)[0], 1
+	}
+	target := s1.Angle(fraction) * p.Length()
+
+	for i := 1; i < len(*p); i++ {
+		length := (*p)[i-1].Distance((*p)[i])
+		if target < length {
+			// This interpolates with respect to arc length rather than
+			// straight-line distance, and produces a unit-length result.
+			result := InterpolateAtDistance(target, (*p)[i-1], (*p)[i])
+
+			// It is possible that (result == vertex(i)) due to rounding errors.
+			if result == (*p)[i] {
+				return result, i + 1
+			}
+			return result, i
+		}
+		target -= length
+	}
+
+	return (*p)[len(*p)-1], len(*p)
+}
+
 // TODO(roberts): Differences from C++.
-// Suffix
-// Interpolate/UnInterpolate
-// ApproxEqual
+// UnInterpolate
 // NearlyCoversPolyline
 // InitToSnapped
 // InitToSimplified
