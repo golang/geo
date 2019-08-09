@@ -228,7 +228,7 @@ func (c *CrossingEdgeQuery) candidatesEdgeMap(a, b Point) EdgeMap {
 }
 
 // getCells returns the set of ShapeIndexCells that might contain edges intersecting
-// the edge AB in the given cell root. This method is used primarly by loop and shapeutil.
+// the edge AB in the given cell root. This method is used primarily by loop and shapeutil.
 func (c *CrossingEdgeQuery) getCells(a, b Point, root *PaddedCell) []*ShapeIndexCell {
 	aUV, bUV, ok := ClipToFace(a, b, root.id.Face())
 	if ok {

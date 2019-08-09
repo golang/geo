@@ -621,7 +621,7 @@ func TestLoopFromCell(t *testing.T) {
 	// Demonstrates the reason for this test; the cell bounds are more
 	// conservative than the resulting loop bounds.
 	if loopFromCell.RectBound().Contains(cell.RectBound()) {
-		t.Errorf("loopFromCell's RectBound countains the original cells RectBound, but should not")
+		t.Errorf("loopFromCell's RectBound contains the original cells RectBound, but should not")
 	}
 }
 
