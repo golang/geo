@@ -297,7 +297,10 @@ func TestLoopEncodeDecode(t *testing.T) {
 	loops := []*Loop{LoopFromPoints(pts), EmptyLoop(), FullLoop()}
 	for i, l := range loops {
 		var buf bytes.Buffer
-		l.Encode(&buf)
+		if err := l.Encode(&buf); err != nil {
+			t.Errorf("Encode %d: %v", i, err)
+			continue
+		}
 		ll := new(Loop)
 		if err := ll.Decode(&buf); err != nil {
 			t.Errorf("Decode %d: %v", i, err)
