@@ -1450,6 +1450,7 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 	}
 
 	// Update the edge list and delete this cell from the index.
+	//nolint:ineffassign
 	edges, newEdges = newEdges, edges
 	delete(s.cellMap, p.id)
 	// TODO(roberts): delete from s.Cells
@@ -1471,7 +1472,7 @@ func (s *ShapeIndex) countShapes(edges []*clippedEdge, shapeIDs []int32) int {
 	lastShapeID := int32(-1)
 
 	// next clipped shape id in the shapeIDs list.
-	clippedNext := int32(0)
+	var clippedNext int32
 	// index of the current element in the shapeIDs list.
 	shapeIDidx := 0
 	for _, edge := range edges {

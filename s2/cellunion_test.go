@@ -349,7 +349,7 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 		// We also make sure that we do not recurse on all 4 children, since
 		// then we might include all 4 children in the input case by accident
 		// (in which case the expected output would not be correct).
-		recurse := false
+		var recurse bool
 		if selected {
 			recurse = oneIn(12)
 		} else {
