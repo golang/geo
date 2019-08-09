@@ -120,14 +120,12 @@ func (c *CrossingEdgeQuery) CrossingsEdgeMap(a, b Point, crossType CrossingType)
 // candidates returns a superset of the edges of the given shape that intersect
 // the edge AB.
 func (c *CrossingEdgeQuery) candidates(a, b Point, shape Shape) []int {
-	var edges []int
-
 	// For small loops it is faster to use brute force. The threshold below was
 	// determined using benchmarks.
 	const maxBruteForceEdges = 27
 	maxEdges := shape.NumEdges()
 	if maxEdges <= maxBruteForceEdges {
-		edges = make([]int, maxEdges)
+		edges := make([]int, maxEdges)
 		for i := 0; i < maxEdges; i++ {
 			edges[i] = i
 		}
@@ -150,6 +148,8 @@ func (c *CrossingEdgeQuery) candidates(a, b Point, shape Shape) []int {
 		}
 	}
 
+	//nolint:prealloc
+	var edges []int
 	for _, cell := range c.cells {
 		clipped := cell.findByShapeID(shapeID)
 		if clipped == nil {
@@ -167,6 +167,7 @@ func (c *CrossingEdgeQuery) candidates(a, b Point, shape Shape) []int {
 
 // uniqueInts returns the sorted uniqued values from the given input.
 func uniqueInts(in []int) []int {
+	//nolint:prealloc
 	var edges []int
 	m := make(map[int]bool)
 	for _, i := range in {

@@ -49,7 +49,7 @@ func CellUnionFromRange(begin, end CellID) CellUnion {
 
 // CellUnionFromUnion creates a CellUnion from the union of the given CellUnions.
 func CellUnionFromUnion(cellUnions ...CellUnion) CellUnion {
-	var cu CellUnion
+	cu := make(CellUnion, 0, len(cellUnions))
 	for _, cellUnion := range cellUnions {
 		cu = append(cu, cellUnion...)
 	}

@@ -1431,7 +1431,7 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 		}
 	}
 	// Now create a clippedEdge for each faceEdge, and put them in "new_edges".
-	var newEdges []*clippedEdge
+	newEdges := make([]*clippedEdge, 0, len(faceEdges))
 	for _, faceEdge := range faceEdges {
 		clipped := &clippedEdge{
 			faceEdge: faceEdge,

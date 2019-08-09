@@ -96,6 +96,7 @@ func pointsToString(points []Point) string {
 
 // parseLatLngs returns the values in the input string as LatLngs.
 func parseLatLngs(s string) []LatLng {
+	//nolint:prealloc
 	var lls []LatLng
 	if s == "" {
 		return lls
@@ -173,6 +174,7 @@ func makeLoop(s string) *Loop {
 //     "empty"  // the empty polygon (consisting of no loops)
 //     "full"   // the full polygon (consisting of one full loop)
 func makePolygon(s string, normalize bool) *Polygon {
+	//nolint:prealloc
 	var loops []*Loop
 	// Avoid the case where strings.Split on empty string will still return
 	// one empty value, where we want no values.
@@ -264,6 +266,7 @@ func makeShapeIndex(s string) *ShapeIndex {
 
 	index := NewShapeIndex()
 
+	//nolint:prealloc
 	var points []Point
 	for _, p := range strings.Split(fields[0], "|") {
 		p = strings.TrimSpace(p)

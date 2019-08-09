@@ -204,7 +204,7 @@ func (q *ConvexHullQuery) ConvexHull() *Loop {
 // monotoneChain iterates through the points, selecting the maximal subset of points
 // such that the edge chain makes only left (CCW) turns.
 func (q *ConvexHullQuery) monotoneChain() []Point {
-	var output []Point
+	output := make([]Point, 0, len(q.points))
 	for _, p := range q.points {
 		// Remove any points that would cause the chain to make a clockwise turn.
 		for len(output) >= 2 && RobustSign(output[len(output)-2], output[len(output)-1], p) != CounterClockwise {
