@@ -155,9 +155,7 @@ func (c *CrossingEdgeQuery) candidates(a, b Point, shape Shape) []int {
 		if clipped == nil {
 			continue
 		}
-		for _, j := range clipped.edges {
-			edges = append(edges, j)
-		}
+		edges = append(edges, clipped.edges...)
 	}
 
 	if len(c.cells) > 1 {
@@ -188,7 +186,7 @@ func uniqueInts(in []int) []int {
 // CAVEAT: This method may return shapes that have an empty set of candidate edges.
 // However the return value is non-empty only if at least one shape has a candidate edge.
 func (c *CrossingEdgeQuery) candidatesEdgeMap(a, b Point) EdgeMap {
-	edgeMap := make(EdgeMap, 0)
+	edgeMap := make(EdgeMap)
 
 	// If there are only a few edges then it's faster to use brute force. We
 	// only bother with this optimization when there is a single shape.

@@ -876,7 +876,7 @@ func (l *Loop) Invert() {
 	}
 
 	// originInside must be set correctly before building the ShapeIndex.
-	l.originInside = l.originInside != true
+	l.originInside = !l.originInside
 	if l.bound.Lat.Lo > -math.Pi/2 && l.bound.Lat.Hi < math.Pi/2 {
 		// The complement of this loop contains both poles.
 		l.bound = FullRect()

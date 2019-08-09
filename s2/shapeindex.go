@@ -894,7 +894,6 @@ func (s *ShapeIndex) addFaceEdge(fe faceEdge, allEdges [][]faceEdge) {
 			allEdges[face] = append(allEdges[face], fe)
 		}
 	}
-	return
 }
 
 // updateFaceEdges adds or removes the various edges from the index.
