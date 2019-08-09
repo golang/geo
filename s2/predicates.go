@@ -79,8 +79,8 @@ type Direction int
 // These are the three options for the direction of a set of points.
 const (
 	Clockwise        Direction = -1
-	Indeterminate              = 0
-	CounterClockwise           = 1
+	Indeterminate    Direction = 0
+	CounterClockwise Direction = 1
 )
 
 // newBigFloat constructs a new big.Float with maximum precision.

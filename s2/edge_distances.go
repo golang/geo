@@ -356,15 +356,18 @@ func EdgePairClosestPoints(a0, a1, b0, b1 Point) (Point, Point) {
 	var minDist s1.ChordAngle
 	var ok bool
 
-	minDist, ok = updateMinDistance(a0, b0, b1, minDist, true)
+	minDist, _ = updateMinDistance(a0, b0, b1, minDist, true)
 	closestVertex := 0
-	if minDist, ok = UpdateMinDistance(a1, b0, b1, minDist); ok {
+	minDist, ok = UpdateMinDistance(a1, b0, b1, minDist)
+	if ok {
 		closestVertex = 1
 	}
-	if minDist, ok = UpdateMinDistance(b0, a0, a1, minDist); ok {
+	minDist, ok = UpdateMinDistance(b0, a0, a1, minDist)
+	if ok {
 		closestVertex = 2
 	}
-	if minDist, ok = UpdateMinDistance(b1, a0, a1, minDist); ok {
+	_, ok = UpdateMinDistance(b1, a0, a1, minDist)
+	if ok {
 		closestVertex = 3
 	}
 	switch closestVertex {

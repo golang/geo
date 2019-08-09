@@ -151,8 +151,6 @@ func (c *CrossingEdgeQuery) candidates(a, b Point, shape Shape) []int {
 	}
 
 	for _, cell := range c.cells {
-		if cell == nil {
-		}
 		clipped := cell.findByShapeID(shapeID)
 		if clipped == nil {
 			continue

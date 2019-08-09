@@ -1009,6 +1009,7 @@ func (s *ShapeIndex) updateEdges(pcell *PaddedCell, edges []*clippedEdge, t *tra
 		// the existing cell contents by absorbing the cell.
 		iter := s.Iterator()
 		r := iter.LocateCellID(pcell.id)
+		//nolint:staticcheck
 		if r == Disjoint {
 			disjointFromIndex = true
 		} else if r == Indexed {
@@ -1339,6 +1340,7 @@ func (s *ShapeIndex) clipVAxis(edge *clippedEdge, middle r1.Interval) (a, b *cli
 // and/or "tracker", and then delete this cell from the index. If edges includes
 // any edges that are being removed, this method also updates their
 // InteriorTracker state to correspond to the exit vertex of this cell.
+//nolint:staticcheck
 func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, edges []*clippedEdge, t *tracker) {
 	// When we absorb a cell, we erase all the edges that are being removed.
 	// However when we are finished with this cell, we want to restore the state
