@@ -881,7 +881,7 @@ func cellUnionDistanceFromAxis(cu CellUnion, axis Point) float64 {
 			//
 			// TODO: Improve edgeutil's DistanceFromSegment accuracy near Pi.
 			if a.Angle(axis.Vector) > math.Pi/2 || b.Angle(axis.Vector) > math.Pi/2 {
-				dist = math.Pi - float64(DistanceFromSegment(Point{axis.Mul(-1)}, a, b).Radians())
+				dist = math.Pi - DistanceFromSegment(Point{axis.Mul(-1)}, a, b).Radians()
 			} else {
 				dist = float64(a.Angle(axis.Vector))
 			}

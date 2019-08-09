@@ -1188,7 +1188,7 @@ func (s *ShapeIndex) makeIndexCell(p *PaddedCell, edges []*clippedEdge, t *track
 		var clipped *clippedShape
 		// advance to next value base + i
 		eshapeID := int32(s.Len())
-		cshapeID := int32(eshapeID) // Sentinels
+		cshapeID := eshapeID // Sentinels
 
 		if eNext != len(edges) {
 			eshapeID = edges[eNext].faceEdge.shapeID
@@ -1496,7 +1496,7 @@ func (s *ShapeIndex) countShapes(edges []*clippedEdge, shapeIDs []int32) int {
 	}
 
 	// Count any remaining containing shapes.
-	count += int(len(shapeIDs)) - int(shapeIDidx)
+	count += len(shapeIDs) - shapeIDidx
 	return count
 }
 

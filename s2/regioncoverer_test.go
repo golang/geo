@@ -123,7 +123,7 @@ func TestCovererRandomCaps(t *testing.T) {
 			rc.MaxLevel = int(rand.Int31n(maxLevel + 1))
 		}
 		rc.LevelMod = int(1 + rand.Int31n(3))
-		rc.MaxCells = int(skewedInt(10))
+		rc.MaxCells = skewedInt(10)
 
 		maxArea := math.Min(4*math.Pi, float64(3*rc.MaxCells+1)*AvgAreaMetric.Value(rc.MinLevel))
 		r := Region(randomCap(0.1*AvgAreaMetric.Value(maxLevel), maxArea))

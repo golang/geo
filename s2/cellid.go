@@ -576,8 +576,8 @@ func cellIDFromFaceIJ(f, i, j int) CellID {
 	// Hilbert curve orientation respectively.
 	for k := 7; k >= 0; k-- {
 		mask := (1 << lookupBits) - 1
-		bits += int((i>>uint(k*lookupBits))&mask) << (lookupBits + 2)
-		bits += int((j>>uint(k*lookupBits))&mask) << 2
+		bits += (i >> uint(k*lookupBits)) & mask << (lookupBits + 2)
+		bits += (j >> uint(k*lookupBits)) & mask << 2
 		bits = lookupPos[bits]
 		n |= uint64(bits>>2) << (uint(k) * 2 * lookupBits)
 		bits &= (swapMask | invertMask)
