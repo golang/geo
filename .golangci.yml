@@ -1,0 +1,17 @@
+linters:
+  enable-all: true
+  disable:
+    - deadcode
+    - dupl
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - govet
+    - lll
+    - maligned
+    - nakedret
+    - unparam
+    - unused
+    - varcheck
