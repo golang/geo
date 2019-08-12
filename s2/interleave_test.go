@@ -19,7 +19,7 @@ import "testing"
 func TestInterleaveUint32(t *testing.T) {
 	x, y := uint32(13356), uint32(1073728367)
 	gotX, gotY := deinterleaveUint32(interleaveUint32(x, y))
-	if gotX != x || gotY != gotY {
+	if gotX != x || gotY != y {
 		t.Errorf("deinterleave after interleave = %d, %d; want %d, %d", gotX, gotY, x, y)
 	}
 }

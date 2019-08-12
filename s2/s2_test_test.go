@@ -168,7 +168,7 @@ func TestTestingFractal(t *testing.T) {
 		if got, want := loop.NumVertices(), numVerticesAtLevel(test.maxLevel); got > want {
 			t.Errorf("%s. number of vertices = %d, should be less than %d", test.label, got, want)
 		}
-		if got, want := float64(expectedNumVertices), float64(loop.NumVertices()); !float64Near(got, want, relativeError*(expectedNumVertices-float64(minVertices))) {
+		if got, want := expectedNumVertices, float64(loop.NumVertices()); !float64Near(got, want, relativeError*(expectedNumVertices-float64(minVertices))) {
 			t.Errorf("%s. expected number of vertices %v should be close to %v, difference: %v", test.label, got, want, (got - want))
 		}
 
