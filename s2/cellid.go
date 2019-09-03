@@ -481,7 +481,7 @@ func (ci CellID) encode(e *encoder) {
 	e.writeUint64(uint64(ci))
 }
 
-// Decode encodes the CellID.
+// Decode decodes the CellID.
 func (ci *CellID) Decode(r io.Reader) error {
 	d := &decoder{r: asByteReader(r)}
 	ci.decode(d)
