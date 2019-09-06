@@ -20,7 +20,7 @@ var (
 )
 
 // PointVector is a Shape representing a set of Points. Each point
-// is represented as a degenerate point with the same starting and ending
+// is represented as a degenerate edge with the same starting and ending
 // vertices.
 //
 // This type is useful for adding a collection of points to an ShapeIndex.
