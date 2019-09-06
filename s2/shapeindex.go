@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"sort"
 	"sync"
 	"sync/atomic"
 
@@ -303,18 +304,9 @@ func (s *ShapeIndexIterator) refresh() {
 // seek positions the iterator at the first cell whose ID >= target, or at the
 // end of the index if no such cell exists.
 func (s *ShapeIndexIterator) seek(target CellID) {
-	s.position = 0
-	// In C++, this relies on the lower_bound method of the underlying btree_map.
-	// TODO(roberts): Convert this to a binary search since the list of cells is ordered.
-	for k, v := range s.index.cells {
-		// We've passed the cell that is after us, so we are done.
-		if v >= target {
-			s.position = k
-			break
-		}
-		// Otherwise, advance the position.
-		s.position++
-	}
+	s.position = sort.Search(len(s.index.cells), func(i int) bool {
+		return s.index.cells[i] >= target
+	})
 	s.refresh()
 }
 

@@ -550,3 +550,21 @@ func TestShapeIndexNumEdgesUpTo(t *testing.T) {
 // TestShapeIndexSimpleUpdates(t *testing.T) {}
 // TestShapeIndexRandomUpdates(t *testing.T) {}
 // TestShapeIndexHasCrossing(t *testing.T) {}
+
+func BenchmarkShapeIndexIteratorLocatePoint(b *testing.B) {
+	index := NewShapeIndex()
+	for i := 0; i < 100; i++ {
+		var points []Point
+		for j := 0; j < 100; j++ {
+			points = append(points, randomPoint())
+		}
+		polyline := Polyline(points)
+		index.Add(&polyline)
+	}
+
+	it := index.Iterator()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		it.LocatePoint(randomPoint())
+	}
+}
