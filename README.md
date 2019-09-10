@@ -146,6 +146,7 @@ Approximately ~40% complete.
 C++ code, and are reasonably complete enough to use in live code. Up to date
 listing of the incomplete methods are documented at the end of each file.
 
+*   EdgeQuery/Closest/Furthest - missing Project, GetEdge
 *   ContainsPointQuery - missing visit edges
 *   laxPolygon
 *   Loop - Loop is mostly complete now. Missing Project, Distance, Union, etc.
@@ -181,7 +182,6 @@ started.
 *   BuilderSnapFunctions
 *   BuilderTesting
 *   Centroids
-*   ClosestEdgeQuery
 *   ClosestPointQuery
 *   EdgeTesselator
 *   LoopMeasures

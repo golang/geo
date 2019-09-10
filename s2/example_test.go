@@ -116,3 +116,175 @@ func ExamplePolygonFromOrientedLoops() {
 	// Combined area: 0.0004993
 	// l1+l2 = 0.0006089, inv(l3) = 0.0001097; l1+l2 - inv(l3) = 0.0004993
 }
+
+func ExampleClosestEdgeQuery_FindEdges() {
+	// Lets start with a one or more Polylines that we wish to compare against.
+	polylines := []s2.Polyline{
+		// This is an iteration = 3 Koch snowflake centered at the
+		// center of the continental US.
+		s2.Polyline{
+			s2.PointFromLatLng(s2.LatLngFromDegrees(47.5467, -103.6035)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.9214, -103.7320)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.1527, -105.8000)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(44.2866, -103.8538)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(42.6450, -103.9695)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(41.8743, -105.9314)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(42.7141, -107.8226)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(41.0743, -107.8377)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(40.2486, -109.6869)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(39.4333, -107.8521)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(37.7936, -107.8658)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(38.5849, -106.0503)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(37.7058, -104.2841)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(36.0638, -104.3793)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(35.3062, -106.1585)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(34.4284, -104.4703)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(32.8024, -104.5573)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(33.5273, -102.8163)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(32.6053, -101.1982)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(34.2313, -101.0361)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(34.9120, -99.2189)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(33.9382, -97.6134)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(32.3185, -97.8489)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(32.9481, -96.0510)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(31.9449, -94.5321)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(33.5521, -94.2263)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(34.1285, -92.3780)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(35.1678, -93.9070)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(36.7893, -93.5734)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(37.3529, -91.6381)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(36.2777, -90.1050)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(37.8824, -89.6824)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(38.3764, -87.7108)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(39.4869, -89.2407)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(41.0883, -88.7784)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(40.5829, -90.8289)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(41.6608, -92.4765)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(43.2777, -92.0749)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(43.7961, -89.9408)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(44.8865, -91.6533)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(46.4844, -91.2100)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.9512, -93.4327)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(46.9863, -95.2792)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.3722, -95.6237)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(44.7496, -97.7776)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.7189, -99.6629)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(47.3422, -99.4244)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(46.6523, -101.6056)),
+		},
+	}
+
+	// We will use a point that we want to find the edges which are closest to it.
+	point := s2.PointFromLatLng(s2.LatLngFromDegrees(37.7, -122.5))
+
+	// Load them into a ShapeIndex
+	index := s2.NewShapeIndex()
+	for _, l := range polylines {
+		index.Add(&l)
+	}
+
+	// Create a ClosestEdgeQuery and specify that we want the 7 closest.
+	q := s2.NewClosestEdgeQuery(index, s2.NewClosestEdgeQueryOptions().MaxResults(7))
+	target := s2.NewMinDistanceToPointTarget(point)
+
+	for _, result := range q.FindEdges(target) {
+		polylineIndex := result.ShapeID()
+		edgeIndex := result.EdgeID()
+		distance := result.Distance()
+		fmt.Printf("Polyline %d, Edge %d is %0.4f degrees from Point (%0.6f, %0.6f, %0.6f)\n",
+			polylineIndex, edgeIndex,
+			distance.Angle().Degrees(), point.X, point.Y, point.Z)
+	}
+	// Output:
+	// Polyline 0, Edge 7 is 10.2718 degrees from Point (-0.425124, -0.667311, 0.611527)
+	// Polyline 0, Edge 8 is 10.2718 degrees from Point (-0.425124, -0.667311, 0.611527)
+	// Polyline 0, Edge 9 is 11.5362 degrees from Point (-0.425124, -0.667311, 0.611527)
+	// Polyline 0, Edge 10 is 11.5602 degrees from Point (-0.425124, -0.667311, 0.611527)
+	// Polyline 0, Edge 6 is 11.8071 degrees from Point (-0.425124, -0.667311, 0.611527)
+	// Polyline 0, Edge 5 is 12.2577 degrees from Point (-0.425124, -0.667311, 0.611527)
+	// Polyline 0, Edge 11 is 12.9502 degrees from Point (-0.425124, -0.667311, 0.611527)
+}
+
+func ExampleFurthestEdgeQuery_FindEdges() {
+	// Lets start with a one or more Polylines that we wish to compare against.
+	polylines := []s2.Polyline{
+		// This is an iteration = 3 Koch snowflake centered at the
+		// center of the continental US.
+		s2.Polyline{
+			s2.PointFromLatLng(s2.LatLngFromDegrees(47.5467, -103.6035)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.9214, -103.7320)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.1527, -105.8000)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(44.2866, -103.8538)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(42.6450, -103.9695)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(41.8743, -105.9314)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(42.7141, -107.8226)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(41.0743, -107.8377)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(40.2486, -109.6869)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(39.4333, -107.8521)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(37.7936, -107.8658)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(38.5849, -106.0503)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(37.7058, -104.2841)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(36.0638, -104.3793)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(35.3062, -106.1585)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(34.4284, -104.4703)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(32.8024, -104.5573)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(33.5273, -102.8163)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(32.6053, -101.1982)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(34.2313, -101.0361)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(34.9120, -99.2189)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(33.9382, -97.6134)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(32.3185, -97.8489)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(32.9481, -96.0510)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(31.9449, -94.5321)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(33.5521, -94.2263)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(34.1285, -92.3780)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(35.1678, -93.9070)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(36.7893, -93.5734)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(37.3529, -91.6381)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(36.2777, -90.1050)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(37.8824, -89.6824)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(38.3764, -87.7108)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(39.4869, -89.2407)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(41.0883, -88.7784)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(40.5829, -90.8289)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(41.6608, -92.4765)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(43.2777, -92.0749)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(43.7961, -89.9408)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(44.8865, -91.6533)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(46.4844, -91.2100)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.9512, -93.4327)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(46.9863, -95.2792)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.3722, -95.6237)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(44.7496, -97.7776)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(45.7189, -99.6629)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(47.3422, -99.4244)),
+			s2.PointFromLatLng(s2.LatLngFromDegrees(46.6523, -101.6056)),
+		},
+	}
+
+	// We will use a point that we want to find the edges which are furthest from it.
+	point := s2.PointFromLatLng(s2.LatLngFromDegrees(37.7, -122.5))
+
+	// Load them into a ShapeIndex
+	index := s2.NewShapeIndex()
+	for _, l := range polylines {
+		index.Add(&l)
+	}
+
+	// Create a FurthestEdgeQuery and specify that we want the 3 furthest.
+	q := s2.NewFurthestEdgeQuery(index, s2.NewFurthestEdgeQueryOptions().MaxResults(3))
+	target := s2.NewMaxDistanceToPointTarget(point)
+
+	for _, result := range q.FindEdges(target) {
+		polylineIndex := result.ShapeID()
+		edgeIndex := result.EdgeID()
+		distance := result.Distance()
+		fmt.Printf("Polyline %d, Edge %d is %0.3f degrees from Point (%0.3f, %0.3f, %0.3f)\n",
+			polylineIndex, edgeIndex,
+			distance.Angle().Degrees(), point.X, point.Y, point.Z)
+	}
+	// Output:
+	// Polyline 0, Edge 31 is 27.245 degrees from Point (-0.425, -0.667, 0.612)
+	// Polyline 0, Edge 32 is 27.245 degrees from Point (-0.425, -0.667, 0.612)
+	// Polyline 0, Edge 33 is 26.115 degrees from Point (-0.425, -0.667, 0.612)
+}
