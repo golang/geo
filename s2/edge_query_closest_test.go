@@ -178,6 +178,64 @@ func TestClosestEdgeQueryTargetPolygonContainingIndexedPoints(t *testing.T) {
 	}
 }
 
+func BenchmarkEdgeQueryFindEdgesClosestFractal(b *testing.B) {
+	// Test searching within the general vicinity of the indexed shapes.
+	opts := &edgeQueryBenchmarkOptions{
+		fact:                     fractalLoopShapeIndexGenerator,
+		includeInteriors:         false,
+		targetType:               queryTypePoint,
+		numTargetEdges:           0,
+		chooseTargetFromIndex:    false,
+		radiusKm:                 1000,
+		maxDistanceFraction:      -1,
+		maxErrorFraction:         -1,
+		targetRadiusFraction:     0.0,
+		centerSeparationFraction: -2.0,
+	}
+
+	benchmarkEdgeQueryFindClosest(b, opts)
+}
+
+func BenchmarkEdgeQueryFindEdgesClosestInterior(b *testing.B) {
+	// Test searching within the general vicinity of the indexed shapes including interiors.
+	opts := &edgeQueryBenchmarkOptions{
+		fact:                     fractalLoopShapeIndexGenerator,
+		includeInteriors:         true,
+		targetType:               queryTypePoint,
+		numTargetEdges:           0,
+		chooseTargetFromIndex:    false,
+		radiusKm:                 1000,
+		maxDistanceFraction:      -1,
+		maxErrorFraction:         -1,
+		targetRadiusFraction:     0.0,
+		centerSeparationFraction: -2.0,
+	}
+
+	benchmarkEdgeQueryFindClosest(b, opts)
+}
+
+func BenchmarkEdgeQueryFindEdgesClosestErrorPercent(b *testing.B) {
+	// Test searching with an error tolerance.  Allowing 1% error makes searches
+	// 6x faster in the case of regular loops with a large number of vertices.
+	opts := &edgeQueryBenchmarkOptions{
+		fact:                     fractalLoopShapeIndexGenerator,
+		includeInteriors:         false,
+		targetType:               queryTypePoint,
+		numTargetEdges:           0,
+		chooseTargetFromIndex:    false,
+		radiusKm:                 1000,
+		maxDistanceFraction:      -1,
+		maxErrorFraction:         0.01,
+		targetRadiusFraction:     0.0,
+		centerSeparationFraction: -2.0,
+	}
+
+	benchmarkEdgeQueryFindClosest(b, opts)
+
+	opts.maxErrorFraction = 0.1
+	benchmarkEdgeQueryFindClosest(b, opts)
+}
+
 // TODO(roberts): Remaining tests to implement.
 //
 // TestClosestEdgeQueryTestReuseOfQuery) {
@@ -194,4 +252,4 @@ func TestClosestEdgeQueryTargetPolygonContainingIndexedPoints(t *testing.T) {
 // TestClosestEdgeQueryPointCloudEdges) {
 // TestClosestEdgeQueryConservativeCellDistanceIsUsed) {
 //
-// Benchmarking code.
+// More of the Benchmarking code.
