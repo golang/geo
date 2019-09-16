@@ -117,7 +117,7 @@ func ExamplePolygonFromOrientedLoops() {
 	// l1+l2 = 0.0006089, inv(l3) = 0.0001097; l1+l2 - inv(l3) = 0.0004993
 }
 
-func ExampleClosestEdgeQuery_FindEdges() {
+func ExampleEdgeQuery_FindEdges_findClosestEdges() {
 	// Lets start with a one or more Polylines that we wish to compare against.
 	polylines := []s2.Polyline{
 		// This is an iteration = 3 Koch snowflake centered at the
@@ -205,7 +205,7 @@ func ExampleClosestEdgeQuery_FindEdges() {
 	// Polyline 0, Edge 11 is 12.9502 degrees from Point (-0.425124, -0.667311, 0.611527)
 }
 
-func ExampleFurthestEdgeQuery_FindEdges() {
+func ExampleEdgeQuery_FindEdges_findFurthestEdges() {
 	// Lets start with a one or more Polylines that we wish to compare against.
 	polylines := []s2.Polyline{
 		// This is an iteration = 3 Koch snowflake centered at the
