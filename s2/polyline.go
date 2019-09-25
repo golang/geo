@@ -556,11 +556,34 @@ func (p *Polyline) Interpolate(fraction float64) (Point, int) {
 	return (*p)[len(*p)-1], len(*p)
 }
 
+// Uninterpolate is the inverse operation of Interpolate. Given a point on the
+// polyline, it returns the ratio of the distance to the point from the
+// beginning of the polyline over the length of the polyline. The return
+// value is always betwen 0 and 1 inclusive.
+//
+// The polyline should not be empty.  If it has fewer than 2 vertices, the
+// return value is zero.
+func (p *Polyline) Uninterpolate(point Point, nextVertex int) float64 {
+	if len(*p) < 2 {
+		return 0
+	}
+
+	var sum s1.Angle
+	for i := 1; i < nextVertex; i++ {
+		sum += (*p)[i-1].Distance((*p)[i])
+	}
+	lengthToPoint := sum + (*p)[nextVertex-1].Distance(point)
+	for i := nextVertex; i < len(*p); i++ {
+		sum += (*p)[i-1].Distance((*p)[i])
+	}
+	// The ratio can be greater than 1.0 due to rounding errors or because the
+	// point is not exactly on the polyline.
+	return minFloat64(1.0, float64(lengthToPoint/sum))
+}
+
 // TODO(roberts): Differences from C++.
-// UnInterpolate
 // NearlyCoversPolyline
 // InitToSnapped
 // InitToSimplified
-// IsValid
 // SnapLevel
 // encode/decode compressed

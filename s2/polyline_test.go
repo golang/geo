@@ -584,8 +584,50 @@ func TestPolylineInterpolate(t *testing.T) {
 	}
 }
 
+func TestPolylineUninterpolate(t *testing.T) {
+	vertices := []Point{PointFromCoords(1, 0, 0)}
+	line := Polyline(vertices)
+	if got, want := line.Uninterpolate(PointFromCoords(0, 1, 0), 1), 0.0; !float64Eq(got, want) {
+		t.Errorf("Uninterpolate on a polyline with 2 or fewer vertices should return 0, got %v", got)
+	}
+
+	vertices = append(vertices,
+		PointFromCoords(0, 1, 0),
+		PointFromCoords(0, 1, 1),
+		PointFromCoords(0, 0, 1),
+	)
+	line = Polyline(vertices)
+
+	interpolated, nextVertex := line.Interpolate(-0.1)
+	if got, want := line.Uninterpolate(interpolated, nextVertex), 0.0; !float64Eq(got, want) {
+		t.Errorf("line.Uninterpolate(%v, %d) = %v, want %v", interpolated, nextVertex, got, want)
+	}
+	interpolated, nextVertex = line.Interpolate(0.0)
+	if got, want := line.Uninterpolate(interpolated, nextVertex), 0.0; !float64Eq(got, want) {
+		t.Errorf("line.Uninterpolate(%v, %d) = %v, want %v", interpolated, nextVertex, got, want)
+	}
+	interpolated, nextVertex = line.Interpolate(0.5)
+	if got, want := line.Uninterpolate(interpolated, nextVertex), 0.5; !float64Eq(got, want) {
+		t.Errorf("line.Uninterpolate(%v, %d) = %v, want %v", interpolated, nextVertex, got, want)
+	}
+	interpolated, nextVertex = line.Interpolate(0.75)
+	if got, want := line.Uninterpolate(interpolated, nextVertex), 0.75; !float64Eq(got, want) {
+		t.Errorf("line.Uninterpolate(%v, %d) = %v, want %v", interpolated, nextVertex, got, want)
+	}
+	interpolated, nextVertex = line.Interpolate(1.1)
+	if got, want := line.Uninterpolate(interpolated, nextVertex), 1.0; !float64Eq(got, want) {
+		t.Errorf("line.Uninterpolate(%v, %d) = %v, want %v", interpolated, nextVertex, got, want)
+	}
+
+	// Check that the return value is clamped to 1.0.
+	if got, want := line.Uninterpolate(PointFromCoords(0, 1, 0), len(line)), 1.0; !float64Eq(got, want) {
+		t.Errorf("line.Uninterpolate(%v, %d) = %v, want %v", PointFromCoords(0, 1, 0), len(line), got, want)
+	}
+}
+
 // TODO(roberts): Test differences from C++:
-// UnInterpolate
+// InitToSnapped
+// InitToSimplified
 //
 // PolylineCoveringTest
 //    PolylineOverlapsSelf
