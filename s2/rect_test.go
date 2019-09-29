@@ -1107,3 +1107,25 @@ func TestDirectedHausdorffDistanceRectToRectDegenerateCases(t *testing.T) {
 	verifyDirectedHausdorffDistance(t,
 		rectFromDegrees(-20, 95, 20, 105), rectFromDegrees(-30, 5, 30, 15))
 }
+
+func TestApproxEqual(t *testing.T) {
+	// s1.Interval and r1.Interval have additional testing.
+
+	const ε = epsilon / 10
+	tests := []struct {
+		a, b Rect
+		want bool
+	}{
+		{EmptyRect(), rectFromDegrees(1, 5, 1, 5), true},
+		{rectFromDegrees(1, 5, 1, 5), EmptyRect(), true},
+
+		{rectFromDegrees(1, 5, 1, 5), rectFromDegrees(2, 7, 2, 7), false},
+		{rectFromDegrees(1, 5, 1, 5), rectFromDegrees(1+ε, 5+ε, 1+ε, 5+ε), true},
+	}
+
+	for _, test := range tests {
+		if got := test.a.ApproxEqual(test.b); got != test.want {
+			t.Errorf("%v.ApproxEquals(%v) = %t, want %t", test.a, test.b, got, test.want)
+		}
+	}
+}

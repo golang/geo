@@ -506,6 +506,12 @@ func (r Rect) HausdorffDistance(other Rect) s1.Angle {
 		other.DirectedHausdorffDistance(r))
 }
 
+// ApproxEqual reports whether the latitude and longitude intervals of the two rectangles
+// are the same up to a small tolerance.
+func (r Rect) ApproxEqual(other Rect) bool {
+	return r.Lat.ApproxEqual(other.Lat) && r.Lng.ApproxEqual(other.Lng)
+}
+
 // directedHausdorffDistance returns the directed Hausdorff distance
 // from one longitudinal edge spanning latitude range 'a' to the other
 // longitudinal edge spanning latitude range 'b', with their longitudinal
