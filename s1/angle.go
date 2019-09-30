@@ -47,7 +47,7 @@ import (
 //
 //   (60*Degree).Degrees() != 60
 //
-// When testing for equality, you should allow for numerical errors (floatApproxEq)
+// When testing for equality, you should allow for numerical errors (ApproxEqual)
 // or convert to discrete E5/E6/E7 values first.
 type Angle float64
 
@@ -109,6 +109,11 @@ func (a Angle) Normalized() Angle {
 
 func (a Angle) String() string {
 	return strconv.FormatFloat(a.Degrees(), 'f', 7, 64) // like "%.7f"
+}
+
+// ApproxEqual reports whether the two angles are the same up to a small tolerance.
+func (a Angle) ApproxEqual(other Angle) bool {
+	return math.Abs(float64(a)-float64(other)) <= epsilon
 }
 
 // BUG(dsymonds): The major differences from the C++ version are:

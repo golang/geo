@@ -1108,7 +1108,7 @@ func TestDirectedHausdorffDistanceRectToRectDegenerateCases(t *testing.T) {
 		rectFromDegrees(-20, 95, 20, 105), rectFromDegrees(-30, 5, 30, 15))
 }
 
-func TestApproxEqual(t *testing.T) {
+func TestRectApproxEqual(t *testing.T) {
 	// s1.Interval and r1.Interval have additional testing.
 
 	const ε = epsilon / 10

@@ -93,3 +93,9 @@ func PointFromLatLng(ll LatLng) Point {
 func LatLngFromPoint(p Point) LatLng {
 	return LatLng{latitude(p), longitude(p)}
 }
+
+// ApproxEqual reports whether the latitude and longitude of the two LatLngs
+// are the same up to a small tolerance.
+func (ll LatLng) ApproxEqual(other LatLng) bool {
+	return ll.Lat.ApproxEqual(other.Lat) && ll.Lng.ApproxEqual(other.Lng)
+}

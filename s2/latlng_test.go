@@ -150,3 +150,21 @@ func TestLatLngDistance(t *testing.T) {
 		}
 	}
 }
+
+func TestLatLngApproxEqual(t *testing.T) {
+	const ε = epsilon / 10
+	tests := []struct {
+		a, b LatLng
+		want bool
+	}{
+		{LatLngFromDegrees(30, 50), LatLngFromDegrees(30, 50+ε), true},
+		{LatLngFromDegrees(30, 50), LatLngFromDegrees(30-ε, 50), true},
+		{LatLngFromDegrees(1, 5), LatLngFromDegrees(2, 3), false},
+	}
+
+	for _, test := range tests {
+		if got := test.a.ApproxEqual(test.b); got != test.want {
+			t.Errorf("%v.ApproxEqual(%v) = %t, want %t", test.a, test.b, got, test.want)
+		}
+	}
+}
