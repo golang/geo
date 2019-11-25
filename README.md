@@ -141,6 +141,7 @@ Approximately ~40% complete.
     conversion methods to and from ST-space, UV-space, and XYZ-space.
 *   s2wedge_relations
 *   ShapeIndex
+*   idSetLexicon,sequenceLexicon
 
 **Mostly Complete** Files that have almost all of the features of the original
 C++ code, and are reasonably complete enough to use in live code. Up to date
@@ -185,7 +186,6 @@ started.
 *   ClosestPointQuery
 *   EdgeTesselator
 *   LoopMeasures
-*   MinDistanceTargets
 *   PointIndex
 *   PointRegion
 *   PointUtil
@@ -194,7 +194,6 @@ started.
 *   RegionTermIndexer
 *   RegionUnion
 *   ShapeIndexRegion - Allows ShapeIndexes to be used as Regions for things like
-*   lexicon
 
 ### Encode/Decode
 
