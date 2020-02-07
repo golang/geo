@@ -313,6 +313,42 @@ func TestTextFormatParseRect(t *testing.T) {
 	}
 }
 
+func TestTextFormatMakeCellUnion(t *testing.T) {
+	tests := []struct {
+		have []string
+		want CellUnion
+	}{
+		{
+			have: nil,
+			want: CellUnion{},
+		},
+		{
+			have: []string{},
+			want: CellUnion{},
+		},
+		{
+			have: []string{"google"},
+			want: CellUnion{0},
+		},
+		{
+			have: []string{"0/"},
+			want: CellUnion{CellIDFromFace(0)},
+		},
+		{
+			have: []string{"2/010", "2/011", "2/02"},
+			want: CellUnion{0x4240000000000000, 0x42c0000000000000, 0x4500000000000000},
+		},
+	}
+
+	for _, test := range tests {
+		got := makeCellUnion(test.have...)
+		got.Normalize()
+		if !got.Equal(test.want) {
+			t.Errorf("makeCellUnion(%v) = %v, want %v", test.have, got, test.want)
+		}
+	}
+}
+
 func TestTextFormatMakeLaxPolyline(t *testing.T) {
 	l := makeLaxPolyline("-20:150, -20:151, -19:150")
 

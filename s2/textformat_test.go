@@ -143,6 +143,16 @@ func makeRect(s string) Rect {
 	return rect
 }
 
+// makeCellUnion returns a CellUnion from the given CellID token strings.
+func makeCellUnion(tokens ...string) CellUnion {
+	var cu CellUnion
+
+	for _, t := range tokens {
+		cu = append(cu, cellIDFromString(t))
+	}
+	return cu
+}
+
 // makeLoop constructs a Loop from the input string.
 // The strings "empty" or "full" create an empty or full loop respectively.
 func makeLoop(s string) *Loop {

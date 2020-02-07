@@ -129,6 +129,15 @@ func randomCellID() CellID {
 	return randomCellIDForLevel(randomUniformInt(maxLevel + 1))
 }
 
+// randomCellUnion returns a CellUnion of the given size of randomly selected cells.
+func randomCellUnion(n int) CellUnion {
+	var cu CellUnion
+	for i := 0; i < n; i++ {
+		cu = append(cu, randomCellID())
+	}
+	return cu
+}
+
 // concentricLoopsPolygon constructs a polygon with the specified center as a
 // number of concentric loops and vertices per loop.
 func concentricLoopsPolygon(center Point, numLoops, verticesPerLoop int) *Polygon {
