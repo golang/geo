@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/golang/geo/r1"
+	"github.com/golang/geo/r2"
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
@@ -1128,4 +1129,80 @@ func TestRectApproxEqual(t *testing.T) {
 			t.Errorf("%v.ApproxEquals(%v) = %t, want %t", test.a, test.b, got, test.want)
 		}
 	}
+}
+
+func TestRectCentroidEmptyFull(t *testing.T) {
+	// Empty and full rectangles.
+	if got, want := EmptyRect().Centroid(), (Point{}); !got.ApproxEqual(want) {
+		t.Errorf("%v.Centroid() = %v, want %v", EmptyRect(), got, want)
+	}
+	if got, want := FullRect().Centroid().Norm(), epsilon; !float64Eq(got, want) {
+		t.Errorf("%v.Centroid().Norm() = %v, want %v", FullRect(), got, want)
+	}
+}
+
+func testRectCentroidSplitting(t *testing.T, r Rect, leftSplits int) {
+	// Recursively verify that when a rectangle is split into two pieces, the
+	// centroids of the children sum to give the centroid of the parent.
+	var child0, child1 Rect
+	if oneIn(2) {
+		lat := randomUniformFloat64(r.Lat.Lo, r.Lat.Hi)
+		child0 = Rect{r1.Interval{r.Lat.Lo, lat}, r.Lng}
+		child1 = Rect{r1.Interval{lat, r.Lat.Hi}, r.Lng}
+	} else {
+		lng := randomUniformFloat64(r.Lng.Lo, r.Lng.Hi)
+		child0 = Rect{r.Lat, s1.Interval{r.Lng.Lo, lng}}
+		child1 = Rect{r.Lat, s1.Interval{lng, r.Lng.Hi}}
+	}
+
+	if got, want := r.Centroid().Sub(child0.Centroid().Vector).Sub(child1.Centroid().Vector).Norm(), 1e-15; got > want {
+		t.Errorf("%v.Centroid() - %v.Centroid() - %v.Centroid = %v, want ~0", r, child0, child1, got)
+	}
+	if leftSplits > 0 {
+		testRectCentroidSplitting(t, child0, leftSplits-1)
+		testRectCentroidSplitting(t, child1, leftSplits-1)
+	}
+}
+
+func TestRectCentroidFullRange(t *testing.T) {
+	// Rectangles that cover the full longitude range.
+	for i := 0; i < 100; i++ {
+		lat1 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
+		lat2 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
+		r := Rect{r1.Interval{lat1, lat2}, s1.FullInterval()}
+		centroid := r.Centroid()
+		if want := 0.5 * (math.Sin(lat1) + math.Sin(lat2)) * r.Area(); !float64Near(want, centroid.Z, epsilon) {
+			t.Errorf("%v.Centroid().Z was %v, want %v", r, centroid.Z, want)
+		}
+		if got := (r2.Point{centroid.X, centroid.Y}.Norm()); got > epsilon {
+			t.Errorf("%v.Centroid().Norm() was %v, want > %v ", r, got, epsilon)
+		}
+	}
+
+	// Rectangles that cover the full latitude range.
+	for i := 0; i < 100; i++ {
+		lat1 := randomUniformFloat64(-math.Pi, math.Pi)
+		lat2 := randomUniformFloat64(-math.Pi, math.Pi)
+		r := Rect{r1.Interval{-math.Pi / 2, math.Pi / 2}, s1.Interval{lat1, lat2}}
+		centroid := r.Centroid()
+
+		if got, want := math.Abs(centroid.Z), epsilon; got > want {
+			t.Errorf("math.Abs(%v.Centroid().Z) = %v, want <= %v", r, got, want)
+		}
+
+		if got, want := LatLngFromPoint(centroid).Lng.Radians(), r.Lng.Center(); !float64Near(got, want, epsilon) {
+			t.Errorf("%v.Lng.Radians() = %v, want %v", centroid, got, want)
+		}
+
+		alpha := 0.5 * r.Lng.Length()
+		if got, want := (r2.Point{centroid.X, centroid.Y}.Norm()), (0.25 * math.Pi * math.Sin(alpha) / alpha * r.Area()); !float64Near(got, want, epsilon) {
+			t.Errorf("%v.Centroid().Norm() = %v, want ~%v", got, want, epsilon)
+		}
+	}
+
+	// Finally, verify that when a rectangle is recursively split into pieces,
+	// the centroids of the pieces add to give the centroid of their parent.
+	// To make the code simpler we avoid rectangles that cross the 180 degree
+	// line of longitude.
+	testRectCentroidSplitting(t, Rect{r1.Interval{-math.Pi / 2, math.Pi / 2}, s1.Interval{-math.Pi, math.Pi}}, 10)
 }

@@ -637,5 +637,74 @@ func bisectorIntersection(lat r1.Interval, lng s1.Angle) Point {
 	return orthoLng.PointCross(PointFromLatLng(orthoBisector))
 }
 
+// Centroid returns the true centroid of the given Rect multiplied by its
+// surface area. The result is not unit length, so you may want to normalize it.
+// Note that in general the centroid is *not* at the center of the rectangle, and
+// in fact it may not even be contained by the rectangle. (It is the "center of
+// mass" of the rectangle viewed as subset of the unit sphere, i.e. it is the
+// point in space about which this curved shape would rotate.)
+//
+// The reason for multiplying the result by the rectangle area is to make it
+// easier to compute the centroid of more complicated shapes. The centroid
+// of a union of disjoint regions can be computed simply by adding their
+// Centroid results.
+func (r Rect) Centroid() Point {
+	// When a sphere is divided into slices of constant thickness by a set
+	// of parallel planes, all slices have the same surface area. This
+	// implies that the z-component of the centroid is simply the midpoint
+	// of the z-interval spanned by the Rect.
+	//
+	// Similarly, it is easy to see that the (x,y) of the centroid lies in
+	// the plane through the midpoint of the rectangle's longitude interval.
+	// We only need to determine the distance "d" of this point from the
+	// z-axis.
+	//
+	// Let's restrict our attention to a particular z-value. In this
+	// z-plane, the Rect is a circular arc. The centroid of this arc
+	// lies on a radial line through the midpoint of the arc, and at a
+	// distance from the z-axis of
+	//
+	//     r * (sin(alpha) / alpha)
+	//
+	// where r = sqrt(1-z^2) is the radius of the arc, and "alpha" is half
+	// of the arc length (i.e., the arc covers longitudes [-alpha, alpha]).
+	//
+	// To find the centroid distance from the z-axis for the entire
+	// rectangle, we just need to integrate over the z-interval. This gives
+	//
+	//    d = Integrate[sqrt(1-z^2)*sin(alpha)/alpha, z1..z2] / (z2 - z1)
+	//
+	// where [z1, z2] is the range of z-values covered by the rectangle.
+	// This simplifies to
+	//
+	//    d = sin(alpha)/(2*alpha*(z2-z1))*(z2*r2 - z1*r1 + theta2 - theta1)
+	//
+	// where [theta1, theta2] is the latitude interval, z1=sin(theta1),
+	// z2=sin(theta2), r1=cos(theta1), and r2=cos(theta2).
+	//
+	// Finally, we want to return not the centroid itself, but the centroid
+	// scaled by the area of the rectangle. The area of the rectangle is
+	//
+	//    A = 2 * alpha * (z2 - z1)
+	//
+	// which fortunately appears in the denominator of "d".
+
+	if r.IsEmpty() {
+		return Point{}
+	}
+
+	z1 := math.Sin(r.Lat.Lo)
+	z2 := math.Sin(r.Lat.Hi)
+	r1 := math.Cos(r.Lat.Lo)
+	r2 := math.Cos(r.Lat.Hi)
+
+	alpha := 0.5 * r.Lng.Length()
+	r0 := math.Sin(alpha) * (r2*z2 - r1*z1 + r.Lat.Length())
+	lng := r.Lng.Center()
+	z := alpha * (z2 + z1) * (z2 - z1) // scaled by the area
+
+	return Point{r3.Vector{r0 * math.Cos(lng), r0 * math.Sin(lng), z}}
+}
+
 // BUG: The major differences from the C++ version are:
-//   - GetCentroid, Get*Distance, Vertex, InteriorContains(LatLng|Rect|Point)
+//  - Get*Distance, Vertex, InteriorContains(LatLng|Rect|Point)
