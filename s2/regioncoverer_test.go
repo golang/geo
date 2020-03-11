@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"reflect"
@@ -190,6 +191,87 @@ func TestRegionCovererSimpleRegionCovering(t *testing.T) {
 		covering := SimpleRegionCovering(c, c.Center(), level)
 		rc := &RegionCoverer{MaxLevel: level, MinLevel: level, MaxCells: math.MaxInt32, LevelMod: 1}
 		checkCovering(t, rc, c, covering, false)
+	}
+}
+
+const numCoveringBMRegions = 1000
+
+func BenchmarkRegionCovererCoveringCap(b *testing.B) {
+	benchmarkRegionCovererCovering(b, func(n int) string {
+		return fmt.Sprintf("Cap%d", n)
+	},
+		func(n int) []Region {
+			regions := make([]Region, numCoveringBMRegions)
+			for i := 0; i < numCoveringBMRegions; i++ {
+				regions[i] = randomCap(0.1*AvgAreaMetric.Value(maxLevel), 4*math.Pi)
+			}
+			return regions
+		})
+}
+
+func BenchmarkRegionCovererCoveringCell(b *testing.B) {
+	benchmarkRegionCovererCovering(b, func(n int) string {
+		return fmt.Sprintf("Cell%d", n)
+	},
+		func(n int) []Region {
+			regions := make([]Region, numCoveringBMRegions)
+			for i := 0; i < numCoveringBMRegions; i++ {
+				regions[i] = CellFromCellID(randomCellIDForLevel(maxLevel - randomUniformInt(n)))
+			}
+			return regions
+		})
+}
+
+func BenchmarkRegionCovererCoveringLoop(b *testing.B) {
+	benchmarkRegionCovererCovering(b, func(n int) string {
+		return fmt.Sprintf("Loop-%d-edges", int(math.Pow(2.0, float64(n))))
+	},
+		func(n int) []Region {
+			size := int(math.Pow(2.0, float64(n)))
+			regions := make([]Region, numCoveringBMRegions)
+			for i := 0; i < numCoveringBMRegions; i++ {
+				regions[i] = RegularLoop(randomPoint(), kmToAngle(10.0), size)
+			}
+			return regions
+		})
+}
+
+func BenchmarkRegionCovererCoveringCellUnion(b *testing.B) {
+	benchmarkRegionCovererCovering(b, func(n int) string {
+		return fmt.Sprintf("CellUnion-%d-cells", int(math.Pow(2.0, float64(n))))
+	},
+		func(n int) []Region {
+			size := int(math.Pow(2.0, float64(n)))
+			regions := make([]Region, numCoveringBMRegions)
+			for i := 0; i < numCoveringBMRegions; i++ {
+				cu := randomCellUnion(size)
+				regions[i] = &cu
+			}
+			return regions
+		})
+}
+
+// TODO(roberts): Add more benchmarking that changes the values in the coverer (min/max level, # cells).
+
+// benchmark Covering using the supplied func to generate a slice of random Regions of
+// the given type to choose from for the benchmark.
+//
+// e.g. Loops with [4..~2^n] edges, CellUnions of 2^n random Cells, random Cells and Caps
+func benchmarkRegionCovererCovering(b *testing.B, genLabel func(n int) string, genRegions func(n int) []Region) {
+	rc := &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 1, MaxCells: 8}
+
+	// Range over a variety of region complexities.
+	for n := 2; n <= 16; n++ {
+		b.Run(genLabel(n),
+			func(b *testing.B) {
+				b.StopTimer()
+				regions := genRegions(n)
+				l := len(regions)
+				b.StartTimer()
+				for i := 0; i < b.N; i++ {
+					rc.Covering(regions[i%l])
+				}
+			})
 	}
 }
 
