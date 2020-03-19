@@ -295,8 +295,10 @@ func (m *MaxDistanceToShapeIndexTarget) setMaxError(maxErr s1.ChordAngle) bool {
 }
 func (m *MaxDistanceToShapeIndexTarget) maxBruteForceIndexSize() int { return 70 }
 func (m *MaxDistanceToShapeIndexTarget) distance() distance          { return m.dist }
-func (m *MaxDistanceToShapeIndexTarget) setIncludeInteriors(b bool)  { m.query.opts.includeInteriors = b }
-func (m *MaxDistanceToShapeIndexTarget) setUseBruteForce(b bool)     { m.query.opts.useBruteForce = b }
+func (m *MaxDistanceToShapeIndexTarget) setIncludeInteriors(b bool) {
+	m.query.opts.includeInteriors = b
+}
+func (m *MaxDistanceToShapeIndexTarget) setUseBruteForce(b bool) { m.query.opts.useBruteForce = b }
 
 // TODO(roberts): Remaining methods
 //

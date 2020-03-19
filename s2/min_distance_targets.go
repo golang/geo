@@ -351,8 +351,10 @@ func (m *MinDistanceToShapeIndexTarget) setMaxError(maxErr s1.ChordAngle) bool {
 }
 func (m *MinDistanceToShapeIndexTarget) maxBruteForceIndexSize() int { return 25 }
 func (m *MinDistanceToShapeIndexTarget) distance() distance          { return m.dist }
-func (m *MinDistanceToShapeIndexTarget) setIncludeInteriors(b bool)  { m.query.opts.includeInteriors = b }
-func (m *MinDistanceToShapeIndexTarget) setUseBruteForce(b bool)     { m.query.opts.useBruteForce = b }
+func (m *MinDistanceToShapeIndexTarget) setIncludeInteriors(b bool) {
+	m.query.opts.includeInteriors = b
+}
+func (m *MinDistanceToShapeIndexTarget) setUseBruteForce(b bool) { m.query.opts.useBruteForce = b }
 
 // TODO(roberts): Remaining methods
 //
