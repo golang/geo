@@ -16,6 +16,7 @@ package s2
 
 import (
 	"container/heap"
+	"sort"
 )
 
 // RegionCoverer allows arbitrary regions to be approximated as unions of cells (CellUnion).
@@ -76,6 +77,16 @@ type RegionCoverer struct {
 	MaxLevel int // the maximum cell level to be used.
 	LevelMod int // the LevelMod to be used.
 	MaxCells int // the maximum desired number of cells in the approximation.
+}
+
+// NewRegionCoverer returns a region coverer with the appropriate defaults.
+func NewRegionCoverer() *RegionCoverer {
+	return &RegionCoverer{
+		MinLevel: 0,
+		MaxLevel: maxLevel,
+		LevelMod: 1,
+		MaxCells: 8,
+	}
 }
 
 type coverer struct {
@@ -306,8 +317,20 @@ func (c *coverer) coveringInternal(region Region) {
 			c.addCandidate(cand)
 		}
 	}
+
 	c.pq.Reset()
 	c.region = nil
+
+	// Rather than just returning the raw list of cell ids, we construct a cell
+	// union and then denormalize it. This has the effect of replacing four
+	// child cells with their parent whenever this does not violate the covering
+	// parameters specified (min_level, level_mod, etc). This significantly
+	// reduces the number of cells returned in many cases, and it is cheap
+	// compared to computing the covering in the first place.
+	c.result.Normalize()
+	if c.minLevel > 0 || c.levelMod > 1 {
+		c.result.Denormalize(c.minLevel, c.levelMod)
+	}
 }
 
 // newCoverer returns an instance of coverer.
@@ -378,8 +401,26 @@ func (rc *RegionCoverer) FastCovering(region Region) CellUnion {
 	return cu
 }
 
-// normalizeCovering normalizes the "covering" so that it conforms to the current covering
-// parameters (MaxCells, minLevel, maxLevel, and levelMod).
+// IsCanonical reports whether the given CellUnion represents a valid covering
+// that conforms to the current covering parameters.  In particular:
+//
+//  - All CellIDs must be valid.
+//
+//  - CellIDs must be sorted and non-overlapping.
+//
+//  - CellID levels must satisfy MinLevel, MaxLevel, and LevelMod.
+//
+//  - If the covering has more than MaxCells, there must be no two cells with
+//    a common ancestor at MinLevel or higher.
+//
+//  - There must be no sequence of cells that could be replaced by an
+//    ancestor (i.e. with LevelMod == 1, the 4 child cells of a parent).
+func (rc *RegionCoverer) IsCanonical(covering CellUnion) bool {
+	return rc.newCoverer().isCanonical(covering)
+}
+
+// normalizeCovering normalizes the "covering" so that it conforms to the
+// current covering parameters (maxCells, minLevel, maxLevel, and levelMod).
 // This method makes no attempt to be optimal. In particular, if
 // minLevel > 0 or levelMod > 1 then it may return more than the
 // desired number of cells even when this isn't necessary.
@@ -399,6 +440,25 @@ func (c *coverer) normalizeCovering(covering *CellUnion) {
 	}
 	// Sort the cells and simplify them.
 	covering.Normalize()
+
+	// Make sure that the covering satisfies minLevel and levelMod,
+	// possibly at the expense of satisfying MaxCells.
+	if c.minLevel > 0 || c.levelMod > 1 {
+		covering.Denormalize(c.minLevel, c.levelMod)
+	}
+
+	// If there are too many cells and the covering is very large, use the
+	// RegionCoverer to compute a new covering. (This avoids possible O(n^2)
+	// behavior of the simpler algorithm below.)
+	excess := len(*covering) - c.maxCells
+	if excess <= 0 || c.isCanonical(*covering) {
+		return
+	}
+	if excess*len(*covering) > 10000 {
+		rc := NewRegionCoverer()
+		(*covering) = rc.Covering(covering)
+		return
+	}
 
 	// If there are still too many cells, then repeatedly replace two adjacent
 	// cells in CellID order by their lowest common ancestor.
@@ -420,14 +480,99 @@ func (c *coverer) normalizeCovering(covering *CellUnion) {
 		if bestLevel < c.minLevel {
 			break
 		}
-		(*covering)[bestIndex] = (*covering)[bestIndex].Parent(bestLevel)
-		covering.Normalize()
+
+		// Replace all cells contained by the new ancestor cell.
+		id := (*covering)[bestIndex].Parent(bestLevel)
+		(*covering) = c.replaceCellsWithAncestor(*covering, id)
+
+		// Now repeatedly check whether all children of the parent cell are
+		// present, in which case we can replace those cells with their parent.
+		for bestLevel > c.minLevel {
+			bestLevel -= c.levelMod
+			id = id.Parent(bestLevel)
+			if !c.containsAllChildren(*covering, id) {
+				break
+			}
+			(*covering) = c.replaceCellsWithAncestor(*covering, id)
+		}
 	}
-	// Make sure that the covering satisfies minLevel and levelMod,
-	// possibly at the expense of satisfying MaxCells.
-	if c.minLevel > 0 || c.levelMod > 1 {
-		covering.Denormalize(c.minLevel, c.levelMod)
+}
+
+// isCanonical reports whether the covering is canonical.
+func (c *coverer) isCanonical(covering CellUnion) bool {
+	trueMax := c.maxLevel
+	if c.levelMod != 1 {
+		trueMax = c.maxLevel - (c.maxLevel-c.minLevel)%c.levelMod
 	}
+	tooManyCells := len(covering) > c.maxCells
+	sameParentCount := 1
+
+	prevID := CellID(0)
+	for _, id := range covering {
+		if !id.IsValid() {
+			return false
+		}
+
+		// Check that the CellID level is acceptable.
+		level := id.Level()
+		if level < c.minLevel || level > trueMax {
+			return false
+		}
+		if c.levelMod > 1 && (level-c.minLevel)%c.levelMod != 0 {
+			return false
+		}
+
+		if prevID != 0 {
+			// Check that cells are sorted and non-overlapping.
+			if prevID.RangeMax() >= id.RangeMin() {
+				return false
+			}
+
+			lev, ok := id.CommonAncestorLevel(prevID)
+			// If there are too many cells, check that no pair of adjacent cells
+			// could be replaced by an ancestor.
+			if tooManyCells && (ok && lev >= c.minLevel) {
+				return false
+			}
+
+			// Check that there are no sequences of (4 ** level_mod) cells that all
+			// have the same parent (considering only multiples of "level_mod").
+			pLevel := level - c.levelMod
+			if pLevel < c.minLevel || level != prevID.Level() ||
+				id.Parent(pLevel) != prevID.Parent(pLevel) {
+				sameParentCount = 1
+			} else {
+				sameParentCount++
+				if sameParentCount == 1<<uint(2*c.levelMod) {
+					return false
+				}
+			}
+		}
+		prevID = id
+	}
+
+	return true
+}
+
+func (c *coverer) containsAllChildren(covering []CellID, id CellID) bool {
+	pos := sort.Search(len(covering), func(i int) bool { return (covering)[i] >= id.RangeMin() })
+	level := id.Level() + c.levelMod
+	for child := id.ChildBeginAtLevel(level); child != id.ChildEndAtLevel(level); child = child.Next() {
+		if pos == len(covering) || covering[pos] != child {
+			return false
+		}
+		pos++
+	}
+	return true
+}
+
+// replaceCellsWithAncestor replaces all descendants of the given id in covering
+// with id. This requires the covering contains at least one descendant of id.
+func (c *coverer) replaceCellsWithAncestor(covering []CellID, id CellID) []CellID {
+	begin := sort.Search(len(covering), func(i int) bool { return covering[i] > id.RangeMin() })
+	end := sort.Search(len(covering), func(i int) bool { return covering[i] > id.RangeMax() })
+
+	return append(append(covering[:begin], id), covering[end:]...)
 }
 
 // SimpleRegionCovering returns a set of cells at the given level that cover
@@ -468,10 +613,3 @@ func FloodFillRegionCovering(region Region, start CellID) []CellID {
 
 	return output
 }
-
-// TODO(roberts): The differences from the C++ version
-// finish up FastCovering to match C++
-// IsCanonical
-// CanonicalizeCovering
-// containsAllChildren
-// replaceCellsWithAncestor

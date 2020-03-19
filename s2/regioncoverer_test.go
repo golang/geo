@@ -27,13 +27,12 @@ func TestCovererRandomCells(t *testing.T) {
 
 	// Test random cell ids at all levels.
 	for i := 0; i < 10000; i++ {
-		id := CellID(randomUint64())
-		for !id.IsValid() {
-			id = CellID(randomUint64())
-		}
+		id := randomCellID()
 		covering := rc.Covering(Region(CellFromCellID(id)))
 		if len(covering) != 1 {
 			t.Errorf("Iteration %d, cell ID token %s, got covering size = %d, want covering size = 1", i, id.ToToken(), len(covering))
+			// if the covering isn't len 1, the next check will panic
+			break
 		}
 		if (covering)[0] != id {
 			t.Errorf("Iteration %d, cell ID token %s, got covering = %v, want covering = %v", i, id.ToToken(), covering, id)
@@ -115,7 +114,7 @@ func checkCoveringTight(t *testing.T, r Region, cover CellUnion, checkTight bool
 }
 
 func TestCovererRandomCaps(t *testing.T) {
-	rc := &RegionCoverer{}
+	rc := &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 1, MaxCells: 1}
 	for i := 0; i < 1000; i++ {
 		rc.MinLevel = int(rand.Int31n(maxLevel + 1))
 		rc.MaxLevel = int(rand.Int31n(maxLevel + 1))
@@ -191,6 +190,111 @@ func TestRegionCovererSimpleRegionCovering(t *testing.T) {
 		covering := SimpleRegionCovering(c, c.Center(), level)
 		rc := &RegionCoverer{MaxLevel: level, MinLevel: level, MaxCells: math.MaxInt32, LevelMod: 1}
 		checkCovering(t, rc, c, covering, false)
+	}
+}
+
+func TestRegionCovererIsCanonical(t *testing.T) {
+	tests := []struct {
+		cells []string
+		cov   *RegionCoverer
+		want  bool
+	}{
+		// InvalidCellID
+		{cells: []string{"1/"}, cov: NewRegionCoverer(), want: true},
+		{cells: []string{"invalid"}, cov: NewRegionCoverer(), want: false},
+		// Unsorted
+		{cells: []string{"1/1", "1/3"}, cov: NewRegionCoverer(), want: true},
+		{cells: []string{"1/3", "1/1"}, cov: NewRegionCoverer(), want: false},
+
+		// Overlapping
+		{cells: []string{"1/2", "1/33"}, cov: NewRegionCoverer(), want: true},
+		{cells: []string{"1/3", "1/33"}, cov: NewRegionCoverer(), want: false},
+
+		// MinLevel
+		{
+			cells: []string{"1/31"},
+			cov:   &RegionCoverer{MinLevel: 2, MaxLevel: 30, LevelMod: 1, MaxCells: 8},
+			want:  true,
+		},
+		{
+			cells: []string{"1/3"},
+			cov:   &RegionCoverer{MinLevel: 2, MaxLevel: 30, LevelMod: 1, MaxCells: 8},
+			want:  false,
+		},
+
+		// MaxLevel
+		{
+			cells: []string{"1/31"},
+			cov:   &RegionCoverer{MinLevel: 0, MaxLevel: 2, LevelMod: 1, MaxCells: 8},
+			want:  true,
+		},
+		{
+			cells: []string{"1/312"},
+			cov:   &RegionCoverer{MinLevel: 0, MaxLevel: 2, LevelMod: 1, MaxCells: 8},
+			want:  false,
+		},
+
+		// LevelMod
+		{
+			cells: []string{"1/31"},
+			cov:   &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 2, MaxCells: 8},
+			want:  true,
+		},
+		{
+			cells: []string{"1/312"},
+			cov:   &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 2, MaxCells: 8},
+			want:  false,
+		},
+
+		// MaxCells
+		{cells: []string{"1/1", "1/3"}, cov: &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 1, MaxCells: 2}, want: true},
+		{cells: []string{"1/1", "1/3", "2/"}, cov: &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 1, MaxCells: 2}, want: false},
+		{cells: []string{"1/123", "2/1", "3/0122"}, cov: &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 1, MaxCells: 2}, want: true},
+
+		// Normalized
+		// Test that no sequence of cells could be replaced by an ancestor.
+		{
+			cells: []string{"1/01", "1/02", "1/03", "1/10", "1/11"},
+			cov:   NewRegionCoverer(),
+			want:  true,
+		},
+		{
+			cells: []string{"1/00", "1/01", "1/02", "1/03", "1/10"},
+			cov:   NewRegionCoverer(),
+			want:  false,
+		},
+
+		{
+			cells: []string{"0/22", "1/01", "1/02", "1/03", "1/10"},
+			cov:   NewRegionCoverer(),
+			want:  true,
+		},
+		{
+			cells: []string{"0/22", "1/00", "1/01", "1/02", "1/03"},
+			cov:   NewRegionCoverer(),
+			want:  false,
+		},
+
+		{
+			cells: []string{"1/1101", "1/1102", "1/1103", "1/1110", "1/1111", "1/1112",
+				"1/1113", "1/1120", "1/1121", "1/1122", "1/1123", "1/1130",
+				"1/1131", "1/1132", "1/1133", "1/1200"},
+			cov:  &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 2, MaxCells: 20},
+			want: true,
+		},
+		{
+			cells: []string{"1/1100", "1/1101", "1/1102", "1/1103", "1/1110", "1/1111",
+				"1/1112", "1/1113", "1/1120", "1/1121", "1/1122", "1/1123",
+				"1/1130", "1/1131", "1/1132", "1/1133"},
+			cov:  &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 2, MaxCells: 20},
+			want: false,
+		},
+	}
+	for _, test := range tests {
+		cu := makeCellUnion(test.cells...)
+		if got := test.cov.IsCanonical(cu); got != test.want {
+			t.Errorf("IsCanonical(%v) = %t, want %t", cu, got, test.want)
+		}
 	}
 }
 
@@ -278,14 +382,6 @@ func benchmarkRegionCovererCovering(b *testing.B, genLabel func(n int) string, g
 // TODO(roberts): Differences from C++
 //  func TestRegionCovererAccuracy(t *testing.T) {
 //  func TestRegionCovererFastCoveringHugeFixedLevelCovering(t *testing.T) {
-//  func TestRegionCovererIsCanonicalInvalidS2CellId(t *testing.T) {
-//  func TestRegionCovererIsCanonicalUnsorted(t *testing.T) {
-//  func TestRegionCovererIsCanonicalOverlapping(t *testing.T) {
-//  func TestRegionCovererIsCanonicalMinLevel(t *testing.T) {
-//  func TestRegionCovererIsCanonicalMaxLevel(t *testing.T) {
-//  func TestRegionCovererIsCanonicalLevelMod(t *testing.T) {
-//  func TestRegionCovererIsCanonicalMaxCells(t *testing.T) {
-//  func TestRegionCovererIsCanonicalNormalized(t *testing.T) {
 //  func TestRegionCovererCanonicalizeCoveringUnsortedDuplicateCells(t *testing.T) {
 //  func TestRegionCovererCanonicalizeCoveringMaxLevelExceeded(t *testing.T) {
 //  func TestRegionCovererCanonicalizeCoveringWrongLevelMod(t *testing.T) {

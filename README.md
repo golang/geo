@@ -128,6 +128,7 @@ Approximately ~40% complete.
 *   Point
 *   PointCompression
 *   Region
+*   RegionCoverer
 *   s2edge_clipping
 *   s2edge_crosser
 *   s2edge_crossings
@@ -153,7 +154,6 @@ listing of the incomplete methods are documented at the end of each file.
 *   Loop - Loop is mostly complete now. Missing Project, Distance, Union, etc.
 *   Polyline - Missing InitTo... methods, NearlyCoversPolyline
 *   Rect (AKA s2latlngrect in C++) - Missing Centroid, InteriorContains.
-*   RegionCoverer - canonicalize
 *   s2_test.go (AKA s2testing and s2textformat in C++) - Missing Fractal test
     shape generation. This file is a collection of testing helper methods.
 *   s2edge_distances - Missing Intersection
