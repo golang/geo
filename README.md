@@ -161,6 +161,7 @@ listing of the incomplete methods are documented at the end of each file.
 **In Progress** Files that have some work done, but are probably not complete
 enough for general use in production code.
 
+*   CellIndex - A queryable index of CellIDs.
 *   Polygon - Polygons with multiple loops are supported. It fully implements
     Shape and Region, but it's missing most other methods. (Area, Centroid,
     Distance, Projection, Intersection, Union, Contains, Normalized, etc.)
