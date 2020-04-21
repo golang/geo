@@ -1505,3 +1505,8 @@ func maxLevelForEdge(edge Edge) int {
 func (s *ShapeIndex) removeShapeInternal(removed *removedShape, allEdges [][]faceEdge, t *tracker) {
 	// TODO(roberts): finish the implementation of this.
 }
+
+// ForceBuild run force indexing
+func (s *ShapeIndex) ForceBuild() {
+	s.maybeApplyUpdates()
+}
