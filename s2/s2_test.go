@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"flag"
 	"io"
 	"math"
 	"math/rand"
@@ -23,6 +24,12 @@ import (
 	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r2"
 	"github.com/golang/geo/s1"
+)
+
+var (
+	// To set in testing add "--benchmark_brute_force=true" to your test command.
+	benchmarkBruteForce = flag.Bool("benchmark_brute_force", false,
+		"When set, use brute force algorithms in benchmarking.")
 )
 
 // float64Eq reports whether the two values are within the default epsilon.
