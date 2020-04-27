@@ -308,3 +308,21 @@ func TestLoopEncodeDecode(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkRectDecode(b *testing.B) {
+	rect := RectFromCenterSize(LatLngFromDegrees(80, 170), LatLngFromDegrees(40, 60))
+	var buf bytes.Buffer
+	if err := rect.Encode(&buf); err != nil {
+		b.Fatal(err)
+	}
+	encoded := buf.Bytes()
+	b.ReportAllocs()
+	b.SetBytes(int64(len(encoded)))
+	b.ResetTimer()
+	var out Rect
+	for i := 0; i < b.N; i++ {
+		if err := out.Decode(bytes.NewReader(encoded)); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
