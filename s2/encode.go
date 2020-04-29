@@ -17,6 +17,7 @@ package s2
 import (
 	"encoding/binary"
 	"io"
+	"math"
 )
 
 const (
@@ -145,6 +146,15 @@ func asByteReader(r io.Reader) byteReader {
 type decoder struct {
 	r   byteReader // the real reader passed to Decode
 	err error
+	buf []byte
+}
+
+// Get a buffer of size 8, to avoid allocating over and over.
+func (d *decoder) buffer() []byte {
+	if d.buf == nil {
+		d.buf = make([]byte, 8)
+	}
+	return d.buf
 }
 
 func (d *decoder) readBool() (x bool) {
@@ -157,22 +167,6 @@ func (d *decoder) readBool() (x bool) {
 }
 
 func (d *decoder) readInt8() (x int8) {
-	if d.err != nil {
-		return
-	}
-	d.err = binary.Read(d.r, binary.LittleEndian, &x)
-	return
-}
-
-func (d *decoder) readInt16() (x int16) {
-	if d.err != nil {
-		return
-	}
-	d.err = binary.Read(d.r, binary.LittleEndian, &x)
-	return
-}
-
-func (d *decoder) readInt32() (x int32) {
 	if d.err != nil {
 		return
 	}
@@ -212,20 +206,13 @@ func (d *decoder) readUint64() (x uint64) {
 	return
 }
 
-func (d *decoder) readFloat32() (x float32) {
+func (d *decoder) readFloat64() float64 {
 	if d.err != nil {
-		return
+		return 0
 	}
-	d.err = binary.Read(d.r, binary.LittleEndian, &x)
-	return
-}
-
-func (d *decoder) readFloat64() (x float64) {
-	if d.err != nil {
-		return
-	}
-	d.err = binary.Read(d.r, binary.LittleEndian, &x)
-	return
+	buf := d.buffer()
+	_, d.err = io.ReadFull(d.r, buf)
+	return math.Float64frombits(binary.LittleEndian.Uint64(buf))
 }
 
 func (d *decoder) readUvarint() (x uint64) {
