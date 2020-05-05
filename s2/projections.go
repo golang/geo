@@ -59,6 +59,16 @@ type Projection interface {
 	//
 	// If a given axis does not wrap, its WrapDistance should be set to zero.
 	WrapDistance() r2.Point
+
+	// WrapDestination that wraps the coordinates of B if necessary in order to
+	// obtain the shortest edge AB. For example, suppose that A = [170, 20],
+	// B = [-170, 20], and the projection wraps so that [x, y] == [x + 360, y].
+	// Then this function would return [190, 20] for point B (reducing the edge
+	// length in the "x" direction from 340 to 20).
+	WrapDestination(a, b r2.Point) r2.Point
+
+	// We do not support implementations of this interface outside this package.
+	privateInterface()
 }
 
 // PlateCarreeProjection defines the "plate carree" (square plate) projection,
@@ -126,6 +136,13 @@ func (p *PlateCarreeProjection) Interpolate(f float64, a, b r2.Point) r2.Point {
 func (p *PlateCarreeProjection) WrapDistance() r2.Point {
 	return r2.Point{p.xWrap, 0}
 }
+
+// WrapDestination wraps the points if needed to get the shortest edge.
+func (p *PlateCarreeProjection) WrapDestination(a, b r2.Point) r2.Point {
+	return wrapDestination(a, b, p.WrapDistance)
+}
+
+func (p *PlateCarreeProjection) privateInterface() {}
 
 // MercatorProjection defines the spherical Mercator projection. Google Maps
 // uses this projection together with WGS84 coordinates, in which case it is
@@ -200,4 +217,25 @@ func (p *MercatorProjection) Interpolate(f float64, a, b r2.Point) r2.Point {
 // WrapDistance reports the coordinate wrapping distance along each axis.
 func (p *MercatorProjection) WrapDistance() r2.Point {
 	return r2.Point{p.xWrap, 0}
+}
+
+// WrapDestination wraps the points if needed to get the shortest edge.
+func (p *MercatorProjection) WrapDestination(a, b r2.Point) r2.Point {
+	return wrapDestination(a, b, p.WrapDistance)
+}
+
+func (p *MercatorProjection) privateInterface() {}
+
+func wrapDestination(a, b r2.Point, wrapDistance func() r2.Point) r2.Point {
+	wrap := wrapDistance()
+	x := b.X
+	y := b.Y
+	// The code below ensures that "b" is unmodified unless wrapping is required.
+	if wrap.X > 0 && math.Abs(x-a.X) > 0.5*wrap.X {
+		x = a.X + math.Remainder(x-a.X, wrap.X)
+	}
+	if wrap.Y > 0 && math.Abs(y-a.Y) > 0.5*wrap.Y {
+		y = a.Y + math.Remainder(y-a.Y, wrap.Y)
+	}
+	return r2.Point{x, y}
 }

@@ -183,6 +183,20 @@ func pointsApproxEqual(a, b Point, epsilon float64) bool {
 	return float64(a.Vector.Angle(b.Vector)) <= epsilon
 }
 
+// pointSlicesApproxEqual reports whether corresponding elements of each slice are approximately equal.
+func pointSlicesApproxEqual(a, b []Point, epsilon float64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if !pointsApproxEqual(a[i], b[i], epsilon) {
+			return false
+		}
+	}
+	return true
+}
+
 // r1IntervalsApproxEqual reports whether the two r1.Intervals are within the given
 // epsilon of each other. This adds a test changeable value for epsilon
 func r1IntervalsApproxEqual(a, b r1.Interval, epsilon float64) bool {
@@ -204,6 +218,20 @@ var (
 // r2PointsApproxEqual reports whether the two points are within the given epsilon.
 func r2PointsApproxEqual(a, b r2.Point, epsilon float64) bool {
 	return float64Near(a.X, b.X, epsilon) && float64Near(a.Y, b.Y, epsilon)
+}
+
+// r2PointSlicesApproxEqual reports whether corresponding elements of the slices are approximately equal.
+func r2PointSlicesApproxEqual(a, b []r2.Point, epsilon float64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if !r2PointsApproxEqual(a[i], b[i], epsilon) {
+			return false
+		}
+	}
+	return true
 }
 
 // rectsApproxEqual reports whether the two rect are within the given tolerances

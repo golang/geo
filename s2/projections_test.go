@@ -57,10 +57,6 @@ func TestPlateCarreeProjectionInterpolate(t *testing.T) {
 	}
 }
 
-func r2pointsApproxEqual(a, b r2.Point) bool {
-	return float64Eq(a.X, b.X) && float64Eq(a.Y, b.Y)
-}
-
 func TestPlateCarreeProjectionProjectUnproject(t *testing.T) {
 	tests := []struct {
 		have Point
@@ -77,7 +73,7 @@ func TestPlateCarreeProjectionProjectUnproject(t *testing.T) {
 	proj := NewPlateCarreeProjection(180)
 
 	for _, test := range tests {
-		if got := proj.Project(test.have); !r2pointsApproxEqual(test.want, got) {
+		if got := proj.Project(test.have); !r2PointsApproxEqual(test.want, got, epsilon) {
 			t.Errorf("proj.Project(%v) = %v, want %v", test.have, got, test.want)
 		}
 		if got := proj.Unproject(test.want); !got.ApproxEqual(test.have) {
@@ -102,7 +98,7 @@ func TestMercatorProjectionProjectUnproject(t *testing.T) {
 	proj := NewMercatorProjection(180)
 
 	for _, test := range tests {
-		if got := proj.Project(test.have); !r2pointsApproxEqual(test.want, got) {
+		if got := proj.Project(test.have); !r2PointsApproxEqual(test.want, got, epsilon) {
 			t.Errorf("proj.Project(%v) = %v, want %v", test.have, got, test.want)
 		}
 		if got := proj.Unproject(test.want); !got.ApproxEqual(test.have) {
