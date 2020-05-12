@@ -118,7 +118,7 @@ func ExamplePolygonFromOrientedLoops() {
 }
 
 func ExampleEdgeQuery_FindEdges_findClosestEdges() {
-	// Lets start with a one or more Polylines that we wish to compare against.
+	// Let's start with one or more Polylines that we wish to compare against.
 	polylines := []s2.Polyline{
 		// This is an iteration = 3 Koch snowflake centered at the
 		// center of the continental US.
@@ -174,16 +174,22 @@ func ExampleEdgeQuery_FindEdges_findClosestEdges() {
 		},
 	}
 
-	// We will use a point that we want to find the edges which are closest to it.
+	// We will use a point that we wish to find the edges which are closest to it.
 	point := s2.PointFromLatLng(s2.LatLngFromDegrees(37.7, -122.5))
 
-	// Load them into a ShapeIndex
+	// Load them into a ShapeIndex.
 	index := s2.NewShapeIndex()
 	for _, l := range polylines {
 		index.Add(&l)
 	}
 
 	// Create a ClosestEdgeQuery and specify that we want the 7 closest.
+	//
+	// Note that if you were to request all results, and compare to the results
+	// of a FurthestEdgeQuery, the results will not be a complete reversal. This
+	// is because the distances being reported are to the closest end of a given
+	// edge, while the Furthest query is reporting distances to the farthest end
+	// of a given edge.
 	q := s2.NewClosestEdgeQuery(index, s2.NewClosestEdgeQueryOptions().MaxResults(7))
 	target := s2.NewMinDistanceToPointTarget(point)
 
@@ -203,10 +209,11 @@ func ExampleEdgeQuery_FindEdges_findClosestEdges() {
 	// Polyline 0, Edge 6 is 11.8071 degrees from Point (-0.425124, -0.667311, 0.611527)
 	// Polyline 0, Edge 5 is 12.2577 degrees from Point (-0.425124, -0.667311, 0.611527)
 	// Polyline 0, Edge 11 is 12.9502 degrees from Point (-0.425124, -0.667311, 0.611527)
+
 }
 
 func ExampleEdgeQuery_FindEdges_findFurthestEdges() {
-	// Lets start with a one or more Polylines that we wish to compare against.
+	// Let's start with one or more Polylines that we wish to compare against.
 	polylines := []s2.Polyline{
 		// This is an iteration = 3 Koch snowflake centered at the
 		// center of the continental US.
@@ -279,12 +286,13 @@ func ExampleEdgeQuery_FindEdges_findFurthestEdges() {
 		polylineIndex := result.ShapeID()
 		edgeIndex := result.EdgeID()
 		distance := result.Distance()
-		fmt.Printf("Polyline %d, Edge %d is %0.3f degrees from Point (%0.3f, %0.3f, %0.3f)\n",
+		fmt.Printf("Polyline %d, Edge %d is %0.3f degrees from Point (%0.6f, %0.6f, %0.6f)\n",
 			polylineIndex, edgeIndex,
 			distance.Angle().Degrees(), point.X, point.Y, point.Z)
 	}
 	// Output:
-	// Polyline 0, Edge 31 is 27.245 degrees from Point (-0.425, -0.667, 0.612)
-	// Polyline 0, Edge 32 is 27.245 degrees from Point (-0.425, -0.667, 0.612)
-	// Polyline 0, Edge 33 is 26.115 degrees from Point (-0.425, -0.667, 0.612)
+	// Polyline 0, Edge 31 is 27.245 degrees from Point (-0.425124, -0.667311, 0.611527)
+	// Polyline 0, Edge 32 is 27.245 degrees from Point (-0.425124, -0.667311, 0.611527)
+	// Polyline 0, Edge 33 is 26.115 degrees from Point (-0.425124, -0.667311, 0.611527)
+
 }

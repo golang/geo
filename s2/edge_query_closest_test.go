@@ -135,6 +135,40 @@ func TestClosestEdgeQueryTrueDistanceLessThanChordAngleDistance(t *testing.T) {
 	}
 }
 
+func TestClosestEdgeQueryTargetPointInsideIndexedPolygon(t *testing.T) {
+	// Tests a target point in the interior of an indexed polygon.
+	// (The index also includes a polyline loop with no interior.)
+	index := makeShapeIndex("# 0:0, 0:5, 5:5, 5:0 # 0:10, 0:15, 5:15, 5:10")
+	opts := NewClosestEdgeQueryOptions().
+		IncludeInteriors(true).
+		DistanceLimit(s1.ChordAngleFromAngle(s1.Angle(1) * s1.Degree))
+	query := NewClosestEdgeQuery(index, opts)
+
+	target := NewMinDistanceToPointTarget(parsePoint("2:12"))
+
+	results := query.FindEdges(target)
+	if len(results) != 1 {
+		t.Fatalf("len(results) = %v, want 1", len(results))
+	}
+
+	r0 := results[0]
+	if r0.Distance() != 0 {
+		t.Errorf("result[0].Distance = %v, want 0", r0.Distance())
+	}
+	if r0.shapeID != 1 {
+		t.Errorf("result[0].shapeID = %v, want 1", r0.shapeID)
+	}
+	if r0.edgeID != -1 {
+		t.Errorf("result[0].edgeID = %v, want -1", r0.edgeID)
+	}
+	if !r0.IsInterior() {
+		t.Errorf("first edge should have been interior to the polygon")
+	}
+	if r0.IsEmpty() {
+		t.Errorf("result should not have been empty")
+	}
+}
+
 func TestClosestEdgeQueryTargetPolygonContainingIndexedPoints(t *testing.T) {
 	// Two points are contained within a polyline loop (no interior) and two
 	// points are contained within a polygon.
@@ -214,7 +248,7 @@ func BenchmarkEdgeQueryFindEdgesClosestInterior(b *testing.B) {
 	benchmarkEdgeQueryFindClosest(b, opts)
 }
 
-func BenchmarkEdgeQueryFindEdgesClosestErrorPercent(b *testing.B) {
+func BenchmarkEdgeQueryFindEdgesClosestErrorPoint01Percent(b *testing.B) {
 	// Test searching with an error tolerance.  Allowing 1% error makes searches
 	// 6x faster in the case of regular loops with a large number of vertices.
 	opts := &edgeQueryBenchmarkOptions{
@@ -231,8 +265,24 @@ func BenchmarkEdgeQueryFindEdgesClosestErrorPercent(b *testing.B) {
 	}
 
 	benchmarkEdgeQueryFindClosest(b, opts)
+}
 
-	opts.maxErrorFraction = 0.1
+func BenchmarkEdgeQueryFindEdgesClosestErrorPoint1Percent(b *testing.B) {
+	// Test searching with an error tolerance.  Allowing 1% error makes searches
+	// 6x faster in the case of regular loops with a large number of vertices.
+	opts := &edgeQueryBenchmarkOptions{
+		fact:                     fractalLoopShapeIndexGenerator,
+		includeInteriors:         false,
+		targetType:               queryTypePoint,
+		numTargetEdges:           0,
+		chooseTargetFromIndex:    false,
+		radiusKm:                 1000,
+		maxDistanceFraction:      -1,
+		maxErrorFraction:         0.1,
+		targetRadiusFraction:     0.0,
+		centerSeparationFraction: -2.0,
+	}
+
 	benchmarkEdgeQueryFindClosest(b, opts)
 }
 

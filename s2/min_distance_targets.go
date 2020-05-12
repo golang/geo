@@ -96,7 +96,7 @@ func (m *MinDistanceToPointTarget) visitContainingShapes(index *ShapeIndex, v sh
 }
 
 func (m *MinDistanceToPointTarget) setMaxError(maxErr s1.ChordAngle) bool { return false }
-func (m *MinDistanceToPointTarget) maxBruteForceIndexSize() int           { return 120 }
+func (m *MinDistanceToPointTarget) maxBruteForceIndexSize() int           { return 30 }
 func (m *MinDistanceToPointTarget) distance() distance                    { return m.dist }
 
 // ----------------------------------------------------------
@@ -153,7 +153,7 @@ func (m *MinDistanceToEdgeTarget) visitContainingShapes(index *ShapeIndex, v sha
 }
 
 func (m *MinDistanceToEdgeTarget) setMaxError(maxErr s1.ChordAngle) bool { return false }
-func (m *MinDistanceToEdgeTarget) maxBruteForceIndexSize() int           { return 60 }
+func (m *MinDistanceToEdgeTarget) maxBruteForceIndexSize() int           { return 30 }
 func (m *MinDistanceToEdgeTarget) distance() distance                    { return m.dist }
 
 // ----------------------------------------------------------

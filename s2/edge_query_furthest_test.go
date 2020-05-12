@@ -292,5 +292,3 @@ func TestFurthestEdgeQueryPointCloudEdges(t *testing.T) {
 // func TestFurthestEdgeQueryDistanceEqualToLimit(t *testing.T) {}
 // func TestFurthestEdgeQueryTrueDistanceGreaterThanChordAngleDistance(t *testing.T) { }
 // func TestFurthestEdgeQueryFullLaxPolygonTarget(t *testing.T) {}
-//
-// Benchmarking code.

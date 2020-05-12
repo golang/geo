@@ -232,6 +232,15 @@ func NewShapeIndexIterator(index *ShapeIndex, pos ...ShapeIndexIteratorPos) *Sha
 	return s
 }
 
+func (s *ShapeIndexIterator) clone() *ShapeIndexIterator {
+	return &ShapeIndexIterator{
+		index:    s.index,
+		position: s.position,
+		id:       s.id,
+		cell:     s.cell,
+	}
+}
+
 // CellID returns the CellID of the current index cell.
 // If s.Done() is true, a value larger than any valid CellID is returned.
 func (s *ShapeIndexIterator) CellID() CellID {

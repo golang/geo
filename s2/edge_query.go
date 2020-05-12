@@ -147,17 +147,11 @@ func (e EdgeQueryResult) IsEmpty() bool {
 // Less reports if this results is less that the other first by distance,
 // then by (shapeID, edgeID). This is used for sorting.
 func (e EdgeQueryResult) Less(other EdgeQueryResult) bool {
-	if e.distance.less(other.distance) {
-		return true
+	if e.distance.chordAngle() != other.distance.chordAngle() {
+		return e.distance.less(other.distance)
 	}
-	if other.distance.less(e.distance) {
-		return false
-	}
-	if e.shapeID < other.shapeID {
-		return true
-	}
-	if other.shapeID < e.shapeID {
-		return false
+	if e.shapeID != other.shapeID {
+		return e.shapeID < other.shapeID
 	}
 	return e.edgeID < other.edgeID
 }
@@ -219,6 +213,22 @@ type EdgeQuery struct {
 
 	// testedEdges tracks the set of shape and edges that have already been tested.
 	testedEdges map[ShapeEdgeID]uint32
+
+	// For the optimized algorihm we precompute the top-level CellIDs that
+	// will be added to the priority queue. There can be at most 6 of these
+	// cells. Essentially this is just a covering of the indexed edges, except
+	// that we also store pointers to the corresponding ShapeIndexCells to
+	// reduce the number of index seeks required.
+	indexCovering []CellID
+	indexCells    []*ShapeIndexCell
+
+	// The algorithm maintains a priority queue of unprocessed CellIDs, sorted
+	// in increasing order of distance from the target.
+	queue *queryQueue
+
+	iter                *ShapeIndexIterator
+	maxDistanceCovering []CellID
+	initialCells        []CellID
 }
 
 // NewClosestEdgeQuery returns an EdgeQuery that is used for finding the
@@ -245,11 +255,14 @@ func NewClosestEdgeQuery(index *ShapeIndex, opts *EdgeQueryOptions) *EdgeQuery {
 	if opts == nil {
 		opts = NewClosestEdgeQueryOptions()
 	}
-	return &EdgeQuery{
+	e := &EdgeQuery{
 		testedEdges: make(map[ShapeEdgeID]uint32),
 		index:       index,
 		opts:        opts.common,
+		queue:       newQueryQueue(),
 	}
+
+	return e
 }
 
 // NewFurthestEdgeQuery returns an EdgeQuery that is used for finding the
@@ -264,11 +277,22 @@ func NewFurthestEdgeQuery(index *ShapeIndex, opts *EdgeQueryOptions) *EdgeQuery 
 	if opts == nil {
 		opts = NewFurthestEdgeQueryOptions()
 	}
-	return &EdgeQuery{
+	e := &EdgeQuery{
 		testedEdges: make(map[ShapeEdgeID]uint32),
 		index:       index,
 		opts:        opts.common,
+		queue:       newQueryQueue(),
 	}
+
+	return e
+}
+
+// Reset resets the state of this EdgeQuery.
+func (e *EdgeQuery) Reset() {
+	e.indexNumEdges = 0
+	e.indexNumEdgesLimit = 0
+	e.indexCovering = nil
+	e.indexCells = nil
 }
 
 // FindEdges returns the edges for the given target that satisfy the current options.
@@ -462,10 +486,7 @@ func (e *EdgeQuery) findEdgesInternal(target distanceTarget, opts *queryOptions)
 		// If the target takes advantage of maxError then we need to avoid
 		// duplicate edges explicitly. (Otherwise it happens automatically.)
 		e.avoidDuplicates = targetUsesMaxError && opts.maxResults > 1
-
-		// TODO(roberts): Uncomment when optimized is completed.
-		e.findEdgesBruteForce()
-		//e.findEdgesOptimized()
+		e.findEdgesOptimized()
 	}
 }
 
@@ -505,8 +526,278 @@ func (e *EdgeQuery) findEdgesBruteForce() {
 	}
 }
 
+func (e *EdgeQuery) findEdgesOptimized() {
+	e.initQueue()
+	// Repeatedly find the closest Cell to "target" and either split it into
+	// its four children or process all of its edges.
+	for e.queue.size() > 0 {
+		// We need to copy the top entry before removing it, and we need to
+		// remove it before adding any new entries to the queue.
+		entry := e.queue.pop()
+
+		if !entry.distance.less(e.distanceLimit) {
+			e.queue.reset() // Clear any remaining entries.
+			break
+		}
+		// If this is already known to be an index cell, just process it.
+		if entry.indexCell != nil {
+			e.processEdges(entry)
+			continue
+		}
+		// Otherwise split the cell into its four children.  Before adding a
+		// child back to the queue, we first check whether it is empty.  We do
+		// this in two seek operations rather than four by seeking to the key
+		// between children 0 and 1 and to the key between children 2 and 3.
+		id := entry.id
+		ch := id.Children()
+		e.iter.seek(ch[1].RangeMin())
+
+		if !e.iter.Done() && e.iter.CellID() <= ch[1].RangeMax() {
+			e.processOrEnqueueCell(ch[1])
+		}
+		if e.iter.Prev() && e.iter.CellID() >= id.RangeMin() {
+			e.processOrEnqueueCell(ch[0])
+		}
+
+		e.iter.seek(ch[3].RangeMin())
+		if !e.iter.Done() && e.iter.CellID() <= id.RangeMax() {
+			e.processOrEnqueueCell(ch[3])
+		}
+		if e.iter.Prev() && e.iter.CellID() >= ch[2].RangeMin() {
+			e.processOrEnqueueCell(ch[2])
+		}
+	}
+}
+
+func (e *EdgeQuery) processOrEnqueueCell(id CellID) {
+	if e.iter.CellID() == id {
+		e.processOrEnqueue(id, e.iter.IndexCell())
+	} else {
+		e.processOrEnqueue(id, nil)
+	}
+}
+
+func (e *EdgeQuery) initQueue() {
+	if len(e.indexCovering) == 0 {
+		// We delay iterator initialization until now to make queries on very
+		// small indexes a bit faster (i.e., where brute force is used).
+		e.iter = NewShapeIndexIterator(e.index)
+	}
+
+	// Optimization: if the user is searching for just the closest edge, and the
+	// center of the target's bounding cap happens to intersect an index cell,
+	// then we try to limit the search region to a small disc by first
+	// processing the edges in that cell.  This sets distance_limit_ based on
+	// the closest edge in that cell, which we can then use to limit the search
+	// area.  This means that the cell containing "target" will be processed
+	// twice, but in general this is still faster.
+	//
+	// TODO(roberts): Even if the cap center is not contained, we could still
+	// process one or both of the adjacent index cells in CellID order,
+	// provided that those cells are closer than distanceLimit.
+	cb := e.target.capBound()
+	if cb.IsEmpty() {
+		return // Empty target.
+	}
+
+	if e.opts.maxResults == 1 && e.iter.LocatePoint(cb.Center()) {
+		e.processEdges(&queryQueueEntry{
+			distance:  e.target.distance().zero(),
+			id:        e.iter.CellID(),
+			indexCell: e.iter.IndexCell(),
+		})
+		// Skip the rest of the algorithm if we found an intersecting edge.
+		if e.distanceLimit == e.target.distance().zero() {
+			return
+		}
+	}
+	if len(e.indexCovering) == 0 {
+		e.initCovering()
+	}
+	if e.distanceLimit == e.target.distance().infinity() {
+		// Start with the precomputed index covering.
+		for i := range e.indexCovering {
+			e.processOrEnqueue(e.indexCovering[i], e.indexCells[i])
+		}
+	} else {
+		// Compute a covering of the search disc and intersect it with the
+		// precomputed index covering.
+		coverer := &RegionCoverer{MaxCells: 4, LevelMod: 1, MaxLevel: maxLevel}
+
+		radius := cb.Radius() + e.distanceLimit.chordAngleBound().Angle()
+		searchCB := CapFromCenterAngle(cb.Center(), radius)
+		maxDistCover := coverer.FastCovering(searchCB)
+		e.initialCells = CellUnionFromIntersection(e.indexCovering, maxDistCover)
+
+		// Now we need to clean up the initial cells to ensure that they all
+		// contain at least one cell of the ShapeIndex. (Some may not intersect
+		// the index at all, while other may be descendants of an index cell.)
+		i, j := 0, 0
+		for i < len(e.initialCells) {
+			idI := e.initialCells[i]
+			// Find the top-level cell that contains this initial cell.
+			for e.indexCovering[j].RangeMax() < idI {
+				j++
+			}
+
+			idJ := e.indexCovering[j]
+			if idI == idJ {
+				// This initial cell is one of the top-level cells.  Use the
+				// precomputed ShapeIndexCell pointer to avoid an index seek.
+				e.processOrEnqueue(idJ, e.indexCells[j])
+				i++
+				j++
+			} else {
+				// This initial cell is a proper descendant of a top-level cell.
+				// Check how it is related to the cells of the ShapeIndex.
+				r := e.iter.LocateCellID(idI)
+				if r == Indexed {
+					// This cell is a descendant of an index cell.
+					// Enqueue it and skip any other initial cells
+					// that are also descendants of this cell.
+					e.processOrEnqueue(e.iter.CellID(), e.iter.IndexCell())
+					lastID := e.iter.CellID().RangeMax()
+					for i < len(e.initialCells) && e.initialCells[i] <= lastID {
+						i++
+					}
+				} else {
+					// Enqueue the cell only if it contains at least one index cell.
+					if r == Subdivided {
+						e.processOrEnqueue(idI, nil)
+					}
+					i++
+				}
+			}
+		}
+	}
+}
+
+func (e *EdgeQuery) initCovering() {
+	// Find the range of Cells spanned by the index and choose a level such
+	// that the entire index can be covered with just a few cells. These are
+	// the "top-level" cells. There are two cases:
+	//
+	//  - If the index spans more than one face, then there is one top-level cell
+	// per spanned face, just big enough to cover the index cells on that face.
+	//
+	//  - If the index spans only one face, then we find the smallest cell "C"
+	// that covers the index cells on that face (just like the case above).
+	// Then for each of the 4 children of "C", if the child contains any index
+	// cells then we create a top-level cell that is big enough to just fit
+	// those index cells (i.e., shrinking the child as much as possible to fit
+	// its contents). This essentially replicates what would happen if we
+	// started with "C" as the top-level cell, since "C" would immediately be
+	// split, except that we take the time to prune the children further since
+	// this will save work on every subsequent query.
+	e.indexCovering = make([]CellID, 0, 6)
+
+	// TODO(roberts): Use a single iterator below and save position
+	// information using pair {CellID, ShapeIndexCell}.
+	next := NewShapeIndexIterator(e.index, IteratorBegin)
+	last := NewShapeIndexIterator(e.index, IteratorEnd)
+	last.Prev()
+	if next.CellID() != last.CellID() {
+		// The index has at least two cells. Choose a level such that the entire
+		// index can be spanned with at most 6 cells (if the index spans multiple
+		// faces) or 4 cells (it the index spans a single face).
+		level, ok := next.CellID().CommonAncestorLevel(last.CellID())
+		if !ok {
+			level = 0
+		} else {
+			level++
+		}
+
+		// Visit each potential top-level cell except the last (handled below).
+		lastID := last.CellID().Parent(level)
+		for id := next.CellID().Parent(level); id != lastID; id = id.Next() {
+			// Skip any top-level cells that don't contain any index cells.
+			if id.RangeMax() < next.CellID() {
+				continue
+			}
+
+			// Find the range of index cells contained by this top-level cell and
+			// then shrink the cell if necessary so that it just covers them.
+			cellFirst := next.clone()
+			next.seek(id.RangeMax().Next())
+			cellLast := next.clone()
+			cellLast.Prev()
+			e.addInitialRange(cellFirst, cellLast)
+			break
+		}
+
+	}
+	e.addInitialRange(next, last)
+}
+
+// addInitialRange adds an entry to the indexCovering and indexCells that covers the given
+// inclusive range of cells.
+//
+// This requires that first and last cells have a common ancestor.
+func (e *EdgeQuery) addInitialRange(first, last *ShapeIndexIterator) {
+	if first.CellID() == last.CellID() {
+		// The range consists of a single index cell.
+		e.indexCovering = append(e.indexCovering, first.CellID())
+		e.indexCells = append(e.indexCells, first.IndexCell())
+	} else {
+		// Add the lowest common ancestor of the given range.
+		level, _ := first.CellID().CommonAncestorLevel(last.CellID())
+		e.indexCovering = append(e.indexCovering, first.CellID().Parent(level))
+		e.indexCells = append(e.indexCells, nil)
+	}
+}
+
+// processEdges processes all the edges of the given index cell.
+func (e *EdgeQuery) processEdges(entry *queryQueueEntry) {
+	for _, clipped := range entry.indexCell.shapes {
+		shape := e.index.Shape(clipped.shapeID)
+		for j := 0; j < clipped.numEdges(); j++ {
+			e.maybeAddResult(shape, int32(clipped.edges[j]))
+		}
+	}
+}
+
+// processOrEnqueue the given cell id and indexCell.
+func (e *EdgeQuery) processOrEnqueue(id CellID, indexCell *ShapeIndexCell) {
+	if indexCell != nil {
+		// If this index cell has only a few edges, then it is faster to check
+		// them directly rather than computing the minimum distance to the Cell
+		// and inserting it into the queue.
+		const minEdgesToEnqueue = 10
+		numEdges := indexCell.numEdges()
+		if numEdges == 0 {
+			return
+		}
+		if numEdges < minEdgesToEnqueue {
+			// Set "distance" to zero to avoid the expense of computing it.
+			e.processEdges(&queryQueueEntry{
+				distance:  e.target.distance().zero(),
+				id:        id,
+				indexCell: indexCell,
+			})
+			return
+		}
+	}
+
+	// Otherwise compute the minimum distance to any point in the cell and add
+	// it to the priority queue.
+	cell := CellFromCellID(id)
+	dist := e.distanceLimit
+	var ok bool
+	if dist, ok = e.target.updateDistanceToCell(cell, dist); !ok {
+		return
+	}
+	if e.useConservativeCellDistance {
+		// Ensure that "distance" is a lower bound on the true distance to the cell.
+		dist = dist.sub(e.target.distance().fromChordAngle(e.opts.maxError))
+	}
+
+	e.queue.push(&queryQueueEntry{
+		distance:  dist,
+		id:        id,
+		indexCell: indexCell,
+	})
+}
+
 // TODO(roberts): Remaining pieces
-// Add clear/reset/re-init method to empty out the state of the query.
-// findEdgesOptimized and related methods.
 // GetEdge
 // Project

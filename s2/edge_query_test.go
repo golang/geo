@@ -333,9 +333,7 @@ func benchmarkEdgeQueryFindClosest(b *testing.B, bmOpts *edgeQueryBenchmarkOptio
 		opts.MaxError(s1.ChordAngleFromAngle(s1.Angle(bmOpts.maxErrorFraction) * radius))
 	}
 
-	// TODO(roberts): Once there is a non-brute-force option, set it here.
-	// opts.UseBruteForce(opts.bruteForce)
-
+	opts.UseBruteForce(*benchmarkBruteForce)
 	query := NewClosestEdgeQuery(index, opts)
 
 	delta := 0 // Bresenham-type algorithm for geometry sampling.
@@ -430,6 +428,7 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 	opts.randomSeed++
 	indexCap := CapFromCenterAngle(randomPoint(), opts.radiusKm)
 
+	query.Reset()
 	queryIndex.Reset()
 	opts.fact(indexCap, opts.numIndexEdges, queryIndex)
 
