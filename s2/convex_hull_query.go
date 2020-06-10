@@ -16,6 +16,8 @@ package s2
 
 import (
 	"sort"
+
+	"github.com/golang/geo/r3"
 )
 
 // ConvexHullQuery builds the convex hull of any collection of points,
@@ -231,7 +233,24 @@ func singlePointLoop(p Point) *Loop {
 
 // singleEdgeLoop constructs a loop consisting of the two vertices and their midpoint.
 func singleEdgeLoop(a, b Point) *Loop {
-	vertices := []Point{a, b, {a.Add(b.Vector).Normalize()}}
+	// If the points are exactly antipodal we return the full loop.
+	//
+	// Note that we could use the code below even in this case (which would
+	// return a zero-area loop that follows the edge AB), except that (1) the
+	// direction of AB is defined using symbolic perturbations and therefore is
+	// not predictable by ordinary users, and (2) Loop disallows anitpodal
+	// adjacent vertices and so we would need to use 4 vertices to define the
+	// degenerate loop. (Note that the Loop antipodal vertex restriction is
+	// historical and now could easily be removed, however it would still have
+	// the problem that the edge direction is not easily predictable.)
+	if a.Add(b.Vector) == (r3.Vector{}) {
+		return FullLoop()
+	}
+
+	// Construct a loop consisting of the two vertices and their midpoint.  We
+	// use Interpolate() to ensure that the midpoint is very close to
+	// the edge even when its endpoints nearly antipodal.
+	vertices := []Point{a, b, Interpolate(0.5, a, b)}
 	loop := LoopFromPoints(vertices)
 	// The resulting loop may be clockwise, so invert it if necessary.
 	loop.Normalize()

@@ -84,6 +84,16 @@ func TestConvexHullQueryTwoPoints(t *testing.T) {
 	}
 }
 
+func TestConvexHullAntipodalPoints(t *testing.T) {
+	query := NewConvexHullQuery()
+	query.AddPoint(PointFromCoords(0, 0, 1))
+	query.AddPoint(PointFromCoords(0, 0, -1))
+	result := query.ConvexHull()
+	if !result.IsFull() {
+		t.Errorf("antipodal points should return a Full Polygon, got: %v", result)
+	}
+}
+
 func loopHasVertex(l *Loop, p Point) bool {
 	for _, v := range l.vertices {
 		if v == p {
