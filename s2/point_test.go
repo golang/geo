@@ -39,8 +39,6 @@ func TestOriginPoint(t *testing.T) {
 	}
 
 	// Check that the origin is not too close to either pole.
-	// The Earth's mean radius in kilometers (according to NASA).
-	const earthRadiusKm = 6371.01
 	if dist := math.Acos(OriginPoint().Z) * earthRadiusKm; dist <= 50 {
 		t.Errorf("Origin point is to close to the North Pole. Got %v, want >= 50km", dist)
 	}

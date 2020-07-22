@@ -42,10 +42,11 @@ func float64Near(x, y, ε float64) bool {
 
 // TODO(roberts): Add in flag to allow specifying the random seed for repeatable tests.
 
+// The Earth's mean radius in kilometers (according to NASA).
+const earthRadiusKm = 6371.01
+
 // kmToAngle converts a distance on the Earth's surface to an angle.
 func kmToAngle(km float64) s1.Angle {
-	// The Earth's mean radius in kilometers (according to NASA).
-	const earthRadiusKm = 6371.01
 	return s1.Angle(km / earthRadiusKm)
 }
 

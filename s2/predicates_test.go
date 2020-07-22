@@ -227,7 +227,6 @@ func TestPredicatesRobustSign(t *testing.T) {
 }
 
 func TestPredicatesStableSignFailureRate(t *testing.T) {
-	const earthRadiusKm = 6371.01
 	const iters = 1000
 
 	// Verify that stableSign is able to handle most cases where the three

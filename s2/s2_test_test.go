@@ -23,8 +23,6 @@ import (
 )
 
 func TestKmToAngle(t *testing.T) {
-	const earthRadiusKm = 6371.01
-
 	tests := []struct {
 		have float64
 		want s1.Angle
