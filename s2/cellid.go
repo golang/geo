@@ -495,8 +495,10 @@ func (ci *CellID) decode(d *decoder) {
 // TODO: the methods below are not exported yet.  Settle on the entire API design
 // before doing this.  Do we want to mirror the C++ one as closely as possible?
 
-// distanceFromBegin returns the number of steps that this cell is from the first
-// node in the S2 hierarchy at our level. (i.e., FromFace(0).ChildBeginAtLevel(ci.Level())).
+// distanceFromBegin returns the number of steps along the Hilbert curve that
+// this cell is from the first node in the S2 hierarchy at our level. (i.e.,
+// FromFace(0).ChildBeginAtLevel(ci.Level())). This is analogous to Pos(), but
+// for this cell's level.
 // The return value is always non-negative.
 func (ci CellID) distanceFromBegin() int64 {
 	return int64(ci >> uint64(2*(maxLevel-ci.Level())+1))
