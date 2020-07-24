@@ -72,6 +72,7 @@ type Loop struct {
 func LoopFromPoints(pts []Point) *Loop {
 	l := &Loop{
 		vertices: pts,
+		index:    NewShapeIndex(),
 	}
 
 	l.initOriginAndBound()
@@ -96,6 +97,7 @@ func LoopFromCell(c Cell) *Loop {
 			c.Vertex(2),
 			c.Vertex(3),
 		},
+		index: NewShapeIndex(),
 	}
 
 	l.initOriginAndBound()
@@ -587,16 +589,24 @@ func (l *Loop) bruteForceContainsPoint(p Point) bool {
 
 // ContainsPoint returns true if the loop contains the point.
 func (l *Loop) ContainsPoint(p Point) bool {
-	// Empty and full loops don't need a special case, but invalid loops with
-	// zero vertices do, so we might as well handle them all at once.
-	if len(l.vertices) < 3 {
-		return l.originInside
+	if !l.index.IsFresh() && !l.bound.ContainsPoint(p) {
+		return false
 	}
 
-	// For small loops, and during initial construction, it is faster to just
-	// check all the crossing.
+	// For small loops it is faster to just check all the crossings.  We also
+	// use this method during loop initialization because InitOriginAndBound()
+	// calls Contains() before InitIndex().  Otherwise, we keep track of the
+	// number of calls to Contains() and only build the index when enough calls
+	// have been made so that we think it is worth the effort.  Note that the
+	// code below is structured so that if many calls are made in parallel only
+	// one thread builds the index, while the rest continue using brute force
+	// until the index is actually available.
+
 	const maxBruteForceVertices = 32
-	if len(l.vertices) < maxBruteForceVertices || l.index == nil {
+	// TODO(roberts): add unindexed contains calls tracking
+
+	if len(l.index.shapes) == 0 || // Index has not been initialized yet.
+		len(l.vertices) <= maxBruteForceVertices {
 		return l.bruteForceContainsPoint(p)
 	}
 
@@ -802,20 +812,23 @@ func (l *Loop) TurningAngle() float64 {
 		compensation = (oldSum - sum) + angle
 		n--
 	}
-	return float64(dir) * float64(sum+compensation)
+
+	const maxCurvature = 2*math.Pi - 4*dblEpsilon
+
+	return math.Max(-maxCurvature, math.Min(maxCurvature, float64(dir)*float64(sum+compensation)))
 }
 
 // turningAngleMaxError return the maximum error in TurningAngle. The value is not
 // constant; it depends on the loop.
 func (l *Loop) turningAngleMaxError() float64 {
 	// The maximum error can be bounded as follows:
-	//   2.24 * dblEpsilon    for RobustCrossProd(b, a)
-	//   2.24 * dblEpsilon    for RobustCrossProd(c, b)
+	//   3.00 * dblEpsilon    for RobustCrossProd(b, a)
+	//   3.00 * dblEpsilon    for RobustCrossProd(c, b)
 	//   3.25 * dblEpsilon    for Angle()
 	//   2.00 * dblEpsilon    for each addition in the Kahan summation
 	//   ------------------
-	//   9.73 * dblEpsilon
-	maxErrorPerVertex := 9.73 * dblEpsilon
+	//  11.25 * dblEpsilon
+	maxErrorPerVertex := 11.25 * dblEpsilon
 	return maxErrorPerVertex * float64(len(l.vertices))
 }
 
@@ -1275,12 +1288,12 @@ func (l *Loop) decode(d *decoder) {
 		l.vertices[i].Y = d.readFloat64()
 		l.vertices[i].Z = d.readFloat64()
 	}
+	l.index = NewShapeIndex()
 	l.originInside = d.readBool()
 	l.depth = int(d.readUint32())
 	l.bound.decode(d)
 	l.subregionBound = ExpandForSubregions(l.bound)
 
-	l.index = NewShapeIndex()
 	l.index.Add(l)
 }
 
@@ -1359,6 +1372,7 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 		return
 	}
 
+	l.index = NewShapeIndex()
 	l.originInside = (properties & originInside) != 0
 
 	l.depth = int(d.readUvarint())
@@ -1373,7 +1387,6 @@ func (l *Loop) decodeCompressed(d *decoder, snapLevel int) {
 		l.initBound()
 	}
 
-	l.index = NewShapeIndex()
 	l.index.Add(l)
 }
 

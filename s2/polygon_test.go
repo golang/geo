@@ -1107,6 +1107,23 @@ func TestPolygonArea(t *testing.T) {
 	}
 }
 
+func TestPolygonInvert(t *testing.T) {
+	origin := PointFromLatLng(LatLngFromDegrees(0, 0))
+	pt := PointFromLatLng(LatLngFromDegrees(30, 30))
+	p := PolygonFromLoops([]*Loop{
+		RegularLoop(origin, 1000/earthRadiusKm, 100),
+	})
+
+	if p.ContainsPoint(pt) {
+		t.Errorf("polygon contains point outside itself")
+	}
+
+	p.Invert()
+	if !p.ContainsPoint(pt) {
+		t.Errorf("inverted polygon does not contain point that is inside itself")
+	}
+}
+
 // TODO(roberts): Remaining Tests
 // TestInit
 // TestMultipleInit
