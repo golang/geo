@@ -769,6 +769,16 @@ func (s *ShapeIndex) Remove(shape Shape) {
 	atomic.StoreInt32(&s.status, stale)
 }
 
+// Build triggers the update of the index. Calls to Add and Release are normally
+// queued and processed on the first subsequent query. This has many advantages,
+// the most important of which is that sometimes there *is* no subsequent
+// query, which lets us avoid building the index completely.
+//
+// This method forces any pending updates to be applied immediately.
+func (s *ShapeIndex) Build() {
+	s.maybeApplyUpdates()
+}
+
 // IsFresh reports if there are no pending updates that need to be applied.
 // This can be useful to avoid building the index unnecessarily, or for
 // choosing between two different algorithms depending on whether the index
