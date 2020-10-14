@@ -450,7 +450,7 @@ func (r *Rect) Decode(rd io.Reader) error {
 }
 
 func (r *Rect) decode(d *decoder) {
-	if version := d.readUint8(); int(version) != int(encodingVersion) && d.err == nil {
+	if version := d.readUint8(); int8(version) != encodingVersion && d.err == nil {
 		d.err = fmt.Errorf("can't decode version %d; my version: %d", version, encodingVersion)
 		return
 	}
