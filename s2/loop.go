@@ -167,6 +167,10 @@ func (l *Loop) initOriginAndBound() {
 
 // initBound sets up the approximate bounding Rects for this loop.
 func (l *Loop) initBound() {
+	if len(l.vertices) == 0 {
+		*l = *EmptyLoop()
+		return
+	}
 	// Check for the special "empty" and "full" loops.
 	if l.isEmptyOrFull() {
 		if l.IsEmpty() {

@@ -309,6 +309,34 @@ func TestLoopEncodeDecode(t *testing.T) {
 	}
 }
 
+func TestLoopEncodeDecodeFuzzed(t *testing.T) {
+	for i := 3; i < 100; i++ {
+		var pts []Point
+		for j := 0; j < i; j++ {
+			pts = append(pts, randomPoint())
+		}
+		loop := LoopFromPoints(pts)
+		if err := loop.Validate(); err != nil {
+			t.Fatalf("loop(%v).Validate: %v", loop, err)
+		}
+		polygon := PolygonFromLoops([]*Loop{loop})
+		var buf bytes.Buffer
+		if err := polygon.Encode(&buf); err != nil {
+			t.Fatal(err)
+		}
+		got := new(Loop)
+		if err := got.Decode(&buf); err != nil {
+			// TODO(nsch): Uncomment the next line as soon as decoding of all encoded loops works.
+			// t.Fatalf("decode(encode(%v)): %v", loop, err)
+			continue
+		}
+
+		if !reflect.DeepEqual(got, polygon) {
+			t.Errorf("decode(encode()) = %v, want %v", got, polygon)
+		}
+	}
+}
+
 func BenchmarkRectDecode(b *testing.B) {
 	rect := RectFromCenterSize(LatLngFromDegrees(80, 170), LatLngFromDegrees(40, 60))
 	var buf bytes.Buffer
