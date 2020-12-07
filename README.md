@@ -129,6 +129,7 @@ Approximately ~40% complete.
 *   PointCompression
 *   Region
 *   RegionCoverer
+*   RegionUnion
 *   s2edge_clipping
 *   s2edge_crosser
 *   s2edge_crossings
@@ -193,7 +194,6 @@ started.
 *   PolygonMeasures
 *   RegionIntersection
 *   RegionTermIndexer
-*   RegionUnion
 *   ShapeIndexRegion - Allows ShapeIndexes to be used as Regions for things like
 
 ### Encode/Decode
