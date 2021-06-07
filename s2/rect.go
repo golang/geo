@@ -19,9 +19,9 @@ import (
 	"io"
 	"math"
 
-	"github.com/sreekanth-cb/geo/r1"
+	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r3"
-	"github.com/sreekanth-cb/geo/s1"
+	"github.com/golang/geo/s1"
 )
 
 // Rect represents a closed latitude-longitude rectangle.
@@ -708,3 +708,19 @@ func (r Rect) Centroid() Point {
 
 // BUG: The major differences from the C++ version are:
 //  - Get*Distance, Vertex, InteriorContains(LatLng|Rect|Point)
+
+func RectFromDegrees(latLo, lngLo, latHi, lngHi float64) Rect {
+	// Convenience method to construct a rectangle. This method is
+	// intentionally *not* in the S2LatLngRect interface because the
+	// argument order is ambiguous, but is fine for the test.
+	return Rect{
+		Lat: r1.Interval{
+			Lo: (s1.Angle(latLo) * s1.Degree).Radians(),
+			Hi: (s1.Angle(latHi) * s1.Degree).Radians(),
+		},
+		Lng: s1.IntervalFromEndpoints(
+			(s1.Angle(lngLo) * s1.Degree).Radians(),
+			(s1.Angle(lngHi) * s1.Degree).Radians(),
+		),
+	}
+}
