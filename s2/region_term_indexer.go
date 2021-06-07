@@ -105,10 +105,12 @@ func NewRegionTermIndexerWithOptions(option Options) *RegionTermIndexer {
 
 func (rti *RegionTermIndexer) GetTerm(termTyp TermType, id CellID,
 	prefix string) string {
-	if termTyp == ANCESTOR {
+	return prefix + id.ToToken()
+
+	/*if termTyp == ANCESTOR {
 		return prefix + id.ToToken()
 	}
-	return prefix + marker + id.ToToken()
+	return prefix + marker + id.ToToken()*/
 }
 
 func (rti *RegionTermIndexer) GetIndexTermsForPoint(p Point, prefix string) []string {
