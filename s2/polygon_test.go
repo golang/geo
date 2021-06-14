@@ -17,6 +17,7 @@ package s2
 import (
 	"math"
 	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/golang/geo/s1"
@@ -357,8 +358,11 @@ func checkPolygonInvalid(t *testing.T, label string, loops []*Loop, initOriented
 		f(polygon)
 	}
 
-	if err := polygon.Validate(); err == nil {
+	err := polygon.Validate()
+	if err == nil {
 		t.Errorf("%s: %v.Validate() = %v, want non-nil", label, polygon, err)
+	} else if !strings.Contains(err.Error(), label) {
+		t.Errorf("%s: %v.Validate() = %v, wrong error text", label, polygon, err)
 	}
 }
 
@@ -386,6 +390,15 @@ func TestPolygonIsValidLoopNestingInvalid(t *testing.T) {
 	}
 }
 
+func TestPolygonIsValidInconsistentOrientations(t *testing.T) {
+	const iters = 1000
+
+	for iter := 0; iter < iters; iter++ {
+		loops := generatePolygonConcentricTestLoops(2+randomUniformInt(5), 3)
+		checkPolygonInvalid(t, "inconsistent loop orientations", loops, true, nil)
+	}
+}
+
 // TODO(roberts): Implement remaining validity tests.
 // IsValidTests
 //   TestUnitLength
@@ -396,7 +409,6 @@ func TestPolygonIsValidLoopNestingInvalid(t *testing.T) {
 //   TestFullLoop
 //   TestLoopsCrossing
 //   TestDuplicateEdge
-//   TestInconsistentOrientations
 //   TestLoopDepthNegative
 //   TestLoopNestingInvalid
 //   TestFuzzTest

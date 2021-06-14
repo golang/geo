@@ -57,6 +57,15 @@ type Polygon struct {
 	// hasHoles tracks if this polygon has at least one hole.
 	hasHoles bool
 
+	// hasInconsistentLoopOrientation is true if PolygonFromOrientedLoops() was
+	// called and the given loops had inconsistent orientations (i.e., it is not
+	// possible to construct a polygon such that the interior is on the left-hand
+	// side of all loops).  We need to remember this error so that it can be
+	// returned later by Validate(), since it is not possible to detect this error
+	// once the polygon has been initialized. This field is not preserved by
+	// Encode/Decode.
+	hasInconsistentLoopOrientations bool
+
 	// numVertices keeps the running total of all of the vertices of the contained loops.
 	numVertices int
 
@@ -177,6 +186,19 @@ func PolygonFromOrientedLoops(loops []*Loop) *Polygon {
 		}
 		if containedOrigin[originLoop] != polygonContainsOrigin {
 			p.Invert()
+		}
+	}
+
+	// Verify that the original loops had consistent shell/hole orientations.
+	// Each original loop L should have been inverted if and only if it now
+	// represents a hole.
+	for _, l := range p.Loops() {
+		if (containedOrigin[l] != l.ContainsOrigin()) != l.IsHole() {
+			// There is no point in saving the loop index because the error is a
+			// property of the entire set of loops. In general, there is no way to
+			// determine which ones are incorrect.
+			p.hasInconsistentLoopOrientations = true
+			break
 		}
 	}
 
@@ -468,9 +490,9 @@ func (p *Polygon) Validate() error {
 	// }
 
 	// Check whether initOriented detected inconsistent loop orientations.
-	// if p.hasInconsistentLoopOrientations {
-	// 	return fmt.Errorf("inconsistent loop orientations detected")
-	// }
+	if p.hasInconsistentLoopOrientations {
+		return fmt.Errorf("inconsistent loop orientations detected")
+	}
 
 	// Finally, verify the loop nesting hierarchy.
 	return p.findLoopNestingError()
