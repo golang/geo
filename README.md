@@ -81,9 +81,11 @@ etc).
 
 See http://godoc.org/github.com/golang/geo for specific package documentation.
 
-For an analogous library in C++, see https://github.com/google/s2geometry, in
-Java, see https://github.com/google/s2-geometry-library-java, and Python, see
-https://github.com/google/s2geometry/tree/master/src/python
+For an analogous library:
+* in C++, see https://github.com/google/s2geometry
+* in Kotlin: see https://github.com/Enovea/s2-geometry-kotlin
+* in Java, see https://github.com/google/s2-geometry-library-java
+* in Python, see https://github.com/google/s2geometry/tree/master/src/python
 
 # Status of the Go Library
 
