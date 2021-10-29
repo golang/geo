@@ -14,6 +14,10 @@
 
 package s2
 
+import (
+	"github.com/golang/geo/s1"
+)
+
 type TermType int
 
 var marker = string('$')
@@ -106,11 +110,13 @@ func NewRegionTermIndexerWithOptions(option Options) *RegionTermIndexer {
 func (rti *RegionTermIndexer) GetTerm(termTyp TermType, id CellID,
 	prefix string) string {
 	return prefix + id.ToToken()
-
-	/*if termTyp == ANCESTOR {
-		return prefix + id.ToToken()
-	}
-	return prefix + marker + id.ToToken()*/
+	/*
+		    TODO - revisit this if needed.
+			if termTyp == ANCESTOR {
+				return prefix + id.ToToken()
+			}
+			return prefix + marker + id.ToToken()
+	*/
 }
 
 func (rti *RegionTermIndexer) GetIndexTermsForPoint(p Point, prefix string) []string {
@@ -225,4 +231,9 @@ func (rti *RegionTermIndexer) GetQueryTermsForCanonicalCovering(
 	}
 
 	return rv
+}
+
+func CapFromCenterAndRadius(centerLat, centerLon, dist float64) Cap {
+	return CapFromCenterAngle(PointFromLatLng(
+		LatLngFromDegrees(centerLat, centerLon)), s1.Angle((dist/1000)/6378))
 }
