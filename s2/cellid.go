@@ -317,12 +317,12 @@ func (ci CellID) RangeMin() CellID { return CellID(uint64(ci) - (ci.lsb() - 1)) 
 // RangeMax returns the maximum CellID that is contained within this cell.
 func (ci CellID) RangeMax() CellID { return CellID(uint64(ci) + (ci.lsb() - 1)) }
 
-// Contains returns true iff the CellID contains oci.
+// Contains returns true if the CellID contains oci.
 func (ci CellID) Contains(oci CellID) bool {
 	return uint64(ci.RangeMin()) <= uint64(oci) && uint64(oci) <= uint64(ci.RangeMax())
 }
 
-// Intersects returns true iff the CellID intersects oci.
+// Intersects returns true if the CellID intersects oci.
 func (ci CellID) Intersects(oci CellID) bool {
 	return uint64(oci.RangeMin()) <= uint64(ci.RangeMax()) && uint64(oci.RangeMax()) >= uint64(ci.RangeMin())
 }
