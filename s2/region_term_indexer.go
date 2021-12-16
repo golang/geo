@@ -1,4 +1,4 @@
-// Copyright 2020 Google Inc. All rights reserved.
+// Copyright 2021 Google Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,69 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//
+// Indexing Strategy
+// -----------------
+//
+// Given a query region, we want to find all of the document regions that
+// intersect it.  The first step is to represent all the regions as S2Cell
+// coverings (see S2RegionCoverer).  We then split the problem into two parts,
+// namely finding the document regions that are "smaller" than the query
+// region and those that are "larger" than the query region.
+//
+// We do this by defining two terms for each S2CellId: a "covering term" and
+// an "ancestor term".  (In the implementation below, covering terms are
+// distinguished by prefixing a '$' to them.)  For each document region, we
+// insert a covering term for every cell in the region's covering, and we
+// insert an ancestor term for these cells *and* all of their ancestors.
+//
+// Then given a query region, we can look up all the document regions that
+// intersect its covering by querying the union of the following terms:
+//
+// 1. An "ancestor term" for each cell in the query region.  These terms
+//    ensure that we find all document regions that are "smaller" than the
+//    query region, i.e. where the query region contains a cell that is either
+//    a cell of a document region or one of its ancestors.
+//
+// 2. A "covering term" for every ancestor of the cells in the query region.
+//    These terms ensure that we find all the document regions that are
+//    "larger" than the query region, i.e. where document region contains a
+//    cell that is a (proper) ancestor of a cell in the query region.
+//
+// Together, these terms find all of the document regions that intersect the
+// query region.  Furthermore, the number of terms to be indexed and queried
+// are both fairly small, and can be bounded in terms of max_cells() and the
+// number of cell levels used.
+//
+// Optimizations
+// -------------
+//
+// + Cells at the maximum level being indexed (max_level()) have the special
+//   property that they will never be an ancestor of a cell in the query
+//   region.  Therefore we can safely skip generating "covering terms" for
+//   these cells (see query step 2 above).
+//
+// + If the index will contain only points (rather than general regions), then
+//   we can skip all the covering terms mentioned above because there will
+//   never be any document regions larger than the query region.  This can
+//   significantly reduce the size of queries.
+//
+// + If it is more important to optimize index size rather than query speed,
+//   the number of index terms can be reduced by creating ancestor terms only
+//   for the *proper* ancestors of the cells in a document region, and
+//   compensating for this by including covering terms for all cells in the
+//   query region (in addition to their ancestors).
+//
+//   Effectively, when the query region and a document region contain exactly
+//   the same cell, we have a choice about whether to treat this match as a
+//   "covering term" or an "ancestor term".  One choice minimizes query size
+//   while the other minimizes index size.
+
 package s2
 
 import (
+	"strings"
+
 	"github.com/golang/geo/s1"
 )
 
@@ -86,6 +146,49 @@ func (o *Options) trueMaxLevel() int {
 	return trueMax
 }
 
+// RegionTermIndexer is a helper struct for adding spatial data to an
+// information retrieval system.  Such systems work by converting documents
+// into a collection of "index terms" (e.g., representing words or phrases),
+// and then building an "inverted index" that maps each term to a list of
+// documents (and document positions) where that term occurs.
+//
+// This class deals with the problem of converting spatial data into index
+// terms, which can then be indexed along with the other document information.
+//
+// Spatial data is represented using the S2Region type.  Useful S2Region
+// subtypes include:
+//
+//   S2Cap
+//    - a disc-shaped region
+//
+//   S2LatLngRect
+//    - a rectangle in latitude-longitude coordinates
+//
+//   S2Polyline
+//    - a polyline
+//
+//   S2Polygon
+//    - a polygon, possibly with multiple holes and/or shells
+//
+//   S2CellUnion
+//    - a region approximated as a collection of S2CellIds
+//
+//   S2ShapeIndexRegion
+//    - an arbitrary collection of points, polylines, and polygons
+//
+//   S2ShapeIndexBufferedRegion
+//    - like the above, but expanded by a given radius
+//
+//   S2RegionUnion, S2RegionIntersection
+//    - the union or intersection of arbitrary other regions
+//
+// So for example, if you want to query documents that are within 500 meters
+// of a polyline, you could use an S2ShapeIndexBufferedRegion containing the
+// polyline with a radius of 500 meters.
+//
+// For example usage refer:
+// https://github.com/google/s2geometry/blob/ad1489e898f369ca09e2099353ccd55bd0fd7a26/src/s2/s2region_term_indexer.h#L58
+
 type RegionTermIndexer struct {
 	options       Options
 	regionCoverer RegionCoverer
@@ -109,17 +212,21 @@ func NewRegionTermIndexerWithOptions(option Options) *RegionTermIndexer {
 
 func (rti *RegionTermIndexer) GetTerm(termTyp TermType, id CellID,
 	prefix string) string {
-	return prefix + id.ToToken()
-	/*
-		    TODO - revisit this if needed.
-			if termTyp == ANCESTOR {
-				return prefix + id.ToToken()
-			}
-			return prefix + marker + id.ToToken()
-	*/
+	if termTyp == ANCESTOR {
+		return prefix + id.ToToken()
+	}
+	return prefix + marker + id.ToToken()
 }
 
 func (rti *RegionTermIndexer) GetIndexTermsForPoint(p Point, prefix string) []string {
+	// See the top of this file for an overview of the indexing strategy.
+	//
+	// The last cell generated by this loop is effectively the covering for
+	// the given point.  You might expect that this cell would be indexed as a
+	// covering term, but as an optimization we always index these cells as
+	// ancestor terms only.  This is possible because query regions will never
+	// contain a descendant of such cells.  Note that this is true even when
+	// max_level() != true_max_level() (see S2RegionCoverer::Options).
 	cellID := cellIDFromPoint(p)
 	var rv []string
 	for l := rti.options.minLevel; l <= rti.options.maxLevel; l += rti.options.levelMod {
@@ -141,6 +248,14 @@ func (rti *RegionTermIndexer) GetIndexTermsForRegion(region Region,
 
 func (rti *RegionTermIndexer) GetIndexTermsForCanonicalCovering(
 	covering CellUnion, prefix string) []string {
+	// See the top of this file for an overview of the indexing strategy.
+	//
+	// Cells in the covering are normally indexed as covering terms.  If we are
+	// optimizing for query time rather than index space, they are also indexed
+	// as ancestor terms (since this lets us reduce the number of terms in the
+	// query).  Finally, as an optimization we always index true_max_level()
+	// cells as ancestor cells only, since these cells have the special property
+	// that query regions will never contain a descendant of these cells.
 	var rv []string
 	prevID := CellID(0)
 	tml := rti.options.trueMaxLevel()
@@ -236,4 +351,18 @@ func (rti *RegionTermIndexer) GetQueryTermsForCanonicalCovering(
 func CapFromCenterAndRadius(centerLat, centerLon, dist float64) Cap {
 	return CapFromCenterAngle(PointFromLatLng(
 		LatLngFromDegrees(centerLat, centerLon)), s1.Angle((dist/1000)/6378))
+}
+
+// FilterOutCoveringTerms filters out the covering terms so that
+// it helps to reduce the search terms while searching in a one
+// dimensional space. (point only indexing usecase)
+func FilterOutCoveringTerms(terms []string) []string {
+	rv := make([]string, 0, len(terms))
+	for _, term := range terms {
+		if strings.HasPrefix(term, marker) {
+			continue
+		}
+		rv = append(rv, term)
+	}
+	return rv
 }
