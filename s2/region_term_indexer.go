@@ -90,11 +90,84 @@ const (
 var defaultMaxCells = int(8)
 
 type Options struct {
-	maxCells      int
-	minLevel      int
-	maxLevel      int
-	levelMod      int
-	pointsOnly    bool
+	///////////////// Options Inherited From S2RegionCoverer ////////////////
+
+	// maxCells controls the maximum number of cells when approximating
+	// each region.  This parameter value may be changed as often as desired.
+	// e.g. to approximate some regions more accurately than others.
+	//
+	// Increasing this value during indexing will make indexes more accurate
+	// but larger.  Increasing this value for queries will make queries more
+	// accurate but slower.  (See regioncoverer.go for details on how this
+	// parameter affects accuracy.)  For example, if you don't mind large
+	// indexes but want fast serving, it might be reasonable to set
+	// max_cells() == 100 during indexing and max_cells() == 8 for queries.
+	//
+	// DEFAULT: 8  (coarse approximations)
+	maxCells int
+
+	// minLevel and maxLevel control the minimum and maximum size of the
+	// S2Cells used to approximate regions.  Setting these parameters
+	// appropriately can reduce the size of the index and speed up queries by
+	// reducing the number of terms needed.  For example, if you know that
+	// your query regions will rarely be less than 100 meters in width, then
+	// you could set maxLevel to 100.
+	//
+	// This restricts the index to S2Cells that are approximately 100 meters
+	// across or larger.  Similar, if you know that query regions will rarely
+	// be larger than 1000km across, then you could set minLevel similarly.
+	//
+	// If minLevel is set too high, then large regions may generate too
+	// many query terms.  If maxLevel() set too low, then small query
+	// regions will not be able to discriminate which regions they intersect
+	// very precisely and may return many more candidates than necessary.
+	//
+	// If you have no idea about the scale of the regions being queried,
+	// it is perfectly fine to set minLevel to 0 and maxLevel to 30.
+	// The only drawback is that may result in a larger index and slower queries.
+	//
+	// The default parameter values are suitable for query regions ranging
+	// from about 100 meters to 3000 km across.
+	//
+	// DEFAULT: 4  (average cell width == 600km)
+	minLevel int
+
+	// DEFAULT: 16 (average cell width == 150m)
+	maxLevel int
+
+	// Setting levelMod to a value greater than 1 increases the effective
+	// branching factor of the S2Cell hierarchy by skipping some levels.  For
+	// example, if levelMod to 2 then every second level is skipped (which
+	// increases the effective branching factor to 16).  You might want to
+	// consider doing this if your query regions are typically very small
+	// (e.g., single points) and you don't mind increasing the index size
+	// (since skipping levels will reduce the accuracy of cell coverings for a
+	// given maxCells limit).
+	//
+	// DEFAULT: 1  (don't skip any cell levels)
+	levelMod int
+
+	// If your index will only contain points (rather than regions), be sure
+	// to set this flag.  This will generate smaller and faster queries that
+	// are specialized for the points-only case.
+	//
+	// With the default quality settings, this flag reduces the number of
+	// query terms by about a factor of two.  (The improvement gets smaller
+	// as maxCells is increased, but there is really no reason not to use
+	// this flag if your index consists entirely of points.)
+	//
+	// DEFAULT: false
+	pointsOnly bool
+
+	// If true, the index will be optimized for space rather than for query
+	// time.  With the default quality settings, this flag reduces the number
+	// of index terms and increases the number of query terms by the same
+	// factor (approximately 1.3).  The factor increases up to a limiting
+	// ratio of 2.0 as maxCells is increased.
+	//
+	// CAVEAT: This option has no effect if the index contains only points.
+	//
+	// DEFAULT: false
 	optimizeSpace bool
 }
 
