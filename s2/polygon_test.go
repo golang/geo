@@ -1124,6 +1124,29 @@ func TestPolygonInvert(t *testing.T) {
 	}
 }
 
+func TestPolygonProject(t *testing.T) {
+	polygon := makePolygon(nearLoop0+nearLoop2, true)
+	point := PointFromLatLng(LatLngFromDegrees(1.1, 0))
+	projected := polygon.Project(&point)
+	if !projected.ApproxEqual(point) {
+		t.Errorf("projection %v failed for %v", projected, point)
+	}
+
+	point = PointFromLatLng(LatLngFromDegrees(5.1, -2))
+	projected = polygon.Project(&point)
+	expected := PointFromLatLng(LatLngFromDegrees(5, -2))
+	if !projected.ApproxEqual(expected) {
+		t.Errorf("projection %v failed for %v", projected, expected)
+	}
+
+	point = PointFromLatLng(LatLngFromDegrees(0, -3))
+	projected = polygon.Project(&point)
+	expected = PointFromLatLng(LatLngFromDegrees(0, -2))
+	if !projected.ApproxEqual(expected) {
+		t.Errorf("projection %v failed for %v", projected, expected)
+	}
+}
+
 // TODO(roberts): Remaining Tests
 // TestInit
 // TestMultipleInit

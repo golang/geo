@@ -798,6 +798,19 @@ func (e *EdgeQuery) processOrEnqueue(id CellID, indexCell *ShapeIndexCell) {
 	})
 }
 
+func (e *EdgeQuery) GetEdge(result EdgeQueryResult) Edge {
+	return e.index.Shape(result.shapeID).Edge(int(result.edgeID))
+}
+
+func (e *EdgeQuery) Project(point Point, result EdgeQueryResult) Point {
+	if result.edgeID < 0 {
+		return point
+	}
+
+	edge := e.GetEdge(result)
+	return Project(point, edge.V0, edge.V1)
+}
+
 // TODO(roberts): Remaining pieces
 // GetEdge
 // Project

@@ -1184,6 +1184,21 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 	p.initLoopProperties()
 }
 
+func (p *Polygon) Project(point *Point) Point {
+	if p.ContainsPoint(*point) {
+		return *point
+	}
+	return p.ProjectToBoundary(point)
+}
+
+func (p *Polygon) ProjectToBoundary(point *Point) Point {
+	options := NewClosestEdgeQueryOptions().MaxResults(1).IncludeInteriors(false)
+	q := NewClosestEdgeQuery(p.index, options)
+	target := NewMinDistanceToPointTarget(*point)
+	edges := q.FindEdges(target)
+	return q.Project(*point, edges[0])
+}
+
 // TODO(roberts): Differences from C++
 // Centroid
 // SnapLevel
