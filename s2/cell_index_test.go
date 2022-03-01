@@ -214,7 +214,7 @@ func verifyCellIndexContents(t *testing.T, desc string, index *CellIndex) {
 				// Verify that the cell does not intersect the range.
 				if x.cellID.RangeMin() <= r.LimitID().Prev() &&
 					x.cellID.RangeMax() >= r.StartID() {
-					t.Errorf("%s: CellID does not interect the current range: %v <= %v && %v >= %v", desc, x.cellID.RangeMin(), r.LimitID().Prev(), x.cellID.RangeMax(), r.StartID())
+					t.Errorf("%s: CellID does not intersect the current range: %v <= %v && %v >= %v", desc, x.cellID.RangeMin(), r.LimitID().Prev(), x.cellID.RangeMax(), r.StartID())
 				}
 			}
 		}

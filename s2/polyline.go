@@ -559,7 +559,7 @@ func (p *Polyline) Interpolate(fraction float64) (Point, int) {
 // Uninterpolate is the inverse operation of Interpolate. Given a point on the
 // polyline, it returns the ratio of the distance to the point from the
 // beginning of the polyline over the length of the polyline. The return
-// value is always betwen 0 and 1 inclusive.
+// value is always between 0 and 1 inclusive.
 //
 // The polyline should not be empty.  If it has fewer than 2 vertices, the
 // return value is zero.
