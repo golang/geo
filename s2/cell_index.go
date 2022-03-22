@@ -53,11 +53,33 @@ type rangeNode struct {
 // (CellID, label) pairs in an unspecified order.
 type CellIndexIterator struct {
 	// TODO(roberts): Implement
+	cellTree []cellIndexNode
+	pos      int
 }
 
 // NewCellIndexIterator creates an iterator for the given CellIndex.
 func NewCellIndexIterator(index *CellIndex) *CellIndexIterator {
-	return &CellIndexIterator{}
+	return &CellIndexIterator{
+		cellTree: index.cellTree,
+	}
+}
+
+// CellID returns the current CellID.
+func (c *CellIndexIterator) CellID() CellID {
+	return c.cellTree[c.pos].cellID
+}
+
+// Label returns the current Label.
+func (c *CellIndexIterator) Label() int32 {
+	return c.cellTree[c.pos].label
+}
+
+func (c *CellIndexIterator) Done() bool {
+	return c.pos == len(c.cellTree)-1
+}
+
+func (c *CellIndexIterator) Next() {
+	c.pos++
 }
 
 // CellIndexRangeIterator is an iterator that seeks and iterates over a set of
@@ -490,6 +512,70 @@ func (c *CellIndex) Build() {
 		}
 		c.rangeNodes = append(c.rangeNodes, rangeNode{startID, contents})
 	}
+}
+
+type CellVisitor func(CellID, int32) bool
+
+func (c *CellIndex) GetIntersectingLabels(target CellUnion) []int32 {
+	var rv []int32
+	c.IntersectingLabels(target, &rv)
+	return rv
+}
+
+func (c *CellIndex) IntersectingLabels(target CellUnion, labels *[]int32) {
+	c.VisitIntersectingCells(target, func(cellID CellID, label int32) bool {
+		*labels = append(*labels, label)
+		return true
+	})
+	dedupe(labels)
+	sort.Slice(*labels, func(i, j int) bool { return (*labels)[i] < (*labels)[j] })
+}
+
+func dedupe(labels *[]int32) {
+	encountered := make(map[int32]struct{})
+
+	for v := range *labels {
+		encountered[(*labels)[v]] = struct{}{}
+	}
+
+	(*labels) = (*labels)[:0]
+	for key, _ := range encountered {
+		*labels = append(*labels, key)
+	}
+}
+
+func (c *CellIndex) VisitIntersectingCells(target CellUnion,
+	visitor CellVisitor) bool {
+	if len(target) == 0 {
+		return true
+	}
+
+	var pos int
+	cItr := NewCellIndexContentsIterator(c)
+	rItr := NewCellIndexNonEmptyRangeIterator(c)
+	rItr.Begin()
+	for pos < len(target) {
+		if rItr.LimitID() <= target[pos].RangeMin() {
+			rItr.Seek(target[pos].RangeMin())
+		}
+
+		for rItr.StartID() <= target[pos].RangeMax() {
+			for cItr.StartUnion(rItr); cItr.Done(); cItr.Next() {
+				if !visitor(cItr.CellID(), cItr.Label()) {
+					return false
+				}
+			}
+		}
+
+		pos++
+		if pos < len(target) && target[pos].RangeMax() < rItr.StartID() {
+			pos = target.lowerBound(pos, len(target), rItr.StartID())
+			if target[pos-1].RangeMax() >= rItr.StartID() {
+				pos--
+			}
+		}
+	}
+	return true
 }
 
 // TODO(roberts): Differences from C++
