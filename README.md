@@ -1,5 +1,10 @@
 # Overview
 
+This forked version of s2geometry implements a few essential functionalities
+like region term indexer, polygon projections etc for enabling the use of s2geo
+in the information retrieval systems that uses an inverted index for indexing
+and querying the spatial tokens.
+
 S2 is a library for spherical geometry that aims to have the same robustness,
 flexibility, and performance as the best planar geometry libraries.
 
@@ -130,6 +135,7 @@ Approximately ~40% complete.
 *   Region
 *   RegionCoverer
 *   RegionUnion
+*   RegionTermIndexer - (implemented in this fork)
 *   s2edge_clipping
 *   s2edge_crosser
 *   s2edge_crossings
@@ -165,7 +171,7 @@ enough for general use in production code.
 *   CellIndex - A queryable index of CellIDs.
 *   Polygon - Polygons with multiple loops are supported. It fully implements
     Shape and Region, but it's missing most other methods. (Area, Centroid,
-    Distance, Projection, Intersection, Union, Contains, Normalized, etc.)
+    Distance, Intersection, Union, Contains, Normalized, etc.)
 *   PolylineSimplifier - Initial work has begun on this.
 *   s2predicates.go - This file is a collection of helper methods used by other
     parts of the library.
@@ -193,7 +199,6 @@ started.
 *   PointUtil
 *   PolygonMeasures
 *   RegionIntersection
-*   RegionTermIndexer
 *   ShapeIndexRegion - Allows ShapeIndexes to be used as Regions for things like
 
 ### Encode/Decode

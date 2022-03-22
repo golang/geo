@@ -1200,12 +1200,13 @@ func (p *Polygon) ProjectToBoundary(point *Point) Point {
 }
 
 // TODO(roberts): Differences from C++
+// Project - implemented in this fork.
+// ProjectToBoundary - implemented in this fork.
+
 // Centroid
 // SnapLevel
 // DistanceToPoint
 // DistanceToBoundary
-// Project
-// ProjectToBoundary
 // ApproxContains/ApproxDisjoint for Polygons
 // InitTo{Intersection/ApproxIntersection/Union/ApproxUnion/Diff/ApproxDiff}
 // InitToSimplified
