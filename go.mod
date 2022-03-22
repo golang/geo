@@ -1,4 +1,4 @@
-module github.com/sreekanth-cb/geo
+module github.com/blevesearch/geo
 
 go 1.12
 
