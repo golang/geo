@@ -1628,7 +1628,7 @@ func (l *loopCrosser) hasCrossingRelation(ai, bi *rangeIterator) bool {
 		return false
 	}
 
-	if containsCenterMatches(aClipped, l.aCrossingTarget) {
+	if !containsCenterMatches(aClipped, l.aCrossingTarget) {
 		// The crossing target for A is not satisfied, so we skip over these cells of B.
 		bi.seekBeyond(ai)
 		ai.next()
