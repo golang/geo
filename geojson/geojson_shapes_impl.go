@@ -256,9 +256,10 @@ func NewGeoJsonLinestring(points [][]float64) index.GeoJSON {
 
 func (ls *LineString) init() {
 	if ls.pl == nil {
-		latlngs := make([]s2.LatLng, 2)
-		latlngs[0] = s2.LatLngFromDegrees(ls.Vertices[0][1], ls.Vertices[0][0])
-		latlngs[1] = s2.LatLngFromDegrees(ls.Vertices[1][1], ls.Vertices[1][0])
+		latlngs := make([]s2.LatLng, len(ls.Vertices))
+		for i, vertex := range ls.Vertices {
+			latlngs[i] = s2.LatLngFromDegrees(vertex[1], vertex[0])
+		}
 		ls.pl = s2.PolylineFromLatLngs(latlngs)
 	}
 }
@@ -1088,9 +1089,11 @@ func checkLineStringsIntersectsShape(pls []*s2.Polyline, shapeIn,
 	if c, ok := other.(*Circle); ok {
 		centre := c.s2cap.Center()
 		for _, pl := range pls {
-			edge := pl.Edge(0)
-			distance := s2.DistanceFromSegment(centre, edge.V0, edge.V1)
-			return distance <= c.s2cap.Radius(), nil
+			for i := 0; i < pl.NumEdges(); i++ {
+				edge := pl.Edge(i)
+				distance := s2.DistanceFromSegment(centre, edge.V0, edge.V1)
+				return distance <= c.s2cap.Radius(), nil
+			}
 		}
 
 		return false, nil
@@ -1099,18 +1102,20 @@ func checkLineStringsIntersectsShape(pls []*s2.Polyline, shapeIn,
 	// check if the other shape is a envelope.
 	if e, ok := other.(*Envelope); ok {
 		for _, pl := range pls {
-			edge := pl.Edge(0)
-			latlng1 := s2.LatLngFromPoint(edge.V0)
-			latlng2 := s2.LatLngFromPoint(edge.V1)
-			a := []float64{latlng1.Lng.Degrees(), latlng1.Lat.Degrees()}
-			b := []float64{latlng2.Lng.Degrees(), latlng2.Lat.Degrees()}
-			for j := 0; j < 4; j++ {
-				v1 := e.r.Vertex(j)
-				v2 := e.r.Vertex((j + 1) % 4)
-				c := []float64{v1.Lng.Degrees(), v1.Lat.Degrees()}
-				d := []float64{v2.Lng.Degrees(), v2.Lat.Degrees()}
-				if doIntersect(a, b, c, d) {
-					return true, nil
+			for i := 0; i < pl.NumEdges(); i++ {
+				edge := pl.Edge(i)
+				latlng1 := s2.LatLngFromPoint(edge.V0)
+				latlng2 := s2.LatLngFromPoint(edge.V1)
+				a := []float64{latlng1.Lng.Degrees(), latlng1.Lat.Degrees()}
+				b := []float64{latlng2.Lng.Degrees(), latlng2.Lat.Degrees()}
+				for j := 0; j < 4; j++ {
+					v1 := e.r.Vertex(j)
+					v2 := e.r.Vertex((j + 1) % 4)
+					c := []float64{v1.Lng.Degrees(), v1.Lat.Degrees()}
+					d := []float64{v2.Lng.Degrees(), v2.Lat.Degrees()}
+					if doIntersect(a, b, c, d) {
+						return true, nil
+					}
 				}
 			}
 		}
