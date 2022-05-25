@@ -78,12 +78,13 @@ func geometryCollectionIntersectsShape(gc *GeometryCollection,
 func polygonsIntersectsLinestrings(s2pgn *s2.Polygon,
 	pls []*s2.Polyline) bool {
 	for _, pl := range pls {
-		if len(*pl) == 2 {
-			a := []float64{(*pl)[0].X, (*pl)[0].Y}
-			b := []float64{(*pl)[1].X, (*pl)[1].Y}
+		for i := 0; i < pl.NumEdges(); i++ {
+			edge := pl.Edge(i)
+			a := []float64{edge.V0.X, edge.V0.Y}
+			b := []float64{edge.V1.X, edge.V1.Y}
 
-			for i := 0; i < s2pgn.NumEdges(); i++ {
-				edgeB := s2pgn.Edge(i)
+			for j := 0; j < s2pgn.NumEdges(); j++ {
+				edgeB := s2pgn.Edge(j)
 
 				c := []float64{edgeB.V0.X, edgeB.V0.Y}
 				d := []float64{edgeB.V1.X, edgeB.V1.Y}
@@ -103,9 +104,9 @@ func polygonsContainsLineStrings(s2pgns []*s2.Polygon,
 	linesWithIn := make(map[int]struct{})
 nextLine:
 	for lineIndex, pl := range pls {
-		if len(*pl) == 2 {
-			start := (*pl)[0]
-			end := (*pl)[1]
+		for i := 0; i < len(*pl)-1; i++ {
+			start := (*pl)[i]
+			end := (*pl)[i+1]
 
 			// check whether both the end vertices are inside the polygon.
 			for _, s2pgn := range s2pgns {
