@@ -1270,6 +1270,16 @@ func checkMultiPolygonContainsShape(s2pgns []*s2.Polygon,
 				if s2pgn.ContainsPoint(*point) {
 					pointsWithIn[pointIndex] = struct{}{}
 					continue nextPoint
+				} else {
+					// double check for containment with the vertices.
+					for _, loop := range s2pgn.Loops() {
+						for i := 0; i < loop.NumVertices(); i++ {
+							if point.ApproxEqual(loop.Vertex(i)) {
+								pointsWithIn[pointIndex] = struct{}{}
+								continue nextPoint
+							}
+						}
+					}
 				}
 			}
 		}
