@@ -185,7 +185,7 @@ func s2PolygonFromCoordinates(coordinates [][][]float64) *s2.Polygon {
 		loops = append(loops, s2loop)
 	}
 
-	rv := s2.PolygonFromLoops(loops)
+	rv := s2.PolygonFromOrientedLoops(loops)
 	return rv
 }
 
