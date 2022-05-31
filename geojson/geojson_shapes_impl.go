@@ -1756,28 +1756,18 @@ func checkEnvelopeContainsShape(s2rect *s2.Rect, shapeIn,
 
 	// check if the other shape is a polygon.
 	if p2, ok := other.(*Polygon); ok {
-
-		for i := 0; i < p2.s2pgn.NumEdges(); i++ {
-			edge := p2.s2pgn.Edge(i)
-			if !s2rect.ContainsPoint(edge.V0) ||
-				!s2rect.ContainsPoint(edge.V1) {
-				return false, nil
-			}
-		}
-
-		return true, nil
+		s2pgnRect := s2PolygonFromS2Rectangle(s2rect)
+		return s2pgnRect.Contains(p2.s2pgn), nil
 	}
 
 	// check if the other shape is a multipolygon.
 	if p2, ok := other.(*MultiPolygon); ok {
-		// check the intersection for any polygon in the collection.
+		s2pgnRect := s2PolygonFromS2Rectangle(s2rect)
+
+		// check the containment for every polygon in the collection.
 		for _, s2pgn := range p2.s2pgns {
-			for i := 0; i < s2pgn.NumEdges(); i++ {
-				edge := s2pgn.Edge(i)
-				if !s2rect.ContainsPoint(edge.V0) ||
-					!s2rect.ContainsPoint(edge.V1) {
-					return false, nil
-				}
+			if !s2pgnRect.Contains(s2pgn) {
+				return false, nil
 			}
 		}
 

@@ -192,7 +192,7 @@ func s2PolygonFromCoordinates(coordinates [][][]float64) *s2.Polygon {
 func s2PolygonFromS2Rectangle(s2rect *s2.Rect) *s2.Polygon {
 	loops := make([]*s2.Loop, 0, 1)
 	var points []s2.Point
-	for j := 0; j <= 4; j++ {
+	for j := 0; j < 4; j++ {
 		points = append(points, s2.PointFromLatLng(s2rect.Vertex(j%4)))
 	}
 
