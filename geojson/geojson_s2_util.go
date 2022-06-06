@@ -102,29 +102,37 @@ func polygonsIntersectsLinestrings(s2pgn *s2.Polygon,
 func polygonsContainsLineStrings(s2pgns []*s2.Polygon,
 	pls []*s2.Polyline) bool {
 	linesWithIn := make(map[int]struct{})
+	checker := s2.NewCrossingEdgeQuery(s2.NewShapeIndex())
 nextLine:
 	for lineIndex, pl := range pls {
 		for i := 0; i < len(*pl)-1; i++ {
 			start := (*pl)[i]
 			end := (*pl)[i+1]
 
-			// check whether both the end vertices are inside the polygon.
 			for _, s2pgn := range s2pgns {
-				if s2pgn.ContainsPoint(start) && s2pgn.ContainsPoint(end) {
-					// if both endpoints lie within the polygon then check
-					// for any edge intersections to confirm the containment.
-					for i := 0; i < s2pgn.NumEdges(); i++ {
-						edgeA := s2pgn.Edge(i)
-						a := []float64{edgeA.V0.X, edgeA.V0.Y}
-						b := []float64{edgeA.V1.X, edgeA.V1.Y}
-						c := []float64{start.X, start.Y}
-						d := []float64{end.X, end.Y}
-						if doIntersect(a, b, c, d) {
-							continue nextLine
-						}
+				containsStart := s2pgn.ContainsPoint(start)
+				containsEnd := s2pgn.ContainsPoint(end)
+				if containsStart && containsEnd {
+					crossings := checker.Crossings(start, end, s2pgn, s2.CrossingTypeInterior)
+					if len(crossings) > 0 {
+						continue nextLine
 					}
 					linesWithIn[lineIndex] = struct{}{}
 					continue nextLine
+				} else {
+					for _, loop := range s2pgn.Loops() {
+						for i := 0; i < loop.NumVertices(); i++ {
+							if !containsStart && start.ApproxEqual(loop.Vertex(i)) {
+								containsStart = true
+							} else if !containsEnd && end.ApproxEqual(loop.Vertex(i)) {
+								containsEnd = true
+							}
+							if containsStart && containsEnd {
+								linesWithIn[lineIndex] = struct{}{}
+								continue nextLine
+							}
+						}
+					}
 				}
 			}
 		}
