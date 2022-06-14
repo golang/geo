@@ -68,14 +68,14 @@ func (v Vector) Sub(ov Vector) Vector { return Vector{v.X - ov.X, v.Y - ov.Y, v.
 func (v Vector) Mul(m float64) Vector { return Vector{m * v.X, m * v.Y, m * v.Z} }
 
 // Dot returns the standard dot product of v and ov.
-func (v Vector) Dot(ov Vector) float64 { return v.X*ov.X + v.Y*ov.Y + v.Z*ov.Z }
+func (v Vector) Dot(ov Vector) float64 { return float64(v.X*ov.X) + float64(v.Y*ov.Y) + float64(v.Z*ov.Z) }
 
 // Cross returns the standard cross product of v and ov.
 func (v Vector) Cross(ov Vector) Vector {
 	return Vector{
-		v.Y*ov.Z - v.Z*ov.Y,
-		v.Z*ov.X - v.X*ov.Z,
-		v.X*ov.Y - v.Y*ov.X,
+		float64(v.Y*ov.Z) - float64(v.Z*ov.Y),
+		float64(v.Z*ov.X) - float64(v.X*ov.Z),
+		float64(v.X*ov.Y) - float64(v.Y*ov.X),
 	}
 }
 
