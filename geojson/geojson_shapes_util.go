@@ -415,9 +415,15 @@ func NewGeometryCollection(coordinates [][][][][]float64,
 // prefix the byte contents with certain glue bytes that
 // can be used later while filering the doc values.
 func NewGeoCircleShape(cp []float64,
-	radiusInMeter float64) (*Circle, []byte, error) {
+	radius string) (*Circle, []byte, error) {
+	r, err := ParseDistance(radius)
+	if err != nil {
+		return nil, nil, err
+	}
 	rv := &Circle{Typ: CircleType, Vertices: cp,
-		RadiusInMeters: radiusInMeter}
+		Radius:         radius,
+		radiusInMeters: r}
+
 	vbytes, err := rv.Marshal()
 	if err != nil {
 		return nil, nil, err

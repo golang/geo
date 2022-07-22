@@ -90,6 +90,10 @@ func (p *Point) Type() string {
 	return strings.ToLower(p.Typ)
 }
 
+func (p *Point) Value() ([]byte, error) {
+	return jsoniter.Marshal(p)
+}
+
 func NewGeoJsonPoint(v []float64) index.GeoJSON {
 	rv := &Point{Typ: PointType, Vertices: v}
 	rv.init()
@@ -193,6 +197,10 @@ func (p *MultiPoint) Type() string {
 	return strings.ToLower(p.Typ)
 }
 
+func (mp *MultiPoint) Value() ([]byte, error) {
+	return jsoniter.Marshal(mp)
+}
+
 func (p *MultiPoint) Intersects(other index.GeoJSON) (bool, error) {
 	p.init()
 
@@ -268,6 +276,10 @@ func (ls *LineString) Type() string {
 	return strings.ToLower(ls.Typ)
 }
 
+func (ls *LineString) Value() ([]byte, error) {
+	return jsoniter.Marshal(ls)
+}
+
 func (ls *LineString) Marshal() ([]byte, error) {
 	ls.init()
 
@@ -321,6 +333,10 @@ func (mls *MultiLineString) init() {
 
 func (mls *MultiLineString) Type() string {
 	return strings.ToLower(mls.Typ)
+}
+
+func (mls *MultiLineString) Value() ([]byte, error) {
+	return jsoniter.Marshal(mls)
 }
 
 func (mls *MultiLineString) Marshal() ([]byte, error) {
@@ -402,6 +418,10 @@ func (p *Polygon) Type() string {
 	return strings.ToLower(p.Typ)
 }
 
+func (p *Polygon) Value() ([]byte, error) {
+	return jsoniter.Marshal(p)
+}
+
 func (p *Polygon) Marshal() ([]byte, error) {
 	p.init()
 
@@ -463,6 +483,10 @@ func (p *MultiPolygon) init() {
 
 func (p *MultiPolygon) Type() string {
 	return strings.ToLower(p.Typ)
+}
+
+func (p *MultiPolygon) Value() ([]byte, error) {
+	return jsoniter.Marshal(p)
 }
 
 func (p *MultiPolygon) Marshal() ([]byte, error) {
@@ -540,6 +564,10 @@ type GeometryCollection struct {
 
 func (gc *GeometryCollection) Type() string {
 	return strings.ToLower(gc.Typ)
+}
+
+func (gc *GeometryCollection) Value() ([]byte, error) {
+	return jsoniter.Marshal(gc)
 }
 
 func (gc *GeometryCollection) Members() []index.GeoJSON {
@@ -721,24 +749,35 @@ func (gc *GeometryCollection) UnmarshalJSON(data []byte) error {
 type Circle struct {
 	Typ            string    `json:"type"`
 	Vertices       []float64 `json:"coordinates"`
-	RadiusInMeters float64   `json:"radiusInMeters"`
+	Radius         string    `json:"radius"`
+	radiusInMeters float64
 	s2cap          *s2.Cap
 }
 
 func NewGeoCircle(points []float64,
-	radiusInMeter float64) index.GeoJSON {
+	radius string) index.GeoJSON {
+	r, err := ParseDistance(radius)
+	if err != nil {
+		return nil
+	}
+
 	return &Circle{Typ: CircleType,
 		Vertices:       points,
-		RadiusInMeters: radiusInMeter}
+		Radius:         radius,
+		radiusInMeters: r}
 }
 
 func (c *Circle) Type() string {
 	return strings.ToLower(c.Typ)
 }
 
+func (c *Circle) Value() ([]byte, error) {
+	return jsoniter.Marshal(c)
+}
+
 func (c *Circle) init() {
 	if c.s2cap == nil {
-		c.s2cap = s2Cap(c.Vertices, c.RadiusInMeters)
+		c.s2cap = s2Cap(c.Vertices, c.radiusInMeters)
 	}
 }
 
@@ -770,10 +809,9 @@ func (c *Circle) Contains(other index.GeoJSON) (bool, error) {
 
 func (c *Circle) UnmarshalJSON(data []byte) error {
 	tmp := struct {
-		Typ            string    `json:"type"`
-		Vertices       []float64 `json:"coordinates"`
-		Radius         string    `json:"radius"`
-		RadiusInMeters float64   `json:"radiusInMeters"`
+		Typ      string    `json:"type"`
+		Vertices []float64 `json:"coordinates"`
+		Radius   string    `json:"radius"`
 	}{}
 
 	err := jsoniter.Unmarshal(data, &tmp)
@@ -782,9 +820,9 @@ func (c *Circle) UnmarshalJSON(data []byte) error {
 	}
 	c.Typ = tmp.Typ
 	c.Vertices = tmp.Vertices
-	c.RadiusInMeters = tmp.RadiusInMeters
+	c.Radius = tmp.Radius
 	if tmp.Radius != "" {
-		c.RadiusInMeters, err = ParseDistance(tmp.Radius)
+		c.radiusInMeters, err = ParseDistance(tmp.Radius)
 	}
 
 	return err
@@ -805,6 +843,10 @@ func NewGeoEnvelope(points [][]float64) index.GeoJSON {
 
 func (e *Envelope) Type() string {
 	return strings.ToLower(e.Typ)
+}
+
+func (e *Envelope) Value() ([]byte, error) {
+	return jsoniter.Marshal(e)
 }
 
 func (e *Envelope) init() {
