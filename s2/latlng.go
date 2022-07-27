@@ -64,7 +64,7 @@ func (ll LatLng) Distance(ll2 LatLng) s1.Angle {
 	lng1, lng2 := ll.Lng.Radians(), ll2.Lng.Radians()
 	dlat := math.Sin(0.5 * (lat2 - lat1))
 	dlng := math.Sin(0.5 * (lng2 - lng1))
-	x := dlat*dlat + dlng*dlng*math.Cos(lat1)*math.Cos(lat2)
+	x := float64(dlat*dlat) + float64(dlng*dlng*math.Cos(lat1)*math.Cos(lat2))
 	return s1.Angle(2*math.Atan2(math.Sqrt(x), math.Sqrt(math.Max(0, 1-x)))) * s1.Radian
 }
 
@@ -72,7 +72,7 @@ func (ll LatLng) Distance(ll2 LatLng) s1.Angle {
 // functions. Let's see if that's really necessary before exposing the same functionality.
 
 func latitude(p Point) s1.Angle {
-	return s1.Angle(math.Atan2(p.Z, math.Sqrt(p.X*p.X+p.Y*p.Y))) * s1.Radian
+	return s1.Angle(math.Atan2(p.Z, math.Sqrt(float64(p.X*p.X)+float64(p.Y*p.Y)))) * s1.Radian
 }
 
 func longitude(p Point) s1.Angle {
