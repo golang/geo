@@ -40,6 +40,19 @@ func polylineIntersectsPoint(pls []*s2.Polyline,
 
 func polylineIntersectsPolygons(pls []*s2.Polyline,
 	s2pgns []*s2.Polygon) bool {
+	// Early exit if the polygon contains any of the line's vertices.
+	for _, pl := range pls {
+		for i := 0; i < pl.NumEdges(); i++ {
+			edge := pl.Edge(i)
+			for _, s2pgn := range s2pgns {
+				if s2pgn.IntersectsCell(s2.CellFromPoint(edge.V0)) ||
+					s2pgn.IntersectsCell(s2.CellFromPoint(edge.V1)) {
+					return true
+				}
+			}
+		}
+	}
+
 	for _, pl := range pls {
 		for _, s2pgn := range s2pgns {
 			for i := 0; i < pl.NumEdges(); i++ {
@@ -72,30 +85,6 @@ func geometryCollectionIntersectsShape(gc *GeometryCollection,
 			return true
 		}
 	}
-	return false
-}
-
-func polygonsIntersectsLinestrings(s2pgn *s2.Polygon,
-	pls []*s2.Polyline) bool {
-	for _, pl := range pls {
-		for i := 0; i < pl.NumEdges(); i++ {
-			edge := pl.Edge(i)
-			a := []float64{edge.V0.X, edge.V0.Y}
-			b := []float64{edge.V1.X, edge.V1.Y}
-
-			for j := 0; j < s2pgn.NumEdges(); j++ {
-				edgeB := s2pgn.Edge(j)
-
-				c := []float64{edgeB.V0.X, edgeB.V0.Y}
-				d := []float64{edgeB.V1.X, edgeB.V1.Y}
-
-				if doIntersect(a, b, c, d) {
-					return true
-				}
-			}
-		}
-	}
-
 	return false
 }
 

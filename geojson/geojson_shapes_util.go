@@ -391,6 +391,12 @@ var GlueBytes = []byte("##")
 // can be used later while filering the doc values.
 func NewGeometryCollection(coordinates [][][][][]float64,
 	typs []string) (index.GeoJSON, []byte, error) {
+	if typs == nil {
+		return nil, nil, fmt.Errorf("nil type information")
+	}
+	if len(typs) < len(coordinates) {
+		return nil, nil, fmt.Errorf("missing type information for some shapes")
+	}
 	shapes := make([]index.GeoJSON, 0, len(coordinates))
 	for i, vertices := range coordinates {
 		s, _, err := NewGeoJsonShape(vertices, typs[i])

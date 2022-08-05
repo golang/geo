@@ -1232,8 +1232,8 @@ func checkPolygonIntersectsShape(s2pgn *s2.Polygon, shapeIn,
 	// check if the other shape is a linestring.
 	if ls, ok := other.(*LineString); ok {
 
-		if polygonsIntersectsLinestrings(s2pgn,
-			[]*s2.Polyline{ls.pl}) {
+		if polylineIntersectsPolygons([]*s2.Polyline{ls.pl},
+			[]*s2.Polygon{s2pgn}) {
 			return true, nil
 		}
 
@@ -1243,7 +1243,7 @@ func checkPolygonIntersectsShape(s2pgn *s2.Polygon, shapeIn,
 	// check if the other shape is a multilinestring.
 	if mls, ok := other.(*MultiLineString); ok {
 
-		if polygonsIntersectsLinestrings(s2pgn, mls.pls) {
+		if polylineIntersectsPolygons(mls.pls, []*s2.Polygon{s2pgn}) {
 			return true, nil
 		}
 
