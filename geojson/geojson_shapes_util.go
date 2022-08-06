@@ -206,6 +206,11 @@ func filterShapes(shape index.GeoJSON,
 		return shape.Contains(shapeInDoc)
 	}
 
+	if relation == "disjoint" {
+		intersects, err := shape.Intersects(shapeInDoc)
+		return !intersects, err
+	}
+
 	return false, fmt.Errorf("unknown relation: %s", relation)
 }
 
