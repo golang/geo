@@ -79,7 +79,7 @@ to geography are not part of the core library (e.g. easting/northing
 conversions, ellipsoid approximations, geodetic vs. geocentric coordinates,
 etc).
 
-See http://godoc.org/github.com/golang/geo for specific package documentation.
+See https://pkg.go.dev/github.com/golang/geo for specific package documentation.
 
 For an analogous library in C++, see https://github.com/google/s2geometry, in
 Java, see https://github.com/google/s2-geometry-library-java, and Python, see
@@ -92,23 +92,23 @@ This library is principally a port of the
 where it makes sense. We detail the progress of this port below relative to that
 C++ library.
 
-## [ℝ¹](https://godoc.org/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
+## [ℝ¹](https://pkg.go.dev/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
 
 Full parity with C++.
 
-## [ℝ²](https://godoc.org/github.com/golang/geo/r2) - Two-dimensional Cartesian coordinates
+## [ℝ²](https://pkg.go.dev/github.com/golang/geo/r2) - Two-dimensional Cartesian coordinates
 
 Full parity with C++.
 
-## [ℝ³](https://godoc.org/github.com/golang/geo/r3) - Three-dimensional Cartesian coordinates
+## [ℝ³](https://pkg.go.dev/github.com/golang/geo/r3) - Three-dimensional Cartesian coordinates
 
 Full parity with C++.
 
-## [S¹](https://godoc.org/github.com/golang/geo/s1) - Circular Geometry
+## [S¹](https://pkg.go.dev/github.com/golang/geo/s1) - Circular Geometry
 
 Full parity with C++.
 
-## [S²](https://godoc.org/github.com/golang/geo/s2) - Spherical Geometry
+## [S²](https://pkg.go.dev/github.com/golang/geo/s2) - Spherical Geometry
 
 Approximately ~40% complete.
 
