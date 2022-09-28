@@ -77,7 +77,7 @@ type compositeShape interface {
 	Members() []index.GeoJSON
 }
 
-//--------------------------------------------------------
+// --------------------------------------------------------
 // Point represents the geoJSON point type and it
 // implements the index.GeoJSON interface.
 type Point struct {
@@ -141,7 +141,7 @@ func (p *Point) Coordinates() []float64 {
 	return p.Vertices
 }
 
-//--------------------------------------------------------
+// --------------------------------------------------------
 // MultiPoint represents the geoJSON multipoint type and it
 // implements the index.GeoJSON interface as well as the
 // compositeShap interface.
@@ -247,7 +247,7 @@ func (p *MultiPoint) Members() []index.GeoJSON {
 	return points
 }
 
-//--------------------------------------------------------
+// --------------------------------------------------------
 // LineString represents the geoJSON linestring type and it
 // implements the index.GeoJSON interface.
 type LineString struct {
@@ -309,7 +309,7 @@ func (ls *LineString) Coordinates() [][]float64 {
 	return ls.Vertices
 }
 
-//--------------------------------------------------------
+// --------------------------------------------------------
 // MultiLineString represents the geoJSON multilinestring type
 // and it implements the index.GeoJSON interface as well as the
 // compositeShap interface.
@@ -393,7 +393,7 @@ func (p *MultiLineString) Members() []index.GeoJSON {
 	return lines
 }
 
-//--------------------------------------------------------
+// --------------------------------------------------------
 // Polygon represents the geoJSON polygon type
 // and it implements the index.GeoJSON interface.
 type Polygon struct {
@@ -455,7 +455,7 @@ func (p *Polygon) Coordinates() [][][]float64 {
 	return p.Vertices
 }
 
-//--------------------------------------------------------
+// --------------------------------------------------------
 // MultiPolygon represents the geoJSON multipolygon type
 // and it implements the index.GeoJSON interface as well as the
 // compositeShap interface.
@@ -553,7 +553,7 @@ func (p *MultiPolygon) Members() []index.GeoJSON {
 	return polygons
 }
 
-//--------------------------------------------------------
+// --------------------------------------------------------
 // GeometryCollection represents the geoJSON geometryCollection type
 // and it implements the index.GeoJSON interface as well as the
 // compositeShap interface.
@@ -743,7 +743,7 @@ func (gc *GeometryCollection) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-//--------------------------------------------------------
+// --------------------------------------------------------
 // Circle represents a custom circle type and it
 // implements the index.GeoJSON interface.
 type Circle struct {
@@ -828,7 +828,7 @@ func (c *Circle) UnmarshalJSON(data []byte) error {
 	return err
 }
 
-//--------------------------------------------------------
+// --------------------------------------------------------
 // Envelope represents the  envelope/bounding box type and it
 // implements the index.GeoJSON interface.
 type Envelope struct {
@@ -1143,26 +1143,9 @@ func checkLineStringsIntersectsShape(pls []*s2.Polyline, shapeIn,
 
 	// check if the other shape is a envelope.
 	if e, ok := other.(*Envelope); ok {
-		for _, pl := range pls {
-			for i := 0; i < pl.NumEdges(); i++ {
-				edge := pl.Edge(i)
-				latlng1 := s2.LatLngFromPoint(edge.V0)
-				latlng2 := s2.LatLngFromPoint(edge.V1)
-				a := []float64{latlng1.Lng.Degrees(), latlng1.Lat.Degrees()}
-				b := []float64{latlng2.Lng.Degrees(), latlng2.Lat.Degrees()}
-				for j := 0; j < 4; j++ {
-					v1 := e.r.Vertex(j)
-					v2 := e.r.Vertex((j + 1) % 4)
-					c := []float64{v1.Lng.Degrees(), v1.Lat.Degrees()}
-					d := []float64{v2.Lng.Degrees(), v2.Lat.Degrees()}
-					if doIntersect(a, b, c, d) {
-						return true, nil
-					}
-				}
-			}
-		}
+		res := rectangleIntersectsWithLineStrings(e.r, pls)
 
-		return false, nil
+		return res, nil
 	}
 
 	return false, fmt.Errorf("unknown geojson type: %s "+

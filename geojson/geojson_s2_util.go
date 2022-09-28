@@ -56,17 +56,13 @@ func polylineIntersectsPolygons(pls []*s2.Polyline,
 	for _, pl := range pls {
 		for _, s2pgn := range s2pgns {
 			for i := 0; i < pl.NumEdges(); i++ {
-				edge := pl.Edge(i)
-				a := []float64{edge.V0.X, edge.V0.Y}
-				b := []float64{edge.V1.X, edge.V1.Y}
-
 				for i := 0; i < s2pgn.NumEdges(); i++ {
 					edgeB := s2pgn.Edge(i)
+					latLng1 := s2.LatLngFromPoint(edgeB.V0)
+					latLng2 := s2.LatLngFromPoint(edgeB.V1)
+					pl2 := s2.PolylineFromLatLngs([]s2.LatLng{latLng1, latLng2})
 
-					c := []float64{edgeB.V0.X, edgeB.V0.Y}
-					d := []float64{edgeB.V1.X, edgeB.V1.Y}
-
-					if doIntersect(a, b, c, d) {
+					if pl.Intersects(pl2) {
 						return true
 					}
 				}
@@ -144,20 +140,24 @@ func rectangleIntersectsWithPolygons(s2rect *s2.Rect,
 
 func rectangleIntersectsWithLineStrings(s2rect *s2.Rect,
 	polylines []*s2.Polyline) bool {
+	// Early exit path if the envelope contains any of the linestring's vertices.
 	for _, pl := range polylines {
 		for i := 0; i < pl.NumEdges(); i++ {
-			edgeA := pl.Edge(i)
-			a := []float64{edgeA.V0.X, edgeA.V0.Y}
-			b := []float64{edgeA.V1.X, edgeA.V1.Y}
+			edge := pl.Edge(i)
+			if s2rect.IntersectsCell(s2.CellFromPoint(edge.V0)) ||
+				s2rect.IntersectsCell(s2.CellFromPoint(edge.V1)) {
+				return true
+			}
+		}
+	}
 
+	for _, pl := range polylines {
+		for i := 0; i < pl.NumEdges(); i++ {
 			for j := 0; j < 4; j++ {
-				v1 := s2.PointFromLatLng(s2rect.Vertex(j))
-				v2 := s2.PointFromLatLng(s2rect.Vertex((j + 1) % 4))
+				pl2 := s2.PolylineFromLatLngs([]s2.LatLng{s2rect.Vertex(j),
+					s2rect.Vertex((j + 1) % 4)})
 
-				c := []float64{v1.X, v1.Y}
-				d := []float64{v2.X, v2.Y}
-
-				if doIntersect(a, b, c, d) {
+				if pl.Intersects(pl2) {
 					return true
 				}
 			}
@@ -257,55 +257,6 @@ func min(a, b float64) float64 {
 		return b
 	}
 	return a
-}
-
-func onsegment(p, q, r []float64) bool {
-	if q[0] <= max(p[0], r[0]) && q[0] >= min(p[0], r[0]) &&
-		q[1] <= max(p[1], r[1]) && q[1] >= min(p[1], r[1]) {
-		return true
-	}
-
-	return false
-}
-
-func doIntersect(p1, q1, p2, q2 []float64) bool {
-	o1 := orientation(p1, q1, p2)
-	o2 := orientation(p1, q1, q2)
-	o3 := orientation(p2, q2, p1)
-	o4 := orientation(p2, q2, q1)
-
-	if o1 != o2 && o3 != o4 {
-		return true
-	}
-
-	if o1 == 0 && onsegment(p1, p2, q1) {
-		return true
-	}
-
-	if o2 == 0 && onsegment(p1, q2, q1) {
-		return true
-	}
-
-	if o3 == 0 && onsegment(p2, p1, q2) {
-		return true
-	}
-
-	if o4 == 0 && onsegment(p2, q1, q2) {
-		return true
-	}
-
-	return false
-}
-
-func orientation(p, q, r []float64) int {
-	val := (q[1]-p[1])*(r[0]-q[0]) - (q[0]-p[0])*(r[1]-q[1])
-	if val == 0 {
-		return 0
-	}
-	if val > 0 {
-		return 1
-	}
-	return 2
 }
 
 func StripCoveringTerms(terms []string) []string {
