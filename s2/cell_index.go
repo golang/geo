@@ -52,12 +52,32 @@ type rangeNode struct {
 // CellIndexIterator is an iterator that visits the entire set of indexed
 // (CellID, label) pairs in an unspecified order.
 type CellIndexIterator struct {
-	// TODO(roberts): Implement
+	nodes []cellIndexNode
+	pos   int
 }
 
 // NewCellIndexIterator creates an iterator for the given CellIndex.
 func NewCellIndexIterator(index *CellIndex) *CellIndexIterator {
-	return &CellIndexIterator{}
+	return &CellIndexIterator{
+		nodes: index.cellTree,
+		pos:   0,
+	}
+}
+
+func (c *CellIndexIterator) CellID() CellID {
+	return c.nodes[c.pos].cellID
+}
+
+func (c *CellIndexIterator) Label() int32 {
+	return c.nodes[c.pos].label
+}
+
+func (c *CellIndexIterator) Done() bool {
+	return c.pos == len(c.nodes)
+}
+
+func (c *CellIndexIterator) Next() {
+	c.pos++
 }
 
 // CellIndexRangeIterator is an iterator that seeks and iterates over a set of
@@ -495,4 +515,3 @@ func (c *CellIndex) Build() {
 // TODO(roberts): Differences from C++
 // IntersectingLabels
 // VisitIntersectingCells
-// CellIndexIterator
