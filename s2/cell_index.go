@@ -49,6 +49,26 @@ type rangeNode struct {
 	contents int32  // Contents of this node (an index within the cell tree).
 }
 
+type labels []int32
+
+func (l *labels) Normalize() {
+	if len(*l) == 0 {
+		return
+	}
+	labels := *l
+	sort.Slice(labels, func(i, j int) bool { return labels[i] < labels[j] })
+
+	var lastIndex int
+	for i := 0; i < len(*l); i++ {
+		if labels[lastIndex] != labels[i] {
+			lastIndex++
+			labels[lastIndex] = labels[i]
+		}
+	}
+}
+
+type cellVisitor func(cellID CellID, label int32) bool
+
 // CellIndexIterator is an iterator that visits the entire set of indexed
 // (CellID, label) pairs in an unspecified order.
 type CellIndexIterator struct {
@@ -510,6 +530,52 @@ func (c *CellIndex) Build() {
 		}
 		c.rangeNodes = append(c.rangeNodes, rangeNode{startID, contents})
 	}
+}
+
+func (c *CellIndex) IntersectingLabels(target CellUnion) []int32 {
+	var labels labels
+	c.VisitIntersectingCells(target, func(cellID CellID, label int32) bool {
+		labels = append(labels, label)
+		return true
+	})
+
+	labels.Normalize()
+	return labels
+}
+
+func (c *CellIndex) VisitIntersectingCells(target CellUnion, visitor cellVisitor) bool {
+	if len(target) == 0 {
+		return true
+	}
+
+	pos := 0
+	contents := NewCellIndexContentsIterator(c)
+	rangeIter := NewCellIndexRangeIterator(c)
+	rangeIter.Begin()
+
+	for ok := true; ok; ok = pos != len(target) {
+		if rangeIter.LimitID() <= target[pos].RangeMin() {
+			rangeIter.Seek(target[pos].RangeMin())
+		}
+
+		for ; rangeIter.StartID() <= target[pos].RangeMax(); rangeIter.Next() {
+			for contents.StartUnion(rangeIter); !contents.Done(); contents.Next() {
+				if !visitor(contents.CellID(), contents.Label()) {
+					return false
+				}
+			}
+		}
+
+		pos++
+		if pos != len(target) && target[pos].RangeMax() < rangeIter.StartID() {
+			pos = target.lowerBound(pos+1, len(target), rangeIter.StartID())
+			if target[pos-1].RangeMax() >= rangeIter.StartID() {
+				pos--
+			}
+		}
+	}
+
+	return true
 }
 
 // TODO(roberts): Differences from C++
