@@ -34,7 +34,7 @@ type cellIndexNode struct {
 // newCellIndexNode returns a node with the appropriate default values.
 func newCellIndexNode() cellIndexNode {
 	return cellIndexNode{
-		cellID: 0,
+		cellID: CellID(0),
 		label:  cellIndexDoneContents,
 		parent: -1,
 	}
@@ -202,7 +202,6 @@ func (c *CellIndexRangeIterator) Seek(target CellID) {
 
 	// Nonempty needs to find the next non-empty entry.
 	for c.nonEmpty && c.IsEmpty() && !c.Done() {
-		// c.Next()
 		c.pos++
 	}
 }
@@ -246,7 +245,7 @@ type CellIndexContentsIterator struct {
 func NewCellIndexContentsIterator(index *CellIndex) *CellIndexContentsIterator {
 	it := &CellIndexContentsIterator{
 		cellTree:       index.cellTree,
-		prevStartID:    0,
+		prevStartID:    CellID(0),
 		nodeCutoff:     -1,
 		nextNodeCutoff: -1,
 		node:           cellIndexNode{label: cellIndexDoneContents},
@@ -256,7 +255,7 @@ func NewCellIndexContentsIterator(index *CellIndex) *CellIndexContentsIterator {
 
 // Clear clears all state with respect to which range(s) have been visited.
 func (c *CellIndexContentsIterator) Clear() {
-	c.prevStartID = 0
+	c.prevStartID = CellID(0)
 	c.nodeCutoff = -1
 	c.nextNodeCutoff = -1
 	c.node.label = cellIndexDoneContents
@@ -343,7 +342,7 @@ func (c *CellIndexContentsIterator) StartUnion(r *CellIndexRangeIterator) {
 // There is also a helper method that adds all elements of CellUnion with the
 // same label:
 //
-//     index.AddCellUnion(cellUnion, label)
+//	index.AddCellUnion(cellUnion, label)
 //
 // Note that the index is not dynamic; the contents of the index cannot be
 // changed once it has been built. Adding more after calling Build results in
@@ -353,7 +352,7 @@ func (c *CellIndexContentsIterator) StartUnion(r *CellIndexRangeIterator) {
 // is to use a built-in method such as IntersectingLabels (which returns
 // the labels of all cells that intersect a given target CellUnion):
 //
-//   labels := index.IntersectingLabels(targetUnion);
+//	labels := index.IntersectingLabels(targetUnion);
 //
 // Alternatively, you can use a ClosestCellQuery which computes the cell(s)
 // that are closest to a given target geometry.
@@ -482,7 +481,8 @@ func (c *CellIndex) Build() {
 				c.cellTree = append(c.cellTree, cellIndexNode{
 					cellID: deltas[i].cellID,
 					label:  deltas[i].label,
-					parent: contents})
+					parent: contents,
+				})
 				contents = int32(len(c.cellTree) - 1)
 			} else if deltas[i].cellID == SentinelCellID {
 				contents = c.cellTree[contents].parent
