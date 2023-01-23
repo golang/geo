@@ -52,18 +52,15 @@ type rangeNode struct {
 type labels []int32
 
 func (l *labels) Normalize() {
-	if len(*l) == 0 {
-		return
-	}
-	labels := *l
-	sort.Slice(labels, func(i, j int) bool { return labels[i] < labels[j] })
+	encountered := make(map[int32]struct{})
 
-	var lastIndex int
-	for i := 0; i < len(*l); i++ {
-		if labels[lastIndex] != labels[i] {
-			lastIndex++
-			labels[lastIndex] = labels[i]
-		}
+	for i := range *l {
+		encountered[(*l)[i]] = struct{}{}
+	}
+
+	*l = (*l)[:0]
+	for key := range encountered {
+		*l = append(*l, key)
 	}
 }
 
