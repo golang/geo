@@ -597,23 +597,6 @@ func (l *Loop) ContainsPoint(p Point) bool {
 		return false
 	}
 
-	// For small loops it is faster to just check all the crossings.  We also
-	// use this method during loop initialization because InitOriginAndBound()
-	// calls Contains() before InitIndex().  Otherwise, we keep track of the
-	// number of calls to Contains() and only build the index when enough calls
-	// have been made so that we think it is worth the effort.  Note that the
-	// code below is structured so that if many calls are made in parallel only
-	// one thread builds the index, while the rest continue using brute force
-	// until the index is actually available.
-
-	const maxBruteForceVertices = 32
-	// TODO(roberts): add unindexed contains calls tracking
-
-	if len(l.index.shapes) == 0 || // Index has not been initialized yet.
-		len(l.vertices) <= maxBruteForceVertices {
-		return l.bruteForceContainsPoint(p)
-	}
-
 	// Otherwise, look up the point in the index.
 	it := l.index.Iterator()
 	if !it.LocatePoint(p) {
