@@ -1,3 +1,3 @@
-module github.com/golang/geo
+module github.com/rekki/geo
 
 go 1.12
