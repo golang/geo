@@ -593,10 +593,6 @@ func (l *Loop) bruteForceContainsPoint(p Point) bool {
 
 // ContainsPoint returns true if the loop contains the point.
 func (l *Loop) ContainsPoint(p Point) bool {
-	if !l.index.IsFresh() && !l.bound.ContainsPoint(p) {
-		return false
-	}
-
 	// Otherwise, look up the point in the index.
 	it := l.index.Iterator()
 	if !it.LocatePoint(p) {
