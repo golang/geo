@@ -319,7 +319,7 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 
 	// The following code ensures that the probability of selecting a cell at each level is
 	// approximately the same, i.e. we test normalization of cells at all levels.
-	if !selected && oneIn(maxLevel-id.Level()) {
+	if !selected && oneIn(MaxLevel-id.Level()) {
 		//  Once a cell has been selected, the expected output is predetermined.  We then make sure
 		//  that cells are selected that will normalize to the desired output.
 		*expected = append(*expected, id)
@@ -436,11 +436,11 @@ func TestCellUnionNormalizePseudoRandom(t *testing.T) {
 				if cellunion.IntersectsCellID(j.ChildEnd().Prev()) == false {
 					t.Errorf("Expected intersection with %v.", j.ChildEnd().Prev())
 				}
-				if cellunion.ContainsCellID(j.ChildBeginAtLevel(maxLevel)) == false {
-					t.Errorf("Expected containment of %v.", j.ChildBeginAtLevel(maxLevel))
+				if cellunion.ContainsCellID(j.ChildBeginAtLevel(MaxLevel)) == false {
+					t.Errorf("Expected containment of %v.", j.ChildBeginAtLevel(MaxLevel))
 				}
-				if cellunion.IntersectsCellID(j.ChildBeginAtLevel(maxLevel)) == false {
-					t.Errorf("Expected intersection with %v.", j.ChildBeginAtLevel(maxLevel))
+				if cellunion.IntersectsCellID(j.ChildBeginAtLevel(MaxLevel)) == false {
+					t.Errorf("Expected intersection with %v.", j.ChildBeginAtLevel(MaxLevel))
 				}
 			}
 		}
@@ -663,14 +663,14 @@ func TestCellUnionLeafCellsCovered(t *testing.T) {
 		{
 			// One leaf cell on face 0.
 			have: []CellID{
-				CellIDFromFace(0).ChildBeginAtLevel(maxLevel),
+				CellIDFromFace(0).ChildBeginAtLevel(MaxLevel),
 			},
 			want: 1,
 		},
 		{
 			// Face 0 itself (which includes the previous leaf cell).
 			have: []CellID{
-				CellIDFromFace(0).ChildBeginAtLevel(maxLevel),
+				CellIDFromFace(0).ChildBeginAtLevel(MaxLevel),
 				CellIDFromFace(0),
 			},
 			want: 1 << 60,
@@ -686,7 +686,7 @@ func TestCellUnionLeafCellsCovered(t *testing.T) {
 		{
 			// Add some disjoint cells.
 			have: []CellID{
-				CellIDFromFace(0).ChildBeginAtLevel(maxLevel),
+				CellIDFromFace(0).ChildBeginAtLevel(MaxLevel),
 				CellIDFromFace(0),
 				CellIDFromFace(1).ChildBeginAtLevel(1),
 				CellIDFromFace(2).ChildBeginAtLevel(2),
@@ -712,8 +712,8 @@ func TestCellUnionLeafCellsCovered(t *testing.T) {
 
 func TestCellUnionFromRange(t *testing.T) {
 	for iter := 0; iter < 2000; iter++ {
-		min := randomCellIDForLevel(maxLevel)
-		max := randomCellIDForLevel(maxLevel)
+		min := randomCellIDForLevel(MaxLevel)
+		max := randomCellIDForLevel(MaxLevel)
 		if min > max {
 			min, max = max, min
 		}
@@ -738,14 +738,14 @@ func TestCellUnionFromRange(t *testing.T) {
 	// Focus on test cases that generate an empty or full range.
 
 	// Test an empty range before the minimum CellID.
-	idBegin := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
+	idBegin := CellIDFromFace(0).ChildBeginAtLevel(MaxLevel)
 	cu := CellUnionFromRange(idBegin, idBegin)
 	if len(cu) != 0 {
 		t.Errorf("CellUnionFromRange with begin and end as the first CellID should be empty, got %d", len(cu))
 	}
 
 	// Test an empty range after the maximum CellID.
-	idEnd := CellIDFromFace(5).ChildEndAtLevel(maxLevel)
+	idEnd := CellIDFromFace(5).ChildEndAtLevel(MaxLevel)
 	cu = CellUnionFromRange(idEnd, idEnd)
 	if len(cu) != 0 {
 		t.Errorf("CellUnionFromRange with begin and end as the last CellID should be empty, got %d", len(cu))
@@ -897,7 +897,7 @@ func TestCellUnionExpand(t *testing.T) {
 	// covering covers the expanded cap.  It also makes sure that the
 	// new covering is not too much larger than expected.
 	for i := 0; i < 5000; i++ {
-		rndCap := randomCap(AvgAreaMetric.Value(maxLevel), 4*math.Pi)
+		rndCap := randomCap(AvgAreaMetric.Value(MaxLevel), 4*math.Pi)
 
 		// Expand the cap area by a random factor whose log is uniformly
 		// distributed between 0 and log(1e2).
@@ -910,7 +910,7 @@ func TestCellUnionExpand(t *testing.T) {
 		// Generate a covering for the original cap, and measure the maximum
 		// distance from the cap center to any point in the covering.
 		coverer := &RegionCoverer{
-			MaxLevel: maxLevel,
+			MaxLevel: MaxLevel,
 			MaxCells: 1 + skewedInt(10),
 			LevelMod: 1,
 		}
@@ -920,7 +920,7 @@ func TestCellUnionExpand(t *testing.T) {
 
 		// This code duplicates the logic in Expand(min_radius, max_level_diff)
 		// that figures out an appropriate cell level to use for the expansion.
-		minLevel := maxLevel
+		minLevel := MaxLevel
 		for _, cid := range covering {
 			minLevel = minInt(minLevel, cid.Level())
 		}
@@ -1048,8 +1048,8 @@ func TestCellUnionEmpty(t *testing.T) {
 }
 
 func BenchmarkCellUnionFromRange(b *testing.B) {
-	x := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
-	y := CellIDFromFace(5).ChildEndAtLevel(maxLevel)
+	x := CellIDFromFace(0).ChildBeginAtLevel(MaxLevel)
+	y := CellIDFromFace(5).ChildEndAtLevel(MaxLevel)
 	for i := 0; i < b.N; i++ {
 		CellUnionFromRange(x, y)
 	}

@@ -79,7 +79,7 @@ func (c Cell) ID() CellID {
 
 // IsLeaf returns whether this Cell is a leaf or not.
 func (c Cell) IsLeaf() bool {
-	return c.level == maxLevel
+	return c.level == MaxLevel
 }
 
 // SizeIJ returns the edge length of this cell in (i,j)-space.
@@ -379,6 +379,18 @@ func (c Cell) CapBound() Cap {
 // If you want every point to be contained by exactly one Cell,
 // you will need to convert the Cell to a Loop.
 func (c Cell) ContainsPoint(p Point) bool {
+	// We can't just call XYZtoFaceUV, because for points that lie on the
+	// boundary between two faces (i.e. u or v is +1/-1) we need to return
+	// true for both adjacent cells.
+	//
+	// We can get away with not checking the face if the point matches the face of
+	// the cell here because, for the 4 faces adjacent to c.face, p will be
+	// projected outside the range of ([-1,1]x[-1,1]) and thus can't intersect the
+	// cell bounds (except on the face boundary which we want).
+	//
+	// For the face opposite c.face, the sign of the UV coordinates of P will be
+	// flipped so it will automatically fall outside the cell boundary as no cells
+	// cross the origin.
 	var uv r2.Point
 	var ok bool
 	if uv.X, uv.Y, ok = faceXYZToUV(int(c.face), p); !ok {
@@ -569,7 +581,7 @@ func (c Cell) MaxDistance(target Point) s1.ChordAngle {
 
 	// Otherwise, find the minimum distance dMin to the antipodal point and the
 	// maximum distance will be pi - dMin.
-	return s1.StraightChordAngle - c.BoundaryDistance(Point{target.Mul(-1)})
+	return s1.StraightChordAngle - c.Distance(Point{target.Mul(-1)})
 }
 
 // BoundaryDistance reports the distance from the cell boundary to the given point.

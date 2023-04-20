@@ -74,10 +74,10 @@ func (c Crossing) String() string {
 //
 // Properties of CrossingSign:
 //
-//  (1) CrossingSign(b,a,c,d) == CrossingSign(a,b,c,d)
-//  (2) CrossingSign(c,d,a,b) == CrossingSign(a,b,c,d)
-//  (3) CrossingSign(a,b,c,d) == MaybeCross if a==c, a==d, b==c, b==d
-//  (3) CrossingSign(a,b,c,d) == DoNotCross or MaybeCross if a==b or c==d
+//	(1) CrossingSign(b,a,c,d) == CrossingSign(a,b,c,d)
+//	(2) CrossingSign(c,d,a,b) == CrossingSign(a,b,c,d)
+//	(3) CrossingSign(a,b,c,d) == MaybeCross if a==c, a==d, b==c, b==d
+//	(3) CrossingSign(a,b,c,d) == DoNotCross or MaybeCross if a==b or c==d
 //
 // This method implements an exact, consistent perturbation model such
 // that no three points are ever considered to be collinear. This means
@@ -107,11 +107,11 @@ func CrossingSign(a, b, c, d Point) Crossing {
 //
 // Useful properties of VertexCrossing (VC):
 //
-//  (1) VC(a,a,c,d) == VC(a,b,c,c) == false
-//  (2) VC(a,b,a,b) == VC(a,b,b,a) == true
-//  (3) VC(a,b,c,d) == VC(a,b,d,c) == VC(b,a,c,d) == VC(b,a,d,c)
-//  (3) If exactly one of a,b equals one of c,d, then exactly one of
-//      VC(a,b,c,d) and VC(c,d,a,b) is true
+//	(1) VC(a,a,c,d) == VC(a,b,c,c) == false
+//	(2) VC(a,b,a,b) == VC(a,b,b,a) == true
+//	(3) VC(a,b,c,d) == VC(a,b,d,c) == VC(b,a,c,d) == VC(b,a,d,c)
+//	(3) If exactly one of a,b equals one of c,d, then exactly one of
+//	    VC(a,b,c,d) and VC(c,d,a,b) is true
 //
 // It is an error to call this method with 4 distinct vertices.
 func VertexCrossing(a, b, c, d Point) bool {
@@ -129,13 +129,13 @@ func VertexCrossing(a, b, c, d Point) bool {
 	// Optimization: if AB=CD or AB=DC, we can avoid most of the calculations.
 	switch {
 	case a == c:
-		return (b == d) || OrderedCCW(Point{a.Ortho()}, d, b, a)
+		return (b == d) || OrderedCCW(a.referenceDir(), d, b, a)
 	case b == d:
-		return OrderedCCW(Point{b.Ortho()}, c, a, b)
+		return OrderedCCW(b.referenceDir(), c, a, b)
 	case a == d:
-		return (b == c) || OrderedCCW(Point{a.Ortho()}, c, b, a)
+		return (b == c) || OrderedCCW(a.referenceDir(), c, b, a)
 	case b == c:
-		return OrderedCCW(Point{b.Ortho()}, d, a, b)
+		return OrderedCCW(b.referenceDir(), d, a, b)
 	}
 
 	return false
@@ -162,8 +162,8 @@ func EdgeOrVertexCrossing(a, b, c, d Point) bool {
 //
 // Useful properties of Intersection:
 //
-//  (1) Intersection(b,a,c,d) == Intersection(a,b,d,c) == Intersection(a,b,c,d)
-//  (2) Intersection(c,d,a,b) == Intersection(a,b,c,d)
+//	(1) Intersection(b,a,c,d) == Intersection(a,b,d,c) == Intersection(a,b,c,d)
+//	(2) Intersection(c,d,a,b) == Intersection(a,b,c,d)
 //
 // The returned intersection point X is guaranteed to be very close to the
 // true intersection point of AB and CD, even if the edges intersect at a
@@ -394,3 +394,47 @@ func intersectionExact(a0, a1, b0, b1 Point) Point {
 
 	return Point{x}
 }
+
+// AngleContainsVertex reports if the angle ABC contains its vertex B.
+// Containment is defined such that if several polygons tile the region around
+// a vertex, then exactly one of those polygons contains that vertex.
+// Returns false for degenerate angles of the form ABA.
+//
+// Note that this method is not sufficient to determine vertex containment in
+// polygons with duplicate vertices (such as the polygon ABCADE).  Use
+// ContainsVertexQuery for such polygons. AngleContainsVertex(a, b, c)
+// is equivalent to using ContainsVertexQuery as follows:
+//
+//	ContainsVertexQuery query(b);
+//	query.AddEdge(a, -1);  // incoming
+//	query.AddEdge(c, 1);   // outgoing
+//	return query.ContainsVertex() > 0;
+//
+// Useful properties of AngleContainsVertex:
+//
+//	(1) AngleContainsVertex(a,b,a) == false
+//	(2) AngleContainsVertex(a,b,c) == !AngleContainsVertex(c,b,a) unless a == c
+//	(3) Given vertices v_1 ... v_k ordered cyclically CCW around vertex b,
+//	    AngleContainsVertex(v_{i+1}, b, v_i) is true for exactly one value of i.
+//
+// REQUIRES: a != b && b != c
+func AngleContainsVertex(a, b, c Point) bool {
+	// A loop with consecutive vertices A, B, C contains vertex B if and only if
+	// the fixed vector R = referenceDir(B) is contained by the wedge ABC.  The
+	// wedge is closed at A and open at C, i.e. the point B is inside the loop
+	// if A = R but not if C = R.
+	//
+	// Note that the test below is written so as to get correct results when the
+	// angle ABC is degenerate. If A = C or C = R it returns false, and
+	// otherwise if A = R it returns true.
+	return !OrderedCCW(b.referenceDir(), c, a, b)
+}
+
+// TODO(roberts): Differences from C++
+// func RobustCrossProd(a, b Point) Point
+// func symbolicCrossProd(a, b Point) Point
+// func exactCrossProd(a, b Point) Point
+// func SignedVertexCrossing(a, b, c, d Point) int
+// func isNormalizable(p Point) bool
+// func ensureNormalizable(p Point) Point
+// func normalizableFromPrecise(p r3.PreciseVector) Point

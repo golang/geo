@@ -525,6 +525,7 @@ func TestCellDistance(t *testing.T) {
 		target := randomPoint()
 
 		expectedToBoundary := minDistanceToPointBruteForce(cell, target).Angle()
+
 		expectedToInterior := expectedToBoundary
 		if cell.ContainsPoint(target) {
 			expectedToInterior = 0
@@ -599,6 +600,9 @@ func minDistanceToPointBruteForce(cell Cell, target Point) s1.ChordAngle {
 }
 
 func maxDistanceToPointBruteForce(cell Cell, target Point) s1.ChordAngle {
+	if cell.ContainsPoint(Point{target.Mul(-1)}) {
+		return s1.StraightChordAngle
+	}
 	maxDistance := s1.NegativeChordAngle
 	for i := 0; i < 4; i++ {
 		maxDistance, _ = UpdateMaxDistance(target, cell.Vertex(i),

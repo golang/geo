@@ -19,7 +19,7 @@ import (
 )
 
 func TestLaxLoopEmptyLoop(t *testing.T) {
-	shape := Shape(laxLoopFromLoop(EmptyLoop()))
+	shape := Shape(LaxLoopFromLoop(EmptyLoop()))
 
 	if got, want := shape.NumEdges(), 0; got != want {
 		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
@@ -43,8 +43,8 @@ func TestLaxLoopEmptyLoop(t *testing.T) {
 
 func TestLaxLoopNonEmptyLoop(t *testing.T) {
 	vertices := parsePoints("0:0, 0:1, 1:1, 1:0")
-	shape := Shape(laxLoopFromPoints(vertices))
-	if got, want := len(shape.(*laxLoop).vertices), len(vertices); got != want {
+	shape := Shape(LaxLoopFromPoints(vertices))
+	if got, want := len(shape.(*LaxLoop).vertices), len(vertices); got != want {
 		t.Errorf("shape.numVertices = %v, want %v", got, want)
 	}
 	if got, want := shape.NumEdges(), len(vertices); got != want {
@@ -60,7 +60,7 @@ func TestLaxLoopNonEmptyLoop(t *testing.T) {
 		t.Errorf("shape.Chain(0).Length = %v, want %v", got, want)
 	}
 	for i := 0; i < len(vertices); i++ {
-		if got, want := shape.(*laxLoop).vertex(i), vertices[i]; got != want {
+		if got, want := shape.(*LaxLoop).vertex(i), vertices[i]; got != want {
 			t.Errorf("%d. vertex(%d) = %v, want %v", i, i, got, want)
 		}
 		edge := shape.Edge(i)
@@ -84,3 +84,8 @@ func TestLaxLoopNonEmptyLoop(t *testing.T) {
 		t.Errorf("shape.ReferencePoint().Contained = true, want false")
 	}
 }
+
+// TODO(roberts): Remaining tests to be ported:
+// LaxClosedPolylineNoInterior
+// VertexIdLaxLoopEmptyLoop
+// VertexIdLaxLoopInvertedLoop

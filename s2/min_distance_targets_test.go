@@ -82,7 +82,7 @@ func TestDistanceTargetMinCellTargetVisitContainingShapes(t *testing.T) {
 }
 
 func TestDistanceTargetMinCellUnionTargetUpdateDistanceToCellWhenEqual(t *testing.T) {
-	// TODO(roberts): Uncomment when implented.
+	// TODO(roberts): Uncomment when implemented.
 	/*
 		var minDist minDistance
 
@@ -104,7 +104,7 @@ func TestDistanceTargetMinCellUnionTargetUpdateDistanceToCellWhenEqual(t *testin
 }
 
 func TestDistanceTargetMinCellUnionTargetUpdateDistanceToEdgeWhenEqual(t *testing.T) {
-	// TODO(roberts): Uncomment when implented.
+	// TODO(roberts): Uncomment when implemented.
 	/*
 		var minDist minDistance
 
@@ -127,7 +127,7 @@ func TestDistanceTargetMinCellUnionTargetUpdateDistanceToEdgeWhenEqual(t *testin
 }
 
 func TestDistanceTargetMinCellUnionTargetVisitContainingShapes(t *testing.T) {
-	// TODO(roberts): Uncomment when implented.
+	// TODO(roberts): Uncomment when implemented.
 	/*
 		index := makeShapeIndex("1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | -1:-1, -1:5, 5:-1")
 

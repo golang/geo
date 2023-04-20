@@ -212,7 +212,7 @@ func TestTestingFractal(t *testing.T) {
 }
 
 // TestChordAngleMaxPointError is located in here to work around circular
-// import issues. This s1 test needs s2.Points which wont work with our
+// import issues. This s1 test needs s2.Points which won't work with our
 // packages. The test is in this file since while it uses Points, it's not
 // part of Points methods so it shouldn't be in s2point_test.
 func TestChordAngleMaxPointError(t *testing.T) {

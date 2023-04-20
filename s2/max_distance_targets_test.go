@@ -421,35 +421,32 @@ func TestDistanceTargetMaxEdgeTargetVisitContainingShapes(t *testing.T) {
 }
 
 func TestDistanceTargetMaxShapeIndexTargetCapBound(t *testing.T) {
-	// TODO(roberts): Uncomment when ShapeIndexRegion is implemented.
-	/*
-		var md maxDistance
-		zero := md.zero()
-		inf := md.infinity()
+	var md maxDistance
+	zero := md.zero()
+	inf := md.infinity()
 
-		index := NewShapeIndex()
-		index.Add(PolygonFromCell(CellFromCellID(randomCellID())))
-		pv := PointVector([]Point{randomPoint()})
-		index.Add(Shape(&pv))
-		target := NewMaxDistanceToShapeIndexTarget(index)
-		c := target.capBound()
+	index := NewShapeIndex()
+	index.Add(PolygonFromCell(CellFromCellID(randomCellID())))
+	pv := PointVector([]Point{randomPoint()})
+	index.Add(Shape(&pv))
+	target := NewMaxDistanceToShapeIndexTarget(index)
+	c := target.capBound()
 
-		for j := 0; j < 100; j++ {
-			pTest := randomPoint()
-			// Check points outside of cap to be away from maxDistance's zero().
-			if !c.ContainsPoint(pTest) {
-				var curDist distance = inf
-				var ok bool
-				if curDist, ok = target.updateDistanceToPoint(pTest, curDist); !ok {
-					t.Errorf("updateDistanceToPoint failed, but should have succeeeded")
-					continue
-				}
-				if !zero.less(curDist) {
-					t.Errorf("point %v outside of cap should be less than %v distance, but were %v", pTest, zero, curDist)
-				}
+	for j := 0; j < 100; j++ {
+		pTest := randomPoint()
+		// Check points outside of cap to be away from maxDistance's zero().
+		if !c.ContainsPoint(pTest) {
+			var curDist distance = inf
+			var ok bool
+			if curDist, ok = target.updateDistanceToPoint(pTest, curDist); !ok {
+				t.Errorf("updateDistanceToPoint failed, but should have succeeded")
+				continue
+			}
+			if !zero.less(curDist) {
+				t.Errorf("point %v outside of cap should be less than %v distance, but were %v", pTest, zero, curDist)
 			}
 		}
-	*/
+	}
 }
 
 func TestDistanceTargetMaxShapeIndexTargetUpdateDistanceToCellWhenEqual(t *testing.T) {
@@ -522,7 +519,7 @@ func TestDistanceTargetMaxShapeIndexTargetVisitContainingShapes(t *testing.T) {
 		reflectPoints(parsePoints("20:20, 20:21, 21:20")),
 		reflectPoints(parsePoints("10:10, 10:11, 11:10")),
 	}
-	laxPoly := laxPolygonFromPoints(loops)
+	laxPoly := LaxPolygonFromPoints(loops)
 	targetIndex.Add(laxPoly)
 
 	target := NewMaxDistanceToShapeIndexTarget(targetIndex)

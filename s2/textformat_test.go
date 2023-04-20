@@ -100,6 +100,7 @@ func parseLatLngs(s string) []LatLng {
 	if s == "" {
 		return lls
 	}
+
 	for _, piece := range strings.Split(s, ",") {
 		piece = strings.TrimSpace(piece)
 
@@ -110,7 +111,7 @@ func parseLatLngs(s string) []LatLng {
 
 		p := strings.Split(piece, ":")
 		if len(p) != 2 {
-			panic(fmt.Sprintf("invalid input string for parseLatLngs: %q", piece))
+			continue
 		}
 
 		lat, err := strconv.ParseFloat(p[0], 64)
@@ -148,7 +149,7 @@ func makeCellUnion(tokens ...string) CellUnion {
 	var cu CellUnion
 
 	for _, t := range tokens {
-		cu = append(cu, cellIDFromString(t))
+		cu = append(cu, CellIDFromString(t))
 	}
 	return cu
 }
@@ -177,11 +178,12 @@ func makeLoop(s string) *Loop {
 // same format as above.
 //
 // Examples of the input format:
-//     "10:20, 90:0, 20:30"                                  // one loop
-//     "10:20, 90:0, 20:30; 5.5:6.5, -90:-180, -15.2:20.3"   // two loops
-//     ""       // the empty polygon (consisting of no loops)
-//     "empty"  // the empty polygon (consisting of no loops)
-//     "full"   // the full polygon (consisting of one full loop)
+//
+//	"10:20, 90:0, 20:30"                                  // one loop
+//	"10:20, 90:0, 20:30; 5.5:6.5, -90:-180, -15.2:20.3"   // two loops
+//	""       // the empty polygon (consisting of no loops)
+//	"empty"  // the empty polygon (consisting of no loops)
+//	"full"   // the full polygon (consisting of one full loop)
 func makePolygon(s string, normalize bool) *Polygon {
 	var loops []*Loop
 	// Avoid the case where strings.Split on empty string will still return
@@ -213,29 +215,29 @@ func makePolyline(s string) *Polyline {
 	return &p
 }
 
-// makeLaxPolyline constructs a laxPolyline from the given string.
-func makeLaxPolyline(s string) *laxPolyline {
-	return laxPolylineFromPoints(parsePoints(s))
+// makeLaxPolyline constructs a LaxPolyline from the given string.
+func makeLaxPolyline(s string) *LaxPolyline {
+	return LaxPolylineFromPoints(parsePoints(s))
 }
 
 // laxPolylineToString returns a string representation suitable for reconstruction
 // by the makeLaxPolyline method.
-func laxPolylineToString(l *laxPolyline) string {
+func laxPolylineToString(l *LaxPolyline) string {
 	var buf bytes.Buffer
 	writePoints(&buf, l.vertices)
 	return buf.String()
 
 }
 
-// makeLaxPolygon creates a laxPolygon from the given debug formatted string.
+// makeLaxPolygon creates a LaxPolygon from the given debug formatted string.
 // Similar to makePolygon, except that loops must be oriented so that the
 // interior of the loop is always on the left, and polygons with degeneracies
 // are supported. As with makePolygon, "full" denotes the full polygon and "empty"
-// is not allowed (instead, simply create a laxPolygon with no loops).
-func makeLaxPolygon(s string) *laxPolygon {
+// is not allowed (instead, simply create a LaxPolygon with no loops).
+func makeLaxPolygon(s string) *LaxPolygon {
 	var points [][]Point
 	if s == "" {
-		return laxPolygonFromPoints(points)
+		return LaxPolygonFromPoints(points)
 	}
 	for _, l := range strings.Split(s, ";") {
 		if l == "full" {
@@ -244,22 +246,23 @@ func makeLaxPolygon(s string) *laxPolygon {
 			points = append(points, parsePoints(l))
 		}
 	}
-	return laxPolygonFromPoints(points)
+	return LaxPolygonFromPoints(points)
 }
 
 // makeShapeIndex builds a ShapeIndex from the given debug string containing
 // the points, polylines, and loops (in the form of a single polygon)
 // described by the following format:
 //
-//   point1|point2|... # line1|line2|... # polygon1|polygon2|...
+//	point1|point2|... # line1|line2|... # polygon1|polygon2|...
 //
 // Examples:
-//   1:2 | 2:3 # #                     // Two points
-//   # 0:0, 1:1, 2:2 | 3:3, 4:4 #      // Two polylines
-//   # # 0:0, 0:3, 3:0; 1:1, 2:1, 1:2  // Two nested loops (one polygon)
-//   5:5 # 6:6, 7:7 # 0:0, 0:1, 1:0    // One of each
-//   # # empty                         // One empty polygon
-//   # # empty | full                  // One empty polygon, one full polygon
+//
+//	1:2 | 2:3 # #                     // Two points
+//	# 0:0, 1:1, 2:2 | 3:3, 4:4 #      // Two polylines
+//	# # 0:0, 0:3, 3:0; 1:1, 2:1, 1:2  // Two nested loops (one polygon)
+//	5:5 # 6:6, 7:7 # 0:0, 0:1, 1:0    // One of each
+//	# # empty                         // One empty polygon
+//	# # empty | full                  // One empty polygon, one full polygon
 //
 // Loops should be directed so that the region's interior is on the left.
 // Loops can be degenerate (they do not need to meet Loop requirements).

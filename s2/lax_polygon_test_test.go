@@ -19,7 +19,7 @@ import (
 )
 
 func TestLaxPolygonShapeEmptyPolygon(t *testing.T) {
-	shape := laxPolygonFromPolygon((&Polygon{}))
+	shape := LaxPolygonFromPolygon((&Polygon{}))
 	if got, want := shape.numLoops, 0; got != want {
 		t.Errorf("shape.numLoops = %d, want %d", got, want)
 	}
@@ -47,7 +47,7 @@ func TestLaxPolygonShapeEmptyPolygon(t *testing.T) {
 }
 
 func TestLaxPolygonFull(t *testing.T) {
-	shape := laxPolygonFromPolygon(PolygonFromLoops([]*Loop{makeLoop("full")}))
+	shape := LaxPolygonFromPolygon(PolygonFromLoops([]*Loop{makeLoop("full")}))
 	if got, want := shape.numLoops, 1; got != want {
 		t.Errorf("shape.numLoops = %d, want %d", got, want)
 	}
@@ -76,11 +76,11 @@ func TestLaxPolygonFull(t *testing.T) {
 
 func TestLaxPolygonSingleVertexPolygon(t *testing.T) {
 	// Polygon doesn't support single-vertex loops, so we need to construct
-	// the laxPolygon directly.
+	// the LaxPolygon directly.
 	var loops [][]Point
 	loops = append(loops, parsePoints("0:0"))
 
-	shape := laxPolygonFromPoints(loops)
+	shape := LaxPolygonFromPoints(loops)
 	if got, want := shape.numLoops, 1; got != want {
 		t.Errorf("shape.numLoops = %d, want %d", got, want)
 	}
@@ -127,7 +127,7 @@ func TestLaxPolygonSingleVertexPolygon(t *testing.T) {
 func TestLaxPolygonShapeSingleLoopPolygon(t *testing.T) {
 	vertices := parsePoints("0:0, 0:1, 1:1, 1:0")
 	lenVerts := len(vertices)
-	shape := laxPolygonFromPolygon(PolygonFromLoops([]*Loop{LoopFromPoints(vertices)}))
+	shape := LaxPolygonFromPolygon(PolygonFromLoops([]*Loop{LoopFromPoints(vertices)}))
 
 	if got, want := shape.numLoops, 1; got != want {
 		t.Errorf("shape.numLoops = %d, want %d", got, want)
@@ -191,7 +191,7 @@ func TestLaxPolygonShapeMultiLoopPolygon(t *testing.T) {
 		parsePoints("1:1, 2:2, 1:2"), // CW
 	}
 	lenLoops := len(loops)
-	shape := laxPolygonFromPoints(loops)
+	shape := LaxPolygonFromPoints(loops)
 	if got, want := shape.numLoops, lenLoops; got != want {
 		t.Errorf("shape.numLoops = %d, want %d", got, want)
 	}
@@ -252,7 +252,7 @@ func TestLaxPolygonShapeDegenerateLoops(t *testing.T) {
 		parsePoints("5:5, 6:6"),
 	}
 
-	shape := laxPolygonFromPoints(loops)
+	shape := LaxPolygonFromPoints(loops)
 	if shape.ReferencePoint().Contained {
 		t.Errorf("%v.ReferencePoint().Contained() = true, want false", shape)
 	}
@@ -263,11 +263,18 @@ func TestLaxPolygonShapeInvertedLoops(t *testing.T) {
 		parsePoints("1:2, 1:1, 2:2"),
 		parsePoints("3:4, 3:3, 4:4"),
 	}
-	shape := laxPolygonFromPoints(loops)
+	shape := LaxPolygonFromPoints(loops)
 
 	if !containsBruteForce(shape, OriginPoint()) {
 		t.Errorf("containsBruteForce(%v, %v) = false, want true", shape, OriginPoint())
 	}
 }
 
-// TODO(roberts): TestLaxPolygonShapeCompareToLoop once fractal testing is added.
+// TODO(roberts): Remaining to port:
+// LaxPolygonManyLoopPolygon
+// LaxPolygonMultiLoopS2Polygon
+// LaxPolygonCompareToLoop once fractal testing is added.
+// LaxPolygonCoderWorks
+// LaxPolygonChainIteratorWorks
+// LaxPolygonChainVertexIteratorWorks
+//

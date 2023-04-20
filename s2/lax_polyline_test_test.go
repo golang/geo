@@ -19,7 +19,7 @@ import (
 )
 
 func TestLaxPolylineNoVertices(t *testing.T) {
-	shape := Shape(laxPolylineFromPoints([]Point{}))
+	shape := Shape(LaxPolylineFromPoints([]Point{}))
 
 	if got, want := shape.NumEdges(), 0; got != want {
 		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
@@ -42,7 +42,7 @@ func TestLaxPolylineNoVertices(t *testing.T) {
 }
 
 func TestLaxPolylineOneVertex(t *testing.T) {
-	shape := Shape(laxPolylineFromPoints([]Point{PointFromCoords(1, 0, 0)}))
+	shape := Shape(LaxPolylineFromPoints([]Point{PointFromCoords(1, 0, 0)}))
 	if got, want := shape.NumEdges(), 0; got != want {
 		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
@@ -62,7 +62,7 @@ func TestLaxPolylineOneVertex(t *testing.T) {
 
 func TestLaxPolylineEdgeAccess(t *testing.T) {
 	vertices := parsePoints("0:0, 0:1, 1:1")
-	shape := Shape(laxPolylineFromPoints(vertices))
+	shape := Shape(LaxPolylineFromPoints(vertices))
 
 	if got, want := shape.NumEdges(), 2; got != want {
 		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
@@ -102,3 +102,9 @@ func TestLaxPolylineEdgeAccess(t *testing.T) {
 		t.Errorf("shape.Edge(1).V1 = %v, want %v", edge1.V1, vertices[2])
 	}
 }
+
+// TODO(roberts): Remaining tests to complete:
+// RoundtripEncoding
+// CoderWorks
+// ChainIteratorWorks
+// ChainVertexIteratorWorks
