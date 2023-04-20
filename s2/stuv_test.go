@@ -211,7 +211,7 @@ func TestSiTiSTRoundtrip(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		st := randomUniformFloat64(0, 1.0)
 		// this uses near not exact because there is some loss in precision
-		// when scaling down to the nearest 1/maxLevel and back.
+		// when scaling down to the nearest 1/MaxLevel and back.
 		if got := siTiToST(stToSiTi(st)); !float64Near(got, st, 1e-8) {
 			t.Errorf("siTiToST(stToSiTi(%v)) = %v, want %v", st, got, st)
 		}
@@ -233,7 +233,7 @@ func TestUVWFace(t *testing.T) {
 }
 
 func TestXYZToFaceSiTi(t *testing.T) {
-	for level := 0; level < maxLevel; level++ {
+	for level := 0; level < MaxLevel; level++ {
 		for i := 0; i < 1000; i++ {
 			ci := randomCellIDForLevel(level)
 			f, si, ti, gotLevel := xyzToFaceSiTi(ci.Point())
@@ -267,8 +267,8 @@ func TestXYZToFaceSiTi(t *testing.T) {
 
 			// Finally, test some random (si,ti) values that may be at different
 			// levels, or not at a valid level at all (for example, si == 0).
-			faceRandom := randomUniformInt(numFaces)
-			mask := -1 << uint32(maxLevel-level)
+			faceRandom := randomUniformInt(NumFaces)
+			mask := -1 << uint32(MaxLevel-level)
 			siRandom := randomUint32() & uint32(mask)
 			tiRandom := randomUint32() & uint32(mask)
 			for siRandom > maxSiTi || tiRandom > maxSiTi {
@@ -306,7 +306,7 @@ func TestXYZToFaceSiTi(t *testing.T) {
 }
 
 func TestXYZFaceSiTiRoundtrip(t *testing.T) {
-	for level := 0; level < maxLevel; level++ {
+	for level := 0; level < MaxLevel; level++ {
 		for i := 0; i < 1000; i++ {
 			ci := randomCellIDForLevel(level)
 			f, si, ti, _ := xyzToFaceSiTi(ci.Point())

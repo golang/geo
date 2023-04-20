@@ -47,14 +47,14 @@ func TestMetric(t *testing.T) {
 		t.Errorf("Max Area: %v*%v = %v, want <= %v", MaxWidthMetric.Deriv, MaxEdgeMetric.Deriv, got, MaxAreaMetric.Deriv)
 	}
 
-	for level := -2; level <= maxLevel+3; level++ {
+	for level := -2; level <= MaxLevel+3; level++ {
 		width := MinWidthMetric.Deriv * math.Pow(2, float64(-level))
-		if level >= maxLevel+3 {
+		if level >= MaxLevel+3 {
 			width = 0
 		}
 
 		// Check boundary cases (exactly equal to a threshold value).
-		expected := int(math.Max(0, math.Min(maxLevel, float64(level))))
+		expected := int(math.Max(0, math.Min(MaxLevel, float64(level))))
 
 		if MinWidthMetric.MinLevel(width) != expected {
 			t.Errorf("MinWidthMetric.MinLevel(%v) = %v, want %v", width, MinWidthMetric.MinLevel(width), expected)

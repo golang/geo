@@ -240,10 +240,10 @@ func (p *PaddedCell) ShrinkToFit(rect r2.Rect) CellID {
 
 	// Compute the highest bit position where the two i- or j-endpoints differ,
 	// and then choose the cell level that includes both of these endpoints. So
-	// if both pairs of endpoints are equal we choose maxLevel; if they differ
-	// only at bit 0, we choose (maxLevel - 1), and so on.
+	// if both pairs of endpoints are equal we choose MaxLevel; if they differ
+	// only at bit 0, we choose (MaxLevel - 1), and so on.
 	levelMSB := uint64(((iXor | jXor) << 1) + 1)
-	level := maxLevel - findMSBSetNonZero64(levelMSB)
+	level := MaxLevel - findMSBSetNonZero64(levelMSB)
 	if level <= p.level {
 		return p.id
 	}

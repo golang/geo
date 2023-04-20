@@ -169,7 +169,7 @@ func testCrossingEdgeQueryAllCrossings(t *testing.T, edges []Edge) {
 					missingCandidates = append(missingCandidates, i)
 				}
 			} else {
-				maxDist := MaxDiagMetric.Value(maxLevel)
+				maxDist := MaxDiagMetric.Value(MaxLevel)
 				if DistanceFromSegment(a, c, d).Radians() < maxDist ||
 					DistanceFromSegment(b, c, d).Radians() < maxDist ||
 					DistanceFromSegment(c, a, b).Radians() < maxDist ||
@@ -278,7 +278,7 @@ func TestCrossingEdgeQueryCandidatesDegenerateEdgeOnCellVertexIsItsOwnCandidate(
 
 func TestCrossingEdgeQueryCandidatesCollinearEdgesOnCellBoundaries(t *testing.T) {
 	const numEdgeIntervals = 8 // 9*8/2 = 36 edges
-	for level := 0; level <= maxLevel; level++ {
+	for level := 0; level <= MaxLevel; level++ {
 		var edges []Edge
 		cell := CellFromCellID(randomCellIDForLevel(level))
 		i := randomUniformInt(4)

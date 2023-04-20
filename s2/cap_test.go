@@ -262,7 +262,6 @@ func TestCapRadiusToHeight(t *testing.T) {
 		{s1.Angle(2 * math.Pi), fullHeight},
 		// Degree tests.
 		{-7.0 * s1.Degree, emptyHeight},
-		{-0.0 * s1.Degree, 0},
 		{0.0 * s1.Degree, 0},
 		{12.0 * s1.Degree, 0.0218523992661943},
 		{30.0 * s1.Degree, 0.1339745962155613},
@@ -273,7 +272,6 @@ func TestCapRadiusToHeight(t *testing.T) {
 		{270.0 * s1.Degree, fullHeight},
 		// Radians tests.
 		{-1.0 * s1.Radian, emptyHeight},
-		{-0.0 * s1.Radian, 0},
 		{0.0 * s1.Radian, 0},
 		{1.0 * s1.Radian, 0.45969769413186},
 		{math.Pi / 2.0 * s1.Radian, 1.0},

@@ -125,8 +125,8 @@ func randomFrameAtPoint(z Point) *matrix3x3 {
 // The distribution is uniform over the space of cell ids, but only
 // approximately uniform over the surface of the sphere.
 func randomCellIDForLevel(level int) CellID {
-	face := randomUniformInt(numFaces)
-	pos := randomUint64() & uint64((1<<posBits)-1)
+	face := randomUniformInt(NumFaces)
+	pos := randomUint64() & uint64((1<<PosBits)-1)
 	return CellIDFromFacePosLevel(face, pos, level)
 }
 
@@ -134,7 +134,7 @@ func randomCellIDForLevel(level int) CellID {
 // level. The distribution is uniform over the space of cell ids,
 // but only approximately uniform over the surface of the sphere.
 func randomCellID() CellID {
-	return randomCellIDForLevel(randomUniformInt(maxLevel + 1))
+	return randomCellIDForLevel(randomUniformInt(MaxLevel + 1))
 }
 
 // randomCellUnion returns a CellUnion of the given size of randomly selected cells.

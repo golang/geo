@@ -170,7 +170,7 @@ func (s *ShapeIndexCell) findByShapeID(shapeID int32) *clippedShape {
 type faceEdge struct {
 	shapeID     int32    // The ID of shape that this edge belongs to
 	edgeID      int      // Edge ID within that shape
-	maxLevel    int      // Not desirable to subdivide this edge beyond this level
+	MaxLevel    int      // Not desirable to subdivide this edge beyond this level
 	hasInterior bool     // Belongs to a shape that has a dimension of 2
 	a, b        r2.Point // The edge endpoints, clipped to a given face
 	edge        Edge     // The original edge.
@@ -197,10 +197,9 @@ const (
 // ShapeIndexIterator is an iterator that provides low-level access to
 // the cells of the index. Cells are returned in increasing order of CellID.
 //
-//   for it := index.Iterator(); !it.Done(); it.Next() {
-//     fmt.Print(it.CellID())
-//   }
-//
+//	for it := index.Iterator(); !it.Done(); it.Next() {
+//	  fmt.Print(it.CellID())
+//	}
 type ShapeIndexIterator struct {
 	index    *ShapeIndex
 	position int
@@ -407,7 +406,7 @@ func newTracker() *tracker {
 	t := &tracker{
 		isActive:   false,
 		b:          trackerOrigin(),
-		nextCellID: CellIDFromFace(0).ChildBeginAtLevel(maxLevel),
+		nextCellID: CellIDFromFace(0).ChildBeginAtLevel(MaxLevel),
 	}
 	t.drawTo(Point{faceUVToXYZ(0, -1, -1).Normalize()}) // CellID curve start
 
@@ -571,12 +570,11 @@ const (
 //
 // Example showing how to build an index of Polylines:
 //
-//   index := NewShapeIndex()
-//   for _, polyline := range polylines {
-//       index.Add(polyline);
-//   }
-//   // Now you can use a CrossingEdgeQuery or ClosestEdgeQuery here.
-//
+//	index := NewShapeIndex()
+//	for _, polyline := range polylines {
+//	    index.Add(polyline);
+//	}
+//	// Now you can use a CrossingEdgeQuery or ClosestEdgeQuery here.
 type ShapeIndex struct {
 	// shapes is a map of shape ID to shape.
 	shapes map[int32]Shape
@@ -659,6 +657,15 @@ func (s *ShapeIndex) End() *ShapeIndexIterator {
 	// happens. See about referencing the IsFresh to guard for this in the future.
 	s.maybeApplyUpdates()
 	return NewShapeIndexIterator(s, IteratorEnd)
+}
+
+// Region returns a new ShapeIndexRegion for this ShapeIndex.
+func (s *ShapeIndex) Region() *ShapeIndexRegion {
+	return &ShapeIndexRegion{
+		index:         s,
+		containsQuery: NewContainsPointQuery(s, VertexModelSemiOpen),
+		iter:          s.Iterator(),
+	}
 }
 
 // Len reports the number of Shapes in this index.
@@ -873,7 +880,7 @@ func (s *ShapeIndex) addShapeInternal(shapeID int32, allEdges [][]faceEdge, t *t
 
 		faceEdge.edgeID = e
 		faceEdge.edge = edge
-		faceEdge.maxLevel = maxLevelForEdge(edge)
+		faceEdge.MaxLevel = maxLevelForEdge(edge)
 		s.addFaceEdge(faceEdge, allEdges)
 	}
 }
@@ -992,7 +999,7 @@ func (s *ShapeIndex) skipCellRange(begin, end CellID, t *tracker, disjointFromIn
 // given cell. disjointFromIndex is an optimization hint indicating that cellMap
 // does not contain any entries that overlap the given cell.
 func (s *ShapeIndex) updateEdges(pcell *PaddedCell, edges []*clippedEdge, t *tracker, disjointFromIndex bool) {
-	// This function is recursive with a maximum recursion depth of 30 (maxLevel).
+	// This function is recursive with a maximum recursion depth of 30 (MaxLevel).
 
 	// Incremental updates are handled as follows. All edges being added or
 	// removed are combined together in edges, and all shapes with interiors
@@ -1140,7 +1147,7 @@ func (s *ShapeIndex) makeIndexCell(p *PaddedCell, edges []*clippedEdge, t *track
 	// Return false if there are too many such edges.
 	count := 0
 	for _, ce := range edges {
-		if p.Level() < ce.faceEdge.maxLevel {
+		if p.Level() < ce.faceEdge.MaxLevel {
 			count++
 		}
 
@@ -1427,7 +1434,7 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 			edgeID := clipped.edges[i]
 			edge.edgeID = edgeID
 			edge.edge = shape.Edge(edgeID)
-			edge.maxLevel = maxLevelForEdge(edge.edge)
+			edge.MaxLevel = maxLevelForEdge(edge.edge)
 			if edge.hasInterior {
 				t.testEdge(shapeID, edge.edge)
 			}

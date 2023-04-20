@@ -268,10 +268,8 @@ func NewMinDistanceToShapeIndexTarget(index *ShapeIndex) *MinDistanceToShapeInde
 }
 
 func (m *MinDistanceToShapeIndexTarget) capBound() Cap {
-	// TODO(roberts): Depends on ShapeIndexRegion existing.
-	// c := makeS2ShapeIndexRegion(m.index).CapBound()
-	// return CapFromCenterRadius(Point{c.Center.Mul(-1)}, c.Radius())
-	panic("not implemented yet")
+	c := m.index.Region().CapBound()
+	return CapFromCenterAngle(Point{c.Center().Mul(-1)}, c.Radius())
 }
 
 func (m *MinDistanceToShapeIndexTarget) updateDistanceToPoint(p Point, dist distance) (distance, bool) {
@@ -358,5 +356,4 @@ func (m *MinDistanceToShapeIndexTarget) setUseBruteForce(b bool) { m.query.opts.
 
 // TODO(roberts): Remaining methods
 //
-// func (m *MinDistanceToShapeIndexTarget) capBound() Cap {
 // CellUnionTarget

@@ -144,6 +144,59 @@ func TestPointApproxEqual(t *testing.T) {
 	}
 }
 
+func TestPointOrtho(t *testing.T) {
+	tests := []struct {
+		have Point
+		want Point
+	}{
+		// Vector's Ortho returns an axis-aligned ortho for an
+		// axis-aligned input. Check that this does not.
+		{
+			have: Point{r3.Vector{X: 1, Y: 0, Z: 0}},
+			want: Point{r3.Vector{X: 0, Y: -0.999985955295886075333556, Z: 0.005299925563068195837058}},
+		},
+		{
+			have: Point{r3.Vector{X: 0, Y: 1, Z: 0}},
+			want: Point{r3.Vector{X: 0.004569952278750987959000, Y: 0.0, Z: -0.999989557713564125585037}},
+		},
+		{
+			have: Point{r3.Vector{X: 0, Y: 0, Z: 1}},
+			want: Point{r3.Vector{X: -0.999928007775066962636856, Y: 0.011999136093300803371231, Z: 0}},
+		},
+
+		// Test a couple other values
+		{
+			have: Point{r3.Vector{X: 1, Y: 1, Z: 1}},
+			want: Point{r3.Vector{X: -0.709740689278763769998193, Y: 0.005297583276916723732386, Z: 0.704443106001847008101890}},
+		},
+		{
+			have: Point{r3.Vector{X: 3, Y: -2, Z: 0.4}},
+			want: Point{r3.Vector{X: -0.555687999915428054720223, Y: -0.831317152491703792449584, Z: 0.011074236907191168863274}},
+		},
+		{
+			have: Point{r3.Vector{X: 0.012, Y: 0.0053, Z: 0.00457}},
+			want: Point{r3.Vector{X: 0.404015523469256565558538, Y: -0.914752128609637393807930, Z: 0}},
+		},
+	}
+
+	for _, test := range tests {
+		got := Ortho(test.have)
+
+		if got != test.want {
+			t.Errorf("Ortho(%v) = %v, want %v", test.have, got, test.want)
+		}
+
+		// Test that the dot product with the orthogonal result is zero.
+		if !float64Eq(test.have.Dot(got.Vector), 0) {
+			t.Errorf("%v = not orthogonal to %v.Ortho()", test.have, got)
+		}
+
+		if !got.IsUnit() {
+			t.Errorf("%v should be unit length, but is not", got)
+		}
+	}
+}
+
 func TestPointRegularPoints(t *testing.T) {
 	// Conversion to/from degrees has a little more variability than the default epsilon.
 	const epsilon = 1e-13

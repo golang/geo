@@ -108,7 +108,7 @@ func (m Metric) Value(level int) float64 {
 }
 
 // MinLevel returns the minimum level such that the metric is at most
-// the given value, or maxLevel (30) if there is no such level.
+// the given value, or MaxLevel (30) if there is no such level.
 //
 // For example, MinLevel(0.1) returns the minimum level such that all cell diagonal
 // lengths are 0.1 or smaller. The returned value is always a valid level.
@@ -116,12 +116,12 @@ func (m Metric) Value(level int) float64 {
 // In C++, this is called GetLevelForMaxValue.
 func (m Metric) MinLevel(val float64) int {
 	if val < 0 {
-		return maxLevel
+		return MaxLevel
 	}
 
 	level := -(math.Ilogb(val/m.Deriv) >> uint(m.Dim-1))
-	if level > maxLevel {
-		level = maxLevel
+	if level > MaxLevel {
+		level = MaxLevel
 	}
 	if level < 0 {
 		level = 0
@@ -138,12 +138,12 @@ func (m Metric) MinLevel(val float64) int {
 // In C++, this is called GetLevelForMinValue.
 func (m Metric) MaxLevel(val float64) int {
 	if val <= 0 {
-		return maxLevel
+		return MaxLevel
 	}
 
 	level := math.Ilogb(m.Deriv/val) >> uint(m.Dim-1)
-	if level > maxLevel {
-		level = maxLevel
+	if level > MaxLevel {
+		level = MaxLevel
 	}
 	if level < 0 {
 		level = 0

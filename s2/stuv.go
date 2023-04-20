@@ -145,9 +145,9 @@ import (
 
 const (
 	// maxSiTi is the maximum value of an si- or ti-coordinate.
-	// It is one shift more than maxSize. The range of valid (si,ti)
+	// It is one shift more than MaxSize. The range of valid (si,ti)
 	// values is [0..maxSiTi].
-	maxSiTi = maxSize << 1
+	maxSiTi = MaxSize << 1
 )
 
 // siTiToST converts an si- or ti-value to the corresponding s- or t-value.
@@ -322,8 +322,8 @@ func xyzToFaceSiTi(p Point) (face int, si, ti uint32, level int) {
 	// center. The si,ti values of 0 and maxSiTi need to be handled specially
 	// because they do not correspond to cell centers at any valid level; they
 	// are mapped to level -1 by the code at the end.
-	level = maxLevel - findLSBSetNonZero64(uint64(si|maxSiTi))
-	if level < 0 || level != maxLevel-findLSBSetNonZero64(uint64(ti|maxSiTi)) {
+	level = MaxLevel - findLSBSetNonZero64(uint64(si|maxSiTi))
+	if level < 0 || level != MaxLevel-findLSBSetNonZero64(uint64(ti|maxSiTi)) {
 		return face, si, ti, -1
 	}
 

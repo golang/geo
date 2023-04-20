@@ -23,6 +23,56 @@ import (
 	"github.com/golang/geo/s1"
 )
 
+func TestParseLatLng(t *testing.T) {
+	tests := []struct {
+		have string
+		want []LatLng
+	}{
+		{
+			have: "",
+			want: []LatLng{},
+		},
+		{
+			have: "blah",
+			want: []LatLng{},
+		},
+		{
+			have: "0:0",
+			want: []LatLng{LatLng{0, 0}},
+		},
+		{
+			have: "0:0, 0:-90",
+			want: []LatLng{
+				LatLngFromDegrees(0, 0),
+				LatLngFromDegrees(0, -90),
+			},
+		},
+		{
+			have: "-20:150, -20:151, -19:150",
+			want: []LatLng{
+				LatLngFromDegrees(-20, 150),
+				LatLngFromDegrees(-20, 151),
+				LatLngFromDegrees(-19, 150),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		got := parseLatLngs(test.have)
+
+		if len(got) != len(test.want) {
+			t.Errorf("parseLatLngs(%s) = %+v, got different number of results %+v", test.have, got, test.want)
+			continue
+		}
+
+		for k, v := range got {
+			if v != test.want[k] {
+				t.Errorf("parseLatlng(%q): %d. %+v, want %+v", test.have, k, v, test.want[k])
+			}
+		}
+	}
+}
+
 func TestTextFormatWritePoints(t *testing.T) {
 	tests := []struct {
 		have []Point
@@ -435,5 +485,5 @@ func TestTextFormatShapeIndexDebugStringRoundTrip(t *testing.T) {
 //   SpecialCases, EmptyLoop, EmptyPolyline, Empty Othertypes
 //
 // make type tests for ValidInput and InvalidInput for
-//   LatLngs, Points, Rect, Loop, Polyline, Polygon,
+//   Points, Rect, Loop, Polyline, Polygon,
 //   LaxPolygon, ShapeIndex

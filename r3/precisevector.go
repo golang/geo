@@ -196,3 +196,8 @@ func (v PreciseVector) SmallestComponent() Axis {
 	}
 	return ZAxis
 }
+
+// IsZero reports if this vector is exactly 0 efficiently.
+func (v PreciseVector) IsZero() bool {
+	return v.X.Sign() == 0 && v.Y.Sign() == 0 && v.Z.Sign() == 0
+}

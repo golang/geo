@@ -188,7 +188,7 @@ func verifyCellIndexRangeIterators(t *testing.T, desc string, index *CellIndex) 
 // the exact set of (s2cell_id, label) pairs that contain any leaf cell.
 func verifyCellIndexContents(t *testing.T, desc string, index *CellIndex) {
 	// "minCellID" is the first CellID that has not been validated yet.
-	minCellID := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
+	minCellID := CellIDFromFace(0).ChildBeginAtLevel(MaxLevel)
 	r := NewCellIndexRangeIterator(index)
 	for r.Begin(); !r.Done(); r.Next() {
 		if minCellID != r.StartID() {
@@ -229,7 +229,7 @@ func verifyCellIndexContents(t *testing.T, desc string, index *CellIndex) {
 		}
 	}
 
-	if CellIDFromFace(5).ChildEndAtLevel(maxLevel) != minCellID {
+	if CellIDFromFace(5).ChildEndAtLevel(MaxLevel) != minCellID {
 		t.Errorf("%s: the final cell should be the sentinel value, got %v", desc, minCellID)
 	}
 }
@@ -321,7 +321,7 @@ func TestCellIndex(t *testing.T) {
 	for _, test := range tests {
 		index := &CellIndex{}
 		for _, v := range test.have {
-			index.Add(cellIDFromString(v.cellID), v.label)
+			index.Add(CellIDFromString(v.cellID), v.label)
 		}
 		cellIndexQuadraticValidate(t, test.label, index, nil)
 	}

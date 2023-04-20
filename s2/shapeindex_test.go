@@ -159,7 +159,7 @@ func quadraticValidate(t *testing.T, index *ShapeIndex) {
 	// sphere and include as a subset all the cell ids used in the index.  For
 	// each cell id, verify that the expected set of edges is present.
 	// "minCellID" is the first CellID that has not been validated yet.
-	minCellID := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
+	minCellID := CellIDFromFace(0).ChildBeginAtLevel(MaxLevel)
 	for it := index.Iterator(); ; it.Next() {
 		// Generate a list of CellIDs ("skipped cells") that cover the gap
 		// between the last cell we validated and the next cell in the index.
@@ -174,7 +174,7 @@ func quadraticValidate(t *testing.T, index *ShapeIndex) {
 		} else {
 			// Validate the empty cells beyond the last cell in the index.
 			skipped = CellUnionFromRange(minCellID,
-				CellIDFromFace(5).ChildEndAtLevel(maxLevel))
+				CellIDFromFace(5).ChildEndAtLevel(MaxLevel))
 		}
 
 		// Iterate through all the shapes, simultaneously validating the current
@@ -250,7 +250,7 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 
 	var ids []CellID
 	// minCellID is the first CellID in a complete traversal.
-	minCellID := CellIDFromFace(0).ChildBeginAtLevel(maxLevel)
+	minCellID := CellIDFromFace(0).ChildBeginAtLevel(MaxLevel)
 
 	for it.Begin(); !it.Done(); it.Next() {
 		// Get the next cell in the iterator.
@@ -478,7 +478,7 @@ func TestShapeIndexMixedGeometry(t *testing.T) {
 	index.Add(makePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"))
 	index.Add(makePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"))
 
-	loop := LoopFromCell(CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(maxLevel)))
+	loop := LoopFromCell(CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(MaxLevel)))
 	index.Add(loop)
 	it := index.Iterator()
 	// No geometry intersects face 1, so there should be no index cells there.
