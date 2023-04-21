@@ -26,11 +26,9 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-var (
-	// To set in testing add "--benchmark_brute_force=true" to your test command.
-	benchmarkBruteForce = flag.Bool("benchmark_brute_force", false,
-		"When set, use brute force algorithms in benchmarking.")
-)
+// To set in testing add "--benchmark_brute_force=true" to your test command.
+var benchmarkBruteForce = flag.Bool("benchmark_brute_force", false,
+	"When set, use brute force algorithms in benchmarking.")
 
 // float64Eq reports whether the two values are within the default epsilon.
 func float64Eq(x, y float64) bool { return float64Near(x, y, epsilon) }
@@ -143,6 +141,7 @@ func randomCellUnion(n int) CellUnion {
 	for i := 0; i < n; i++ {
 		cu = append(cu, randomCellID())
 	}
+	cu.Normalize()
 	return cu
 }
 

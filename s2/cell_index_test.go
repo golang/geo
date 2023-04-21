@@ -49,7 +49,6 @@ func cellIndexNodesEqual(a, b []cellIndexNode) bool {
 		return b[i].less(b[j])
 	})
 	return reflect.DeepEqual(a, b)
-
 }
 
 // copyCellIndexNodes creates a copy of the nodes so that sorting and other tests
@@ -338,9 +337,108 @@ func TestCellIndexRandomCellUnions(t *testing.T) {
 	cellIndexQuadraticValidate(t, "Random Cell Unions", index, nil)
 }
 
+func TestCellIndexIntersectionOptimization(t *testing.T) {
+	type cellIndexTestInput struct {
+		cellID string
+		label  int32
+	}
+	tests := []struct {
+		label string
+		have  []cellIndexTestInput
+	}{
+		{
+			// Tests various corner cases for the binary search optimization in
+			// VisitIntersectingCells.
+			label: "Intersection Optimization",
+			have: []cellIndexTestInput{
+				{"1/001", 1},
+				{"1/333", 2},
+				{"2/00", 3},
+				{"2/0232", 4},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		index := &CellIndex{}
+		for _, v := range test.have {
+			index.Add(cellIDFromString(v.cellID), v.label)
+		}
+		index.Build()
+		checkIntersection(t, test.label, makeCellUnion("1/010", "1/3"), index)
+		checkIntersection(t, test.label, makeCellUnion("2/010", "2/011", "2/02"), index)
+	}
+}
+
+func TestCellIndexIntersectionRandomCellUnions(t *testing.T) {
+	// Construct cell unions from random CellIDs at random levels. Note that
+	// because the cell level is chosen uniformly, there is a very high
+	// likelihood that the cell unions will overlap.
+	index := &CellIndex{}
+	for i := int32(0); i < 100; i++ {
+		index.AddCellUnion(randomCellUnion(10), i)
+	}
+	index.Build()
+	for i := 0; i < 200; i++ {
+		checkIntersection(t, "", randomCellUnion(10), index)
+	}
+}
+
+func TestCellIndexIntersectionSemiRandomCellUnions(t *testing.T) {
+	for i := 0; i < 200; i++ {
+		index := &CellIndex{}
+		id := cellIDFromString("1/0123012301230123")
+		var target CellUnion
+		for j := 0; j < 100; j++ {
+			switch {
+			case oneIn(10):
+				index.Add(id, int32(j))
+			case oneIn(4):
+				target = append(target, id)
+			case oneIn(2):
+				id = id.NextWrap()
+			case oneIn(6) && !id.isFace():
+				id = id.immediateParent()
+			case oneIn(6) && !id.IsLeaf():
+				id = id.ChildBegin()
+			}
+		}
+		target.Normalize()
+		index.Build()
+		checkIntersection(t, "", target, index)
+	}
+}
+
+func checkIntersection(t *testing.T, desc string, target CellUnion, index *CellIndex) {
+	var expected, actual []int32
+	for it := NewCellIndexIterator(index); !it.Done(); it.Next() {
+		if target.IntersectsCellID(it.CellID()) {
+			expected = append(expected, it.Label())
+		}
+	}
+
+	index.VisitIntersectingCells(target, func(cellID CellID, label int32) bool {
+		actual = append(actual, label)
+		return true
+	})
+
+	if !labelsEqual(actual, expected) {
+		t.Errorf("%s: labels not equal but should be.  %v != %v", desc, actual, expected)
+	}
+}
+
+func labelsEqual(a, b []int32) bool {
+	sort.Slice(a, func(i, j int) bool {
+		return a[i] < a[j]
+	})
+	sort.Slice(b, func(i, j int) bool {
+		return b[i] < b[j]
+	})
+	return reflect.DeepEqual(a, b)
+}
+
 // TODO(roberts): Differences from C++
 //
 // Add remainder of TestCellIndexContentsIteratorSuppressesDuplicates
 //
 // additional Iterator related parts
-// Intersections related
