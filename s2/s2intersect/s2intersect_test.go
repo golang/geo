@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package s2
+package s2intersect
 
 import "math/rand"
 
