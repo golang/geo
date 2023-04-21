@@ -30,7 +30,7 @@ func TestMetric(t *testing.T) {
 		t.Errorf("MaxEdgeAspect = %v, want >= 1", MaxEdgeAspect)
 	}
 	if got := MaxEdgeMetric.Deriv / MinEdgeMetric.Deriv; MaxEdgeAspect > got {
-		t.Errorf("Edge Aspect: %v/%v = %v, want <= %v", MaxEdgeMetric.Deriv, MinEdgeMetric.Deriv, got, MaxDiagAspect)
+		t.Errorf("Edge Aspect: %v/%v = %v, want <= %v", MaxEdgeMetric.Deriv, MinEdgeMetric.Deriv, got, MaxEdgeAspect)
 	}
 	if MaxDiagAspect < 1 {
 		t.Errorf("MaxDiagAspect = %v, want >= 1", MaxDiagAspect)
