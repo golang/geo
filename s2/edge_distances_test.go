@@ -202,26 +202,26 @@ func TestEdgeDistancesUpdateMinInteriorDistanceRejectionTestIsConservative(t *te
 			a:       Point{r3.Vector{1, -8.9031850507928352e-11, 0}},
 			b:       Point{r3.Vector{-0.99999999999996347, 2.7030110029169596e-07, 1.555092348806121e-99}},
 			minDist: minDist,
-			want:    false,
+			want:    true,
 		},
 		{
 			x:       Point{r3.Vector{1, -4.7617930898495072e-13, 0}},
 			a:       Point{r3.Vector{-1, -1.6065916409055676e-10, 0}},
 			b:       Point{r3.Vector{1, 0, 9.9964883247706732e-35}},
 			minDist: minDist,
-			want:    false,
+			want:    true,
 		},
 		{
 			x:       Point{r3.Vector{1, 0, 0}},
 			a:       Point{r3.Vector{1, -8.4965026896454536e-11, 0}},
 			b:       Point{r3.Vector{-0.99999999999966138, 8.2297529603339328e-07, 9.6070344113320997e-21}},
 			minDist: minDist,
-			want:    false,
+			want:    true,
 		},
 	}
 
 	for _, test := range tests {
-		if _, ok := UpdateMinDistance(test.x, test.a, test.b, test.minDist); !ok {
+		if _, ok := UpdateMinDistance(test.x, test.a, test.b, test.minDist); ok != test.want {
 			t.Errorf("UpdateMinDistance(%v, %v, %v, %v) = %v, want %v", test.x, test.a, test.b, test.minDist, ok, test.want)
 		}
 	}
