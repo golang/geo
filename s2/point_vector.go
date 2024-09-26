@@ -28,11 +28,16 @@ var (
 // Its methods are on *PointVector due to implementation details of ShapeIndex.
 type PointVector []Point
 
-func (p *PointVector) NumEdges() int                     { return len(*p) }
-func (p *PointVector) Edge(i int) Edge                   { return Edge{(*p)[i], (*p)[i]} }
-func (p *PointVector) ReferencePoint() ReferencePoint    { return OriginReferencePoint(false) }
-func (p *PointVector) NumChains() int                    { return len(*p) }
-func (p *PointVector) Chain(i int) Chain                 { return Chain{i, 1} }
+func (p *PointVector) NumEdges() int                  { return len(*p) }
+func (p *PointVector) Edge(i int) Edge                { return Edge{(*p)[i], (*p)[i]} }
+func (p *PointVector) ReferencePoint() ReferencePoint { return OriginReferencePoint(false) }
+func (p *PointVector) NumChains() int                 { return len(*p) }
+func (p *PointVector) Chain(i int) Chain {
+	if len(*p) == 1 {
+		return Chain{0, 1}
+	}
+	return Chain{i, len(*p) - i}
+}
 func (p *PointVector) ChainEdge(i, j int) Edge           { return Edge{(*p)[i], (*p)[j]} }
 func (p *PointVector) ChainPosition(e int) ChainPosition { return ChainPosition{e, 0} }
 func (p *PointVector) Dimension() int                    { return 0 }

@@ -501,7 +501,10 @@ func (l *Loop) NumChains() int {
 
 // Chain returns the i-th edge chain in the Shape.
 func (l *Loop) Chain(chainID int) Chain {
-	return Chain{0, l.NumEdges()}
+	if l.NumEdges() == 1 {
+		return Chain{0, l.NumEdges()}
+	}
+	return Chain{chainID, l.NumEdges() - chainID}
 }
 
 // ChainEdge returns the j-th edge of the i-th edge chain.
