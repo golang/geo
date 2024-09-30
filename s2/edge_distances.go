@@ -406,3 +406,14 @@ func EdgePairClosestPoints(a0, a1, b0, b1 Point) (Point, Point) {
 		panic("illegal case reached")
 	}
 }
+
+func GetPointOnRay(origin Point, dir Point, r s1.Angle) Point {
+	vector := (origin.Vector.Mul(math.Cos(r.Radians()))).Add(dir.Vector.Mul(math.Sin(r.Radians()))).Normalize()
+	return PointFromCoords(vector.X, vector.Y, vector.Z)
+}
+
+func GetPointOnLine(startPoint Point, endPoint Point, angle s1.Angle) Point {
+	vector, _ := robustNormalWithLength(startPoint.Vector, endPoint.Vector)
+	dir := vector.Cross(startPoint.Vector).Normalize()
+	return GetPointOnRay(startPoint, PointFromCoords(dir.X, dir.Y, dir.Z), angle)
+}
