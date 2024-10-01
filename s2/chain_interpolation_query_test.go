@@ -36,6 +36,7 @@ func testSimplePolylines(t *testing.T) {
 		point    Point
 		edgeID   int
 		distance s1.Angle
+		err      error
 	}
 	distances := []float64{
 		-1.,
@@ -91,25 +92,44 @@ func testSimplePolylines(t *testing.T) {
 	degreesBb := lengthBb.Degrees()
 	degreesCc := lengthCc.Degrees()
 
-	point, edgeID, distance, err := uninitializedQuery.AtFraction(0)
+	point, _, _, err := uninitializedQuery.AtFraction(0)
 	if err == nil {
 		t.Fatalf("got %v, want error", point)
 	}
-	point, edgeID, distance, err = acQuery.AtDistance(s1.InfAngle())
+	point, _, _, err = acQuery.AtDistance(s1.InfAngle())
 	if err == nil {
 		t.Fatalf("got %v, want error", point)
 	}
 
-	distanceResult := make([]reslut, len(distances))
+	ac := make([]reslut, len(distances))
+	abc := make([]reslut, len(distances))
+	bb := make([]reslut, len(distances))
+	cc := make([]reslut, len(distances))
+
+	var emptyQueryValid bool
 
 	for i, distance := range distances {
 		totalFraction := distance / totalLengthAbc
 
-		distancePoint, distanceEdgeID, newDistance, err := emptyQuery.AtFraction(totalFraction)
-		if err != nil && i != len(distances)-1 {
-			t.Fatal(err)
-		}
-		distanceResult[i] = reslut{point: distancePoint, edgeID: distanceEdgeID, distance: newDistance}
+		_, _, _, err := emptyQuery.AtFraction(totalFraction)
+
+		emptyQueryValid = emptyQueryValid || (err == nil)
+
+		distancePoint, distanceEdgeID, newDistance, err := acQuery.AtFraction(totalFraction)
+		ac[i] = reslut{point: distancePoint, edgeID: distanceEdgeID, distance: newDistance, err: err}
+
+		distancePoint, distanceEdgeID, newDistance, err = abcQuery.AtFraction(totalFraction)
+		abc[i] = reslut{point: distancePoint, edgeID: distanceEdgeID, distance: newDistance, err: err}
+
+		distancePoint, distanceEdgeID, newDistance, err = bbQuery.AtFraction(totalFraction)
+		bb[i] = reslut{point: distancePoint, edgeID: distanceEdgeID, distance: newDistance, err: err}
+
+		distancePoint, distanceEdgeID, newDistance, err = ccQuery.AtFraction(totalFraction)
+		cc[i] = reslut{point: distancePoint, edgeID: distanceEdgeID, distance: newDistance, err: err}
+	}
+
+	if emptyQueryValid {
+		t.Errorf("got %v, want %v", emptyQueryValid, false)
 	}
 
 	if degreesEmpty >= kEpsilon {
@@ -138,5 +158,44 @@ func testSimplePolylines(t *testing.T) {
 
 	for i := 0; i < len(groundTruth); i++ {
 
+		if ac[i].err != nil {
+			t.Errorf("got %v, want %v", ac[i].err, nil)
+		}
+
+		if abc[i].err != nil {
+			t.Errorf("got %v, want %v", abc[i].err, nil)
+		}
+
+		if bb[i].err != nil {
+			t.Errorf("got %v, want %v", bb[i].err, nil)
+		}
+
+		if cc[i].err == nil {
+			t.Errorf("got %v, want %v", cc[i].err, nil)
+		}
+
+		if ac[i].point.Angle(groundTruth[i].point.Vector) >= kEpsilonAngle {
+			t.Errorf("got %v, want %v", ac[i].point, kEpsilonAngle)
+		}
+
+		if abc[i].point.Angle(groundTruth[i].point.Vector) >= kEpsilonAngle {
+			t.Errorf("got %v, want %v", abc[i].point, kEpsilonAngle)
+		}
+
+		if bb[i].point.Angle(bbPolyline.Edge(i).V1.Vector) >= kEpsilonAngle {
+			t.Errorf("got %v, want %v", bb[i].point, kEpsilonAngle)
+		}
+
+		if ac[i].edgeID != 0 {
+			t.Errorf("got %v, want %v", ac[i].edgeID, 0)
+		}
+
+		if bb[i].edgeID != 0 {
+			t.Errorf("got %v, want %v", bb[i].edgeID, 0)
+		}
+
+		if abc[i].edgeID != groundTruth[i].edgeID {
+			t.Errorf("got %v, want %v", abc[i].edgeID, groundTruth[i].edgeID)
+		}
 	}
 }
