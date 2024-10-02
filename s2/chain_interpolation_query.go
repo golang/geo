@@ -20,17 +20,21 @@ type ChainInterpolationQuery struct {
 }
 
 func InitS2ChainInterpolationQuery(shape Shape, chainID int) ChainInterpolationQuery {
-	if chainID < shape.NumChains() {
+	if shape == nil || chainID >= shape.NumChains() {
 		return ChainInterpolationQuery{nil, 0, nil, 0, 0}
 	}
 
 	var firstEdgeID, lastEdgeID int
 	var cumulativeValues []s1.Angle
 
-	chain := shape.Chain(chainID)
-
-	firstEdgeID = chain.Start
-	lastEdgeID = firstEdgeID + chain.Length - 1
+	if chainID >= 0 {
+		chain := shape.Chain(chainID)
+		firstEdgeID = chain.Start
+		lastEdgeID = firstEdgeID + chain.Length - 1
+	} else {
+		firstEdgeID = 0
+		lastEdgeID = shape.NumEdges() - 1
+	}
 
 	var cumulativeAngle s1.Angle
 
@@ -73,14 +77,15 @@ func (s ChainInterpolationQuery) AtDistance(inputDistance s1.Angle) (point Point
 
 	position, found := slices.BinarySearch(s.cumulativeValues, inputDistance)
 
-	if found && position == 0 {
-		return s.Shape.Edge(s.firstEdgeID).V1, s.firstEdgeID, s.cumulativeValues[1], nil
-	} else if found && position == len(s.cumulativeValues)-1 {
-		return s.Shape.Edge(s.lastEdgeID).V0, s.lastEdgeID, s.cumulativeValues[len(s.cumulativeValues)-1], nil
+	if (found && position == 0) || (!found && position < 0) {
+		return s.Shape.Edge(s.firstEdgeID).V0, s.firstEdgeID, s.cumulativeValues[0], nil
+	} else if (found && position == len(s.cumulativeValues)-1) || (!found && position >= len(s.cumulativeValues)) {
+		return s.Shape.Edge(s.lastEdgeID).V1, s.lastEdgeID, s.cumulativeValues[len(s.cumulativeValues)-1], nil
 	} else {
-		edgeID = position + s.firstEdgeID - 1
+		edgeID = max(position+s.firstEdgeID-1, 0)
 		edge := s.Shape.Edge(edgeID)
-		point = GetPointOnLine(edge.V0, edge.V1, inputDistance-s.cumulativeValues[position-1])
+		distance = inputDistance - s.cumulativeValues[max(0, position-1)]
+		point = GetPointOnLine(edge.V0, edge.V1, inputDistance-s.cumulativeValues[max(0, position-1)])
 	}
 
 	return point, edgeID, distance, nil
@@ -123,12 +128,12 @@ func (s ChainInterpolationQuery) AddSlice(beginFraction, endFraction float64, po
 		return
 	}
 
-	for edgeID := beginEdgeID; edgeID <= endEdgeID; edgeID++ {
+	for edgeID := beginEdgeID; edgeID < endEdgeID; edgeID++ {
 		edge := s.Shape.Edge(edgeID)
 		if lastPoint != edge.V1 {
 			lastPoint = edge.V1
+			*points = append(*points, lastPoint)
 		}
-		*points = append(*points, lastPoint)
 	}
 	*points = append(*points, atEnd)
 
