@@ -14,7 +14,7 @@ const (
 	kEpsilonAngle  = s1.Angle(kEpsilon)
 )
 
-func testSimplePolylines(t *testing.T) {
+func TestSimplePolylines(t *testing.T) {
 	a := PointFromLatLng(LatLng{0, 0})
 	b := PointFromLatLng(LatLng{latitudeB, 0})
 	c := PointFromLatLng(LatLng{latitudeC, 0})
@@ -136,20 +136,20 @@ func testSimplePolylines(t *testing.T) {
 		t.Errorf("got %v, want %v", degreesEmpty, kEpsilon)
 	}
 
-	if !float64Near(float64(lengthAc), totalLengthAbc, kEpsilon) {
-		t.Errorf("got %v, want %v", lengthAc, totalLengthAbc)
+	if !float64Near(float64(degreesAc), totalLengthAbc, kEpsilon) {
+		t.Errorf("got %v, want %v", degreesAc, totalLengthAbc)
 	}
 
-	if !float64Near(float64(lengthAbc), totalLengthAbc, kEpsilon) {
-		t.Errorf("got %v, want %v", lengthAbc, totalLengthAbc)
+	if !float64Near(float64(degreesAbc), totalLengthAbc, kEpsilon) {
+		t.Errorf("got %v, want %v", degreesAbc, totalLengthAbc)
 	}
 
-	if lengthBb >= kEpsilon {
-		t.Errorf("got %v, want %v", lengthBb, kEpsilon)
+	if degreesBb >= kEpsilon {
+		t.Errorf("got %v, want %v", degreesBb, kEpsilon)
 	}
 
-	if lengthCc >= kEpsilon {
-		t.Errorf("got %v, want %v", lengthBb, kEpsilon)
+	if degreesCc >= kEpsilon {
+		t.Errorf("got %v, want %v", degreesCc, kEpsilon)
 	}
 
 	if point.Angle(c.Vector) >= kEpsilon {
