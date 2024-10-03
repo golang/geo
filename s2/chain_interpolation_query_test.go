@@ -22,9 +22,9 @@ type result struct {
 }
 
 func TestSimplePolylines(t *testing.T) {
-	a := PointFromLatLng(LatLng{0, 0})
-	b := PointFromLatLng(LatLng{latitudeB, 0})
-	c := PointFromLatLng(LatLng{latitudeC, 0})
+	a := PointFromLatLng(LatLngFromDegrees(0, 0))
+	b := PointFromLatLng(LatLngFromDegrees(latitudeB, 0))
+	c := PointFromLatLng(LatLngFromDegrees(latitudeC, 0))
 
 	emptyLaxPolyline := Shape(&LaxPolyline{})
 	acPolyline := Shape(&LaxPolyline{vertices: []Point{a, c}})
@@ -176,15 +176,15 @@ func TestSimplePolylines(t *testing.T) {
 		}
 
 		if ac[i].point.Angle(groundTruth[i].point.Vector) >= kEpsilonAngle {
-			t.Errorf("got %v, want %v", ac[i].point, kEpsilonAngle)
+			t.Errorf("got %v, want %v", ac[i].point, groundTruth[i].point.Vector)
 		}
 
 		if abc[i].point.Angle(groundTruth[i].point.Vector) >= kEpsilonAngle {
-			t.Errorf("got %v, want %v", abc[i].point, kEpsilonAngle)
+			t.Errorf("got %v, want %v", abc[i].point, groundTruth[i].point.Vector)
 		}
 
-		if bb[i].point.Angle(bbPolyline.Edge(i).V1.Vector) >= kEpsilonAngle {
-			t.Errorf("got %v, want %v", bb[i].point, kEpsilonAngle)
+		if bb[i].point.Angle(bbPolyline.Edge(0).V0.Vector) >= kEpsilonAngle {
+			t.Errorf("got %v, want %v", bb[i].point, bbPolyline.Edge(0).V0)
 		}
 
 		if ac[i].edgeID != 0 {
@@ -229,12 +229,12 @@ func TestDistances(t *testing.T) {
 
 	results := make([]result, len(distances))
 	for i := 0; i < len(distances); i++ {
-		point, edgeID, distance, err := query.AtDistance(s1.Angle(distances[i]))
+		point, edgeID, distance, err := query.AtDistance(s1.Angle(distances[i] * float64(s1.Radian)))
 
-		results = append(results, result{point, edgeID, distance, err})
+		results[i] = result{point, edgeID, distance, err}
 	}
 
-	if float64Near(length, totalLength, kEpsilon) {
+	if !float64Near(length, totalLength, kEpsilon) {
 		t.Errorf("got %v, want %v", length, totalLength)
 	}
 
@@ -251,7 +251,7 @@ func TestDistances(t *testing.T) {
 		distance := results[i].distance
 
 		if d < 0 {
-			if !float64Eq(lat, 0) {
+			if !float64Eq(lat, LatLngFromPoint(shape.Edge(0).V0).Lat.Degrees()) {
 				t.Errorf("got %v, want %v", lat, 0)
 			}
 
@@ -262,7 +262,7 @@ func TestDistances(t *testing.T) {
 			if !float64Eq(distance.Degrees(), 0) {
 				t.Errorf("got %v, want %v", distance, 0)
 			}
-		} else if d < 2 {
+		} else if d > 2 {
 			if !float64Near(lat, 2, kEpsilon) {
 				t.Errorf("got %v, want %v", lat, 2)
 			}
@@ -384,7 +384,7 @@ func TestGetLengthAtEdgePolyline(t *testing.T) {
 		t.Errorf("got %v, want %v", err, nil)
 	}
 	if !float64Eq(float64(length), float64(s1.InfAngle())) {
-		t.Errorf("got %v, want %v", length, 0)
+		t.Errorf("got %v, want %v", length, s1.InfAngle())
 	}
 
 	length, err = query.GetLengthAtEdgeEnd(0)
@@ -416,7 +416,7 @@ func TestGetLengthAtEdgePolyline(t *testing.T) {
 		t.Errorf("got %v, want %v", err, nil)
 	}
 	if !float64Eq(float64(length), float64(s1.InfAngle())) {
-		t.Errorf("got %v, want %v", length, 0)
+		t.Errorf("got %v, want %v", length, s1.InfAngle())
 	}
 }
 

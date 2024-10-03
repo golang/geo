@@ -77,7 +77,7 @@ func (s ChainInterpolationQuery) AtDistance(inputDistance s1.Angle) (point Point
 
 	position, found := slices.BinarySearch(s.cumulativeValues, inputDistance)
 
-	if (found && position == 0) || (!found && position < 0) {
+	if position <= 0 {
 		return s.Shape.Edge(s.firstEdgeID).V0, s.firstEdgeID, s.cumulativeValues[0], nil
 	} else if (found && position == len(s.cumulativeValues)-1) || (!found && position >= len(s.cumulativeValues)) {
 		return s.Shape.Edge(s.lastEdgeID).V1, s.lastEdgeID, s.cumulativeValues[len(s.cumulativeValues)-1], nil
@@ -85,7 +85,7 @@ func (s ChainInterpolationQuery) AtDistance(inputDistance s1.Angle) (point Point
 		edgeID = max(position+s.firstEdgeID-1, 0)
 		edge := s.Shape.Edge(edgeID)
 		distance = inputDistance - s.cumulativeValues[max(0, position-1)]
-		point = GetPointOnLine(edge.V0, edge.V1, inputDistance-s.cumulativeValues[max(0, position-1)])
+		point = GetPointOnLine(edge.V0, edge.V1, distance)
 	}
 
 	return point, edgeID, distance, nil
