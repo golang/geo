@@ -36,7 +36,6 @@ type ChainInterpolationQuery struct {
 // Once the query object is initialized, the complexity of each subsequent query
 // is O( log(number of edges) ).  The complexity of the initialization and the
 // memory footprint of the query object are both O(number of edges).
-
 func InitChainInterpolationQuery(shape Shape, chainID int) ChainInterpolationQuery {
 	if shape == nil || chainID >= shape.NumChains() {
 		return ChainInterpolationQuery{nil, 0, nil, 0, 0}
