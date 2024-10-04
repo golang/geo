@@ -33,11 +33,11 @@ func TestSimplePolylines(t *testing.T) {
 	ccPolyline := Shape(&LaxPolyline{vertices: []Point{c}})
 
 	uninitializedQuery := ChainInterpolationQuery{}
-	emptyQuery := InitS2ChainInterpolationQuery(emptyLaxPolyline, 0)
-	acQuery := InitS2ChainInterpolationQuery(acPolyline, 0)
-	abcQuery := InitS2ChainInterpolationQuery(abcPolyline, 0)
-	bbQuery := InitS2ChainInterpolationQuery(bbPolyline, 0)
-	ccQuery := InitS2ChainInterpolationQuery(ccPolyline, 0)
+	emptyQuery := InitChainInterpolationQuery(emptyLaxPolyline, 0)
+	acQuery := InitChainInterpolationQuery(acPolyline, 0)
+	abcQuery := InitChainInterpolationQuery(abcPolyline, 0)
+	bbQuery := InitChainInterpolationQuery(bbPolyline, 0)
+	ccQuery := InitChainInterpolationQuery(ccPolyline, 0)
 
 	distances := []float64{
 		-1.,
@@ -218,7 +218,7 @@ func TestDistances(t *testing.T) {
 	totalLength := vertices[0].Angle(vertices[len(vertices)-1].Vector).Degrees()
 
 	shape := Polyline(vertices)
-	query := InitS2ChainInterpolationQuery(&shape, 0)
+	query := InitChainInterpolationQuery(&shape, 0)
 
 	angle, err := query.GetLength()
 
@@ -312,9 +312,9 @@ func TestChains(t *testing.T) {
 
 	laxPolygon := LaxPolygonFromPoints(loops)
 
-	query := InitS2ChainInterpolationQuery(laxPolygon, -1)
-	query0 := InitS2ChainInterpolationQuery(laxPolygon, 0)
-	query1 := InitS2ChainInterpolationQuery(laxPolygon, 1)
+	query := InitChainInterpolationQuery(laxPolygon, -1)
+	query0 := InitChainInterpolationQuery(laxPolygon, 0)
+	query1 := InitChainInterpolationQuery(laxPolygon, 1)
 
 	point, edgeID, distance, err := query.AtFraction(0.25)
 	queryResult := result{point, edgeID, distance, err}
@@ -348,7 +348,7 @@ func TestChains(t *testing.T) {
 }
 
 func TestGetLengthAtEdgeEmpty(t *testing.T) {
-	query := InitS2ChainInterpolationQuery(&laxPolyline{}, 0)
+	query := InitChainInterpolationQuery(&laxPolyline{}, 0)
 
 	angle, err := query.GetLengthAtEdgeEnd(0)
 
@@ -369,7 +369,7 @@ func TestGetLengthAtEdgePolyline(t *testing.T) {
 		PointFromLatLng(LatLngFromDegrees(0, 6)),
 	}
 
-	query := InitS2ChainInterpolationQuery(&laxPolyline{points}, 0)
+	query := InitChainInterpolationQuery(&laxPolyline{points}, 0)
 
 	length, err := query.GetLength()
 	if err != nil {
@@ -437,7 +437,7 @@ func TestGetLengthAtEdgePolygon(t *testing.T) {
 		{points[4], points[5], points[6], points[7]},
 	}
 
-	query0 := InitS2ChainInterpolationQuery(laxPolygonFromPoints(loops), 0)
+	query0 := InitChainInterpolationQuery(laxPolygonFromPoints(loops), 0)
 
 	tolerance := s1.Degree * 0.01
 
@@ -499,7 +499,7 @@ func TestGetLengthAtEdgePolygon(t *testing.T) {
 		}
 	}
 
-	query1 := InitS2ChainInterpolationQuery(laxPolygonFromPoints(loops), 1)
+	query1 := InitChainInterpolationQuery(laxPolygonFromPoints(loops), 1)
 
 	length, err = query1.GetLength()
 	if err != nil {
@@ -554,13 +554,13 @@ func TestGetLengthAtEdgePolygon(t *testing.T) {
 
 func TestSlice(t *testing.T) {
 	// Test with empty shape
-	if pointsToString(InitS2ChainInterpolationQuery(nil, 0).Slice(0, 1)) != `` {
-		t.Errorf("got %v, want %v", pointsToString(InitS2ChainInterpolationQuery(nil, -1).Slice(0, 1)), ``)
+	if pointsToString(InitChainInterpolationQuery(nil, 0).Slice(0, 1)) != `` {
+		t.Errorf("got %v, want %v", pointsToString(InitChainInterpolationQuery(nil, -1).Slice(0, 1)), ``)
 	}
 
 	polyline := laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`))
 
-	query := InitS2ChainInterpolationQuery(polyline, 0)
+	query := InitChainInterpolationQuery(polyline, 0)
 
 	if pointsToString(query.Slice(0, 1)) != `0:0, 0:1, 0:2` {
 		t.Errorf("got %v, want %v", pointsToString(query.Slice(0, 1)), `0:0, 0:1, 0:2`)
