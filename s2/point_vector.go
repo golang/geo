@@ -36,7 +36,7 @@ func (p *PointVector) Chain(i int) Chain {
 	if len(*p) == 1 {
 		return Chain{0, 1}
 	}
-	return Chain{i, len(*p) - i}
+	return Chain{i, 1}
 }
 func (p *PointVector) ChainEdge(i, j int) Edge           { return Edge{(*p)[i], (*p)[j]} }
 func (p *PointVector) ChainPosition(e int) ChainPosition { return ChainPosition{e, 0} }
