@@ -383,7 +383,6 @@ func TestGetLengthAtEdgeEmpty(t *testing.T) {
 		t.Errorf("got %v, want %v", angle, 0)
 	}
 }
-
 func TestGetLengthAtEdgePolyline(t *testing.T) {
 	points := []Point{
 		PointFromLatLng(LatLngFromDegrees(0, 0)),
@@ -392,54 +391,35 @@ func TestGetLengthAtEdgePolyline(t *testing.T) {
 		PointFromLatLng(LatLngFromDegrees(0, 6)),
 	}
 
-	query := InitChainInterpolationQuery(&laxPolyline{points}, 0)
+	polyline := laxPolyline{points}
 
-	length, err := query.GetLength()
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Eq(float64(length), float64(s1.Degree)*6) {
-		t.Errorf("got %v, want %v", length, s1.Degree*6)
-	}
+	query := InitChainInterpolationQuery(&polyline, 0)
 
-	length, err = query.GetLengthAtEdgeEnd(-100)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if float64(length) != float64(s1.InfAngle()) {
-		t.Errorf("got %v, want %v", length, s1.InfAngle())
+	tests := []struct {
+		edgeID int
+		want   s1.Angle
+	}{
+		{-100, s1.InfAngle()},
+		{0, s1.Degree},
+		{1, s1.Degree * 3},
+		{2, s1.Degree * 6},
+		{100, s1.InfAngle()},
 	}
 
-	length, err = query.GetLengthAtEdgeEnd(0)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Eq(float64(length), float64(s1.Degree)) {
-		t.Errorf("got %v, want %v", length, 0)
-	}
+	for _, tt := range tests {
+		got, err := query.GetLengthAtEdgeEnd(tt.edgeID)
 
-	length, err = query.GetLengthAtEdgeEnd(1)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Eq(float64(length), float64(s1.Degree)*3) {
-		t.Errorf("got %v, want %v", length, 0)
-	}
+		if err != nil {
+			t.Errorf("edgeID %d: got %v, want %v", tt.edgeID, err, nil)
+		}
 
-	length, err = query.GetLengthAtEdgeEnd(2)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Eq(float64(length), float64(s1.Degree)*6) {
-		t.Errorf("got %v, want %v", length, 0)
-	}
-
-	length, err = query.GetLengthAtEdgeEnd(100)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if float64(length) != float64(s1.InfAngle()) {
-		t.Errorf("got %v, want %v", length, s1.InfAngle())
+		if tt.edgeID <= polyline.NumEdges() && tt.edgeID >= 0 {
+			if !float64Near(got.Degrees(), tt.want.Degrees(), kEpsilon) {
+				t.Errorf("edgeID %d: got %v, want %v", tt.edgeID, got, tt.want)
+			}
+		} else if got != tt.want {
+			t.Errorf("edgeID %d: got %v, want %v", tt.edgeID, got, tt.want)
+		}
 	}
 }
 
