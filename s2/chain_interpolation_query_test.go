@@ -422,138 +422,196 @@ func TestGetLengthAtEdgePolyline(t *testing.T) {
 		}
 	}
 }
-
 func TestGetLengthAtEdgePolygon(t *testing.T) {
-	points := []Point{
-		PointFromLatLng(LatLngFromDegrees(1, 1)),
-		PointFromLatLng(LatLngFromDegrees(2, 1)),
-		PointFromLatLng(LatLngFromDegrees(2, 3)),
-		PointFromLatLng(LatLngFromDegrees(1, 3)),
-		PointFromLatLng(LatLngFromDegrees(0, 0)),
-		PointFromLatLng(LatLngFromDegrees(0, 4)),
-		PointFromLatLng(LatLngFromDegrees(3, 4)),
-		PointFromLatLng(LatLngFromDegrees(3, 0)),
+	polygon := laxPolygonFromPoints([][]Point{
+		{
+			PointFromLatLng(LatLngFromDegrees(1, 1)),
+			PointFromLatLng(LatLngFromDegrees(2, 1)),
+			PointFromLatLng(LatLngFromDegrees(2, 3)),
+			PointFromLatLng(LatLngFromDegrees(1, 3)),
+		},
+		{
+			PointFromLatLng(LatLngFromDegrees(0, 0)),
+			PointFromLatLng(LatLngFromDegrees(0, 4)),
+			PointFromLatLng(LatLngFromDegrees(3, 4)),
+			PointFromLatLng(LatLngFromDegrees(3, 0)),
+		}})
+
+	tolerance := .01
+
+	tests := []struct {
+		name string
+		args struct {
+			shape   Shape
+			edge    int
+			chainID int
+		}
+		want s1.Angle
+	}{
+		{
+			name: "edge before first edge of first loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    -100,
+				chainID: 0,
+			},
+			want: s1.InfAngle(),
+		},
+		{
+			name: "first edge of first loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    0,
+				chainID: 0,
+			},
+			want: s1.Degree,
+		},
+		{
+			name: "second edge of first loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    1,
+				chainID: 0,
+			},
+			want: s1.Degree * 3,
+		},
+		{
+			name: "last edge of first loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    3,
+				chainID: 0,
+			},
+			want: s1.Degree * 6,
+		},
+		{
+			name: "edge after last edge of first loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    4,
+				chainID: 0,
+			},
+			want: s1.InfAngle(),
+		},
+		{
+			name: "edge before first edge of second loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    3,
+				chainID: 1,
+			},
+			want: s1.InfAngle(),
+		},
+		{
+			name: "first edge of second loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    4,
+				chainID: 1,
+			},
+			want: s1.Degree * 4,
+		},
+		{
+			name: "second edge of second loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    5,
+				chainID: 1,
+			},
+			want: s1.Degree * 7,
+		},
+		{
+			name: "midlle edge of second loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    6,
+				chainID: 1,
+			},
+			want: s1.Degree * 11,
+		},
+		{
+			name: "last edge of second loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    7,
+				chainID: 1,
+			},
+			want: s1.Degree * 14,
+		},
+		{
+			name: "edge after last edge of second loop",
+			args: struct {
+				shape   Shape
+				edge    int
+				chainID int
+			}{
+				shape:   polygon,
+				edge:    8,
+				chainID: 1,
+			},
+			want: s1.InfAngle(),
+		},
 	}
 
-	loops := [][]Point{
-		{points[0], points[1], points[2], points[3]},
-		{points[4], points[5], points[6], points[7]},
-	}
+	for _, tt := range tests {
+		query := InitChainInterpolationQuery(tt.args.shape, tt.args.chainID)
 
-	query0 := InitChainInterpolationQuery(laxPolygonFromPoints(loops), 0)
+		got, err := query.GetLengthAtEdgeEnd(tt.args.edge)
 
-	tolerance := s1.Degree * 0.01
-
-	length, err := query0.GetLength()
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 6.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 6.0)
-	}
-
-	length, err = query0.GetLengthAtEdgeEnd(-100)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if float64(length) != float64(s1.InfAngle()) {
-		t.Errorf("got %v, want %v", length, 0)
-	}
-
-	length, err = query0.GetLengthAtEdgeEnd(0)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 1.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 1.0)
-	}
-
-	length, err = query0.GetLengthAtEdgeEnd(1)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 3.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 3.0)
-	}
-
-	length, err = query0.GetLengthAtEdgeEnd(2)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 4.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 4.0)
-	}
-
-	length, err = query0.GetLengthAtEdgeEnd(3)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 6.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 6.0)
-	}
-
-	for _, element := range []float64{4, 5, 6, 7, 100} {
-		length, err = query0.GetLengthAtEdgeEnd(int(element))
 		if err != nil {
-			t.Errorf("got %v, want %v", err, nil)
+			t.Errorf("%d. got %v, want %v", tt.args.edge, err, nil)
 		}
-		if float64(length) != float64(s1.InfAngle()) {
-			t.Errorf("got %v, want %v", length, 0)
+
+		if tt.want == s1.InfAngle() {
+			if got != tt.want {
+				t.Errorf("%d. got %v, want %v", tt.args.edge, got, tt.want)
+			}
+		} else if !float64Near(got.Degrees(), tt.want.Degrees(), float64(tolerance)) {
+			t.Errorf("%d. got %v, want %v", tt.args.edge, got.Degrees(), tt.want.Degrees())
 		}
-	}
-
-	query1 := InitChainInterpolationQuery(laxPolygonFromPoints(loops), 1)
-
-	length, err = query1.GetLength()
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 14.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 6.0)
-	}
-
-	for _, element := range []float64{-100, 0, 1, 2, 3, 100} {
-		length, err = query1.GetLengthAtEdgeEnd(int(element))
-		if err != nil {
-			t.Errorf("got %v, want %v", err, nil)
-		}
-		if float64(length) != float64(s1.InfAngle()) {
-			t.Errorf("got %v, want %v", length, s1.InfAngle())
-		}
-	}
-
-	length, err = query1.GetLengthAtEdgeEnd(4)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 4.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 4.0)
-	}
-
-	length, err = query1.GetLengthAtEdgeEnd(5)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 7.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 7.0)
-	}
-
-	length, err = query1.GetLengthAtEdgeEnd(6)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 11.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 11.0)
-	}
-
-	length, err = query1.GetLengthAtEdgeEnd(7)
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
-	if !float64Near(length.Degrees(), 14.0, tolerance.Degrees()) {
-		t.Errorf("got %v, want %v", length, 14.0)
 	}
 }
+
 func TestSlice(t *testing.T) {
 	tests := []struct {
 		name string
