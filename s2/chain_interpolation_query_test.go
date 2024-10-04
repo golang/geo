@@ -229,7 +229,7 @@ func TestDistances(t *testing.T) {
 
 	results := make([]result, len(distances))
 	for i := 0; i < len(distances); i++ {
-		point, edgeID, distance, err := query.AtDistance(s1.Angle(distances[i] * float64(s1.Radian)))
+		point, edgeID, distance, err := query.AtDistance(s1.Angle(distances[i] * float64(s1.Degree)))
 
 		results[i] = result{point, edgeID, distance, err}
 	}
@@ -383,7 +383,7 @@ func TestGetLengthAtEdgePolyline(t *testing.T) {
 	if err != nil {
 		t.Errorf("got %v, want %v", err, nil)
 	}
-	if !float64Eq(float64(length), float64(s1.InfAngle())) {
+	if float64(length) != float64(s1.InfAngle()) {
 		t.Errorf("got %v, want %v", length, s1.InfAngle())
 	}
 
@@ -415,7 +415,7 @@ func TestGetLengthAtEdgePolyline(t *testing.T) {
 	if err != nil {
 		t.Errorf("got %v, want %v", err, nil)
 	}
-	if !float64Eq(float64(length), float64(s1.InfAngle())) {
+	if float64(length) != float64(s1.InfAngle()) {
 		t.Errorf("got %v, want %v", length, s1.InfAngle())
 	}
 }
@@ -453,7 +453,7 @@ func TestGetLengthAtEdgePolygon(t *testing.T) {
 	if err != nil {
 		t.Errorf("got %v, want %v", err, nil)
 	}
-	if !float64Eq(float64(length), float64(s1.InfAngle())) {
+	if float64(length) != float64(s1.InfAngle()) {
 		t.Errorf("got %v, want %v", length, 0)
 	}
 
@@ -494,7 +494,7 @@ func TestGetLengthAtEdgePolygon(t *testing.T) {
 		if err != nil {
 			t.Errorf("got %v, want %v", err, nil)
 		}
-		if !float64Eq(float64(length), float64(s1.InfAngle())) {
+		if float64(length) != float64(s1.InfAngle()) {
 			t.Errorf("got %v, want %v", length, 0)
 		}
 	}
@@ -514,8 +514,8 @@ func TestGetLengthAtEdgePolygon(t *testing.T) {
 		if err != nil {
 			t.Errorf("got %v, want %v", err, nil)
 		}
-		if !float64Eq(float64(length), float64(s1.InfAngle())) {
-			t.Errorf("got %v, want %v", length, 0)
+		if float64(length) != float64(s1.InfAngle()) {
+			t.Errorf("got %v, want %v", length, s1.InfAngle())
 		}
 	}
 
