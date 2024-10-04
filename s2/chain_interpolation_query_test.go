@@ -302,7 +302,6 @@ func TestDistances(t *testing.T) {
 		}
 	}
 }
-
 func TestChains(t *testing.T) {
 	loops := [][]Point{
 		parsePoints(`0:0, 1:0`),
@@ -311,38 +310,63 @@ func TestChains(t *testing.T) {
 
 	laxPolygon := LaxPolygonFromPoints(loops)
 
-	query := InitChainInterpolationQuery(laxPolygon, -1)
-	query0 := InitChainInterpolationQuery(laxPolygon, 0)
-	query1 := InitChainInterpolationQuery(laxPolygon, 1)
-
-	point, edgeID, distance, err := query.AtFraction(0.25)
-	queryResult := result{point, edgeID, distance, err}
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
+	tests := []struct {
+		query ChainInterpolationQuery
+		want  result
+		args  float64
+	}{
+		{
+			query: InitChainInterpolationQuery(laxPolygon, -1),
+			want: result{
+				point:    PointFromLatLng(LatLngFromDegrees(1, 0)),
+				edgeID:   1,
+				distance: s1.Angle(1 * s1.Degree),
+				err:      nil,
+			},
+			args: 0.25,
+		},
+		{
+			query: InitChainInterpolationQuery(laxPolygon, 0),
+			want: result{
+				point:    PointFromLatLng(LatLngFromDegrees(0.5, 0)),
+				edgeID:   0,
+				distance: s1.Angle(0.5 * s1.Degree),
+				err:      nil,
+			},
+			args: 0.25,
+		},
+		{
+			query: InitChainInterpolationQuery(laxPolygon, 1),
+			want: result{
+				point:    PointFromLatLng(LatLngFromDegrees(2.5, 0)),
+				edgeID:   2,
+				distance: s1.Angle(2.5 * s1.Degree),
+				err:      nil,
+			},
+			args: 0.25,
+		},
 	}
 
-	point, edgeID, distance, err = query0.AtFraction(0.25)
-	queryResult0 := result{point, edgeID, distance, err}
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
+	for i, tt := range tests {
+		point, edgeID, distance, err := tt.query.AtFraction(tt.args)
 
-	point, edgeID, distance, err = query1.AtFraction(0.25)
-	queryResult1 := result{point, edgeID, distance, err}
-	if err != nil {
-		t.Errorf("got %v, want %v", err, nil)
-	}
+		got := result{
+			point:    point,
+			edgeID:   edgeID,
+			distance: distance,
+			err:      err,
+		}
 
-	if !float64Near(LatLngFromPoint(queryResult.point).Lat.Degrees(), 1, kEpsilon) {
-		t.Errorf("got %v, want %v", LatLngFromPoint(queryResult.point).Lat.Degrees(), 1)
-	}
+		if !float64Near(LatLngFromPoint(got.point).Lat.Degrees(), LatLngFromPoint(tt.want.point).Lat.Degrees(), kEpsilon) {
+			t.Errorf("%d. got %v, want %v", i, LatLngFromPoint(got.point).Lat.Degrees(), LatLngFromPoint(tt.want.point).Lat.Degrees())
+		}
 
-	if !float64Near(LatLngFromPoint(queryResult0.point).Lat.Degrees(), 0.5, kEpsilon) {
-		t.Errorf("got %v, want %v", LatLngFromPoint(queryResult0.point).Lat.Degrees(), 0.5)
-	}
-
-	if !float64Near(LatLngFromPoint(queryResult1.point).Lat.Degrees(), 2.5, kEpsilon) {
-		t.Errorf("got %v, want %v", LatLngFromPoint(queryResult1.point).Lat.Degrees(), 2.5)
+		if got.edgeID != tt.want.edgeID {
+			t.Errorf("%d. got %v, want %v", i, got.edgeID, tt.want.edgeID)
+		}
+		if got.err != tt.want.err {
+			t.Errorf("%d. got %v, want %v", i, got.err, tt.want.err)
+		}
 	}
 }
 
