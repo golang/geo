@@ -594,3 +594,68 @@ func TestSlice(t *testing.T) {
 		}
 	}
 }
+
+func TestSliceDivided(t *testing.T) {
+	tests := []struct {
+		name string
+		args struct {
+			shape              Shape
+			startSliceFraction float64
+			endSliceFraction   float64
+		}
+		want string
+	}{
+		{
+			name: "empty shape",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{nil, 0, 1},
+			want: ``,
+		},
+		{
+			name: "full polyline",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`)), 0, 1},
+			want: `0:0, 0:1, 0:2`,
+		},
+		{
+			name: "first half of polyline",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`)), 0, 0.5},
+			want: `0:0, 0:1`,
+		},
+		{
+			name: "second half of polyline",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`)), 1, 0.5},
+			want: `0:2, 0:1`,
+		},
+		{
+			name: "middle of polyline",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`)), 0.25, 0.75},
+			want: `0:0.5, 0:1, 0:1.5`,
+		},
+	}
+
+	for _, test := range tests {
+		query := InitChainInterpolationQuery(test.args.shape, 0)
+		if got := pointsToString(query.SliceDivided(test.args.startSliceFraction, test.args.endSliceFraction)); got != test.want {
+			t.Errorf("%v: got %v, want %v", test.name, got, test.want)
+		}
+	}
+}

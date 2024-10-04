@@ -175,12 +175,45 @@ func (s ChainInterpolationQuery) Slice(beginFraction, endFraction float64) []Poi
 	return points
 }
 
+// Returns the vector of points that is a slice of the chain from
+// beginFraction to endFraction. If beginFraction is greater than
+// endFraction, then the points are returned in reverse order.
+//
+// For example, Slice(0,1) returns the entire chain, Slice(0, 0.5) returns the
+// first half of the chain, and Slice(1, 0.5) returns the second half of the
+// chain in reverse.
+//
+// The endpoints of the slice are interpolated (except when coinciding with an
+// existing vertex of the chain), and all the internal points are copied from
+// the chain as is.
+//
+// divisions is the number of segments to divide the polyline into.
+// divisions must be >= Shape.NumEdges().
+//
+// If the query is either uninitialized, or initialized with a shape
+// containing no edges, then an empty vector is returned.
+func (s ChainInterpolationQuery) SliceDivided(beginFraction, endFraction float64, divisions int) []Point {
+	var points []Point
+	s.addDividedSlice(beginFraction, endFraction, &points, divisions)
+	return points
+}
+
 // Appends the chain slice from beginFraction to endFraction to the given
 // slice. If beginFraction is greater than endFraction, then the points are
 // appended in reverse order. If the query is either uninitialized, or
 // initialized with a shape containing no edges, then no points are appended.
 func (s ChainInterpolationQuery) AddSlice(beginFraction, endFraction float64, points *[]Point) {
-	if len(s.cumulativeValues) == 0 {
+	s.addDividedSlice(beginFraction, endFraction, points, s.Shape.NumEdges())
+}
+
+// Appends the chain slice from beginFraction to endFraction to the given
+// slice. If beginFraction is greater than endFraction, then the points are
+// appended in reverse order. If the query is either uninitialized, or
+// initialized with a shape containing no edges, then no points are appended.
+// divisions is the number of segments to divide the polyline into.
+// divisions must be greater or equal of NumEdges of Shape.
+func (s ChainInterpolationQuery) addDividedSlice(beginFraction, endFraction float64, points *[]Point, divisions int) {
+	if len(s.cumulativeValues) == 0 || divisions < s.Shape.NumEdges() {
 		return
 	}
 
