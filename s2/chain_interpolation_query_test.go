@@ -67,136 +67,54 @@ func TestSimplePolylines(t *testing.T) {
 		groundTruth[i] = result{point: point, edgeID: edgeID, distance: s1.Angle(distance)}
 	}
 
-	lengthEmpty, err := emptyQuery.GetLength()
-	if err == nil {
-		t.Fatal(err)
-	}
-	lengthAc, err := acQuery.GetLength()
-	if err != nil {
-		t.Fatal(err)
-	}
-	lengthAbc, err := abcQuery.GetLength()
-	if err != nil {
-		t.Fatal(err)
-	}
-	lengthBb, err := bbQuery.GetLength()
-	if err != nil {
-		t.Fatal(err)
-	}
-	lengthCc, err := ccQuery.GetLength()
-	if err == nil {
-		t.Fatal(err)
-	}
-	degreesEmpty := lengthEmpty.Degrees()
-	degreesAc := lengthAc.Degrees()
-	degreesAbc := lengthAbc.Degrees()
-	degreesBb := lengthBb.Degrees()
-	degreesCc := lengthCc.Degrees()
-
-	point, _, _, err := uninitializedQuery.AtFraction(0)
-	if err == nil {
-		t.Fatalf("got %v, want error", point)
-	}
-	point, _, _, err = acQuery.AtDistance(s1.InfAngle())
-	if err != nil {
-		t.Fatalf("got %v, want nil", point)
-	}
-
-	ac := make([]result, len(distances))
-	abc := make([]result, len(distances))
-	bb := make([]result, len(distances))
-	cc := make([]result, len(distances))
-
-	var emptyQueryValid bool
-
-	for i, distance := range distances {
-		totalFraction := distance / totalLengthAbc
-
-		_, _, _, err := emptyQuery.AtFraction(totalFraction)
-
-		emptyQueryValid = emptyQueryValid || (err == nil)
-
-		distancePoint, distanceEdgeID, newDistance, err := acQuery.AtFraction(totalFraction)
-		ac[i] = result{point: distancePoint, edgeID: distanceEdgeID, distance: newDistance, err: err}
-
-		distancePoint, distanceEdgeID, newDistance, err = abcQuery.AtFraction(totalFraction)
-		abc[i] = result{point: distancePoint, edgeID: distanceEdgeID, distance: newDistance, err: err}
-
-		distancePoint, distanceEdgeID, newDistance, err = bbQuery.AtFraction(totalFraction)
-		bb[i] = result{point: distancePoint, edgeID: distanceEdgeID, distance: newDistance, err: err}
-
-		distancePoint, distanceEdgeID, newDistance, err = ccQuery.AtFraction(totalFraction)
-		cc[i] = result{point: distancePoint, edgeID: distanceEdgeID, distance: newDistance, err: err}
-	}
-
-	if emptyQueryValid {
-		t.Errorf("got %v, want %v", emptyQueryValid, false)
-	}
-
-	if degreesEmpty >= kEpsilon {
-		t.Errorf("got %v, want %v", degreesEmpty, kEpsilon)
-	}
-
-	if !float64Near(degreesAc, totalLengthAbc, kEpsilon) {
-		t.Errorf("got %v, want %v", degreesAc, totalLengthAbc)
-	}
-
-	if !float64Near(degreesAbc, totalLengthAbc, kEpsilon) {
-		t.Errorf("got %v, want %v", degreesAbc, totalLengthAbc)
-	}
-
-	if degreesBb >= kEpsilon {
-		t.Errorf("got %v, want %v", degreesBb, kEpsilon)
-	}
-
-	if degreesCc >= kEpsilon {
-		t.Errorf("got %v, want %v", degreesCc, kEpsilon)
-	}
-
-	if point.Angle(c.Vector) >= kEpsilon {
-		t.Errorf("got %v, want %v", point, kEpsilon)
-	}
-
-	for i := 0; i < len(groundTruth); i++ {
-
-		if ac[i].err != nil {
-			t.Errorf("got %v, want %v", ac[i].err, nil)
+	for _, args := range []struct {
+		query   ChainInterpolationQuery
+		want    float64
+		wantErr bool
+	}{
+		{query: uninitializedQuery, want: 0, wantErr: true},
+		{query: emptyQuery, want: 0, wantErr: true},
+		{query: acQuery, want: totalLengthAbc, wantErr: false},
+		{query: abcQuery, want: totalLengthAbc, wantErr: false},
+		{query: bbQuery, want: 0, wantErr: false},
+		{query: ccQuery, want: 0, wantErr: true},
+	} {
+		length, err := args.query.GetLength()
+		if args.wantErr != (err != nil) {
+			t.Fatalf("got %v, want %v", err, args.wantErr)
 		}
-
-		if abc[i].err != nil {
-			t.Errorf("got %v, want %v", abc[i].err, nil)
+		if !float64Near(length.Degrees(), args.want, kEpsilon) {
+			t.Errorf("got %v, want %v", length.Degrees(), args.want)
 		}
+	}
 
-		if bb[i].err != nil {
-			t.Errorf("got %v, want %v", bb[i].err, nil)
+	for _, args := range []struct {
+		query         ChainInterpolationQuery
+		totalFraction float64
+		wantPoint     Point
+		wantEdgeID    int
+		wantDistance  s1.Angle
+		wantErr       bool
+	}{
+		{query: uninitializedQuery, totalFraction: 0, wantPoint: Point{}, wantEdgeID: 0, wantDistance: 0, wantErr: true},
+		{query: emptyQuery, totalFraction: 0, wantPoint: Point{}, wantEdgeID: 0, wantDistance: 0, wantErr: true},
+		{query: acQuery, totalFraction: 0, wantPoint: a, wantEdgeID: 0, wantDistance: s1.Angle(0), wantErr: false},
+		{query: abcQuery, totalFraction: 0, wantPoint: a, wantEdgeID: 0, wantDistance: s1.Angle(0), wantErr: false},
+		{query: bbQuery, totalFraction: 0, wantPoint: b, wantEdgeID: 0, wantDistance: s1.Angle(0), wantErr: false},
+		{query: ccQuery, totalFraction: 0, wantPoint: c, wantEdgeID: 0, wantDistance: 0, wantErr: true},
+	} {
+		distancePoint, distanceEdgeID, newDistance, err := args.query.AtFraction(args.totalFraction)
+		if args.wantErr != (err != nil) {
+			t.Fatalf("got %v, want %v", err, args.wantErr)
 		}
-
-		if cc[i].err == nil {
-			t.Errorf("got %v, want %v", cc[i].err, nil)
+		if distancePoint.Angle(args.wantPoint.Vector) >= kEpsilonAngle {
+			t.Errorf("got %v, want %v", distancePoint, args.wantPoint.Vector)
 		}
-
-		if ac[i].point.Angle(groundTruth[i].point.Vector) >= kEpsilonAngle {
-			t.Errorf("got %v, want %v", ac[i].point, groundTruth[i].point.Vector)
+		if distanceEdgeID != args.wantEdgeID {
+			t.Errorf("got %v, want %v", distanceEdgeID, args.wantEdgeID)
 		}
-
-		if abc[i].point.Angle(groundTruth[i].point.Vector) >= kEpsilonAngle {
-			t.Errorf("got %v, want %v", abc[i].point, groundTruth[i].point.Vector)
-		}
-
-		if bb[i].point.Angle(bbPolyline.Edge(0).V0.Vector) >= kEpsilonAngle {
-			t.Errorf("got %v, want %v", bb[i].point, bbPolyline.Edge(0).V0)
-		}
-
-		if ac[i].edgeID != 0 {
-			t.Errorf("got %v, want %v", ac[i].edgeID, 0)
-		}
-
-		if bb[i].edgeID != 0 {
-			t.Errorf("got %v, want %v", bb[i].edgeID, 0)
-		}
-
-		if abc[i].edgeID != groundTruth[i].edgeID {
-			t.Errorf("got %v, want %v", abc[i].edgeID, groundTruth[i].edgeID)
+		if !float64Near(newDistance.Radians(), args.wantDistance.Radians(), kEpsilon) {
+			t.Errorf("got %v, want %v", newDistance, args.wantDistance)
 		}
 	}
 }
