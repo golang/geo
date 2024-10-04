@@ -200,7 +200,6 @@ func TestSimplePolylines(t *testing.T) {
 		}
 	}
 }
-
 func TestDistances(t *testing.T) {
 	// Initialize test data
 	distances := []float64{
@@ -551,31 +550,67 @@ func TestGetLengthAtEdgePolygon(t *testing.T) {
 		t.Errorf("got %v, want %v", length, 14.0)
 	}
 }
-
 func TestSlice(t *testing.T) {
-	// Test with empty shape
-	if pointsToString(InitChainInterpolationQuery(nil, 0).Slice(0, 1)) != `` {
-		t.Errorf("got %v, want %v", pointsToString(InitChainInterpolationQuery(nil, -1).Slice(0, 1)), ``)
+	tests := []struct {
+		name string
+		args struct {
+			shape              Shape
+			startSliceFraction float64
+			endSliceFraction   float64
+		}
+		want string
+	}{
+		{
+			name: "empty shape",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{nil, 0, 1},
+			want: ``,
+		},
+		{
+			name: "full polyline",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`)), 0, 1},
+			want: `0:0, 0:1, 0:2`,
+		},
+		{
+			name: "first half of polyline",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`)), 0, 0.5},
+			want: `0:0, 0:1`,
+		},
+		{
+			name: "second half of polyline",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`)), 1, 0.5},
+			want: `0:2, 0:1`,
+		},
+		{
+			name: "middle of polyline",
+			args: struct {
+				shape              Shape
+				startSliceFraction float64
+				endSliceFraction   float64
+			}{laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`)), 0.25, 0.75},
+			want: `0:0.5, 0:1, 0:1.5`,
+		},
 	}
 
-	polyline := laxPolylineFromPoints(parsePoints(`0:0, 0:1, 0:2`))
-
-	query := InitChainInterpolationQuery(polyline, 0)
-
-	if pointsToString(query.Slice(0, 1)) != `0:0, 0:1, 0:2` {
-		t.Errorf("got %v, want %v", pointsToString(query.Slice(0, 1)), `0:0, 0:1, 0:2`)
+	for _, test := range tests {
+		query := InitChainInterpolationQuery(test.args.shape, 0)
+		if got := pointsToString(query.Slice(test.args.startSliceFraction, test.args.endSliceFraction)); got != test.want {
+			t.Errorf("%v: got %v, want %v", test.name, got, test.want)
+		}
 	}
-
-	if pointsToString(query.Slice(0, 0.5)) != `0:0, 0:1` {
-		t.Errorf("got %v, want %v", pointsToString(query.Slice(0, 0.5)), `0:0, 0:1`)
-	}
-
-	if pointsToString(query.Slice(1, 0.5)) != `0:2, 0:1` {
-		t.Errorf("got %v, want %v", pointsToString(query.Slice(1, 0.5)), `0:2, 0:1`)
-	}
-
-	if pointsToString(query.Slice(0.25, 0.75)) != `0:0.5, 0:1, 0:1.5` {
-		t.Errorf("got %v, want %v", pointsToString(query.Slice(0.25, 0.75)), `0:0.5, 0:1, 0:1.5`)
-	}
-
 }
