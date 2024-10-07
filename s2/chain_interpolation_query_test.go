@@ -734,6 +734,8 @@ func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
 	}
 	type args struct {
 		divisionsCount int
+		startIndex     int
+		endIndex       int
 	}
 	tests := []struct {
 		name             string
@@ -753,7 +755,7 @@ func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
 				}),
 				ChainID: 0,
 			},
-			args:             args{divisionsCount: 3},
+			args:             args{divisionsCount: 3, startIndex: 0, endIndex: 2},
 			wantDivisions:    []int{1.0, 1.0},
 			wantLengthByEdge: []s1.Angle{s1.Degree, s1.Degree},
 			wantErr:          false,
@@ -768,7 +770,7 @@ func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
 				}),
 				ChainID: 0,
 			},
-			args:             args{divisionsCount: 4},
+			args:             args{divisionsCount: 4, startIndex: 0, endIndex: 2},
 			wantDivisions:    []int{2.0, 1.0},
 			wantLengthByEdge: []s1.Angle{s1.Degree, s1.Degree},
 			wantErr:          false,
@@ -783,7 +785,7 @@ func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
 				}),
 				ChainID: 0,
 			},
-			args:             args{divisionsCount: 5},
+			args:             args{divisionsCount: 5, startIndex: 0, endIndex: 2},
 			wantDivisions:    []int{2.0, 2.0},
 			wantLengthByEdge: []s1.Angle{s1.Degree, s1.Degree},
 			wantErr:          false,
@@ -798,7 +800,7 @@ func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
 				}),
 				ChainID: 0,
 			},
-			args:             args{divisionsCount: 3},
+			args:             args{divisionsCount: 3, startIndex: 0, endIndex: 2},
 			wantDivisions:    []int{1.0, 1.0},
 			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
 			wantErr:          false,
@@ -813,7 +815,7 @@ func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
 				}),
 				ChainID: 0,
 			},
-			args:             args{divisionsCount: 4},
+			args:             args{divisionsCount: 4, startIndex: 0, endIndex: 2},
 			wantDivisions:    []int{1.0, 2.0},
 			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
 			wantErr:          false,
@@ -828,7 +830,7 @@ func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
 				}),
 				ChainID: 0,
 			},
-			args:             args{divisionsCount: 5},
+			args:             args{divisionsCount: 5, startIndex: 0, endIndex: 2},
 			wantDivisions:    []int{1.0, 3.0},
 			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
 			wantErr:          false,
@@ -843,7 +845,7 @@ func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
 				}),
 				ChainID: 0,
 			},
-			args:             args{divisionsCount: 6},
+			args:             args{divisionsCount: 6, startIndex: 0, endIndex: 2},
 			wantDivisions:    []int{2.0, 3.0},
 			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
 			wantErr:          false,
@@ -858,22 +860,80 @@ func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
 				}),
 				ChainID: 0,
 			},
-			args:             args{divisionsCount: 7},
+			args:             args{divisionsCount: 7, startIndex: 0, endIndex: 2},
 			wantDivisions:    []int{2.0, 4.0},
 			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
+			wantErr:          false,
+		},
+		{
+			name: "Shape: unequal length edges; divisions = NumCains() - 1",
+			fields: fields{
+				Shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				}),
+				ChainID: 0,
+			},
+			args:    args{divisionsCount: 2, startIndex: 0, endIndex: 1},
+			wantErr: true,
+		},
+		{
+			name: "Shape: unequal length edges; divisions = NumCains() + 1; invalid startIndex & endIndex",
+			fields: fields{
+				Shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				}),
+				ChainID: 0,
+			},
+			args:    args{divisionsCount: 4, startIndex: 0, endIndex: 1},
+			wantErr: true,
+		},
+		{
+			name: "Shape: unequal length edges; divisions = NumCains() + 4; limited by endIndex",
+			fields: fields{
+				Shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+					PointFromLatLng(LatLngFromDegrees(0, 3)),
+				}),
+				ChainID: 0,
+			},
+			args:             args{divisionsCount: 6, startIndex: 0, endIndex: 2},
+			wantDivisions:    []int{2.0, 3.0},
+			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
+			wantErr:          false,
+		},
+		{
+			name: "Shape: unequal length edges; divisions = NumCains() + 4; limited by startIndex",
+			fields: fields{
+				Shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+					PointFromLatLng(LatLngFromDegrees(0, 3)),
+				}),
+				ChainID: 0,
+			},
+			args:             args{divisionsCount: 6, startIndex: 1, endIndex: 4},
+			wantDivisions:    []int{2.0, 3.0},
+			wantLengthByEdge: []s1.Angle{s1.Degree * 1.5, s1.Degree * 1.0},
 			wantErr:          false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := InitChainInterpolationQuery(tt.fields.Shape, tt.fields.ChainID)
-			gotDivisions, gotLengthByEdge, err := s.calculateDivisionsByEdge(tt.args.divisionsCount)
+			gotDivisions, gotLengthByEdge, err := s.calculateDivisionsByEdge(tt.args.divisionsCount, tt.args.startIndex, tt.args.endIndex)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ChainInterpolationQuery.calculateDivisionsByEdge() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ChainInterpolationQuery.calculateDivisionsByEdge(); name = %s; error = %v, wantErr %v", tt.name, err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(gotDivisions, tt.wantDivisions) {
-				t.Errorf("ChainInterpolationQuery.calculateDivisionsByEdge() gotDivisions = %v, want %v", gotDivisions, tt.wantDivisions)
+				t.Errorf("ChainInterpolationQuery.calculateDivisionsByEdge(); name = %s; gotDivisions = %v, want %v", tt.name, gotDivisions, tt.wantDivisions)
 			}
 
 			for i := range tt.wantLengthByEdge {

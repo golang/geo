@@ -15,6 +15,10 @@ var (
 	// ErrInvalidDivisionsCount is returned by ChainInterpolationQuery when
 	// divisionsCount is less than the number of edges in the shape.
 	ErrInvalidDivisionsCount = errors.New("invalid divisions count")
+
+	// ErrInvalidIndexes is returned by ChainInterpolationQuery when
+	// start or end indexes are invalid.
+	ErrInvalidIndexes = errors.New("invalid indexes")
 )
 
 // ChainInterpolationQuery is a helper struct for querying points on Shape's
@@ -243,6 +247,8 @@ func (s ChainInterpolationQuery) addDividedSlice(beginFraction, endFraction floa
 		return
 	}
 
+	s.calculateDivisionsByEdge(divisions, beginEdgeID, endEdgeID)
+
 	// Copy the internal points from the chain.
 	for edgeID := beginEdgeID; edgeID < endEdgeID; edgeID++ {
 		edge := s.Shape.Edge(edgeID)
@@ -285,11 +291,22 @@ func (s ChainInterpolationQuery) addDividedSlice(beginFraction, endFraction floa
 // calculateDivisionsByEdge(7) will return divisions = {2,4} and lengthByEdge = {0.5,1.5} and err = nil
 // Here we start to divide first edge because the length of the first edge is greater than the divided second edge
 // Each next division divides a biggest divided edge
-func (s ChainInterpolationQuery) calculateDivisionsByEdge(divisionsCount int) (divisions []int, lengthByEdge []s1.Angle, err error) {
-	if len(s.singleEdgeValues) == 0 || divisionsCount < s.Shape.NumEdges() {
+func (s ChainInterpolationQuery) calculateDivisionsByEdge(divisionsCount, startIndex, endIndex int) (divisions []int, lengthByEdge []s1.Angle, err error) {
+	if len(s.singleEdgeValues) == 0 {
+		err = ErrEmptyChain
+		return
+	}
+
+	if divisionsCount < s.Shape.NumEdges() {
 		err = ErrInvalidDivisionsCount
 		return
 	}
+
+	if endIndex-startIndex < 2 || len(s.singleEdgeValues) < (endIndex-startIndex) {
+		err = ErrInvalidIndexes
+		return
+	}
+
 	lengthByEdge = s.singleEdgeValues
 
 	divisionLengths := make([]s1.Angle, len(s.singleEdgeValues))
@@ -302,7 +319,7 @@ func (s ChainInterpolationQuery) calculateDivisionsByEdge(divisionsCount int) (d
 	copy(divisionLengths, s.singleEdgeValues)
 
 	for i := 1; i < divisionsCount-len(s.singleEdgeValues); i++ {
-		_, index := findMaxValueWithIndex(divisionLengths)
+		_, index := findMaxValueWithIndex(divisionLengths, startIndex, endIndex)
 		divisions[index]++
 
 		divisionLengths[index] = lengthByEdge[index] / s1.Angle(divisions[index])
@@ -311,12 +328,12 @@ func (s ChainInterpolationQuery) calculateDivisionsByEdge(divisionsCount int) (d
 	return
 }
 
-func findMaxValueWithIndex(values []s1.Angle) (maxValue s1.Angle, maxIndex int) {
-	maxValue = values[0]
-	maxIndex = 0
-	for i, value := range values {
-		if value > maxValue {
-			maxValue = value
+func findMaxValueWithIndex(values []s1.Angle, startIndex, endIndex int) (maxValue s1.Angle, maxIndex int) {
+	maxValue = values[startIndex]
+	maxIndex = startIndex
+	for i := startIndex; i < endIndex; i++ {
+		if values[i] > maxValue {
+			maxValue = values[i]
 			maxIndex = i
 		}
 	}
