@@ -11,6 +11,10 @@ var (
 	// ErrEmptyChain is returned by ChainInterpolationQuery when the query
 	// contains no edges.
 	ErrEmptyChain = errors.New("empty chain")
+
+	// ErrInvalidDivisionsCount is returned by ChainInterpolationQuery when
+	// divisionsCount is less than the number of edges in the shape.
+	ErrInvalidDivisionsCount = errors.New("invalid divisions count")
 )
 
 // ChainInterpolationQuery is a helper struct for querying points on Shape's
@@ -21,6 +25,7 @@ type ChainInterpolationQuery struct {
 	Shape            Shape
 	ChainID          int
 	cumulativeValues []s1.Angle
+	singleEdgeValues []s1.Angle
 	firstEdgeID      int
 	lastEdgeID       int
 }
@@ -38,11 +43,12 @@ type ChainInterpolationQuery struct {
 // memory footprint of the query object are both O(number of edges).
 func InitChainInterpolationQuery(shape Shape, chainID int) ChainInterpolationQuery {
 	if shape == nil || chainID >= shape.NumChains() {
-		return ChainInterpolationQuery{nil, 0, nil, 0, 0}
+		return ChainInterpolationQuery{nil, 0, nil, nil, 0, 0}
 	}
 
 	var firstEdgeID, lastEdgeID int
 	var cumulativeValues []s1.Angle
+	var singleEdgeValues []s1.Angle
 
 	if chainID >= 0 {
 		// If a valid chain id was provided, then the range of edge ids is defined
@@ -62,13 +68,15 @@ func InitChainInterpolationQuery(shape Shape, chainID int) ChainInterpolationQue
 	for i := firstEdgeID; i <= lastEdgeID; i++ {
 		cumulativeValues = append(cumulativeValues, cumulativeAngle)
 		edge := shape.Edge(i)
-		cumulativeAngle += edge.V0.Angle(edge.V1.Vector)
+		edgeAngle := edge.V0.Angle(edge.V1.Vector)
+		cumulativeAngle += edgeAngle
+		singleEdgeValues = append(singleEdgeValues, edgeAngle)
 	}
 
 	if len(cumulativeValues) != 0 {
 		cumulativeValues = append(cumulativeValues, cumulativeAngle)
 	}
-	return ChainInterpolationQuery{shape, chainID, cumulativeValues, firstEdgeID, lastEdgeID}
+	return ChainInterpolationQuery{shape, chainID, cumulativeValues, singleEdgeValues, firstEdgeID, lastEdgeID}
 }
 
 // Gets the total length of the chain(s), which corresponds to the distance at
@@ -249,4 +257,68 @@ func (s ChainInterpolationQuery) addDividedSlice(beginFraction, endFraction floa
 	if reverse {
 		slices.Reverse(*points)
 	}
+}
+
+// calculateDivisionsByEdge calculates the number of segments to divide each edge into.
+// divisionsCount is a number of segments to divide each edge into and should be greater
+// or equal to the number of edges in the shape.
+// If the query is either uninitialized, or initialized with a shape
+// containing no edges, then an empty slices is returned.
+// The length of the slices is equal to the number of edges in the shape.
+//
+// Exmaple: Given a shape of polylines with 3 edges: 0:0, 0:1, 0:2
+// calculateDivisionsByEdge(3) will return divisions = {1,1} and lengthByEdge = {1,1} and err = nil
+// calculateDivisionsByEdge(2) will return divisions = {} and lengthByEdge = {} and err = ErrInvalidDivisionsCount
+//
+// calculateDivisionsByEdge(4) will return divisions = {2,1} and lengthByEdge = {1,1} and err = nil
+// Here lengths of the edges are similar, so the weigth is equal
+// Lengths of edges are assumed as weights when computing number of divisions by edge
+//
+// calculateDivisionsByEdge(5) will return divisions = {2,2} and lengthByEdge = {1,1} and err = nil
+// calculateDivisionsByEdge(6) will return divisions = {3,2} and lengthByEdge = {1,1} and err = nil
+//
+// Now let's assume that we have polyline with 3 edges: 0:0, 0:0.5, 0:2
+// calculateDivisionsByEdge(3) will return divisions = {1,1} and lengthByEdge = {0.5,1.5} and err = nil
+// calculateDivisionsByEdge(4) will return divisions = {1,2} and lengthByEdge = {0.5,1.5} and err = nil
+// calculateDivisionsByEdge(5) will return divisions = {1,3} and lengthByEdge = {0.5,1.5} and err = nil
+// calculateDivisionsByEdge(6) will return divisions = {2,3} and lengthByEdge = {0.5,1.5} and err = nil
+// calculateDivisionsByEdge(7) will return divisions = {2,4} and lengthByEdge = {0.5,1.5} and err = nil
+// Here we start to divide first edge because the length of the first edge is greater than the divided second edge
+// Each next division divides a biggest divided edge
+func (s ChainInterpolationQuery) calculateDivisionsByEdge(divisionsCount int) (divisions []int, lengthByEdge []s1.Angle, err error) {
+	if len(s.singleEdgeValues) == 0 || divisionsCount < s.Shape.NumEdges() {
+		err = ErrInvalidDivisionsCount
+		return
+	}
+	lengthByEdge = s.singleEdgeValues
+
+	divisionLengths := make([]s1.Angle, len(s.singleEdgeValues))
+	divisions = make([]int, len(s.singleEdgeValues))
+
+	for i := 0; i < len(s.singleEdgeValues); i++ {
+		divisions[i] = 1
+	}
+
+	copy(divisionLengths, s.singleEdgeValues)
+
+	for i := 1; i < divisionsCount-len(s.singleEdgeValues); i++ {
+		_, index := findMaxValueWithIndex(divisionLengths)
+		divisions[index]++
+
+		divisionLengths[index] = lengthByEdge[index] / s1.Angle(divisions[index])
+	}
+
+	return
+}
+
+func findMaxValueWithIndex(values []s1.Angle) (maxValue s1.Angle, maxIndex int) {
+	maxValue = values[0]
+	maxIndex = 0
+	for i, value := range values {
+		if value > maxValue {
+			maxValue = value
+			maxIndex = i
+		}
+	}
+	return
 }
