@@ -1,7 +1,6 @@
 package s2
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/golang/geo/s1"
@@ -613,105 +612,166 @@ func TestSliceDivided(t *testing.T) {
 			args: args{nil, 0, 1., 1},
 			want: ``,
 		},
-		{
-			name: "full polyline",
-			args: args{laxPolylineFromPoints([]Point{
+		{name: "full polyline", args: args{
+			shape: laxPolylineFromPoints([]Point{
 				PointFromLatLng(LatLngFromDegrees(0, 0)),
 				PointFromLatLng(LatLngFromDegrees(0, 1)),
 				PointFromLatLng(LatLngFromDegrees(0, 2)),
 			},
-			), 0, 1, 3},
-			want: `0:0, 0:1, 0:2`,
-		},
+			),
+			startSliceFraction: 0,
+			endSliceFraction:   1,
+			divisions:          3,
+		}, want: `0:0, 0:1, 0:2`},
 		{
 			name: "first half of polyline",
-			args: args{laxPolylineFromPoints([]Point{
-				PointFromLatLng(LatLngFromDegrees(0, 0)),
-				PointFromLatLng(LatLngFromDegrees(0, 1)),
-				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0,
+				endSliceFraction:   0.5,
+				divisions:          2,
 			},
-			), 0, 0.5, 2},
 			want: `0:0, 0:1`,
 		},
 		{
 			name: "second half of polyline",
-			args: args{laxPolylineFromPoints([]Point{
-				PointFromLatLng(LatLngFromDegrees(0, 0)),
-				PointFromLatLng(LatLngFromDegrees(0, 1)),
-				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 1,
+				endSliceFraction:   0.5,
+				divisions:          2,
 			},
-			), 1, 0.5, 2},
 			want: `0:2, 0:1`,
 		},
 		{
 			name: "middle of polyline",
-			args: args{laxPolylineFromPoints([]Point{
-				PointFromLatLng(LatLngFromDegrees(0, 0)),
-				PointFromLatLng(LatLngFromDegrees(0, 1)),
-				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0.25,
+				endSliceFraction:   0.75,
+				divisions:          3,
 			},
-			), 0.25, 0.75, 3},
 			want: `0:0.5, 0:1, 0:1.5`,
 		},
 		{
 			name: "middle of polyline; divisions = 5",
-			args: args{laxPolylineFromPoints([]Point{
-				PointFromLatLng(LatLngFromDegrees(0, 0)),
-				PointFromLatLng(LatLngFromDegrees(0, 1)),
-				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0.25,
+				endSliceFraction:   0.75,
+				divisions:          5,
 			},
-			), 0.25, 0.75, 5},
 			want: `0:0.5, 0:0.75, 0:1, 0:1.25, 0:1.5`,
 		},
 		{
 			name: "middle of polyline; divisions = 11",
-			args: args{laxPolylineFromPoints([]Point{
-				PointFromLatLng(LatLngFromDegrees(0, 0)),
-				PointFromLatLng(LatLngFromDegrees(0, 1)),
-				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0.25,
+				endSliceFraction:   0.75,
+				divisions:          11,
 			},
-			), 0.25, 0.75, 11},
 			want: `0:0.5, 0:0.6, 0:0.7, 0:0.8, 0:0.9, 0:1, 0:1.1, 0:1.20, 0:1.3, 0:1.4, 0:1.5`,
 		},
 		{
 			name: "corner case: divisions = s.NumEdges()+1",
-			args: args{laxPolylineFromPoints([]Point{
-				PointFromLatLng(LatLngFromDegrees(0, 0)),
-				PointFromLatLng(LatLngFromDegrees(0, 1)),
-				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0.3,
+				endSliceFraction:   0.6,
+				divisions:          4,
 			},
-			), 0.3, 0.75, 4},
-			want: `0:0.6, 0:1, 0:1.25, 0:1.5`,
+			want: `0:0.6, 0:0.8, 0:1, 0:1.2`,
 		},
 		{
 			name: "divisions = s.NumEdges()+2",
-			args: args{laxPolylineFromPoints([]Point{
-				PointFromLatLng(LatLngFromDegrees(0, 0)),
-				PointFromLatLng(LatLngFromDegrees(0, 1)),
-				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0.25,
+				endSliceFraction:   0.75,
+				divisions:          5,
 			},
-			), 0.3, 0.75, 5},
-			want: `0:0.6, 0:0.8, 0:1, 0:1.25, 0:1.5`,
+			want: `0:0.5, 0:0.75, 0:1, 0:1.25, 0:1.5`,
 		},
 		{
 			name: "divisions = s.NumEdges()+3",
-			args: args{laxPolylineFromPoints([]Point{
-				PointFromLatLng(LatLngFromDegrees(0, 0)),
-				PointFromLatLng(LatLngFromDegrees(0, 1)),
-				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0.45,
+				endSliceFraction:   0.75,
+				divisions:          6,
 			},
-			), 0.05, 0.75, 6},
-			want: `0:0.1, 0:0.4, 0:0.7, 0:1, 0:1.25, 0:1.5`,
+			want: `0:0.9, 0:1, 0:1.05, 0:1.2, 0:1.35, 0:1.5`,
 		},
 		{
-			name: "divisions = s.NumEdges()+4",
-			args: args{laxPolylineFromPoints([]Point{
-				PointFromLatLng(LatLngFromDegrees(0, 0)),
-				PointFromLatLng(LatLngFromDegrees(0, 1)),
-				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			name: "divisions = s.NumEdges()+10",
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0.105,
+				endSliceFraction:   0.605,
+				divisions:          11,
 			},
-			), 0.05, 0.75, 7},
-			want: `0:0.1, 0:0.4, 0:0.7, 0:1, 0:1.25, 0:1.5`,
+			want: `0:0.21, 0:0.31, 0:0.41, 0:0.51, 0:0.61, 0:0.71, 0:0.81, 0:0.91, 0:1, 0:1.11, 0:1.21`,
+		},
+		{
+			name: "divisions = 10, 0 edges inside resulting points",
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0.1,
+				endSliceFraction:   0.2,
+				divisions:          11,
+			},
+			want: `0:0.10, 0:0.11, 0:0.12, 0:0.13, 0:0.14, 0:0.15, 0:0.16, 0:0.17, 0:0.18, 0:19, 0:0.20`,
 		},
 	}
 
@@ -724,223 +784,5 @@ func TestSliceDivided(t *testing.T) {
 		)); got != test.want {
 			t.Errorf("%v: got %v, want %v", test.name, got, test.want)
 		}
-	}
-}
-
-func TestChainInterpolationQuery_calculateDivisionsByEdge(t *testing.T) {
-	type fields struct {
-		Shape   Shape
-		ChainID int
-	}
-	type args struct {
-		divisionsCount int
-		startIndex     int
-		endIndex       int
-	}
-	tests := []struct {
-		name             string
-		fields           fields
-		args             args
-		wantDivisions    []int
-		wantLengthByEdge []s1.Angle
-		wantErr          bool
-	}{
-		{
-			name: "Shape: equal length edges; divisions = NumCains() + 1",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 1)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 3, startIndex: 0, endIndex: 2},
-			wantDivisions:    []int{1.0, 1.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree, s1.Degree},
-			wantErr:          false,
-		},
-		{
-			name: "Shape: equal length edges; divisions = NumCains() + 2",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 1)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 4, startIndex: 0, endIndex: 2},
-			wantDivisions:    []int{2.0, 1.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree, s1.Degree},
-			wantErr:          false,
-		},
-		{
-			name: "Shape: equal length edges; divisions = NumCains() + 3",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 1)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 5, startIndex: 0, endIndex: 2},
-			wantDivisions:    []int{2.0, 2.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree, s1.Degree},
-			wantErr:          false,
-		},
-		{
-			name: "Shape: unequal length edges; divisions = NumCains() + 1",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 3, startIndex: 0, endIndex: 2},
-			wantDivisions:    []int{1.0, 1.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
-			wantErr:          false,
-		},
-		{
-			name: "Shape: unequal length edges; divisions = NumCains() + 2",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 4, startIndex: 0, endIndex: 2},
-			wantDivisions:    []int{1.0, 2.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
-			wantErr:          false,
-		},
-		{
-			name: "Shape: unequal length edges; divisions = NumCains() + 3",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 5, startIndex: 0, endIndex: 2},
-			wantDivisions:    []int{1.0, 3.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
-			wantErr:          false,
-		},
-		{
-			name: "Shape: unequal length edges; divisions = NumCains() + 4",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 6, startIndex: 0, endIndex: 2},
-			wantDivisions:    []int{2.0, 3.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
-			wantErr:          false,
-		},
-		{
-			name: "Shape: unequal length edges; divisions = NumCains() + 5",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 7, startIndex: 0, endIndex: 2},
-			wantDivisions:    []int{2.0, 4.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
-			wantErr:          false,
-		},
-		{
-			name: "Shape: unequal length edges; divisions = NumCains() - 1",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:    args{divisionsCount: 2, startIndex: 0, endIndex: 1},
-			wantErr: true,
-		},
-		{
-			name: "Shape: unequal length edges; divisions = NumCains() + 1; invalid startIndex & endIndex",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-				}),
-				ChainID: 0,
-			},
-			args:    args{divisionsCount: 4, startIndex: 0, endIndex: 1},
-			wantErr: true,
-		},
-		{
-			name: "Shape: unequal length edges; divisions = NumCains() + 4; limited by endIndex",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-					PointFromLatLng(LatLngFromDegrees(0, 3)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 6, startIndex: 0, endIndex: 2},
-			wantDivisions:    []int{2.0, 3.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree * 0.5, s1.Degree * 1.5},
-			wantErr:          false,
-		},
-		{
-			name: "Shape: unequal length edges; divisions = NumCains() + 4; limited by startIndex",
-			fields: fields{
-				Shape: laxPolylineFromPoints([]Point{
-					PointFromLatLng(LatLngFromDegrees(0, 0)),
-					PointFromLatLng(LatLngFromDegrees(0, 0.5)),
-					PointFromLatLng(LatLngFromDegrees(0, 2)),
-					PointFromLatLng(LatLngFromDegrees(0, 3)),
-				}),
-				ChainID: 0,
-			},
-			args:             args{divisionsCount: 6, startIndex: 1, endIndex: 4},
-			wantDivisions:    []int{2.0, 3.0},
-			wantLengthByEdge: []s1.Angle{s1.Degree * 1.5, s1.Degree * 1.0},
-			wantErr:          false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := InitChainInterpolationQuery(tt.fields.Shape, tt.fields.ChainID)
-			gotDivisions, gotLengthByEdge, err := s.calculateDivisionsByEdge(tt.args.divisionsCount, tt.args.startIndex, tt.args.endIndex)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ChainInterpolationQuery.calculateDivisionsByEdge(); name = %s; error = %v, wantErr %v", tt.name, err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotDivisions, tt.wantDivisions) {
-				t.Errorf("ChainInterpolationQuery.calculateDivisionsByEdge(); name = %s; gotDivisions = %v, want %v", tt.name, gotDivisions, tt.wantDivisions)
-			}
-
-			for i := range tt.wantLengthByEdge {
-				if !float64Near(gotLengthByEdge[i].Radians(), tt.wantLengthByEdge[i].Radians(), float64(kEpsilonAngle)) {
-					t.Errorf("ChainInterpolationQuery.calculateDivisionsByEdge() gotLengthByEdge[i] = %v, want[i] %v", gotLengthByEdge[i], tt.wantLengthByEdge[i])
-				}
-			}
-		})
 	}
 }

@@ -200,13 +200,13 @@ func (s ChainInterpolationQuery) Slice(beginFraction, endFraction float64) []Poi
 // the chain as is.
 //
 // divisions is the number of segments to divide the polyline into.
-// divisions must be >= Shape.NumEdges().
+// divisions must be >= len(Slice(beginFraction, endFraction)).
 //
 // If the query is either uninitialized, or initialized with a shape
 // containing no edges, then an empty vector is returned.
 func (s ChainInterpolationQuery) SliceDivided(beginFraction, endFraction float64, divisions int) []Point {
 	var points []Point
-	s.addDividedSlice(beginFraction, endFraction, &points, divisions)
+	s.AddDividedSlice(beginFraction, endFraction, &points, divisions)
 	return points
 }
 
@@ -215,17 +215,7 @@ func (s ChainInterpolationQuery) SliceDivided(beginFraction, endFraction float64
 // appended in reverse order. If the query is either uninitialized, or
 // initialized with a shape containing no edges, then no points are appended.
 func (s ChainInterpolationQuery) AddSlice(beginFraction, endFraction float64, points *[]Point) {
-	s.addDividedSlice(beginFraction, endFraction, points, s.Shape.NumEdges())
-}
-
-// Appends the chain slice from beginFraction to endFraction to the given
-// slice. If beginFraction is greater than endFraction, then the points are
-// appended in reverse order. If the query is either uninitialized, or
-// initialized with a shape containing no edges, then no points are appended.
-// divisions is the number of segments to divide the polyline into.
-// divisions must be greater or equal of NumEdges of Shape.
-func (s ChainInterpolationQuery) addDividedSlice(beginFraction, endFraction float64, points *[]Point, divisions int) {
-	if len(s.cumulativeValues) == 0 || divisions < s.Shape.NumEdges() {
+	if len(s.cumulativeValues) == 0 {
 		return
 	}
 
@@ -247,8 +237,6 @@ func (s ChainInterpolationQuery) addDividedSlice(beginFraction, endFraction floa
 		return
 	}
 
-	s.calculateDivisionsByEdge(divisions, beginEdgeID, endEdgeID)
-
 	// Copy the internal points from the chain.
 	for edgeID := beginEdgeID; edgeID < endEdgeID; edgeID++ {
 		edge := s.Shape.Edge(edgeID)
@@ -265,77 +253,74 @@ func (s ChainInterpolationQuery) addDividedSlice(beginFraction, endFraction floa
 	}
 }
 
-// calculateDivisionsByEdge calculates the number of segments to divide each edge into.
-// divisionsCount is a number of segments to divide each edge into and should be greater
-// or equal to the number of edges in the shape.
-// If the query is either uninitialized, or initialized with a shape
-// containing no edges, then an empty slices is returned.
-// The length of the slices is equal to the number of edges in the shape.
-//
-// Exmaple: Given a shape of polylines with 3 edges: 0:0, 0:1, 0:2
-// calculateDivisionsByEdge(3) will return divisions = {1,1} and lengthByEdge = {1,1} and err = nil
-// calculateDivisionsByEdge(2) will return divisions = {} and lengthByEdge = {} and err = ErrInvalidDivisionsCount
-//
-// calculateDivisionsByEdge(4) will return divisions = {2,1} and lengthByEdge = {1,1} and err = nil
-// Here lengths of the edges are similar, so the weigth is equal
-// Lengths of edges are assumed as weights when computing number of divisions by edge
-//
-// calculateDivisionsByEdge(5) will return divisions = {2,2} and lengthByEdge = {1,1} and err = nil
-// calculateDivisionsByEdge(6) will return divisions = {3,2} and lengthByEdge = {1,1} and err = nil
-//
-// Now let's assume that we have polyline with 3 edges: 0:0, 0:0.5, 0:2
-// calculateDivisionsByEdge(3) will return divisions = {1,1} and lengthByEdge = {0.5,1.5} and err = nil
-// calculateDivisionsByEdge(4) will return divisions = {1,2} and lengthByEdge = {0.5,1.5} and err = nil
-// calculateDivisionsByEdge(5) will return divisions = {1,3} and lengthByEdge = {0.5,1.5} and err = nil
-// calculateDivisionsByEdge(6) will return divisions = {2,3} and lengthByEdge = {0.5,1.5} and err = nil
-// calculateDivisionsByEdge(7) will return divisions = {2,4} and lengthByEdge = {0.5,1.5} and err = nil
-// Here we start to divide first edge because the length of the first edge is greater than the divided second edge
-// Each next division divides a biggest divided edge
-func (s ChainInterpolationQuery) calculateDivisionsByEdge(divisionsCount, startIndex, endIndex int) (divisions []int, lengthByEdge []s1.Angle, err error) {
-	if len(s.singleEdgeValues) == 0 {
-		err = ErrEmptyChain
+// Appends the  slice from beginFraction to endFraction to the given
+// slice. If beginFraction is greater than endFraction, then the points are
+// appended in reverse order. If the query is either uninitialized, or
+// initialized with a shape containing no edges, then no points are appended.
+// divisions is the number of segments to divide the polyline into.
+// divisions must be greater or equal of NumEdges of Shape.
+// A polyline is divided into segments of equal length, and then edges are added to the slice.
+func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction float64, points *[]Point, pointsNum int) {
+	if len(s.cumulativeValues) == 0 {
 		return
 	}
 
-	if divisionsCount < s.Shape.NumEdges() {
-		err = ErrInvalidDivisionsCount
+	reverse := beginFraction > endFraction
+	if reverse {
+		// Swap the begin and end fractions so that we can iterate in ascending order.
+		beginFraction, endFraction = endFraction, beginFraction
+	}
+
+	atBegin, currentEdgeID, _, err := s.AtFraction(beginFraction)
+	if err != nil {
 		return
 	}
 
-	if endIndex-startIndex < 2 || len(s.singleEdgeValues) < (endIndex-startIndex) {
-		err = ErrInvalidIndexes
+	atEnd, endEdgeID, _, err := s.AtFraction(endFraction)
+	if err != nil {
 		return
 	}
 
-	lengthByEdge = s.singleEdgeValues
-
-	divisionLengths := make([]s1.Angle, len(s.singleEdgeValues))
-	divisions = make([]int, len(s.singleEdgeValues))
-
-	for i := 0; i < len(s.singleEdgeValues); i++ {
-		divisions[i] = 1
+	divisionsExcludingEdges := pointsNum - (endEdgeID - currentEdgeID) - 1
+	//TODO update if start&end points are found in the chain
+	if endFraction == 1 {
+		divisionsExcludingEdges--
 	}
 
-	copy(divisionLengths, s.singleEdgeValues)
-
-	for i := 1; i < divisionsCount-len(s.singleEdgeValues); i++ {
-		_, index := findMaxValueWithIndex(divisionLengths, startIndex, endIndex)
-		divisions[index]++
-
-		divisionLengths[index] = lengthByEdge[index] / s1.Angle(divisions[index])
-	}
-
-	return
-}
-
-func findMaxValueWithIndex(values []s1.Angle, startIndex, endIndex int) (maxValue s1.Angle, maxIndex int) {
-	maxValue = values[startIndex]
-	maxIndex = startIndex
-	for i := startIndex; i < endIndex; i++ {
-		if values[i] > maxValue {
-			maxValue = values[i]
-			maxIndex = i
+	if divisionsExcludingEdges < 0 {
+		return
+	} else if divisionsExcludingEdges == 0 {
+		if reverse {
+			beginFraction, endFraction = endFraction, beginFraction
 		}
+		s.AddSlice(beginFraction, endFraction, points)
+		return
 	}
-	return
+
+	*points = append(*points, atBegin)
+
+	// Copy the internal points from the chain.
+	for fraction := beginFraction + 1.0/float64(divisionsExcludingEdges); fraction < endFraction; fraction += 1.0 / float64(divisionsExcludingEdges) {
+		atFraction, edgeID, _, err := s.AtFraction(fraction)
+		if err != nil {
+			return
+		}
+
+		// If the current edge is the same as the previous edge, then skip it.
+		// Otherwise, append all edges in between.
+		for i := edgeID; i < currentEdgeID; i++ {
+			edge := s.Shape.Edge(i)
+			*points = append(*points, edge.V1)
+		}
+		currentEdgeID = edgeID
+
+		*points = append(*points, atFraction)
+	}
+	// Append last edge
+	*points = append(*points, atEnd)
+
+	// Reverse the slice if necessary.
+	if reverse {
+		slices.Reverse(*points)
+	}
 }
