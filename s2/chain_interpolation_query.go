@@ -29,7 +29,6 @@ type ChainInterpolationQuery struct {
 	Shape            Shape
 	ChainID          int
 	cumulativeValues []s1.Angle
-	singleEdgeValues []s1.Angle
 	firstEdgeID      int
 	lastEdgeID       int
 }
@@ -47,12 +46,11 @@ type ChainInterpolationQuery struct {
 // memory footprint of the query object are both O(number of edges).
 func InitChainInterpolationQuery(shape Shape, chainID int) ChainInterpolationQuery {
 	if shape == nil || chainID >= shape.NumChains() {
-		return ChainInterpolationQuery{nil, 0, nil, nil, 0, 0}
+		return ChainInterpolationQuery{nil, 0, nil, 0, 0}
 	}
 
 	var firstEdgeID, lastEdgeID int
 	var cumulativeValues []s1.Angle
-	var singleEdgeValues []s1.Angle
 
 	if chainID >= 0 {
 		// If a valid chain id was provided, then the range of edge ids is defined
@@ -74,13 +72,12 @@ func InitChainInterpolationQuery(shape Shape, chainID int) ChainInterpolationQue
 		edge := shape.Edge(i)
 		edgeAngle := edge.V0.Angle(edge.V1.Vector)
 		cumulativeAngle += edgeAngle
-		singleEdgeValues = append(singleEdgeValues, edgeAngle)
 	}
 
 	if len(cumulativeValues) != 0 {
 		cumulativeValues = append(cumulativeValues, cumulativeAngle)
 	}
-	return ChainInterpolationQuery{shape, chainID, cumulativeValues, singleEdgeValues, firstEdgeID, lastEdgeID}
+	return ChainInterpolationQuery{shape, chainID, cumulativeValues, firstEdgeID, lastEdgeID}
 }
 
 // Gets the total length of the chain(s), which corresponds to the distance at
