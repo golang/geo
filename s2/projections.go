@@ -17,8 +17,8 @@ package s2
 import (
 	"math"
 
-	"github.com/golang/geo/r2"
-	"github.com/golang/geo/s1"
+	"github.com/pavlov061356/geo/r2"
+	"github.com/pavlov061356/geo/s1"
 )
 
 // Projection defines an interface for different ways of mapping between s2 and r2 Points.

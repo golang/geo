@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/golang/geo/r1"
+	"github.com/pavlov061356/geo/r1"
 )
 
 // Point represents a point in ℝ².

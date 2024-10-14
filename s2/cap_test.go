@@ -18,8 +18,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang/geo/r3"
-	"github.com/golang/geo/s1"
+	"github.com/pavlov061356/geo/r3"
+	"github.com/pavlov061356/geo/s1"
 )
 
 const (

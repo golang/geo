@@ -17,7 +17,7 @@ package s2
 import (
 	"sort"
 
-	"github.com/golang/geo/r2"
+	"github.com/pavlov061356/geo/r2"
 )
 
 // CrossingEdgeQuery is used to find the Edge IDs of Shapes that are crossed by

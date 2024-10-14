@@ -17,7 +17,7 @@ package s2
 import (
 	"math"
 
-	"github.com/golang/geo/r3"
+	"github.com/pavlov061356/geo/r3"
 )
 
 // There are several notions of the "centroid" of a triangle. First, there

@@ -17,7 +17,7 @@ package s2
 import (
 	"fmt"
 
-	"github.com/golang/geo/r3"
+	"github.com/pavlov061356/geo/r3"
 )
 
 // matrix3x3 represents a traditional 3x3 matrix of floating point values.
