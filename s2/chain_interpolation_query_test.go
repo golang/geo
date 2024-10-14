@@ -696,7 +696,7 @@ func TestSliceDivided(t *testing.T) {
 				endSliceFraction:   0.75,
 				divisions:          11,
 			},
-			want: `0:0.5, 0:0.6, 0:0.7, 0:0.8, 0:0.9, 0:1, 0:1.1, 0:1.20, 0:1.3, 0:1.4, 0:1.5`,
+			want: `0:0.5, 0:0.6, 0:0.7, 0:0.8, 0:0.9, 0:1, 0:1.1, 0:1.2, 0:1.3, 0:1.4, 0:1.5`,
 		},
 		{
 			name: "corner case: divisions = s.NumEdges()+1",
@@ -741,7 +741,7 @@ func TestSliceDivided(t *testing.T) {
 				endSliceFraction:   0.75,
 				divisions:          6,
 			},
-			want: `0:0.9, 0:1, 0:1.05, 0:1.2, 0:1.35, 0:1.5`,
+			want: `0:0.9, 0:1, 0:1.14, 0:1.26, 0:1.38, 0:1.5`,
 		},
 		{
 			name: "divisions = s.NumEdges()+10",
@@ -767,11 +767,11 @@ func TestSliceDivided(t *testing.T) {
 					PointFromLatLng(LatLngFromDegrees(0, 2)),
 				},
 				),
-				startSliceFraction: 0.1,
-				endSliceFraction:   0.2,
+				startSliceFraction: 0.05,
+				endSliceFraction:   0.1,
 				divisions:          11,
 			},
-			want: `0:0.10, 0:0.11, 0:0.12, 0:0.13, 0:0.14, 0:0.15, 0:0.16, 0:0.17, 0:0.18, 0:19, 0:0.20`,
+			want: `0:0.1, 0:0.11, 0:0.12, 0:0.13, 0:0.14, 0:0.15, 0:0.16, 0:0.17, 0:0.18, 0:0.19, 0:0.2`,
 		},
 	}
 
