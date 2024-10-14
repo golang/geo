@@ -773,6 +773,24 @@ func TestSliceDivided(t *testing.T) {
 			},
 			want: `0:0.1, 0:0.11, 0:0.12, 0:0.13, 0:0.14, 0:0.15, 0:0.16, 0:0.17, 0:0.18, 0:0.19, 0:0.2`,
 		},
+		{
+			name: "divisions = s.NumEdges()+1",
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+					PointFromLatLng(LatLngFromDegrees(0, 3)),
+					PointFromLatLng(LatLngFromDegrees(0, 4)),
+					PointFromLatLng(LatLngFromDegrees(0, 5)),
+				},
+				),
+				startSliceFraction: 0.3,
+				endSliceFraction:   0.84,
+				divisions:          5,
+			},
+			want: `0:1.5, 0:2, 0:3, 0:4, 0:4.2`,
+		},
 	}
 
 	for _, test := range tests {
