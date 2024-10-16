@@ -791,16 +791,36 @@ func TestSliceDivided(t *testing.T) {
 			},
 			want: `0:1.5, 0:2, 0:3, 0:4, 0:4.2`,
 		},
+		{
+			name: "divisions = s.NumEdges()+1",
+			args: args{
+				shape: laxPolylineFromPoints([]Point{
+					PointFromLatLng(LatLngFromDegrees(0, 0)),
+					PointFromLatLng(LatLngFromDegrees(0, 1)),
+					PointFromLatLng(LatLngFromDegrees(0, 2)),
+				},
+				),
+				startSliceFraction: 0.3,
+				endSliceFraction:   0.99999999999995,
+				divisions:          3,
+			},
+			want: `0:0.6, 0:1, 0:1.9999999999999`,
+		},
 	}
 
 	for _, test := range tests {
 		query := InitChainInterpolationQuery(test.args.shape, 0)
-		if got := pointsToString(query.SliceDivided(
+		got := query.SliceDivided(
 			test.args.startSliceFraction,
 			test.args.endSliceFraction,
 			test.args.divisions,
-		)); got != test.want {
-			t.Errorf("%v: got %v, want %v", test.name, got, test.want)
+		)
+		want := parsePoints(test.want)
+		if len(got) != test.args.divisions && len(got) != len(want) {
+			t.Errorf("length mismatch: got %d, want %d", len(got), test.args.divisions)
+		}
+		if !pointSlicesApproxEqual(got, want, kEpsilon) {
+			t.Errorf("%v: got %v, want %v", test.name, got, want)
 		}
 	}
 }
