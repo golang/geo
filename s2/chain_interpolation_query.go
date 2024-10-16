@@ -304,6 +304,9 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 			for i := currentEdgeID; i < edgeID; i++ {
 				edge := s.Shape.Edge(i)
 				if edge.V1 != atFraction {
+					if len(*points) == pointsNum-1 {
+						break
+					}
 					*points = append(*points, edge.V1)
 				}
 			}
@@ -314,7 +317,9 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 			currentEdgeID++
 			continue
 		}
-
+		if len(*points) == pointsNum-1 {
+			break
+		}
 		*points = append(*points, atFraction)
 	}
 	// Append last edge
