@@ -262,14 +262,18 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 		return
 	}
 
-	slice := s.Slice(beginFraction, endFraction)
+	pointsLength := len(*points)
 
-	if len(slice) > pointsNum {
+	*points = append(*points, s.Slice(beginFraction, endFraction)...)
+
+	if len(*points) > pointsNum {
+		*points = (*points)[0:pointsLength]
 		return
-	} else if len(slice) == pointsNum {
-		*points = append(*points, slice...)
+	} else if len(*points) == pointsNum {
 		return
 	}
+
+	*points = (*points)[0:pointsLength]
 
 	reverse := beginFraction > endFraction
 	if reverse {
