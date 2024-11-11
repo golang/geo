@@ -68,7 +68,13 @@ func (l *laxLoop) Edge(e int) Edge {
 func (l *laxLoop) Dimension() int                 { return 2 }
 func (l *laxLoop) ReferencePoint() ReferencePoint { return referencePointForShape(l) }
 func (l *laxLoop) NumChains() int                 { return minInt(1, l.numVertices) }
-func (l *laxLoop) Chain(i int) Chain              { return Chain{0, l.numVertices} }
+func (l *laxLoop) Chain(i int) Chain {
+	if l.numVertices == 1 {
+		return Chain{0, l.numVertices}
+	}
+	return Chain{i, l.numVertices - i}
+}
+
 func (l *laxLoop) ChainEdge(i, j int) Edge {
 	var k int
 	if j+1 == l.numVertices {
