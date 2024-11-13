@@ -831,7 +831,7 @@ func TestSliceDivided(t *testing.T) {
 // cpu: AMD Ryzen 5 5600G with Radeon Graphics
 // === RUN   Benchmark_SliceDivided
 // Benchmark_SliceDivided
-// Benchmark_SliceDivided-12           8179            131682 ns/op           63696 B/op         23 allocs/op
+// Benchmark_SliceDivided-12           8101            128452 ns/op           49104 B/op         20 allocs/op
 
 func Benchmark_SliceDivided(b *testing.B) {
 	chainInterpolationQuery := InitChainInterpolationQuery(
@@ -847,10 +847,7 @@ func Benchmark_SliceDivided(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		slice := chainInterpolationQuery.SliceDivided(0.3, 0.84, 500)
-		if len(slice) != 500 {
-			b.Errorf("length mismatch: got %d, want %d", len(slice), 500)
-		}
+		chainInterpolationQuery.SliceDivided(0.3, 0.84, 500)
 	}
 
 	b.StopTimer()
@@ -870,10 +867,64 @@ func Benchmark_SliceDivided(b *testing.B) {
 
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		slice := chainInterpolationQuery.SliceDivided(0.3, 0.84, 500)
-		if len(slice) != 500 {
-			b.Errorf("length mismatch: got %d, want %d", len(slice), 500)
-		}
+		chainInterpolationQuery.SliceDivided(0.3, 0.84, 500)
 	}
+}
 
+func TestChainInterpolationQuery_EdgesBetween(t *testing.T) {
+	query := InitChainInterpolationQuery(laxPolylineFromPoints([]Point{
+		PointFromLatLng(LatLngFromDegrees(0, 0)),
+		PointFromLatLng(LatLngFromDegrees(0, 1)),
+		PointFromLatLng(LatLngFromDegrees(0, 2)),
+		PointFromLatLng(LatLngFromDegrees(0, 3)),
+		PointFromLatLng(LatLngFromDegrees(0, 4)),
+		PointFromLatLng(LatLngFromDegrees(0, 5)),
+	},
+	), 0)
+	type args struct {
+		beginFraction float64
+		endFraction   float64
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{
+			name: "beginFraction = 0, endFraction = 0.5",
+			args: args{beginFraction: 0, endFraction: 0.5},
+			want: 2,
+		},
+		{
+			name: "beginFraction = 0, endFraction = 0.8",
+			args: args{beginFraction: 0, endFraction: 0.8},
+			want: 3,
+		},
+		{
+			name: "beginFraction = 0, endFraction = 0.85",
+			args: args{beginFraction: 0, endFraction: 0.85},
+			want: 4,
+		},
+		{
+			name: "beginFraction = 0, endFraction = 1",
+			args: args{beginFraction: 0, endFraction: 1},
+			want: 4,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			atBegin, beginEdgeID, _, err := query.AtFraction(tt.args.beginFraction)
+			if err != nil {
+				t.Errorf("ChainInterpolationQuery.AtFraction() error = %v", err)
+			}
+
+			atEnd, endEdgeID, _, err := query.AtFraction(tt.args.endFraction)
+			if err != nil {
+				t.Errorf("ChainInterpolationQuery.AtFraction() error = %v", err)
+			}
+			if got := query.EdgesBetween(atBegin, atEnd, beginEdgeID, endEdgeID); got != tt.want {
+				t.Errorf("ChainInterpolationQuery.EdgesBetween() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

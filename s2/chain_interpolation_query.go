@@ -264,12 +264,22 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 
 	pointsLength := len(*points)
 
-	*points = append(*points, s.Slice(beginFraction, endFraction)...)
-
-	if len(*points) > pointsNum {
-		*points = (*points)[0:pointsLength]
+	atBegin, currentEdgeID, _, err := s.AtFraction(beginFraction)
+	if err != nil {
 		return
-	} else if len(*points) == pointsNum {
+	}
+
+	atEnd, endEdgeID, _, err := s.AtFraction(endFraction)
+	if err != nil {
+		return
+	}
+
+	edgesBetween := s.EdgesBetween(atBegin, atEnd, currentEdgeID, endEdgeID)
+
+	if edgesBetween > pointsNum-2 {
+		return
+	} else if edgesBetween == pointsNum-2 {
+		s.AddSlice(beginFraction, endFraction, points)
 		return
 	}
 
@@ -279,16 +289,6 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 	if reverse {
 		// Swap the begin and end fractions so that we can iterate in ascending order.
 		beginFraction, endFraction = endFraction, beginFraction
-	}
-
-	atBegin, currentEdgeID, _, err := s.AtFraction(beginFraction)
-	if err != nil {
-		return
-	}
-
-	atEnd, _, _, err := s.AtFraction(endFraction)
-	if err != nil {
-		return
 	}
 
 	// divisionsExcludingEdges := pointsNum - len(slice)
@@ -333,4 +333,21 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 	if reverse {
 		slices.Reverse(*points)
 	}
+}
+
+func (s ChainInterpolationQuery) EdgesBetween(begin, end Point, beginEdgeID, endEdgeID int) int {
+	if end == begin {
+		return 0
+	}
+	edges := 0
+
+	for edgeID := beginEdgeID; edgeID < endEdgeID; edgeID++ {
+		edge := s.Shape.Edge(edgeID)
+		if begin != edge.V1 {
+			begin = edge.V1
+			edges++
+		}
+	}
+
+	return edges
 }
