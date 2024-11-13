@@ -824,3 +824,48 @@ func TestSliceDivided(t *testing.T) {
 		}
 	}
 }
+
+func Benchmark_SliceDivided(b *testing.B) {
+	chainInterpolationQuery := InitChainInterpolationQuery(
+		laxPolylineFromPoints(
+			[]Point{
+				PointFromLatLng(LatLngFromDegrees(0, 0)),
+				PointFromLatLng(LatLngFromDegrees(0, 1)),
+				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			},
+		),
+		0,
+	)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		slice := chainInterpolationQuery.SliceDivided(0.3, 0.84, 500)
+		if len(slice) != 500 {
+			b.Errorf("length mismatch: got %d, want %d", len(slice), 500)
+		}
+	}
+
+	b.StopTimer()
+
+	points := make([]Point, 500)
+
+	for i := 0; i < 100; i++ {
+		points[i] = PointFromLatLng(LatLngFromDegrees(0, float64(i)))
+	}
+
+	chainInterpolationQuery = InitChainInterpolationQuery(
+		laxPolylineFromPoints(
+			points,
+		),
+		0,
+	)
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		slice := chainInterpolationQuery.SliceDivided(0.3, 0.84, 500)
+		if len(slice) != 500 {
+			b.Errorf("length mismatch: got %d, want %d", len(slice), 500)
+		}
+	}
+
+}
