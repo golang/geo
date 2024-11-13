@@ -825,6 +825,14 @@ func TestSliceDivided(t *testing.T) {
 	}
 }
 
+// goos: linux
+// goarch: amd64
+// pkg: github.com/pavlov061356/geo/s2
+// cpu: AMD Ryzen 5 5600G with Radeon Graphics
+// === RUN   Benchmark_SliceDivided
+// Benchmark_SliceDivided
+// Benchmark_SliceDivided-12           8179            131682 ns/op           63696 B/op         23 allocs/op
+
 func Benchmark_SliceDivided(b *testing.B) {
 	chainInterpolationQuery := InitChainInterpolationQuery(
 		laxPolylineFromPoints(
