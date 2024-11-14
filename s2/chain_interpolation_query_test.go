@@ -831,7 +831,7 @@ func TestSliceDivided(t *testing.T) {
 // cpu: AMD Ryzen 5 5600G with Radeon Graphics
 // === RUN   Benchmark_SliceDivided
 // Benchmark_SliceDivided
-// Benchmark_SliceDivided-12           8101            128452 ns/op           49104 B/op         20 allocs/op
+// Benchmark_SliceDivided-12           8101            128452 ns/op           24577 B/op         2 allocs/op
 
 func Benchmark_SliceDivided(b *testing.B) {
 	chainInterpolationQuery := InitChainInterpolationQuery(
@@ -926,5 +926,17 @@ func TestChainInterpolationQuery_EdgesBetween(t *testing.T) {
 				t.Errorf("ChainInterpolationQuery.EdgesBetween() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func Benchmark_InitChinInterpolationQuery(b *testing.B) {
+	points := make([]Point, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		points = append(points, PointFromLatLng(LatLngFromDegrees(0, float64(i))))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		InitChainInterpolationQuery(laxPolylineFromPoints(points), 0)
 	}
 }

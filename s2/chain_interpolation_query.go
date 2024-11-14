@@ -202,7 +202,7 @@ func (s ChainInterpolationQuery) Slice(beginFraction, endFraction float64) []Poi
 // If the query is either uninitialized, or initialized with a shape
 // containing no edges, then an empty vector is returned.
 func (s ChainInterpolationQuery) SliceDivided(beginFraction, endFraction float64, divisions int) []Point {
-	var points []Point
+	points := make([]Point, 0, divisions)
 	s.AddDividedSlice(beginFraction, endFraction, &points, divisions)
 	return points
 }
