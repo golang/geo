@@ -940,3 +940,48 @@ func Benchmark_InitChinInterpolationQuery(b *testing.B) {
 		InitChainInterpolationQuery(laxPolylineFromPoints(points), 0)
 	}
 }
+
+// goos: linux
+// goarch: amd64
+// pkg: github.com/pavlov061356/geo/s2
+// cpu: AMD Ryzen 7 5800H with Radeon Graphics
+// === RUN   Benchmark_Slice
+// Benchmark_Slice
+// Benchmark_Slice-16        303748              3403 ns/op            3216 B/op         10 allocs/op
+func Benchmark_Slice(b *testing.B) {
+	chainInterpolationQuery := InitChainInterpolationQuery(
+		laxPolylineFromPoints(
+			[]Point{
+				PointFromLatLng(LatLngFromDegrees(0, 0)),
+				PointFromLatLng(LatLngFromDegrees(0, 1)),
+				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			},
+		),
+		0,
+	)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		chainInterpolationQuery.Slice(0.3, 0.84)
+	}
+
+	b.StopTimer()
+
+	points := make([]Point, 500)
+
+	for i := 0; i < 100; i++ {
+		points[i] = PointFromLatLng(LatLngFromDegrees(0, float64(i)))
+	}
+
+	chainInterpolationQuery = InitChainInterpolationQuery(
+		laxPolylineFromPoints(
+			points,
+		),
+		0,
+	)
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		chainInterpolationQuery.Slice(0.3, 0.84)
+	}
+}
