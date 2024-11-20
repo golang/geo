@@ -180,7 +180,7 @@ VertexIDLaxLoop      | ❌
 
 C++ Type             | Go
 :------------------- | ---
-S2ChainInterpolation | ❌
+S2ChainInterpolation | ✅
 S2ClosestCell        | ❌
 S2FurthestCell       | ❌
 S2ClosestEdge        | ✅
