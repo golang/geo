@@ -317,6 +317,9 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 			currentEdgeID = edgeID
 			continue
 		} else if edge := s.Shape.Edge(edgeID); edge.V1.approxEqual(atFraction, epsilon) {
+			if len(*points) == pointsNum-1 {
+				break
+			}
 			*points = append(*points, edge.V1)
 			currentEdgeID++
 			continue
