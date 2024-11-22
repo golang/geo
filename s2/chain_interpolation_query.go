@@ -296,7 +296,9 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 	*points = append(*points, atBegin)
 
 	// // Copy the internal points from the chain.
-	for fraction := beginFraction + (endFraction-beginFraction)/float64(pointsNum-1); fraction < endFraction; fraction += (endFraction - beginFraction) / float64(pointsNum-1) {
+
+	fraction := beginFraction + (endFraction-beginFraction)/float64(pointsNum-1)
+	for pointsLength := 0; pointsLength < pointsNum-2; fraction += (endFraction - beginFraction) / float64(pointsNum-1) {
 		atFraction, edgeID, _, err := s.AtFraction(fraction)
 		if err != nil {
 			return
@@ -308,27 +310,63 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 			for i := currentEdgeID; i < edgeID; i++ {
 				edge := s.Shape.Edge(i)
 				if edge.V1 != atFraction {
-					if len(*points) == pointsNum-1 {
-						break
-					}
+					// if len(*points) == pointsNum-1 {
+					// 	break
+					// }
+					pointsLength++
 					*points = append(*points, edge.V1)
 				}
 			}
 			currentEdgeID = edgeID
 			continue
 		} else if edge := s.Shape.Edge(edgeID); edge.V1.approxEqual(atFraction, epsilon) {
-			if len(*points) == pointsNum-1 {
-				break
-			}
+			// if len(*points) == pointsNum-1 {
+			// 	break
+			// }
+			pointsLength++
 			*points = append(*points, edge.V1)
 			currentEdgeID++
 			continue
 		}
-		if len(*points) == pointsNum-1 {
-			break
-		}
+		// if len(*points) == pointsNum-1 {
+		// 	break
+		// }
+		pointsLength++
 		*points = append(*points, atFraction)
 	}
+	// for fraction := beginFraction + (endFraction-beginFraction)/float64(pointsNum-1); fraction < endFraction; fraction += (endFraction - beginFraction) / float64(pointsNum-1) {
+	// 	atFraction, edgeID, _, err := s.AtFraction(fraction)
+	// 	if err != nil {
+	// 		return
+	// 	}
+
+	// 	// If the current edge is the same as the previous edge, then skip it.
+	// 	// Otherwise, append all edges in between.
+	// 	if currentEdgeID != edgeID {
+	// 		for i := currentEdgeID; i < edgeID; i++ {
+	// 			edge := s.Shape.Edge(i)
+	// 			if edge.V1 != atFraction {
+	// 				if len(*points) == pointsNum-1 {
+	// 					break
+	// 				}
+	// 				*points = append(*points, edge.V1)
+	// 			}
+	// 		}
+	// 		currentEdgeID = edgeID
+	// 		continue
+	// 	} else if edge := s.Shape.Edge(edgeID); edge.V1.approxEqual(atFraction, epsilon) {
+	// 		if len(*points) == pointsNum-1 {
+	// 			break
+	// 		}
+	// 		*points = append(*points, edge.V1)
+	// 		currentEdgeID++
+	// 		continue
+	// 	}
+	// 	if len(*points) == pointsNum-1 {
+	// 		break
+	// 	}
+	// 	*points = append(*points, atFraction)
+	// }
 	// Append last edge
 	*points = append(*points, atEnd)
 
