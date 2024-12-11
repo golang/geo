@@ -1,6 +1,7 @@
 package s2
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/pavlov061356/geo/s1"
@@ -821,6 +822,17 @@ func TestSliceDivided(t *testing.T) {
 		}
 		if !pointSlicesApproxEqual(got, want, kEpsilon) {
 			t.Errorf("%v: got %v, want %v", test.name, got, want)
+		}
+
+		fmt.Println(got)
+
+		for i := 1; i < len(got)-1; i++ {
+			prev := LatLngFromPoint(got[i-1])
+			curr := LatLngFromPoint(got[i])
+
+			if curr.Lng < prev.Lng {
+				t.Errorf("%v: got %v, want %v", test.name, got, want)
+			}
 		}
 	}
 }
