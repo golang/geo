@@ -201,8 +201,8 @@ func (s ChainInterpolationQuery) Slice(beginFraction, endFraction float64) []Poi
 //
 // If the query is either uninitialized, or initialized with a shape
 // containing no edges, then an empty vector is returned.
-func (s ChainInterpolationQuery) SliceDivided(beginFraction, endFraction float64, divisions int) []Point {
-	points := make([]Point, 0, divisions)
+func (s ChainInterpolationQuery) SliceDivided(beginFraction, endFraction float64, divisions int) []PointWithFraction {
+	points := make([]PointWithFraction, 0, divisions)
 	s.AddDividedSlice(beginFraction, endFraction, &points, divisions)
 	return points
 }
@@ -250,6 +250,11 @@ func (s ChainInterpolationQuery) AddSlice(beginFraction, endFraction float64, po
 	}
 }
 
+type PointWithFraction struct {
+	Point
+	Fraction float64
+}
+
 // Appends the slice from beginFraction to endFraction to the given
 // slice. If beginFraction is greater than endFraction, then the points are
 // appended in reverse order. If the query is either uninitialized, or
@@ -257,12 +262,18 @@ func (s ChainInterpolationQuery) AddSlice(beginFraction, endFraction float64, po
 // divisions is the number of segments to divide the polyline into.
 // divisions must be greater or equal of NumEdges of Shape.
 // A polyline is divided into segments of equal length, and then edges are added to the slice.
-func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction float64, points *[]Point, pointsNum int) {
+func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction float64, points *[]PointWithFraction, pointsNum int) {
 	if len(s.cumulativeValues) == 0 {
 		return
 	}
 
 	pointsLength := len(*points)
+
+	reverse := beginFraction > endFraction
+	if reverse {
+		// Swap the begin and end fractions so that we can iterate in ascending order.
+		beginFraction, endFraction = endFraction, beginFraction
+	}
 
 	atBegin, currentEdgeID, _, err := s.AtFraction(beginFraction)
 	if err != nil {
@@ -278,22 +289,13 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 
 	if edgesBetween > pointsNum-2 {
 		return
-	} else if edgesBetween == pointsNum-2 {
-		s.AddSlice(beginFraction, endFraction, points)
-		return
 	}
 
 	*points = (*points)[0:pointsLength]
 
-	reverse := beginFraction > endFraction
-	if reverse {
-		// Swap the begin and end fractions so that we can iterate in ascending order.
-		beginFraction, endFraction = endFraction, beginFraction
-	}
-
 	// divisionsExcludingEdges := pointsNum - len(slice)
 
-	*points = append(*points, atBegin)
+	*points = append(*points, PointWithFraction{Point: atBegin, Fraction: beginFraction})
 
 	// // Copy the internal points from the chain.
 
@@ -310,65 +312,31 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 			for i := currentEdgeID; i < edgeID; i++ {
 				edge := s.Shape.Edge(i)
 				if edge.V1 != atFraction {
-					// if len(*points) == pointsNum-1 {
-					// 	break
-					// }
 					pointsLength++
-					*points = append(*points, edge.V1)
+					total, err := s.GetLength()
+					if err != nil {
+						return
+					}
+					if total == 0 {
+						return
+					}
+
+					*points = append(*points, PointWithFraction{Point: edge.V1, Fraction: s.cumulativeValues[i].Radians() / total.Radians()})
 				}
 			}
 			currentEdgeID = edgeID
 			continue
 		} else if edge := s.Shape.Edge(edgeID); edge.V1.approxEqual(atFraction, epsilon) {
-			// if len(*points) == pointsNum-1 {
-			// 	break
-			// }
 			pointsLength++
-			*points = append(*points, edge.V1)
+			*points = append(*points, PointWithFraction{Point: edge.V1, Fraction: fraction})
 			currentEdgeID++
 			continue
 		}
-		// if len(*points) == pointsNum-1 {
-		// 	break
-		// }
-		pointsLength++
-		*points = append(*points, atFraction)
-	}
-	// for fraction := beginFraction + (endFraction-beginFraction)/float64(pointsNum-1); fraction < endFraction; fraction += (endFraction - beginFraction) / float64(pointsNum-1) {
-	// 	atFraction, edgeID, _, err := s.AtFraction(fraction)
-	// 	if err != nil {
-	// 		return
-	// 	}
 
-	// 	// If the current edge is the same as the previous edge, then skip it.
-	// 	// Otherwise, append all edges in between.
-	// 	if currentEdgeID != edgeID {
-	// 		for i := currentEdgeID; i < edgeID; i++ {
-	// 			edge := s.Shape.Edge(i)
-	// 			if edge.V1 != atFraction {
-	// 				if len(*points) == pointsNum-1 {
-	// 					break
-	// 				}
-	// 				*points = append(*points, edge.V1)
-	// 			}
-	// 		}
-	// 		currentEdgeID = edgeID
-	// 		continue
-	// 	} else if edge := s.Shape.Edge(edgeID); edge.V1.approxEqual(atFraction, epsilon) {
-	// 		if len(*points) == pointsNum-1 {
-	// 			break
-	// 		}
-	// 		*points = append(*points, edge.V1)
-	// 		currentEdgeID++
-	// 		continue
-	// 	}
-	// 	if len(*points) == pointsNum-1 {
-	// 		break
-	// 	}
-	// 	*points = append(*points, atFraction)
-	// }
-	// Append last edge
-	*points = append(*points, atEnd)
+		pointsLength++
+		*points = append(*points, PointWithFraction{Point: atFraction, Fraction: fraction})
+	}
+	*points = append(*points, PointWithFraction{Point: atEnd, Fraction: endFraction})
 
 	// Reverse the slice if necessary.
 	if reverse {
