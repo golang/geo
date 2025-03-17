@@ -337,17 +337,17 @@ func (c Cell) RectBound() Rect {
 	var bound Rect
 	switch c.face {
 	case 0:
-		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{-math.Pi / 4, math.Pi / 4}}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}, s1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}}
 	case 1:
-		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{math.Pi / 4, 3 * math.Pi / 4}}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}, s1.Interval{Lo: math.Pi / 4, Hi: 3 * math.Pi / 4}}
 	case 2:
-		bound = Rect{r1.Interval{poleMinLat, math.Pi / 2}, s1.FullInterval()}
+		bound = Rect{r1.Interval{Lo: poleMinLat, Hi: math.Pi / 2}, s1.FullInterval()}
 	case 3:
-		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{3 * math.Pi / 4, -3 * math.Pi / 4}}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}, s1.Interval{Lo: 3 * math.Pi / 4, Hi: -3 * math.Pi / 4}}
 	case 4:
-		bound = Rect{r1.Interval{-math.Pi / 4, math.Pi / 4}, s1.Interval{-3 * math.Pi / 4, -math.Pi / 4}}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 4, Hi: math.Pi / 4}, s1.Interval{Lo: -3 * math.Pi / 4, Hi: -math.Pi / 4}}
 	default:
-		bound = Rect{r1.Interval{-math.Pi / 2, -poleMinLat}, s1.FullInterval()}
+		bound = Rect{r1.Interval{Lo: -math.Pi / 2, Hi: -poleMinLat}, s1.FullInterval()}
 	}
 
 	// Finally, we expand the bound to account for the error when a point P is
@@ -456,8 +456,8 @@ func (c Cell) uEdgeIsClosest(p Point, vHi bool) bool {
 	}
 	// These are the normals to the planes that are perpendicular to the edge
 	// and pass through one of its two endpoints.
-	dir0 := r3.Vector{v*v + 1, -u0 * v, -u0}
-	dir1 := r3.Vector{v*v + 1, -u1 * v, -u1}
+	dir0 := r3.Vector{X: v*v + 1, Y: -u0 * v, Z: -u0}
+	dir1 := r3.Vector{X: v*v + 1, Y: -u1 * v, Z: -u1}
 	return p.Dot(dir0) > 0 && p.Dot(dir1) < 0
 }
 
@@ -470,8 +470,8 @@ func (c Cell) vEdgeIsClosest(p Point, uHi bool) bool {
 	if uHi {
 		u = c.uv.X.Hi
 	}
-	dir0 := r3.Vector{-u * v0, u*u + 1, -v0}
-	dir1 := r3.Vector{-u * v1, u*u + 1, -v1}
+	dir0 := r3.Vector{X: -u * v0, Y: u*u + 1, Z: -v0}
+	dir1 := r3.Vector{X: -u * v1, Y: u*u + 1, Z: -v1}
 	return p.Dot(dir0) > 0 && p.Dot(dir1) < 0
 }
 
@@ -682,7 +682,7 @@ func (c Cell) MaxDistanceToCell(target Cell) s1.ChordAngle {
 	// Need to check the antipodal target for intersection with the cell. If it
 	// intersects, the distance is the straight ChordAngle.
 	// antipodalUV is the transpose of the original UV, interpreted within the opposite face.
-	antipodalUV := r2.Rect{target.uv.Y, target.uv.X}
+	antipodalUV := r2.Rect{X: target.uv.Y, Y: target.uv.X}
 	if int(c.face) == oppositeFace(int(target.face)) && c.uv.Intersects(antipodalUV) {
 		return s1.StraightChordAngle
 	}

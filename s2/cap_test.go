@@ -35,8 +35,8 @@ var (
 	fullHeight  = 2.0
 	emptyHeight = -1.0
 
-	xAxisPt = Point{r3.Vector{1, 0, 0}}
-	yAxisPt = Point{r3.Vector{0, 1, 0}}
+	xAxisPt = Point{r3.Vector{X: 1, Y: 0, Z: 0}}
+	yAxisPt = Point{r3.Vector{X: 0, Y: 1, Z: 0}}
 
 	xAxis = CapFromPoint(xAxisPt)
 	yAxis = CapFromPoint(yAxisPt)
@@ -157,14 +157,14 @@ func TestCapContains(t *testing.T) {
 }
 
 func TestCapContainsPoint(t *testing.T) {
-	tangent := tiny.center.Cross(r3.Vector{3, 2, 1}).Normalize()
+	tangent := tiny.center.Cross(r3.Vector{X: 3, Y: 2, Z: 1}).Normalize()
 	tests := []struct {
 		c    Cap
 		p    Point
 		want bool
 	}{
 		{xAxis, xAxisPt, true},
-		{xAxis, Point{r3.Vector{1, 1e-20, 0}}, false},
+		{xAxis, Point{r3.Vector{X: 1, Y: 1e-20, Z: 0}}, false},
 		{yAxis, xAxis.center, false},
 		{xComp, xAxis.center, true},
 		{xComp.Complement(), xAxis.center, false},
@@ -208,9 +208,9 @@ func TestCapInteriorIntersects(t *testing.T) {
 }
 
 func TestCapInteriorContains(t *testing.T) {
-	if hemi.InteriorContainsPoint(Point{r3.Vector{1, 0, -(1 + epsilon)}}) {
+	if hemi.InteriorContainsPoint(Point{r3.Vector{X: 1, Y: 0, Z: -(1 + epsilon)}}) {
 		t.Errorf("hemi (%v) should not contain point just past half way(%v)", hemi,
-			Point{r3.Vector{1, 0, -(1 + epsilon)}})
+			Point{r3.Vector{X: 1, Y: 0, Z: -(1 + epsilon)}})
 	}
 }
 
@@ -316,7 +316,7 @@ func TestCapRectBounds(t *testing.T) {
 		},
 		{
 			"The eastern hemisphere.",
-			CapFromCenterAngle(Point{r3.Vector{0, 1, 0}}, s1.Radian*(math.Pi/2+2e-16)),
+			CapFromCenterAngle(Point{r3.Vector{X: 0, Y: 1, Z: 0}}, s1.Radian*(math.Pi/2+2e-16)),
 			-90, 90, -180, 180, true,
 		},
 		{
@@ -376,34 +376,34 @@ func TestCapAddPoint(t *testing.T) {
 		{yAxis, yAxisPt, yAxis},
 
 		// Cap plus opposite point equals full.
-		{xAxis, Point{r3.Vector{-1, 0, 0}}, fullCap},
-		{yAxis, Point{r3.Vector{0, -1, 0}}, fullCap},
+		{xAxis, Point{r3.Vector{X: -1, Y: 0, Z: 0}}, fullCap},
+		{yAxis, Point{r3.Vector{X: 0, Y: -1, Z: 0}}, fullCap},
 
 		// Cap plus orthogonal axis equals half cap.
-		{xAxis, Point{r3.Vector{0, 0, 1}}, CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/2.0))},
-		{xAxis, Point{r3.Vector{0, 0, -1}}, CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/2.0))},
+		{xAxis, Point{r3.Vector{X: 0, Y: 0, Z: 1}}, CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/2.0))},
+		{xAxis, Point{r3.Vector{X: 0, Y: 0, Z: -1}}, CapFromCenterAngle(xAxisPt, s1.Angle(math.Pi/2.0))},
 
 		// The 45 degree angled hemisphere plus some points.
 		{
 			hemi,
 			PointFromCoords(0, 1, -1),
-			CapFromCenterAngle(Point{r3.Vector{1, 0, 1}},
+			CapFromCenterAngle(Point{r3.Vector{X: 1, Y: 0, Z: 1}},
 				s1.Angle(120.0)*s1.Degree),
 		},
 		{
 			hemi,
 			PointFromCoords(0, -1, -1),
-			CapFromCenterAngle(Point{r3.Vector{1, 0, 1}},
+			CapFromCenterAngle(Point{r3.Vector{X: 1, Y: 0, Z: 1}},
 				s1.Angle(120.0)*s1.Degree),
 		},
 		{
 			hemi,
 			PointFromCoords(-1, -1, -1),
-			CapFromCenterAngle(Point{r3.Vector{1, 0, 1}},
+			CapFromCenterAngle(Point{r3.Vector{X: 1, Y: 0, Z: 1}},
 				s1.Angle(math.Acos(-math.Sqrt(2.0/3.0)))),
 		},
-		{hemi, Point{r3.Vector{0, 1, 1}}, hemi},
-		{hemi, Point{r3.Vector{1, 0, 0}}, hemi},
+		{hemi, Point{r3.Vector{X: 0, Y: 1, Z: 1}}, hemi},
+		{hemi, Point{r3.Vector{X: 1, Y: 0, Z: 0}}, hemi},
 	}
 
 	for _, test := range tests {
@@ -684,8 +684,8 @@ func TestCapUnion(t *testing.T) {
 		t.Errorf("%v.Radius = %v, want %v", aUnionE, got, want)
 	}
 
-	p1 := Point{r3.Vector{0, 0, 1}}
-	p2 := Point{r3.Vector{0, 1, 0}}
+	p1 := Point{r3.Vector{X: 0, Y: 0, Z: 1}}
+	p2 := Point{r3.Vector{X: 0, Y: 1, Z: 0}}
 	// Two very large caps, whose radius sums to in excess of 180 degrees, and
 	// whose centers are not antipodal.
 	f := CapFromCenterAngle(p1, s1.Degree*150)

@@ -236,11 +236,11 @@ func testCellChildren(t *testing.T, cell Cell) {
 		// where the cell size at a given level is maximal.
 		maxSizeUV := 0.3964182625366691
 		specialUV := []r2.Point{
-			{dblEpsilon, dblEpsilon}, // Face center
-			{dblEpsilon, 1},          // Edge midpoint
-			{1, 1},                   // Face corner
-			{maxSizeUV, maxSizeUV},   // Largest cell area
-			{dblEpsilon, maxSizeUV},  // Longest edge/diagonal
+			{X: dblEpsilon, Y: dblEpsilon}, // Face center
+			{X: dblEpsilon, Y: 1},          // Edge midpoint
+			{X: 1, Y: 1},                   // Face corner
+			{X: maxSizeUV, Y: maxSizeUV},   // Largest cell area
+			{X: dblEpsilon, Y: maxSizeUV},  // Longest edge/diagonal
 		}
 		forceSubdivide := false
 		for _, uv := range specialUV {

@@ -53,7 +53,7 @@ func PointFromCoords(x, y, z float64) Point {
 	if x == 0 && y == 0 && z == 0 {
 		return OriginPoint()
 	}
-	return Point{r3.Vector{x, y, z}.Normalize()}
+	return Point{r3.Vector{X: x, Y: y, Z: z}.Normalize()}
 }
 
 // OriginPoint returns a unique "origin" on the sphere for operations that need a fixed
@@ -65,7 +65,7 @@ func PointFromCoords(x, y, z float64) Point {
 // north and south poles). It should also not be on the boundary of any
 // low-level S2Cell for the same reason.
 func OriginPoint() Point {
-	return Point{r3.Vector{-0.0099994664350250197, 0.0025924542609324121, 0.99994664350250195}}
+	return Point{r3.Vector{X: -0.0099994664350250197, Y: 0.0025924542609324121, Z: 0.99994664350250195}}
 }
 
 // PointCross returns a Point that is orthogonal to both p and op. This is similar to
@@ -164,7 +164,7 @@ func regularPointsForFrame(frame matrix3x3, radius s1.Angle, numVertices int) []
 
 	for i := 0; i < numVertices; i++ {
 		angle := float64(i) * radianStep
-		p := Point{r3.Vector{r * math.Cos(angle), r * math.Sin(angle), z}}
+		p := Point{r3.Vector{X: r * math.Cos(angle), Y: r * math.Sin(angle), Z: z}}
 		vertices = append(vertices, Point{fromFrame(frame, p).Normalize()})
 	}
 
@@ -248,7 +248,7 @@ func (p *Point) decode(d *decoder) {
 // coordinates that are zero. (This is a performance optimization that
 // reduces the amount of time spent in functions that handle degeneracies.)
 func Ortho(a Point) Point {
-	temp := r3.Vector{0.012, 0.0053, 0.00457}
+	temp := r3.Vector{X: 0.012, Y: 0.0053, Z: 0.00457}
 	switch a.LargestComponent() {
 	case r3.XAxis:
 		temp.Z = 1

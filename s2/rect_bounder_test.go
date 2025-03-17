@@ -41,13 +41,13 @@ func TestRectBounderMaxLatitudeSimple(t *testing.T) {
 	}{
 		// Check cases where the min/max latitude is attained at a vertex.
 		{
-			a:    Point{r3.Vector{1, 1, 1}},
-			b:    Point{r3.Vector{1, -1, -1}},
+			a:    Point{r3.Vector{X: 1, Y: 1, Z: 1}},
+			b:    Point{r3.Vector{X: 1, Y: -1, Z: -1}},
 			want: cubeLatRect,
 		},
 		{
-			a:    Point{r3.Vector{1, -1, 1}},
-			b:    Point{r3.Vector{1, 1, -1}},
+			a:    Point{r3.Vector{X: 1, Y: -1, Z: 1}},
+			b:    Point{r3.Vector{X: 1, Y: 1, Z: -1}},
 			want: cubeLatRect,
 		},
 	}
@@ -71,32 +71,32 @@ func TestRectBounderMaxLatitudeEdgeInterior(t *testing.T) {
 		// Max latitude, CW edge
 		{
 			math.Pi/4 + 0.5*rectErrorLat,
-			rectBoundForPoints(Point{r3.Vector{1, 1, 1}}, Point{r3.Vector{1, -1, 1}}).Lat.Hi,
+			rectBoundForPoints(Point{r3.Vector{X: 1, Y: 1, Z: 1}}, Point{r3.Vector{X: 1, Y: -1, Z: 1}}).Lat.Hi,
 		},
 		// Min latitude, CW edge
 		{
 			-math.Pi/4 - 0.5*rectErrorLat,
-			rectBoundForPoints(Point{r3.Vector{1, -1, -1}}, Point{r3.Vector{-1, -1, -1}}).Lat.Lo,
+			rectBoundForPoints(Point{r3.Vector{X: 1, Y: -1, Z: -1}}, Point{r3.Vector{X: -1, Y: -1, Z: -1}}).Lat.Lo,
 		},
 		// Max latitude, CCW edge
 		{
 			math.Pi/4 + 0.5*rectErrorLat,
-			rectBoundForPoints(Point{r3.Vector{1, -1, 1}}, Point{r3.Vector{1, 1, 1}}).Lat.Hi,
+			rectBoundForPoints(Point{r3.Vector{X: 1, Y: -1, Z: 1}}, Point{r3.Vector{X: 1, Y: 1, Z: 1}}).Lat.Hi,
 		},
 		// Min latitude, CCW edge
 		{
 			-math.Pi/4 - 0.5*rectErrorLat,
-			rectBoundForPoints(Point{r3.Vector{-1, 1, -1}}, Point{r3.Vector{-1, -1, -1}}).Lat.Lo,
+			rectBoundForPoints(Point{r3.Vector{X: -1, Y: 1, Z: -1}}, Point{r3.Vector{X: -1, Y: -1, Z: -1}}).Lat.Lo,
 		},
 
 		// Check cases where the edge passes through one of the poles.
 		{
 			math.Pi / 2,
-			rectBoundForPoints(Point{r3.Vector{.3, .4, 1}}, Point{r3.Vector{-.3, -.4, 1}}).Lat.Hi,
+			rectBoundForPoints(Point{r3.Vector{X: .3, Y: .4, Z: 1}}, Point{r3.Vector{X: -.3, Y: -.4, Z: 1}}).Lat.Hi,
 		},
 		{
 			-math.Pi / 2,
-			rectBoundForPoints(Point{r3.Vector{.3, .4, -1}}, Point{r3.Vector{-.3, -.4, -1}}).Lat.Lo,
+			rectBoundForPoints(Point{r3.Vector{X: .3, Y: .4, Z: -1}}, Point{r3.Vector{X: -.3, Y: -.4, Z: -1}}).Lat.Lo,
 		},
 	}
 
@@ -212,11 +212,11 @@ func TestRectBounderExpandForSubregions(t *testing.T) {
 		xLat, xLng, yLat, yLng float64
 		wantRect               Rect
 	}{
-		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 2e-16, Rect{r1.Interval{1.5, 1.5}, s1.FullInterval()}},
-		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 7e-16, Rect{r1.Interval{1.5, 1.5}, s1.Interval{-math.Pi / 2, math.Pi/2 - 7e-16}}},
+		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 2e-16, Rect{r1.Interval{Lo: 1.5, Hi: 1.5}, s1.FullInterval()}},
+		{1.5, -math.Pi / 2, 1.5, math.Pi/2 - 7e-16, Rect{r1.Interval{Lo: 1.5, Hi: 1.5}, s1.Interval{Lo: -math.Pi / 2, Hi: math.Pi/2 - 7e-16}}},
 		// Check for cases where the bound is expanded to include one of the poles
-		{-math.Pi/2 + 1e-15, 0, -math.Pi/2 + 1e-15, 0, Rect{r1.Interval{-math.Pi / 2, -math.Pi/2 + 1e-15}, s1.FullInterval()}},
-		{math.Pi/2 - 1e-15, 0, math.Pi/2 - 1e-15, 0, Rect{r1.Interval{math.Pi/2 - 1e-15, math.Pi / 2}, s1.FullInterval()}},
+		{-math.Pi/2 + 1e-15, 0, -math.Pi/2 + 1e-15, 0, Rect{r1.Interval{Lo: -math.Pi / 2, Hi: -math.Pi/2 + 1e-15}, s1.FullInterval()}},
+		{math.Pi/2 - 1e-15, 0, math.Pi/2 - 1e-15, 0, Rect{r1.Interval{Lo: math.Pi/2 - 1e-15, Hi: math.Pi / 2}, s1.FullInterval()}},
 	}
 
 	for _, tc := range rectTests {

@@ -29,7 +29,7 @@ import (
 // There are several different ways to measure this error, including the
 // representational error (i.e., how accurately ChordAngle can represent
 // angles near π radians), the conversion error (i.e., how much precision is
-// lost when an Angle is converted to an ChordAngle), and the measurement
+// lost when an Angle is converted to a ChordAngle), and the measurement
 // error (i.e., how accurate the ChordAngle(a, b) constructor is when the
 // points A and B are separated by angles close to π radians). All of these
 // errors differ by a small constant factor.

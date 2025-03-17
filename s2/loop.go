@@ -200,15 +200,15 @@ func (l *Loop) initBound() {
 	}
 	b := bounder.RectBound()
 
-	if l.ContainsPoint(Point{r3.Vector{0, 0, 1}}) {
-		b = Rect{r1.Interval{b.Lat.Lo, math.Pi / 2}, s1.FullInterval()}
+	if l.ContainsPoint(Point{r3.Vector{X: 0, Y: 0, Z: 1}}) {
+		b = Rect{r1.Interval{Lo: b.Lat.Lo, Hi: math.Pi / 2}, s1.FullInterval()}
 	}
 	// If a loop contains the south pole, then either it wraps entirely
 	// around the sphere (full longitude range), or it also contains the
 	// north pole in which case b.Lng.IsFull() due to the test above.
 	// Either way, we only need to do the south pole containment test if
 	// b.Lng.IsFull().
-	if b.Lng.IsFull() && l.ContainsPoint(Point{r3.Vector{0, 0, -1}}) {
+	if b.Lng.IsFull() && l.ContainsPoint(Point{r3.Vector{X: 0, Y: 0, Z: -1}}) {
 		b.Lat.Lo = -math.Pi / 2
 	}
 	l.bound = b
@@ -1553,7 +1553,7 @@ func (l *loopCrosser) cellCrossesAnySubcell(aClipped *clippedShape, bID CellID) 
 	// correct index cells more efficiently.
 	bRoot := PaddedCellFromCellID(bID, 0)
 	for _, aj := range aClipped.edges {
-		// Use an CrossingEdgeQuery starting at bRoot to find the index cells
+		// Use a CrossingEdgeQuery starting at bRoot to find the index cells
 		// of B that might contain crossing edges.
 		l.bCells = l.bQuery.getCells(l.a.Vertex(aj), l.a.Vertex(aj+1), bRoot)
 		if len(l.bCells) == 0 {

@@ -87,15 +87,15 @@ func TestFaceUVToXYZ(t *testing.T) {
 	}
 
 	// Adding up the absolute value all all the face normals should equal 2 on each axis.
-	if !sum.ApproxEqual(r3.Vector{2, 2, 2}) {
-		t.Errorf("sum of the abs of the 6 face norms should = %v, got %v", r3.Vector{2, 2, 2}, sum)
+	if !sum.ApproxEqual(r3.Vector{X: 2, Y: 2, Z: 2}) {
+		t.Errorf("sum of the abs of the 6 face norms should = %v, got %v", r3.Vector{X: 2, Y: 2, Z: 2}, sum)
 	}
 }
 
 func TestFaceXYZToUV(t *testing.T) {
 	var (
-		point    = Point{r3.Vector{1.1, 1.2, 1.3}}
-		pointNeg = Point{r3.Vector{-1.1, -1.2, -1.3}}
+		point    = Point{r3.Vector{X: 1.1, Y: 1.2, Z: 1.3}}
+		pointNeg = Point{r3.Vector{X: -1.1, Y: -1.2, Z: -1.3}}
 	)
 
 	tests := []struct {
@@ -128,13 +128,13 @@ func TestFaceXYZToUV(t *testing.T) {
 
 func TestFaceXYZtoUVW(t *testing.T) {
 	var (
-		origin = Point{r3.Vector{0, 0, 0}}
-		posX   = Point{r3.Vector{1, 0, 0}}
-		negX   = Point{r3.Vector{-1, 0, 0}}
-		posY   = Point{r3.Vector{0, 1, 0}}
-		negY   = Point{r3.Vector{0, -1, 0}}
-		posZ   = Point{r3.Vector{0, 0, 1}}
-		negZ   = Point{r3.Vector{0, 0, -1}}
+		origin = Point{r3.Vector{X: 0, Y: 0, Z: 0}}
+		posX   = Point{r3.Vector{X: 1, Y: 0, Z: 0}}
+		negX   = Point{r3.Vector{X: -1, Y: 0, Z: 0}}
+		posY   = Point{r3.Vector{X: 0, Y: 1, Z: 0}}
+		negY   = Point{r3.Vector{X: 0, Y: -1, Z: 0}}
+		posZ   = Point{r3.Vector{X: 0, Y: 0, Z: 1}}
+		negZ   = Point{r3.Vector{X: 0, Y: 0, Z: -1}}
 	)
 
 	for face := 0; face < 6; face++ {
@@ -246,7 +246,7 @@ func TestXYZToFaceSiTi(t *testing.T) {
 			}
 
 			// Test a point near the cell center but not equal to it.
-			pMoved := ci.Point().Add(r3.Vector{1e-13, 1e-13, 1e-13})
+			pMoved := ci.Point().Add(r3.Vector{X: 1e-13, Y: 1e-13, Z: 1e-13})
 			fMoved, siMoved, tiMoved, gotLevel := xyzToFaceSiTi(Point{pMoved})
 
 			if gotLevel != -1 {
@@ -323,33 +323,33 @@ func TestSTUVFace(t *testing.T) {
 		v    r3.Vector
 		want int
 	}{
-		{r3.Vector{-1, -1, -1}, 5},
-		{r3.Vector{-1, -1, 0}, 4},
-		{r3.Vector{-1, -1, 1}, 2},
-		{r3.Vector{-1, 0, -1}, 5},
-		{r3.Vector{-1, 0, 0}, 3},
-		{r3.Vector{-1, 0, 1}, 2},
-		{r3.Vector{-1, 1, -1}, 5},
-		{r3.Vector{-1, 1, 0}, 1},
-		{r3.Vector{-1, 1, 1}, 2},
-		{r3.Vector{0, -1, -1}, 5},
-		{r3.Vector{0, -1, 0}, 4},
-		{r3.Vector{0, -1, 1}, 2},
-		{r3.Vector{0, 0, -1}, 5},
-		{r3.Vector{0, 0, 0}, 2},
-		{r3.Vector{0, 0, 1}, 2},
-		{r3.Vector{0, 1, -1}, 5},
-		{r3.Vector{0, 1, 0}, 1},
-		{r3.Vector{0, 1, 1}, 2},
-		{r3.Vector{1, -1, -1}, 5},
-		{r3.Vector{1, -1, 0}, 4},
-		{r3.Vector{1, -1, 1}, 2},
-		{r3.Vector{1, 0, -1}, 5},
-		{r3.Vector{1, 0, 0}, 0},
-		{r3.Vector{1, 0, 1}, 2},
-		{r3.Vector{1, 1, -1}, 5},
-		{r3.Vector{1, 1, 0}, 1},
-		{r3.Vector{1, 1, 1}, 2},
+		{r3.Vector{X: -1, Y: -1, Z: -1}, 5},
+		{r3.Vector{X: -1, Y: -1, Z: 0}, 4},
+		{r3.Vector{X: -1, Y: -1, Z: 1}, 2},
+		{r3.Vector{X: -1, Y: 0, Z: -1}, 5},
+		{r3.Vector{X: -1, Y: 0, Z: 0}, 3},
+		{r3.Vector{X: -1, Y: 0, Z: 1}, 2},
+		{r3.Vector{X: -1, Y: 1, Z: -1}, 5},
+		{r3.Vector{X: -1, Y: 1, Z: 0}, 1},
+		{r3.Vector{X: -1, Y: 1, Z: 1}, 2},
+		{r3.Vector{X: 0, Y: -1, Z: -1}, 5},
+		{r3.Vector{X: 0, Y: -1, Z: 0}, 4},
+		{r3.Vector{X: 0, Y: -1, Z: 1}, 2},
+		{r3.Vector{X: 0, Y: 0, Z: -1}, 5},
+		{r3.Vector{X: 0, Y: 0, Z: 0}, 2},
+		{r3.Vector{X: 0, Y: 0, Z: 1}, 2},
+		{r3.Vector{X: 0, Y: 1, Z: -1}, 5},
+		{r3.Vector{X: 0, Y: 1, Z: 0}, 1},
+		{r3.Vector{X: 0, Y: 1, Z: 1}, 2},
+		{r3.Vector{X: 1, Y: -1, Z: -1}, 5},
+		{r3.Vector{X: 1, Y: -1, Z: 0}, 4},
+		{r3.Vector{X: 1, Y: -1, Z: 1}, 2},
+		{r3.Vector{X: 1, Y: 0, Z: -1}, 5},
+		{r3.Vector{X: 1, Y: 0, Z: 0}, 0},
+		{r3.Vector{X: 1, Y: 0, Z: 1}, 2},
+		{r3.Vector{X: 1, Y: 1, Z: -1}, 5},
+		{r3.Vector{X: 1, Y: 1, Z: 0}, 1},
+		{r3.Vector{X: 1, Y: 1, Z: 1}, 2},
 	}
 
 	for _, test := range tests {

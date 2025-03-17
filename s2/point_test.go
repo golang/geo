@@ -33,7 +33,7 @@ func TestOriginPoint(t *testing.T) {
 	// Cells. (The line of longitude through the chosen point is always 1/3
 	// or 2/3 of the way across any Cell with longitudinal edges that it
 	// passes through.)
-	p := Point{r3.Vector{-0.01, 0.01 * stToUV(2.0/3), 1}}
+	p := Point{r3.Vector{X: -0.01, Y: 0.01 * stToUV(2.0/3), Z: 1}}
 	if !p.ApproxEqual(OriginPoint()) {
 		t.Errorf("Origin point should fall in the Siberian Sea, but does not.")
 	}
@@ -54,8 +54,8 @@ func TestPointCross(t *testing.T) {
 		{1, 2, 3, -4, 5, -6, 2 * math.Sqrt(934)},
 	}
 	for _, test := range tests {
-		p1 := Point{r3.Vector{test.p1x, test.p1y, test.p1z}}
-		p2 := Point{r3.Vector{test.p2x, test.p2y, test.p2z}}
+		p1 := Point{r3.Vector{X: test.p1x, Y: test.p1y, Z: test.p1z}}
+		p2 := Point{r3.Vector{X: test.p2x, Y: test.p2y, Z: test.p2z}}
 		result := p1.PointCross(p2)
 		if !float64Eq(result.Norm(), test.norm) {
 			t.Errorf("|%v ⨯ %v| = %v, want %v", p1, p2, result.Norm(), test.norm)
@@ -82,8 +82,8 @@ func TestPointDistance(t *testing.T) {
 		{1, 2, 3, 2, 3, -1, 1.2055891055045298},
 	}
 	for _, test := range tests {
-		p1 := Point{r3.Vector{test.x1, test.y1, test.z1}}
-		p2 := Point{r3.Vector{test.x2, test.y2, test.z2}}
+		p1 := Point{r3.Vector{X: test.x1, Y: test.y1, Z: test.z1}}
+		p2 := Point{r3.Vector{X: test.x2, Y: test.y2, Z: test.z2}}
 		if a := p1.Distance(p2).Radians(); !float64Eq(a, test.want) {
 			t.Errorf("%v.Distance(%v) = %v, want %v", p1, p2, a, test.want)
 		}
@@ -136,8 +136,8 @@ func TestPointApproxEqual(t *testing.T) {
 		{1, epsilon, 0, 1, -epsilon, epsilon, false},
 	}
 	for _, test := range tests {
-		p1 := Point{r3.Vector{test.x1, test.y1, test.z1}}
-		p2 := Point{r3.Vector{test.x2, test.y2, test.z2}}
+		p1 := Point{r3.Vector{X: test.x1, Y: test.y1, Z: test.z1}}
+		p2 := Point{r3.Vector{X: test.x2, Y: test.y2, Z: test.z2}}
 		if got := p1.ApproxEqual(p2); got != test.want {
 			t.Errorf("%v.ApproxEqual(%v), got %v want %v", p1, p2, got, test.want)
 		}
@@ -254,8 +254,8 @@ func TestPointRegularPoints(t *testing.T) {
 }
 
 func TestPointRegion(t *testing.T) {
-	p := Point{r3.Vector{1, 0, 0}}
-	r := Point{r3.Vector{1, 0, 0}}
+	p := Point{r3.Vector{X: 1, Y: 0, Z: 0}}
+	r := Point{r3.Vector{X: 1, Y: 0, Z: 0}}
 	if !r.Contains(p) {
 		t.Errorf("%v.Contains(%v) = false, want true", r, p)
 	}
@@ -268,7 +268,7 @@ func TestPointRegion(t *testing.T) {
 	if !r.ContainsPoint(r) {
 		t.Errorf("%v.ContainsPoint(%v) = false, want true", r, r)
 	}
-	if s := (Point{r3.Vector{1, 0, 1}}); r.Contains(s) {
+	if s := (Point{r3.Vector{X: 1, Y: 0, Z: 1}}); r.Contains(s) {
 		t.Errorf("%v.Contains(%v) = true, want false", r, s)
 	}
 	if got, want := r.CapBound(), CapFromPoint(p); !got.ApproxEqual(want) {
