@@ -27,7 +27,7 @@ import (
 
 var (
 	// The edge query benchmarks scale up the number of edges each time in the
-	// benchmarking loop. This flag allows for chaning up or down the number
+	// benchmarking loop. This flag allows for changing up or down the number
 	// of scalings that occur in benchmarking.  The default value gets to
 	// ~50k edges in the test, and completes in a reasonable amount of time.
 	// Sometimes though there is a need to push the limits on the benchmarks

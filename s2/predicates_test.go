@@ -63,9 +63,9 @@ func TestPredicatesSign(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		p1 := Point{r3.Vector{test.p1x, test.p1y, test.p1z}}
-		p2 := Point{r3.Vector{test.p2x, test.p2y, test.p2z}}
-		p3 := Point{r3.Vector{test.p3x, test.p3y, test.p3z}}
+		p1 := Point{r3.Vector{X: test.p1x, Y: test.p1y, Z: test.p1z}}
+		p2 := Point{r3.Vector{X: test.p2x, Y: test.p2y, Z: test.p2z}}
+		p3 := Point{r3.Vector{X: test.p3x, Y: test.p3y, Z: test.p3z}}
 		result := Sign(p1, p2, p3)
 		if result != test.want {
 			t.Errorf("Sign(%v, %v, %v) = %v, want %v", p1, p2, p3, result, test.want)
@@ -86,26 +86,26 @@ var (
 	// approximate tangent to the surface of the unit sphere. In fact, C is the
 	// exact midpoint of the line segment AB. All of these points are close
 	// enough to unit length to satisfy r3.Vector.IsUnit().
-	poA = Point{r3.Vector{0.72571927877036835, 0.46058825605889098, 0.51106749730504852}}
-	poB = Point{r3.Vector{0.7257192746638208, 0.46058826573818168, 0.51106749441312738}}
-	poC = Point{r3.Vector{0.72571927671709457, 0.46058826089853633, 0.51106749585908795}}
+	poA = Point{r3.Vector{X: 0.72571927877036835, Y: 0.46058825605889098, Z: 0.51106749730504852}}
+	poB = Point{r3.Vector{X: 0.7257192746638208, Y: 0.46058826573818168, Z: 0.51106749441312738}}
+	poC = Point{r3.Vector{X: 0.72571927671709457, Y: 0.46058826089853633, Z: 0.51106749585908795}}
 
 	// The points "x1" and "x2" are exactly proportional, i.e. they both lie
 	// on a common line through the origin. Both points are considered to be
 	// normalized, and in fact they both satisfy (x == x.Normalize()).
 	// Therefore the triangle (x1, x2, -x1) consists of three distinct points
 	// that all lie on a common line through the origin.
-	x1 = Point{r3.Vector{0.99999999999999989, 1.4901161193847655e-08, 0}}
-	x2 = Point{r3.Vector{1, 1.4901161193847656e-08, 0}}
+	x1 = Point{r3.Vector{X: 0.99999999999999989, Y: 1.4901161193847655e-08, Z: 0}}
+	x2 = Point{r3.Vector{X: 1, Y: 1.4901161193847656e-08, Z: 0}}
 
 	// Here are two more points that are distinct, exactly proportional, and
 	// that satisfy (x == x.Normalize()).
-	x3 = Point{r3.Vector{1, 1, 1}.Normalize()}
+	x3 = Point{r3.Vector{X: 1, Y: 1, Z: 1}.Normalize()}
 	x4 = Point{x3.Mul(0.99999999999999989)}
 
 	// The following three points demonstrate that Normalize() is not idempotent, i.e.
 	// y0.Normalize() != y0.Normalize().Normalize(). Both points are exactly proportional.
-	y0 = Point{r3.Vector{1, 1, 0}}
+	y0 = Point{r3.Vector{X: 1, Y: 1, Z: 0}}
 	y1 = Point{y0.Normalize()}
 	y2 = Point{y1.Normalize()}
 )
@@ -133,9 +133,9 @@ func TestPredicatesRobustSignEqualities(t *testing.T) {
 }
 
 func TestPredicatesRobustSign(t *testing.T) {
-	x := Point{r3.Vector{1, 0, 0}}
-	y := Point{r3.Vector{0, 1, 0}}
-	z := Point{r3.Vector{0, 0, 1}}
+	x := Point{r3.Vector{X: 1, Y: 0, Z: 0}}
+	y := Point{r3.Vector{X: 0, Y: 1, Z: 0}}
+	z := Point{r3.Vector{X: 0, Y: 0, Z: 1}}
 
 	tests := []struct {
 		p1, p2, p3 Point
@@ -291,96 +291,96 @@ func TestPredicatesSymbolicallyPerturbedSign(t *testing.T) {
 	}{
 		{
 			// det(M_1) = b0*c1 - b1*c0
-			a:    Point{r3.Vector{-3, -1, 0}},
-			b:    Point{r3.Vector{-2, 1, 0}},
-			c:    Point{r3.Vector{1, -2, 0}},
+			a:    Point{r3.Vector{X: -3, Y: -1, Z: 0}},
+			b:    Point{r3.Vector{X: -2, Y: 1, Z: 0}},
+			c:    Point{r3.Vector{X: 1, Y: -2, Z: 0}},
 			want: CounterClockwise,
 		},
 		{
 			// det(M_2) = b2*c0 - b0*c2
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-6, 3, 3}},
-			b:    Point{r3.Vector{-4, 2, -1}},
-			c:    Point{r3.Vector{-2, 1, 4}},
+			a:    Point{r3.Vector{X: -6, Y: 3, Z: 3}},
+			b:    Point{r3.Vector{X: -4, Y: 2, Z: -1}},
+			c:    Point{r3.Vector{X: -2, Y: 1, Z: 4}},
 		},
 		{
 			// det(M_3) = b1*c2 - b2*c1
 			want: CounterClockwise,
-			a:    Point{r3.Vector{0, -1, -1}},
-			b:    Point{r3.Vector{0, 1, -2}},
-			c:    Point{r3.Vector{0, 2, 1}},
+			a:    Point{r3.Vector{X: 0, Y: -1, Z: -1}},
+			b:    Point{r3.Vector{X: 0, Y: 1, Z: -2}},
+			c:    Point{r3.Vector{X: 0, Y: 2, Z: 1}},
 		},
 		// From this point onward, B or C must be zero, or B is proportional to C.
 		{
 			// det(M_4) = c0*a1 - c1*a0
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-1, 2, 7}},
-			b:    Point{r3.Vector{2, 1, -4}},
-			c:    Point{r3.Vector{4, 2, -8}},
+			a:    Point{r3.Vector{X: -1, Y: 2, Z: 7}},
+			b:    Point{r3.Vector{X: 2, Y: 1, Z: -4}},
+			c:    Point{r3.Vector{X: 4, Y: 2, Z: -8}},
 		},
 		{
 			// det(M_5) = c0
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-4, -2, 7}},
-			b:    Point{r3.Vector{2, 1, -4}},
-			c:    Point{r3.Vector{4, 2, -8}},
+			a:    Point{r3.Vector{X: -4, Y: -2, Z: 7}},
+			b:    Point{r3.Vector{X: 2, Y: 1, Z: -4}},
+			c:    Point{r3.Vector{X: 4, Y: 2, Z: -8}},
 		},
 		{
 			// det(M_6) = -c1
 			want: CounterClockwise,
-			a:    Point{r3.Vector{0, -5, 7}},
-			b:    Point{r3.Vector{0, -4, 8}},
-			c:    Point{r3.Vector{0, -2, 4}},
+			a:    Point{r3.Vector{X: 0, Y: -5, Z: 7}},
+			b:    Point{r3.Vector{X: 0, Y: -4, Z: 8}},
+			c:    Point{r3.Vector{X: 0, Y: -2, Z: 4}},
 		},
 		{
 			// det(M_7) = c2*a0 - c0*a2
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-5, -2, 7}},
-			b:    Point{r3.Vector{0, 0, -2}},
-			c:    Point{r3.Vector{0, 0, -1}},
+			a:    Point{r3.Vector{X: -5, Y: -2, Z: 7}},
+			b:    Point{r3.Vector{X: 0, Y: 0, Z: -2}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: -1}},
 		},
 		{
 			// det(M_8) = c2
 			want: CounterClockwise,
-			a:    Point{r3.Vector{0, -2, 7}},
-			b:    Point{r3.Vector{0, 0, 1}},
-			c:    Point{r3.Vector{0, 0, 2}},
+			a:    Point{r3.Vector{X: 0, Y: -2, Z: 7}},
+			b:    Point{r3.Vector{X: 0, Y: 0, Z: 1}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 2}},
 		},
 		// From this point onward, C must be zero.
 		{
 			// det(M_9) = a0*b1 - a1*b0
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-3, 1, 7}},
-			b:    Point{r3.Vector{-1, -4, 1}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: -3, Y: 1, Z: 7}},
+			b:    Point{r3.Vector{X: -1, Y: -4, Z: 1}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 		{
 			// det(M_10) = -b0
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-6, -4, 7}},
-			b:    Point{r3.Vector{-3, -2, 1}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: -6, Y: -4, Z: 7}},
+			b:    Point{r3.Vector{X: -3, Y: -2, Z: 1}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 		{
 			// det(M_11) = b1
 			want: Clockwise,
-			a:    Point{r3.Vector{0, -4, 7}},
-			b:    Point{r3.Vector{0, -2, 1}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: 0, Y: -4, Z: 7}},
+			b:    Point{r3.Vector{X: 0, Y: -2, Z: 1}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 		{
 			// det(M_12) = a0
 			want: Clockwise,
-			a:    Point{r3.Vector{-1, -4, 5}},
-			b:    Point{r3.Vector{0, 0, -3}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: -1, Y: -4, Z: 5}},
+			b:    Point{r3.Vector{X: 0, Y: 0, Z: -3}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 		{
 			// det(M_13) = 1
 			want: CounterClockwise,
-			a:    Point{r3.Vector{0, -4, 5}},
-			b:    Point{r3.Vector{0, 0, -5}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: 0, Y: -4, Z: 5}},
+			b:    Point{r3.Vector{X: 0, Y: 0, Z: -5}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 	}
 	// Given 3 points A, B, C that are exactly coplanar with the origin and where
@@ -475,9 +475,9 @@ func TestPredicatesCompareDistancesCoverage(t *testing.T) {
 			wantPrec: doublePrecision,
 		},
 		{
-			x:        Point{r3.Vector{2, 0, 0}},
-			a:        Point{r3.Vector{2, -1, 0}},
-			b:        Point{r3.Vector{2, 1, 1e-100}},
+			x:        Point{r3.Vector{X: 2, Y: 0, Z: 0}},
+			a:        Point{r3.Vector{X: 2, Y: -1, Z: 0}},
+			b:        Point{r3.Vector{X: 2, Y: 1, Z: 1e-100}},
 			distFunc: triageCompareSin2Distances,
 			wantSign: -1,
 			wantPrec: exactPrecision,
@@ -938,9 +938,9 @@ func TestPredicatesCompareDistanceConsistency(t *testing.T) {
 }
 
 func BenchmarkSign(b *testing.B) {
-	p1 := Point{r3.Vector{-3, -1, 4}}
-	p2 := Point{r3.Vector{2, -1, -3}}
-	p3 := Point{r3.Vector{1, -2, 0}}
+	p1 := Point{r3.Vector{X: -3, Y: -1, Z: 4}}
+	p2 := Point{r3.Vector{X: 2, Y: -1, Z: -3}}
+	p3 := Point{r3.Vector{X: 1, Y: -2, Z: 0}}
 	for i := 0; i < b.N; i++ {
 		Sign(p1, p2, p3)
 	}
@@ -949,9 +949,9 @@ func BenchmarkSign(b *testing.B) {
 // BenchmarkRobustSignSimple runs the benchmark for points that satisfy the first
 // checks in RobustSign to compare the performance to that of Sign().
 func BenchmarkRobustSignSimple(b *testing.B) {
-	p1 := Point{r3.Vector{-3, -1, 4}}
-	p2 := Point{r3.Vector{2, -1, -3}}
-	p3 := Point{r3.Vector{1, -2, 0}}
+	p1 := Point{r3.Vector{X: -3, Y: -1, Z: 4}}
+	p2 := Point{r3.Vector{X: 2, Y: -1, Z: -3}}
+	p3 := Point{r3.Vector{X: 1, Y: -2, Z: 0}}
 	for i := 0; i < b.N; i++ {
 		RobustSign(p1, p2, p3)
 	}

@@ -214,7 +214,7 @@ type EdgeQuery struct {
 	// testedEdges tracks the set of shape and edges that have already been tested.
 	testedEdges map[ShapeEdgeID]uint32
 
-	// For the optimized algorihm we precompute the top-level CellIDs that
+	// For the optimized algorithm we precompute the top-level CellIDs that
 	// will be added to the priority queue. There can be at most 6 of these
 	// cells. Essentially this is just a covering of the indexed edges, except
 	// that we also store pointers to the corresponding ShapeIndexCells to

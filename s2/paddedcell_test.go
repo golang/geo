@@ -146,12 +146,12 @@ func TestPaddedCellShrinkToFit(t *testing.T) {
 
 		// Start with a random subset of the maximum rectangle.
 		a := r2.Point{
-			randomUniformFloat64(maxRect.X.Lo, maxRect.X.Hi),
-			randomUniformFloat64(maxRect.Y.Lo, maxRect.Y.Hi),
+			X: randomUniformFloat64(maxRect.X.Lo, maxRect.X.Hi),
+			Y: randomUniformFloat64(maxRect.Y.Lo, maxRect.Y.Hi),
 		}
 		b := r2.Point{
-			randomUniformFloat64(maxRect.X.Lo, maxRect.X.Hi),
-			randomUniformFloat64(maxRect.Y.Lo, maxRect.Y.Hi),
+			X: randomUniformFloat64(maxRect.X.Lo, maxRect.X.Hi),
+			Y: randomUniformFloat64(maxRect.Y.Lo, maxRect.Y.Hi),
 		}
 
 		if !result.IsLeaf() {
@@ -167,7 +167,7 @@ func TestPaddedCellShrinkToFit(t *testing.T) {
 
 			// Find the range of coordinates that are shared between child cells
 			// along that axis.
-			shared := r1.Interval{center - padding, center + padding}
+			shared := r1.Interval{Lo: center - padding, Hi: center + padding}
 			if useY {
 				shared = shared.Intersection(maxRect.Y)
 			} else {

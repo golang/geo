@@ -23,8 +23,8 @@ import (
 )
 
 func TestPlateCarreeProjectionInterpolate(t *testing.T) {
-	a := r2.Point{1.234, -5.456e-20}
-	b := r2.Point{2.1234e-20, 7.456}
+	a := r2.Point{X: 1.234, Y: -5.456e-20}
+	b := r2.Point{X: 2.1234e-20, Y: 7.456}
 	tests := []struct {
 		dist float64
 		a, b r2.Point
@@ -33,16 +33,16 @@ func TestPlateCarreeProjectionInterpolate(t *testing.T) {
 		{
 			// Test that coordinates and/or arguments are not accidentally reversed.
 			0.25,
-			r2.Point{1, 5},
-			r2.Point{3, 9},
-			r2.Point{1.5, 6},
+			r2.Point{X: 1, Y: 5},
+			r2.Point{X: 3, Y: 9},
+			r2.Point{X: 1.5, Y: 6},
 		},
 		{
 			// Test extrapolation.
 			-2,
-			r2.Point{1, 0},
-			r2.Point{3, 0},
-			r2.Point{-3, 0},
+			r2.Point{X: 1, Y: 0},
+			r2.Point{X: 3, Y: 0},
+			r2.Point{X: -3, Y: 0},
 		},
 		// Check that interpolation is exact at both endpoints.
 		{0, a, b, a},
@@ -62,12 +62,12 @@ func TestPlateCarreeProjectionProjectUnproject(t *testing.T) {
 		have Point
 		want r2.Point
 	}{
-		{Point{r3.Vector{1, 0, 0}}, r2.Point{0, 0}},
-		{Point{r3.Vector{-1, 0, 0}}, r2.Point{180, 0}},
-		{Point{r3.Vector{0, 1, 0}}, r2.Point{90, 0}},
-		{Point{r3.Vector{0, -1, 0}}, r2.Point{-90, 0}},
-		{Point{r3.Vector{0, 0, 1}}, r2.Point{0, 90}},
-		{Point{r3.Vector{0, 0, -1}}, r2.Point{0, -90}},
+		{Point{r3.Vector{X: 1, Y: 0, Z: 0}}, r2.Point{X: 0, Y: 0}},
+		{Point{r3.Vector{X: -1, Y: 0, Z: 0}}, r2.Point{X: 180, Y: 0}},
+		{Point{r3.Vector{X: 0, Y: 1, Z: 0}}, r2.Point{X: 90, Y: 0}},
+		{Point{r3.Vector{X: 0, Y: -1, Z: 0}}, r2.Point{X: -90, Y: 0}},
+		{Point{r3.Vector{X: 0, Y: 0, Z: 1}}, r2.Point{X: 0, Y: 90}},
+		{Point{r3.Vector{X: 0, Y: 0, Z: -1}}, r2.Point{X: 0, Y: -90}},
 	}
 
 	proj := NewPlateCarreeProjection(180)
@@ -87,12 +87,12 @@ func TestMercatorProjectionProjectUnproject(t *testing.T) {
 		have Point
 		want r2.Point
 	}{
-		{Point{r3.Vector{1, 0, 0}}, r2.Point{0, 0}},
-		{Point{r3.Vector{-1, 0, 0}}, r2.Point{180, 0}},
-		{Point{r3.Vector{0, 1, 0}}, r2.Point{90, 0}},
-		{Point{r3.Vector{0, -1, 0}}, r2.Point{-90, 0}},
+		{Point{r3.Vector{X: 1, Y: 0, Z: 0}}, r2.Point{X: 0, Y: 0}},
+		{Point{r3.Vector{X: -1, Y: 0, Z: 0}}, r2.Point{X: 180, Y: 0}},
+		{Point{r3.Vector{X: 0, Y: 1, Z: 0}}, r2.Point{X: 90, Y: 0}},
+		{Point{r3.Vector{X: 0, Y: -1, Z: 0}}, r2.Point{X: -90, Y: 0}},
 		// Test one arbitrary point as a sanity check.
-		{PointFromLatLng(LatLng{1, 0}), r2.Point{0, 70.255578967830246}},
+		{PointFromLatLng(LatLng{1, 0}), r2.Point{X: 0, Y: 70.255578967830246}},
 	}
 
 	proj := NewMercatorProjection(180)
@@ -112,8 +112,8 @@ func TestMercatorProjectionProjectUnproject(t *testing.T) {
 		have Point
 		want r2.Point
 	}{
-		{Point{r3.Vector{0, 0, 1}}, r2.Point{0, math.Inf(1)}},
-		{Point{r3.Vector{0, 0, -1}}, r2.Point{0, math.Inf(-1)}},
+		{Point{r3.Vector{X: 0, Y: 0, Z: 1}}, r2.Point{X: 0, Y: math.Inf(1)}},
+		{Point{r3.Vector{X: 0, Y: 0, Z: -1}}, r2.Point{X: 0, Y: math.Inf(-1)}},
 	}
 	for _, test := range testsInf {
 		got := proj.Project(test.have)

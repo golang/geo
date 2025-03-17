@@ -62,7 +62,7 @@ func parsePoint(s string) Point {
 		return p[0]
 	}
 
-	return Point{r3.Vector{0, 0, 0}}
+	return Point{r3.Vector{X: 0, Y: 0, Z: 0}}
 }
 
 // pointToString returns a string representation suitable for reconstruction

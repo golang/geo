@@ -48,7 +48,7 @@ func TestPolylineBasics(t *testing.T) {
 		t.Errorf("semiEquator.Interpolate(0.5) = %v, want %v", got, want)
 	}
 	semiEquator.Reverse()
-	if got, want := (*semiEquator)[2], (Point{r3.Vector{1, 0, 0}}); !got.ApproxEqual(want) {
+	if got, want := (*semiEquator)[2], (Point{r3.Vector{X: 1, Y: 0, Z: 0}}); !got.ApproxEqual(want) {
 		t.Errorf("semiEquator[2] = %v, want %v", got, want)
 	}
 }
@@ -137,8 +137,8 @@ func TestPolylineLengthAndCentroid(t *testing.T) {
 
 func TestPolylineIntersectsCell(t *testing.T) {
 	pline := Polyline{
-		Point{r3.Vector{1, -1.1, 0.8}.Normalize()},
-		Point{r3.Vector{1, -0.8, 1.1}.Normalize()},
+		Point{r3.Vector{X: 1, Y: -1.1, Z: 0.8}.Normalize()},
+		Point{r3.Vector{X: 1, Y: -0.8, Z: 1.1}.Normalize()},
 	}
 
 	for face := 0; face < 6; face++ {
@@ -364,7 +364,7 @@ func TestPolylineValidate(t *testing.T) {
 
 	p1 := Polyline([]Point{
 		PointFromCoords(0, 1, 0),
-		{r3.Vector{10, 3, 7}},
+		{r3.Vector{X: 10, Y: 3, Z: 7}},
 		PointFromCoords(0, 0, 1),
 	})
 

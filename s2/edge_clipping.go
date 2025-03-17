@@ -89,7 +89,7 @@ func ClipToPaddedFace(a, b Point, f int, padding float64) (aUV, bUV r2.Point, in
 	if face(a.Vector) == f && face(b.Vector) == f {
 		au, av := validFaceXYZToUV(f, a.Vector)
 		bu, bv := validFaceXYZToUV(f, b.Vector)
-		return r2.Point{au, av}, r2.Point{bu, bv}, true
+		return r2.Point{X: au, Y: av}, r2.Point{X: bu, Y: bv}, true
 	}
 
 	// Convert everything into the (u,v,w) coordinates of the given face. Note
@@ -283,14 +283,14 @@ func (p pointUVW) exitPoint(a axis) r2.Point {
 		if p.Y > 0 {
 			u = 1.0
 		}
-		return r2.Point{u, (-u*p.X - p.Z) / p.Y}
+		return r2.Point{X: u, Y: (-u*p.X - p.Z) / p.Y}
 	}
 
 	v := -1.0
 	if p.X < 0 {
 		v = 1.0
 	}
-	return r2.Point{(-v*p.Y - p.Z) / p.X, v}
+	return r2.Point{X: (-v*p.Y - p.Z) / p.X, Y: v}
 }
 
 // clipDestination returns a score which is used to indicate if the clipped edge AB
@@ -310,7 +310,7 @@ func clipDestination(a, b, scaledN, aTan, bTan pointUVW, scaleUV float64) (r2.Po
 	// Optimization: if B is within the safe region of the face, use it.
 	maxSafeUVCoord := 1 - faceClipErrorUVCoord
 	if b.Z > 0 {
-		uv = r2.Point{b.X / b.Z, b.Y / b.Z}
+		uv = r2.Point{X: b.X / b.Z, Y: b.Y / b.Z}
 		if math.Max(math.Abs(uv.X), math.Abs(uv.Y)) <= maxSafeUVCoord {
 			return uv, 0
 		}
@@ -319,7 +319,7 @@ func clipDestination(a, b, scaledN, aTan, bTan pointUVW, scaleUV float64) (r2.Po
 	// Otherwise find the point B' where the line AB exits the face.
 	uv = scaledN.exitPoint(scaledN.exitAxis()).Mul(scaleUV)
 
-	p := pointUVW(Point{r3.Vector{uv.X, uv.Y, 1.0}})
+	p := pointUVW(Point{r3.Vector{X: uv.X, Y: uv.Y, Z: 1.0}})
 
 	// Determine if the exit point B' is contained within the segment. We do this
 	// by computing the dot products with two inward-facing tangent vectors at A
@@ -351,7 +351,7 @@ func clipDestination(a, b, scaledN, aTan, bTan pointUVW, scaleUV float64) (r2.Po
 		if b.Z <= 0 {
 			score = 3 // B cannot be projected onto this face.
 		} else {
-			uv = r2.Point{b.X / b.Z, b.Y / b.Z}
+			uv = r2.Point{X: b.X / b.Z, Y: b.Y / b.Z}
 		}
 	}
 
@@ -475,7 +475,7 @@ func clipEdgeBound(a, b r2.Point, clip, bound r2.Rect) (r2.Rect, bool) {
 	}
 	b1y, b1x, up2 := clipBoundAxis(a.Y, b.Y, b0y, a.X, b.X, b0x, negSlope, clip.Y)
 	if !up2 {
-		return r2.Rect{b0x, b0y}, false
+		return r2.Rect{X: b0x, Y: b0y}, false
 	}
 	return r2.Rect{X: b1x, Y: b1y}, true
 }
@@ -563,7 +563,7 @@ func FaceSegments(a, b Point) []FaceSegment {
 		face = nextFace(face, segment.b, exitAxis, n, bFace)
 		exitUvw := faceXYZtoUVW(face, Point{exitXyz})
 		segment.face = face
-		segment.a = r2.Point{exitUvw.X, exitUvw.Y}
+		segment.a = r2.Point{X: exitUvw.X, Y: exitUvw.Y}
 	}
 	// Finish the last segment.
 	segment.b = bSaved

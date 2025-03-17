@@ -30,12 +30,12 @@ func TestEdgeClippingIntersectsFace(t *testing.T) {
 		a    pointUVW
 		want bool
 	}{
-		{pointUVW{r3.Vector{2.05335e-06, 3.91604e-22, 2.90553e-06}}, false},
-		{pointUVW{r3.Vector{-3.91604e-22, -2.05335e-06, -2.90553e-06}}, false},
-		{pointUVW{r3.Vector{0.169258, -0.169258, 0.664013}}, false},
-		{pointUVW{r3.Vector{0.169258, -0.169258, -0.664013}}, false},
-		{pointUVW{r3.Vector{math.Sqrt(2.0 / 3.0), -math.Sqrt(2.0 / 3.0), 3.88578e-16}}, true},
-		{pointUVW{r3.Vector{-3.88578e-16, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, true},
+		{pointUVW{r3.Vector{X: 2.05335e-06, Y: 3.91604e-22, Z: 2.90553e-06}}, false},
+		{pointUVW{r3.Vector{X: -3.91604e-22, Y: -2.05335e-06, Z: -2.90553e-06}}, false},
+		{pointUVW{r3.Vector{X: 0.169258, Y: -0.169258, Z: 0.664013}}, false},
+		{pointUVW{r3.Vector{X: 0.169258, Y: -0.169258, Z: -0.664013}}, false},
+		{pointUVW{r3.Vector{X: math.Sqrt(2.0 / 3.0), Y: -math.Sqrt(2.0 / 3.0), Z: 3.88578e-16}}, true},
+		{pointUVW{r3.Vector{X: -3.88578e-16, Y: -math.Sqrt(2.0 / 3.0), Z: math.Sqrt(2.0 / 3.0)}}, true},
 	}
 
 	for _, test := range tests {
@@ -50,14 +50,14 @@ func TestEdgeClippingIntersectsOppositeEdges(t *testing.T) {
 		a    pointUVW
 		want bool
 	}{
-		{pointUVW{r3.Vector{0.169258, -0.169258, 0.664013}}, false},
-		{pointUVW{r3.Vector{0.169258, -0.169258, -0.664013}}, false},
+		{pointUVW{r3.Vector{X: 0.169258, Y: -0.169258, Z: 0.664013}}, false},
+		{pointUVW{r3.Vector{X: 0.169258, Y: -0.169258, Z: -0.664013}}, false},
 
-		{pointUVW{r3.Vector{-math.Sqrt(4.0 / 3.0), 0, -math.Sqrt(4.0 / 3.0)}}, true},
-		{pointUVW{r3.Vector{math.Sqrt(4.0 / 3.0), 0, math.Sqrt(4.0 / 3.0)}}, true},
+		{pointUVW{r3.Vector{X: -math.Sqrt(4.0 / 3.0), Y: 0, Z: -math.Sqrt(4.0 / 3.0)}}, true},
+		{pointUVW{r3.Vector{X: math.Sqrt(4.0 / 3.0), Y: 0, Z: math.Sqrt(4.0 / 3.0)}}, true},
 
-		{pointUVW{r3.Vector{-math.Sqrt(2.0 / 3.0), -math.Sqrt(2.0 / 3.0), 1.66533453694e-16}}, false},
-		{pointUVW{r3.Vector{math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0), -1.66533453694e-16}}, false},
+		{pointUVW{r3.Vector{X: -math.Sqrt(2.0 / 3.0), Y: -math.Sqrt(2.0 / 3.0), Z: 1.66533453694e-16}}, false},
+		{pointUVW{r3.Vector{X: math.Sqrt(2.0 / 3.0), Y: math.Sqrt(2.0 / 3.0), Z: -1.66533453694e-16}}, false},
 	}
 	for _, test := range tests {
 		if got := test.a.intersectsOppositeEdges(); got != test.want {
@@ -71,13 +71,13 @@ func TestEdgeClippingExitAxis(t *testing.T) {
 		a    pointUVW
 		want axis
 	}{
-		{pointUVW{r3.Vector{0, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, axisU},
-		{pointUVW{r3.Vector{0, math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0)}}, axisU},
-		{pointUVW{r3.Vector{-math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0), 0}}, axisV},
-		{pointUVW{r3.Vector{math.Sqrt(4.0 / 3.0), math.Sqrt(4.0 / 3.0), 0}}, axisV},
-		{pointUVW{r3.Vector{math.Sqrt(2.0 / 3.0), -math.Sqrt(2.0 / 3.0), 0}}, axisV},
-		{pointUVW{r3.Vector{1.67968702783622, 0, 0.870988820096491}}, axisV},
-		{pointUVW{r3.Vector{0, math.Sqrt2, math.Sqrt2}}, axisU},
+		{pointUVW{r3.Vector{X: 0, Y: -math.Sqrt(2.0 / 3.0), Z: math.Sqrt(2.0 / 3.0)}}, axisU},
+		{pointUVW{r3.Vector{X: 0, Y: math.Sqrt(4.0 / 3.0), Z: -math.Sqrt(4.0 / 3.0)}}, axisU},
+		{pointUVW{r3.Vector{X: -math.Sqrt(4.0 / 3.0), Y: -math.Sqrt(4.0 / 3.0), Z: 0}}, axisV},
+		{pointUVW{r3.Vector{X: math.Sqrt(4.0 / 3.0), Y: math.Sqrt(4.0 / 3.0), Z: 0}}, axisV},
+		{pointUVW{r3.Vector{X: math.Sqrt(2.0 / 3.0), Y: -math.Sqrt(2.0 / 3.0), Z: 0}}, axisV},
+		{pointUVW{r3.Vector{X: 1.67968702783622, Y: 0, Z: 0.870988820096491}}, axisV},
+		{pointUVW{r3.Vector{X: 0, Y: math.Sqrt2, Z: math.Sqrt2}}, axisU},
 	}
 
 	for _, test := range tests {
@@ -93,10 +93,10 @@ func TestEdgeClippingExitPoint(t *testing.T) {
 		exitAxis axis
 		want     r2.Point
 	}{
-		{pointUVW{r3.Vector{-3.88578058618805e-16, -math.Sqrt(2.0 / 3.0), math.Sqrt(2.0 / 3.0)}}, axisU, r2.Point{-1, 1}},
-		{pointUVW{r3.Vector{math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0), 0}}, axisV, r2.Point{-1, -1}},
-		{pointUVW{r3.Vector{-math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0), 0}}, axisV, r2.Point{-1, 1}},
-		{pointUVW{r3.Vector{-6.66134e-16, math.Sqrt(4.0 / 3.0), -math.Sqrt(4.0 / 3.0)}}, axisU, r2.Point{1, 1}},
+		{pointUVW{r3.Vector{X: -3.88578058618805e-16, Y: -math.Sqrt(2.0 / 3.0), Z: math.Sqrt(2.0 / 3.0)}}, axisU, r2.Point{X: -1, Y: 1}},
+		{pointUVW{r3.Vector{X: math.Sqrt(4.0 / 3.0), Y: -math.Sqrt(4.0 / 3.0), Z: 0}}, axisV, r2.Point{X: -1, Y: -1}},
+		{pointUVW{r3.Vector{X: -math.Sqrt(4.0 / 3.0), Y: -math.Sqrt(4.0 / 3.0), Z: 0}}, axisV, r2.Point{X: -1, Y: 1}},
+		{pointUVW{r3.Vector{X: -6.66134e-16, Y: math.Sqrt(4.0 / 3.0), Z: -math.Sqrt(4.0 / 3.0)}}, axisU, r2.Point{X: 1, Y: 1}},
 	}
 
 	for _, test := range tests {
@@ -128,7 +128,7 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 		t.Errorf("FaceSegments(%v, %v) should have generated at least one entry", a, b)
 	}
 
-	biunit := r2.Rect{r1.Interval{-1, 1}, r1.Interval{-1, 1}}
+	biunit := r2.Rect{X: r1.Interval{Lo: -1, Hi: 1}, Y: r1.Interval{Lo: -1, Hi: 1}}
 	const errorRadians = faceClipErrorRadians
 
 	// The first and last vertices should approximately equal A and B.
@@ -190,9 +190,9 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 
 	// Given the points A and B, we expect all angles generated from the clipping
 	// to fall within this range.
-	expectedAngles := s1.Interval{0, float64(a.Angle(b.Vector))}
+	expectedAngles := s1.Interval{Lo: 0, Hi: float64(a.Angle(b.Vector))}
 	if expectedAngles.IsInverted() {
-		expectedAngles = s1.Interval{expectedAngles.Hi, expectedAngles.Lo}
+		expectedAngles = s1.Interval{Lo: expectedAngles.Hi, Hi: expectedAngles.Lo}
 	}
 	maxAngles := expectedAngles.Expanded(faceClipErrorRadians)
 	var actualAngles s1.Interval
@@ -234,7 +234,7 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 		// which is okay since the interval length is much less than math.Pi.
 		faceAngles := s1.IntervalFromEndpoints(aAngle, bAngle)
 		if faceAngles.IsInverted() {
-			faceAngles = s1.Interval{faceAngles.Hi, faceAngles.Lo}
+			faceAngles = s1.Interval{Lo: faceAngles.Hi, Hi: faceAngles.Lo}
 		}
 		if !maxAngles.ContainsInterval(faceAngles) {
 			t.Errorf("%s %v.ContainsInterval(%v) = false, but should have contained this interval", desc, maxAngles, faceAngles)
@@ -249,24 +249,24 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 func TestEdgeClippingClipToPaddedFace(t *testing.T) {
 	// Start with a few simple cases.
 	// An edge that is entirely contained within one cube face:
-	testClipToPaddedFace(t, Point{r3.Vector{1, -0.5, -0.5}}, Point{r3.Vector{1, 0.5, 0.5}})
-	testClipToPaddedFace(t, Point{r3.Vector{1, 0.5, 0.5}}, Point{r3.Vector{1, -0.5, -0.5}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: 1, Y: -0.5, Z: -0.5}}, Point{r3.Vector{X: 1, Y: 0.5, Z: 0.5}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: 1, Y: 0.5, Z: 0.5}}, Point{r3.Vector{X: 1, Y: -0.5, Z: -0.5}})
 	// An edge that crosses one cube edge:
-	testClipToPaddedFace(t, Point{r3.Vector{1, 0, 0}}, Point{r3.Vector{0, 1, 0}})
-	testClipToPaddedFace(t, Point{r3.Vector{0, 1, 0}}, Point{r3.Vector{1, 0, 0}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: 1, Y: 0, Z: 0}}, Point{r3.Vector{X: 0, Y: 1, Z: 0}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: 0, Y: 1, Z: 0}}, Point{r3.Vector{X: 1, Y: 0, Z: 0}})
 	// An edge that crosses two opposite edges of face 0:
-	testClipToPaddedFace(t, Point{r3.Vector{0.75, 0, -1}}, Point{r3.Vector{0.75, 0, 1}})
-	testClipToPaddedFace(t, Point{r3.Vector{0.75, 0, 1}}, Point{r3.Vector{0.75, 0, -1}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: 0.75, Y: 0, Z: -1}}, Point{r3.Vector{X: 0.75, Y: 0, Z: 1}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: 0.75, Y: 0, Z: 1}}, Point{r3.Vector{X: 0.75, Y: 0, Z: -1}})
 	// An edge that crosses two adjacent edges of face 2:
-	testClipToPaddedFace(t, Point{r3.Vector{1, 0, 0.75}}, Point{r3.Vector{0, 1, 0.75}})
-	testClipToPaddedFace(t, Point{r3.Vector{0, 1, 0.75}}, Point{r3.Vector{1, 0, 0.75}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: 1, Y: 0, Z: 0.75}}, Point{r3.Vector{X: 0, Y: 1, Z: 0.75}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: 0, Y: 1, Z: 0.75}}, Point{r3.Vector{X: 1, Y: 0, Z: 0.75}})
 	// An edges that crosses three cube edges (four faces):
-	testClipToPaddedFace(t, Point{r3.Vector{1, 0.9, 0.95}}, Point{r3.Vector{-1, 0.95, 0.9}})
-	testClipToPaddedFace(t, Point{r3.Vector{-1, 0.95, 0.9}}, Point{r3.Vector{1, 0.9, 0.95}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: 1, Y: 0.9, Z: 0.95}}, Point{r3.Vector{X: -1, Y: 0.95, Z: 0.9}})
+	testClipToPaddedFace(t, Point{r3.Vector{X: -1, Y: 0.95, Z: 0.9}}, Point{r3.Vector{X: 1, Y: 0.9, Z: 0.95}})
 
 	// Comprehensively test edges that are difficult to handle, especially those
 	// that nearly follow one of the 12 cube edges.
-	biunit := r2.Rect{r1.Interval{-1, 1}, r1.Interval{-1, 1}}
+	biunit := r2.Rect{X: r1.Interval{Lo: -1, Hi: 1}, Y: r1.Interval{Lo: -1, Hi: 1}}
 
 	for i := 0; i < 1000; i++ {
 		// Choose two adjacent cube corners P and Q.
@@ -330,7 +330,7 @@ func chooseRectEndpoint(clip r2.Rect) r2.Point {
 		t := randomUniformFloat64(-1, 2)
 		return clip.Vertices()[diag].Mul(1 - t).Add(clip.Vertices()[diag+2].Mul(t))
 	}
-	return r2.Point{randomPointFromInterval(clip.X), randomPointFromInterval(clip.Y)}
+	return r2.Point{X: randomPointFromInterval(clip.X), Y: randomPointFromInterval(clip.Y)}
 }
 
 // Choose a random point in the rectangle defined by points A and B, sometimes
@@ -346,7 +346,7 @@ func choosePointInRect(a, b r2.Point) r2.Point {
 	if oneIn(3) {
 		return a.Add(b.Sub(a).Mul(randomFloat64()))
 	}
-	return r2.Point{randomUniformFloat64(a.X, b.X), randomUniformFloat64(a.Y, b.Y)}
+	return r2.Point{X: randomUniformFloat64(a.X, b.X), Y: randomUniformFloat64(a.Y, b.Y)}
 }
 
 // Given a point P representing a possibly clipped endpoint A of an edge AB,
@@ -357,7 +357,7 @@ func checkPointOnBoundary(t *testing.T, p, a r2.Point, clip r2.Rect) {
 		t.Errorf("%v.ContainsPoint(%v) = %v, want true", clip, p, got)
 	}
 	if p != a {
-		p1 := r2.Point{math.Nextafter(p.X, a.X), math.Nextafter(p.Y, a.Y)}
+		p1 := r2.Point{X: math.Nextafter(p.X, a.X), Y: math.Nextafter(p.Y, a.Y)}
 		if got := clip.ContainsPoint(p1); got {
 			t.Errorf("%v.ContainsPoint(%v) = %v, want false", clip, p1, got)
 		}
@@ -371,26 +371,26 @@ func TestEdgeClippingClipEdge(t *testing.T) {
 	testRects := []r2.Rect{
 		// Test clipping against random rectangles.
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 		r2.RectFromPoints(
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)},
-			r2.Point{randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1)}),
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)},
+			r2.Point{X: randomUniformFloat64(-1, 1), Y: randomUniformFloat64(-1, 1)}),
 
 		// Also clip against one-dimensional, singleton, and empty rectangles.
-		{r1.Interval{-0.7, -0.7}, r1.Interval{0.3, 0.35}},
-		{r1.Interval{0.2, 0.5}, r1.Interval{0.3, 0.3}},
-		{r1.Interval{-0.7, 0.3}, r1.Interval{0, 0}},
-		r2.RectFromPoints(r2.Point{0.3, 0.8}),
+		{X: r1.Interval{Lo: -0.7, Hi: -0.7}, Y: r1.Interval{Lo: 0.3, Hi: 0.35}},
+		{X: r1.Interval{Lo: 0.2, Hi: 0.5}, Y: r1.Interval{Lo: 0.3, Hi: 0.3}},
+		{X: r1.Interval{Lo: -0.7, Hi: 0.3}, Y: r1.Interval{Lo: 0, Hi: 0}},
+		r2.RectFromPoints(r2.Point{X: 0.3, Y: 0.8}),
 		r2.EmptyRect(),
 	}
 

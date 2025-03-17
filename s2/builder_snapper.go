@@ -231,7 +231,7 @@ func (sf CellIDSnapper) minSnapRadiusForLevel(level int) s1.Angle {
 	// snapRadius needs to be an upper bound on the true distance that a
 	// point can move when snapped, taking into account numerical errors.
 	//
-	// The maximum error when converting from an Point to a CellID is
+	// The maximum error when converting from a Point to a CellID is
 	// MaxDiagMetric.Deriv * dblEpsilon. The maximum error when converting a
 	// CellID center back to a Point is 1.5 * dblEpsilon. These add up to
 	// just slightly less than 4 * dblEpsilon.
@@ -248,7 +248,7 @@ func (sf CellIDSnapper) minSnapRadiusForLevel(level int) s1.Angle {
 //
 //	sf := CellIDSnapperForLevel(f.levelForMaxSnapRadius(distance));
 func (sf CellIDSnapper) levelForMaxSnapRadius(snapRadius s1.Angle) int {
-	// When choosing a level, we need to acount for the error bound of
+	// When choosing a level, we need to account for the error bound of
 	// 4 * dblEpsilon that is added by MinSnapRadiusForLevel.
 	return MaxDiagMetric.MinLevel(2 * (snapRadius.Radians() - 4*dblEpsilon))
 }
@@ -310,7 +310,7 @@ func (sf CellIDSnapper) MinEdgeVertexSeparation() s1.Angle {
 	//    (b) Otherwise, for arbitrary snap radii the worst-case configuration
 	//    in the plane has an edge-vertex separation of sqrt(3/19) *
 	//    MinDiagMetric.Value(level), where sqrt(3/19) is about 0.3973597071. The unit
-	//    test verifies that the bound is slighty better on the sphere:
+	//    test verifies that the bound is slightly better on the sphere:
 	//    0.3973595687 * MinDiagMetric.Value(level).
 	//
 	// 2. Proportional bound: In the plane, the worst-case configuration has an
@@ -434,7 +434,7 @@ func (sf IntLatLngSnapper) minSnapRadiusForExponent(exponent int) s1.Angle {
 // exponent for snapping. The return value is always a valid exponent (out of
 // range values are silently clamped).
 func (sf IntLatLngSnapper) exponentForMaxSnapRadius(snapRadius s1.Angle) int {
-	// When choosing an exponent, we need to acount for the error bound of
+	// When choosing an exponent, we need to account for the error bound of
 	// (9 * sqrt(2) + 1.5) * dblEpsilon added by minSnapRadiusForExponent.
 	snapRadius -= (9*math.Sqrt2 + 1.5) * dblEpsilon
 	snapRadius = s1.Angle(math.Max(float64(snapRadius), 1e-30))

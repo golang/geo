@@ -604,7 +604,7 @@ type ShapeIndex struct {
 	//    the amount of entities added grows.
 	//  - Often the index will never be queried, in which case we can save both
 	//    the time and memory required to build it. Examples:
-	//     + Loops that are created simply to pass to an Polygon. (We don't
+	//     + Loops that are created simply to pass to a Polygon. (We don't
 	//       need the Loop index, because Polygon builds its own index.)
 	//     + Applications that load a database of geometry and then query only
 	//       a small fraction of it.
@@ -892,9 +892,9 @@ func (s *ShapeIndex) addFaceEdge(fe faceEdge, allEdges [][]faceEdge) {
 	// the edge of the face that they don't intersect any (padded) adjacent face.
 	if aFace == face(fe.edge.V1.Vector) {
 		x, y := validFaceXYZToUV(aFace, fe.edge.V0.Vector)
-		fe.a = r2.Point{x, y}
+		fe.a = r2.Point{X: x, Y: y}
 		x, y = validFaceXYZToUV(aFace, fe.edge.V1.Vector)
-		fe.b = r2.Point{x, y}
+		fe.b = r2.Point{X: x, Y: y}
 
 		maxUV := 1 - cellPadding
 		if math.Abs(fe.a.X) <= maxUV && math.Abs(fe.a.Y) <= maxUV &&
@@ -1035,7 +1035,7 @@ func (s *ShapeIndex) updateEdges(pcell *PaddedCell, edges []*clippedEdge, t *tra
 			indexCellAbsorbed = true
 			disjointFromIndex = true
 		} else {
-			// DCHECK_EQ(SUBDIVIDED, r)
+			// ABSL_DCHECK_EQ(SUBDIVIDED, r)
 		}
 	}
 

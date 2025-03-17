@@ -35,7 +35,7 @@ func TestCol(t *testing.T) {
 				{7, 8, 9},
 			},
 			0,
-			Point{r3.Vector{1, 4, 7}},
+			Point{r3.Vector{X: 1, Y: 4, Z: 7}},
 		},
 		{
 			&matrix3x3{
@@ -44,7 +44,7 @@ func TestCol(t *testing.T) {
 				{7, 8, 9},
 			},
 			2,
-			Point{r3.Vector{3, 6, 9}},
+			Point{r3.Vector{X: 3, Y: 6, Z: 9}},
 		},
 	}
 
@@ -69,7 +69,7 @@ func TestRow(t *testing.T) {
 				{7, 8, 9},
 			},
 			0,
-			Point{r3.Vector{1, 2, 3}},
+			Point{r3.Vector{X: 1, Y: 2, Z: 3}},
 		},
 		{
 			&matrix3x3{
@@ -78,7 +78,7 @@ func TestRow(t *testing.T) {
 				{7, 8, 9},
 			},
 			2,
-			Point{r3.Vector{7, 8, 9}},
+			Point{r3.Vector{X: 7, Y: 8, Z: 9}},
 		},
 	}
 
@@ -99,7 +99,7 @@ func TestSetCol(t *testing.T) {
 		{
 			&matrix3x3{},
 			0,
-			Point{r3.Vector{1, 1, 0}},
+			Point{r3.Vector{X: 1, Y: 1, Z: 0}},
 			&matrix3x3{
 				{1, 0, 0},
 				{1, 0, 0},
@@ -113,7 +113,7 @@ func TestSetCol(t *testing.T) {
 				{7, 8, 9},
 			},
 			2,
-			Point{r3.Vector{1, 1, 0}},
+			Point{r3.Vector{X: 1, Y: 1, Z: 0}},
 			&matrix3x3{
 				{1, 2, 1},
 				{4, 5, 1},
@@ -139,7 +139,7 @@ func TestSetRow(t *testing.T) {
 		{
 			&matrix3x3{},
 			0,
-			Point{r3.Vector{1, 1, 0}},
+			Point{r3.Vector{X: 1, Y: 1, Z: 0}},
 			&matrix3x3{
 				{1, 1, 0},
 				{0, 0, 0},
@@ -153,7 +153,7 @@ func TestSetRow(t *testing.T) {
 				{7, 8, 9},
 			},
 			2,
-			Point{r3.Vector{1, 1, 0}},
+			Point{r3.Vector{X: 1, Y: 1, Z: 0}},
 			&matrix3x3{
 				{1, 2, 3},
 				{4, 5, 6},
@@ -269,8 +269,8 @@ func TestMul(t *testing.T) {
 				{0, 1, 0},
 				{0, 0, 1},
 			},
-			Point{r3.Vector{1, 2, 3}},
-			Point{r3.Vector{1, 2, 3}},
+			Point{r3.Vector{X: 1, Y: 2, Z: 3}},
+			Point{r3.Vector{X: 1, Y: 2, Z: 3}},
 		},
 		{
 			&matrix3x3{
@@ -278,8 +278,8 @@ func TestMul(t *testing.T) {
 				{4, 5, 6},
 				{7, 8, 9},
 			},
-			Point{r3.Vector{1, 1, 1}},
-			Point{r3.Vector{6, 15, 24}},
+			Point{r3.Vector{X: 1, Y: 1, Z: 1}},
+			Point{r3.Vector{X: 6, Y: 15, Z: 24}},
 		},
 	}
 	for _, test := range tests {
@@ -475,13 +475,13 @@ func TestFrames(t *testing.T) {
 	}{
 		{m.col(2), z},
 
-		{toFrame(m, m.col(0)), Point{r3.Vector{1, 0, 0}}},
-		{toFrame(m, m.col(1)), Point{r3.Vector{0, 1, 0}}},
-		{toFrame(m, m.col(2)), Point{r3.Vector{0, 0, 1}}},
+		{toFrame(m, m.col(0)), Point{r3.Vector{X: 1, Y: 0, Z: 0}}},
+		{toFrame(m, m.col(1)), Point{r3.Vector{X: 0, Y: 1, Z: 0}}},
+		{toFrame(m, m.col(2)), Point{r3.Vector{X: 0, Y: 0, Z: 1}}},
 
-		{fromFrame(m, Point{r3.Vector{1, 0, 0}}), m.col(0)},
-		{fromFrame(m, Point{r3.Vector{0, 1, 0}}), m.col(1)},
-		{fromFrame(m, Point{r3.Vector{0, 0, 1}}), m.col(2)},
+		{fromFrame(m, Point{r3.Vector{X: 1, Y: 0, Z: 0}}), m.col(0)},
+		{fromFrame(m, Point{r3.Vector{X: 0, Y: 1, Z: 0}}), m.col(1)},
+		{fromFrame(m, Point{r3.Vector{X: 0, Y: 0, Z: 1}}), m.col(2)},
 	}
 
 	for _, test := range tests {

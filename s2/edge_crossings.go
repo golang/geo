@@ -185,7 +185,7 @@ func Intersection(a0, a1, b0, b1 Point) Point {
 	//    error.
 	//
 	//  - intersectionExact computes the intersection point using precision
-	//    arithmetic and converts the final result back to an Point.
+	//    arithmetic and converts the final result back to a Point.
 	pt, ok := intersectionStable(a0, a1, b0, b1)
 	if !ok {
 		pt = intersectionExact(a0, a1, b0, b1)
@@ -374,7 +374,7 @@ func intersectionExact(a0, a1, b0, b1 Point) Point {
 		// "crossing" because of simulation of simplicity. Out of the four
 		// endpoints, exactly two lie in the interior of the other edge. Of
 		// those two we return the one that is lexicographically smallest.
-		x = r3.Vector{10, 10, 10} // Greater than any valid S2Point
+		x = r3.Vector{X: 10, Y: 10, Z: 10} // Greater than any valid S2Point
 
 		aNorm := Point{aNormP.Vector()}
 		bNorm := Point{bNormP.Vector()}
