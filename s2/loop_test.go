@@ -148,7 +148,7 @@ var (
 		lineTriangle,
 		skinnyChevron,
 		loopA,
-		//snappedLoopA, // Fails TestAreaConsistentWithTurningAngle
+		// snappedLoopA, // Fails TestAreaConsistentWithTurningAngle
 		loopB,
 		aIntersectB,
 		aUnionB,

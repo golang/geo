@@ -28,6 +28,7 @@ import (
 
 var (
 	// To set in testing add "--benchmark_brute_force=true" to your test command.
+	// When using blaze/bazel add "--test_arg=--benchmark_brute_force=true"
 	benchmarkBruteForce = flag.Bool("benchmark_brute_force", false,
 		"When set, use brute force algorithms in benchmarking.")
 )
