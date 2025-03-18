@@ -34,6 +34,9 @@ type Metric struct {
 
 // Defined metrics.
 // Of the projection methods defined in C++, Go only supports the quadratic projection.
+// See
+// https://github.com/google/s2geometry/blob/58de4ea1e2f8a294e0c072c602c22232fd1433ad/src/s2/s2coords.h#L238
+// for more details.
 
 // Each cell is bounded by four planes passing through its four edges and
 // the center of the sphere. These metrics relate to the angle between each

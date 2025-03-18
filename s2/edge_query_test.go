@@ -35,6 +35,7 @@ var (
 	// this flag allows that to happen.
 	//
 	// To set in testing add "--benchmark_edge_query_range=5" to your test command.
+	// When using blaze/bazel add "--test_arg=--benchmark_edge_query_range=5"
 	benchmarkEdgeQueryRange = flag.Int("benchmark_edge_query_range", 7,
 		"Set the upper limit on times to scale up the edge query "+
 			"edge counts in benchmark runs.")

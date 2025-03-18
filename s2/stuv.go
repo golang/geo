@@ -32,7 +32,7 @@ import (
 // transformation is designed to make the cells at each level fairly uniform
 // in size.
 //
-////////////////////////// S2 Cell Decomposition /////////////////////////
+// /////////////////////// S2 Cell Decomposition /////////////////////////
 //
 // The following methods define the cube-to-sphere projection used by
 // the Cell decomposition.
