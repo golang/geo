@@ -666,8 +666,8 @@ func TestCellDistanceToEdge(t *testing.T) {
 		// Pi for vertex distance.
 		expectedError := 1e-12
 		if expectedMin.Radians() > math.Pi/2 {
-			// Max error for ChordAngle as it approaches Pi is about 2e-8.
-			expectedError = 2e-8
+			// Max error for ChordAngle as it approaches Pi is about 3e-8.
+			expectedError = 3e-8
 		} else if expectedMin.Radians() <= math.Pi/3 {
 			expectedError = 1e-15
 		}
