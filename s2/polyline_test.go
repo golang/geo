@@ -526,7 +526,6 @@ func TestPolylineInterpolate(t *testing.T) {
 	}
 	line := Polyline(vertices)
 
-	want := vertices[0]
 	point, next := line.Interpolate(-0.1)
 	if point != vertices[0] {
 		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, -0.1, point, vertices[0])
@@ -535,7 +534,7 @@ func TestPolylineInterpolate(t *testing.T) {
 		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, -0.1, next, 1)
 	}
 
-	want = PointFromCoords(1, math.Tan(0.2*math.Pi/2.0), 0)
+	want := PointFromCoords(1, math.Tan(0.2*math.Pi/2.0), 0)
 	if got, _ := line.Interpolate(0.1); !got.ApproxEqual(want) {
 		t.Errorf("%v.Interpolate(%v) = %v, want %v", line, 0.1, got, want)
 	}
