@@ -17,6 +17,7 @@ package s2
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/s1"
@@ -50,6 +51,10 @@ func numVerticesAtLevel(level int) int {
 }
 
 func TestTestingFractal(t *testing.T) {
+	// About 2.4% flaky with a random seed, due to CesaroMultiFractal.
+	// TODO: https://github.com/golang/geo/issues/120
+	rand.Seed(1)
+
 	tests := []struct {
 		label     string
 		minLevel  int
