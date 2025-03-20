@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/s1"
@@ -193,6 +194,10 @@ func TestConvexHullQueryLoopsAroundNorthPole(t *testing.T) {
 }
 
 func TestConvexHullQueryPointsInsideHull(t *testing.T) {
+	// About 0.3% flaky with a random seed.
+	// TODO: https://github.com/golang/geo/issues/120
+	rand.Seed(1)
+
 	// Repeatedly build the convex hull of a set of points, then add more points
 	// inside that loop and build the convex hull again. The result should
 	// always be the same.

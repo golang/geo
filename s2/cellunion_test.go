@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"math/rand"
 	"reflect"
 	"testing"
 
@@ -370,6 +371,10 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 }
 
 func TestCellUnionNormalizePseudoRandom(t *testing.T) {
+	// About 2.4% flaky with a random seed.
+	// TODO: https://github.com/golang/geo/issues/120
+	rand.Seed(2)
+
 	// Try a bunch of random test cases, and keep track of average statistics
 	// for normalization (to see if they agree with the analysis above).
 

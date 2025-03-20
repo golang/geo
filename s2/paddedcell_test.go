@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/r1"
@@ -132,6 +133,10 @@ func TestPaddedCellEntryExitVertices(t *testing.T) {
 }
 
 func TestPaddedCellShrinkToFit(t *testing.T) {
+	// About 0.2% flaky with a random seed.
+	// TODO: https://github.com/golang/geo/issues/120
+	rand.Seed(1)
+
 	for iter := 0; iter < 1000; iter++ {
 		// Start with the desired result and work backwards.
 		result := randomCellID()

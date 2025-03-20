@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -94,6 +95,10 @@ func TestPointDistance(t *testing.T) {
 }
 
 func TestChordAngleBetweenPoints(t *testing.T) {
+	// About 0.2% flaky with a random seed.
+	// TODO: https://github.com/golang/geo/issues/120
+	rand.Seed(1)
+
 	for iter := 0; iter < 10; iter++ {
 		m := randomFrame()
 		x := m.col(0)
