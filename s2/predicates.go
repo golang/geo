@@ -1023,7 +1023,7 @@ func exactIntersectionOrdering(a, b, c, d, m, n r3.PreciseVector) int {
 //
 // > gappa proof.gappa
 // Results:
-//|  diff_ - diff| in [0, 1145679351550454559b-107 {7.06079e-15, 2^(-47.0091)}]
+// |  diff_ - diff| in [0, 1145679351550454559b-107 {7.06079e-15, 2^(-47.0091)}]
 //
 // >>> 1145679351550454559*2**-107/2**-52
 // 31.79898987322334
