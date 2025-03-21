@@ -21,12 +21,75 @@ import (
 	"github.com/golang/geo/r3"
 )
 
-func TestSTUV(t *testing.T) {
-	if x := stToUV(uvToST(.125)); x != .125 {
-		t.Error("stToUV(uvToST(.125) == ", x)
+// TODO(rsned): Rename this file to coords_test.go to match its C++ counterpart.
+
+func swapAxes(ij int) int {
+	return ((ij >> 1) & 1) + ((ij & 1) << 1)
+}
+
+func invertBits(ij int) int {
+	return ij ^ 3
+}
+
+func TestSTUVTraversalOrder(t *testing.T) {
+	for r := 0; r < 4; r++ {
+		for i := 0; i < 4; i++ {
+			// Check consistency with respect to swapping axes.
+			if got, want := ijToPos[r][i], ijToPos[r^swapMask][swapAxes(i)]; got != want {
+				t.Errorf("(ijToPos[%d][%d] = %d) != ijToPos[%d^swapMask][swapAxes(%d)] = %d",
+					r, i, got, r, i, want)
+			}
+			if got, want := posToIJ[r][i], swapAxes(posToIJ[r^swapMask][i]); got != want {
+				t.Errorf("(posToIJ[%d][%d] = %d) != swapAxes(posToIJ[%d^swapMask][%d]) = %d",
+					r, i, got, r, i, want)
+			}
+
+			// Check consistency with respect to reversing axis directions.
+			if got, want := ijToPos[r][i], ijToPos[r^invertMask][invertBits(i)]; got != want {
+				t.Errorf("(ijToPos[%d][%d]= %d) != ijToPos[%d^invertMask][invertBits(%d)] = %d",
+					r, i, got, r, i, want)
+			}
+			if got, want := posToIJ[r][i], invertBits(posToIJ[r^invertMask][i]); got != want {
+				t.Errorf("(posToIJ[%d][%d] = %d) != invertBits(posToIJ[%d^invertMask][%d] = %d",
+					r, i, got, r, i, want)
+			}
+
+			// Check that the two tables are inverses of each other.
+			if got, want := ijToPos[r][posToIJ[r][i]], i; got != want {
+				t.Errorf("(ijToPos[%d][posToIJ[%d][%d]] = %d) != %d",
+					r, r, i, got, want)
+			}
+			if got, want := posToIJ[r][ijToPos[r][i]], i; got != want {
+				t.Errorf("(posToIJ[%d][ijToPos[%d][%d]] = %d) != %d",
+					r, r, i, got, want)
+			}
+		}
 	}
-	if x := uvToST(stToUV(.125)); x != .125 {
-		t.Error("uvToST(stToUV(.125) == ", x)
+}
+
+func TestSTUVConversions(t *testing.T) {
+	// Check boundary conditions.
+	for s := 0.0; s <= 1.0; s += 0.5 {
+		u := stToUV(s)
+		if want := 2*s - 1; !float64Eq(u, want) {
+			t.Errorf("stToUV(%f) = %f, want %f", s, u, want)
+		}
+	}
+	for u := -1.0; u <= 1.0; u++ {
+		s := uvToST(u)
+		if want := 0.5 * (u + 1); !float64Eq(s, want) {
+			t.Errorf("stToUV(%f) = %f, want %f", u, s, want)
+		}
+	}
+
+	// Check that uvToST and stToUV are inverses.
+	for x := 0.0; x <= 1.0; x += 0.0001 {
+		if got := uvToST(stToUV(x)); !float64Near(got, x, 1e-15) {
+			t.Errorf("uvToST(stToUV(%f)) = %f, want %f", x, got, x)
+		}
+		if got, want := stToUV(uvToST(2*x-1)), 2*x-1; !float64Near(got, want, 1e-15) {
+			t.Errorf("stToUV(uvToST(%f)) = %f, want %f", x, got, want)
+		}
 	}
 }
 

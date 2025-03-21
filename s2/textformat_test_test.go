@@ -38,7 +38,7 @@ func TestParseLatLng(t *testing.T) {
 		},
 		{
 			have: "0:0",
-			want: []LatLng{LatLng{0, 0}},
+			want: []LatLng{LatLng{Lat: 0, Lng: 0}},
 		},
 		{
 			have: "0:0, 0:-90",
@@ -75,30 +75,47 @@ func TestParseLatLng(t *testing.T) {
 
 func TestTextFormatWritePoints(t *testing.T) {
 	tests := []struct {
-		have []Point
-		want string
+		have      []Point
+		roundtrip bool
+		want      string
 	}{
 		{
-			have: nil,
-			want: "",
+			have:      nil,
+			roundtrip: false,
+			want:      "",
 		},
 		{
-			have: []Point{},
-			want: "",
+			have:      []Point{},
+			roundtrip: false,
+			want:      "",
 		},
 		{
-			have: []Point{PointFromCoords(1, 0, 0)},
-			want: "0:0",
+			have:      []Point{PointFromCoords(1, 0, 0)},
+			roundtrip: false,
+			want:      "0:0",
 		},
 		{
-			have: []Point{PointFromCoords(1, 0, 0), PointFromCoords(0, -1, 0)},
-			want: "0:0, 0:-90",
+			have:      []Point{PointFromCoords(1, 0, 0), PointFromCoords(0, -1, 0)},
+			roundtrip: false,
+			want:      "0:0, 0:-90",
+		},
+		{
+			// test without roundtrip precision.
+			have:      []Point{PointFromCoords(1, 6.02e-23, 0)},
+			roundtrip: false,
+			want:      "0:3.44920592668756e-21",
+		},
+		{
+			// test with roundtrip precision to get 2 extra digits.
+			have:      []Point{PointFromCoords(1, 6.02e-23, 0)},
+			roundtrip: true,
+			want:      "0:3.4492059266875556e-21",
 		},
 	}
 
 	for _, test := range tests {
 		var buf bytes.Buffer
-		writePoints(&buf, test.have)
+		writePoints(&buf, test.have, test.roundtrip)
 		if got := buf.String(); got != test.want {
 			t.Errorf("writePoints(%v) = %q, want %q", test.have, got, test.want)
 		}
@@ -130,8 +147,8 @@ func TestTextFormatParsePointRoundtrip(t *testing.T) {
 		if !pt.ApproxEqual(test.want) {
 			t.Errorf("parsePoint(%s) = %v, want %v", test.have, pt, test.want)
 		}
-		if got := pointToString(pt); got != test.have {
-			t.Errorf("pointToString(parsePoint(%v)) = %v, want %v", test.have, got, test.have)
+		if got := pointToString(pt, false); got != test.have {
+			t.Errorf("pointToString(parsePoint(%v), false) = %v, want %v", test.have, got, test.have)
 		}
 	}
 }
@@ -169,7 +186,7 @@ func TestTextFormatParsePointRoundtripEdgecases(t *testing.T) {
 			// TODO(roberts): This test output differs between gccgo and 6g in the last significant digit.
 			{
 				have:    "180:0",
-				wantPt:  Point{r3.Vector{-1, -0, 1.2246467991473515e-16}},
+				wantPt:  Point{r3.Vector{X: -1, Y: -0, Z: 1.2246467991473515e-16}},
 				wantStr: "7.01670929853487e-15:-180",
 			},
 		*/
@@ -183,7 +200,7 @@ func TestTextFormatParsePointRoundtripEdgecases(t *testing.T) {
 			// TODO(roberts): This test output differs between gccgo and 6g in the last significant digit.
 			{
 				have:    "-180:90",
-				wantPt:  Point{r3.Vector{-6.123233995736757e-17, -1, 1.2246467991473515e-16}},
+				wantPt:  Point{r3.Vector{X: -6.123233995736757e-17, Y: -1, Z: 1.2246467991473515e-16}},
 				wantStr: "-7.01670929853487e-15:-90",
 			},
 		*/
@@ -201,8 +218,8 @@ func TestTextFormatParsePointRoundtripEdgecases(t *testing.T) {
 		if !pt.ApproxEqual(test.wantPt) {
 			t.Errorf("parsePoint(%s) = %v, want %v", test.have, pt, test.wantPt)
 		}
-		if got := pointToString(pt); got != test.wantStr {
-			t.Errorf("pointToString(parsePoint(%v)) = %v, want %v", test.have, got, test.wantStr)
+		if got := pointToString(pt, false); got != test.wantStr {
+			t.Errorf("pointToString(parsePoint(%v), false) = %v, want %v", test.have, got, test.wantStr)
 		}
 	}
 }
@@ -256,8 +273,8 @@ func TestTextFormatParsePointsLatLngs(t *testing.T) {
 				{r3.Vector{X: -0.421808091075447, Y: -0.672891829588934, Z: 0.607696075333505}},
 			},
 			wantLLs: []LatLng{
-				{s1.Degree * 37.4210, s1.Degree * -122.0866},
-				{s1.Degree * 37.4231, s1.Degree * -122.0819},
+				{Lat: s1.Degree * 37.4210, Lng: s1.Degree * -122.0866},
+				{Lat: s1.Degree * 37.4231, Lng: s1.Degree * -122.0819},
 			},
 		},
 		{
@@ -460,6 +477,7 @@ func TestTextFormatMakeLaxPolygonFullWithHole(t *testing.T) {
 }
 
 func TestTextFormatShapeIndexDebugStringRoundTrip(t *testing.T) {
+	// TODO(rsned): Incorporate the roundtripPrecision parameter to the tests.
 	tests := []string{
 		"# #",
 		"0:0 # #",
@@ -471,10 +489,11 @@ func TestTextFormatShapeIndexDebugStringRoundTrip(t *testing.T) {
 		"# # 0:0, 0:1",
 		"# # 0:0, 0:1, 1:0",
 		"# # 0:0, 0:1, 1:0, 2:2",
+		"# # full",
 	}
 
 	for _, want := range tests {
-		if got := shapeIndexDebugString(makeShapeIndex(want)); got != want {
+		if got := shapeIndexDebugString(makeShapeIndex(want), false); got != want {
 			t.Errorf("ShapeIndex failed roundtrip to string. got %q, want %q", got, want)
 		}
 	}

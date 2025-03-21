@@ -110,7 +110,8 @@ func TestEdgeDistancesCheckDistance(t *testing.T) {
 			a:       r3.Vector{X: 1, Y: 0, Z: 0},
 			b:       r3.Vector{X: 0, Y: 1, Z: 0},
 			distRad: math.Asin(math.Sqrt(1.0 / 3.0)),
-			want:    r3.Vector{X: 1, Y: 1, Z: 0}},
+			want:    r3.Vector{X: 1, Y: 1, Z: 0},
+		},
 		{
 			x:       r3.Vector{X: -1, Y: 0, Z: 0},
 			a:       r3.Vector{X: 1, Y: 1, Z: 0},
@@ -180,7 +181,6 @@ func TestEdgeDistancesUpdateMinInteriorDistanceLowerBoundOptimizationIsConservat
 	if !ok {
 		t.Errorf("UpdateMinDistance(%v, %v, %v, %v) = %v, want %v", x, a, b, s1.InfChordAngle(), minDistance, minDistance)
 	}
-
 }
 
 func TestEdgeDistancesUpdateMinInteriorDistanceRejectionTestIsConservative(t *testing.T) {
@@ -260,13 +260,13 @@ func TestEdgeDistancesCheckMaxDistance(t *testing.T) {
 			x:       r3.Vector{X: 1, Y: 1, Z: 1},
 			a:       r3.Vector{X: 1, Y: 0, Z: 0},
 			b:       r3.Vector{X: 0, Y: 1, Z: 0},
-			distRad: math.Asin(math.Sqrt(2. / 3)),
+			distRad: math.Asin(math.Sqrt(2.0 / 3)),
 		},
 		{
 			x:       r3.Vector{X: 1, Y: 1, Z: -1},
 			a:       r3.Vector{X: 1, Y: 0, Z: 0},
 			b:       r3.Vector{X: 0, Y: 1, Z: 0},
-			distRad: math.Asin(math.Sqrt(2. / 3)),
+			distRad: math.Asin(math.Sqrt(2.0 / 3)),
 		},
 		{
 			x:       r3.Vector{X: 1, Y: 0, Z: 0},
@@ -346,6 +346,13 @@ func TestEdgeDistancesInterpolate(t *testing.T) {
 		// A zero-length edge.
 		{p1, p1, 0, p1},
 		{p1, p1, 1, p1},
+
+		// Zero-length edges, actually interpolated.
+		{PointFromCoords(1, 0, 0), PointFromCoords(1, 0, 0), 0.5, PointFromCoords(1, 0, 0)},
+		{PointFromCoords(1, 0, 0), PointFromCoords(1, 0, 0), math.SmallestNonzeroFloat64, PointFromCoords(1, 0, 0)},
+		{p1, p1, 0.5, p1},
+		{p1, p1, math.SmallestNonzeroFloat64, p1},
+
 		// Start, end, and middle of a medium-length edge.
 		{p1, p2, 0, p1},
 		{p1, p2, 1, p2},
@@ -357,13 +364,13 @@ func TestEdgeDistancesInterpolate(t *testing.T) {
 			Point{r3.Vector{X: 1, Y: 0, Z: 0}},
 			Point{r3.Vector{X: 0, Y: 1, Z: 0}},
 			1.0 / 3.0,
-			Point{r3.Vector{X: math.Sqrt(3), Y: 1, Z: 0}},
+			Point{r3.Vector{X: sqrt3, Y: 1, Z: 0}},
 		},
 		{
 			Point{r3.Vector{X: 1, Y: 0, Z: 0}},
 			Point{r3.Vector{X: 0, Y: 1, Z: 0}},
 			2.0 / 3.0,
-			Point{r3.Vector{X: 1, Y: math.Sqrt(3), Z: 0}},
+			Point{r3.Vector{X: 1, Y: sqrt3, Z: 0}},
 		},
 
 		// InterpolateCanExtrapolate checks
@@ -399,11 +406,31 @@ func TestEdgeDistancesInterpolate(t *testing.T) {
 		test.a = Point{test.a.Normalize()}
 		test.b = Point{test.b.Normalize()}
 		test.want = Point{test.want.Normalize()}
+		maxError := s1.Angle(3e-15)
 
 		// We allow a bit more than the usual 1e-15 error tolerance because
 		// Interpolate() uses trig functions.
-		if got := Interpolate(test.dist, test.a, test.b); !pointsApproxEqual(got, test.want, 3e-15) {
+		if got := Interpolate(test.dist, test.a, test.b); !pointsApproxEqual(got, test.want, float64(maxError)) {
 			t.Errorf("Interpolate(%v, %v, %v) = %v, want %v", test.dist, test.a, test.b, got, test.want)
+		}
+
+		// Now test the other interpolation functions.
+		r := s1.Angle(test.dist) * test.a.Distance(test.b)
+		if got := PointOnLine(test.a, test.b, r); got.Distance(test.want) > maxError {
+			t.Errorf("PointOnLijne((%v, %v, %v) = %v, want %v",
+				test.a, test.b, r, got, test.want)
+		}
+
+		if test.a.Dot(test.b.Vector) == 0 { // Common in the test cases below.
+			if got := PointOnRay(test.a, test.b, r); got.Distance(test.want) > maxError {
+				t.Errorf("PointOnRay(%v, %v, %v) = %v, want %v",
+					test.a, test.b, r, got, test.want)
+			}
+		}
+		if r.Radians() >= 0 && r.Radians() < 0.99*math.Pi {
+			// We don't have the parallel ChordAngle variants of
+			// PointOnLine/Ray/Left/Right
+			// so the second tests are not added here.
 		}
 	}
 }
@@ -490,8 +517,53 @@ func TestEdgeDistanceMinUpdateDistanceMaxError(t *testing.T) {
 	}
 }
 
-// TODO(roberts): TestEdgeDistanceUpdateMinInteriorDistanceMaxError once s2predicates
-// CompareEdgeDistance
+func TestEdgeDistanceUpdateMinInteriorDistanceMaxError(t *testing.T) {
+	// Check that the error bound returned by
+	// updateMinInteriorDistanceMaxError() is large enough.
+
+	for iter := 0; iter < 10000; iter++ {
+		a0 := randomPoint()
+		length := s1.Angle(math.Pi*math.Pow(1e-20, randomFloat64())) * s1.Radian
+		if oneIn(4) {
+			length = math.Pi - length
+		}
+		a1 := PointOnLine(a0, randomPoint(), length)
+
+		// TODO(ericv): The error bound holds for antipodal points, but the S2
+		// predicates used to test the error do not support antipodal points yet.
+		if a1.Vector == a0.Mul(-1) {
+			continue
+		}
+		n := Point{a0.Cross(a1.Vector).Normalize()}
+		f := math.Pow(1e-20, randomFloat64())
+		a := Point{a0.Mul(1 - f).Add(a1.Mul(f)).Normalize()}
+		r := s1.Angle(math.Pi / 2.0 * math.Pow(1e-20, randomFloat64()))
+		if oneIn(2) {
+			r = s1.Angle(math.Pi/2.0) - r
+		}
+		x := PointOnLine(a, n, r)
+		minDist := s1.InfChordAngle()
+
+		var ok bool
+		if minDist, ok = UpdateMinInteriorDistance(x, a0, a1, minDist); !ok {
+			iter--
+			continue
+		}
+		// TODO(rsned): Uncomment once predicates has CompareEdgeDistance
+		/*
+		   maxErr := minUpdateDistanceMaxError(minDist)
+		   if got := CompareEdgeDistance(x, a0, a1, minDist.Expanded(maxErr)); got > 0 {
+		           t.Errorf("CompareEdgeDistance(%v, %v, %v, %v) = got, want <= 0",
+		                   x, a0, a1, minDist.Expanded(maxErr), got)
+
+		   }
+		   if got := CompareEdgeDistance(x, a0, a1, minDist.Expanded(-maxErr)); got < 0 {
+		           t.Errorf("CompareEdgeDistance(%v, %v, %v, %v) = got, want >= 0",
+		                   x, a0, a1, minDist.Expanded(-maxErr), got)
+		   }
+		*/
+	}
+}
 
 func TestEdgeDistancesEdgePairMinDistance(t *testing.T) {
 	var zero Point
@@ -701,7 +773,7 @@ func TestEdgeDistancesEdgePairMaxDistance(t *testing.T) {
 			a1:       PointFromCoords(0, 1, 0),
 			b0:       PointFromCoords(1, 1, 0),
 			b1:       PointFromCoords(1, 1, 1),
-			distRads: math.Acos(1 / math.Sqrt(3)),
+			distRads: math.Acos(1 / sqrt3),
 		},
 		{
 
@@ -788,4 +860,37 @@ func TestEdgeDistancesEdgePairMaxDistance(t *testing.T) {
 	}
 }
 
+func TestEdgeDistancesPointToLeft(t *testing.T) {
+	a := PointFromLatLng(LatLngFromDegrees(0, 0))
+	b := PointFromLatLng(LatLngFromDegrees(0, 5)) // east
+	dist := kmToAngle(10 / 1000.0)
+
+	c := PointToLeft(a, b, dist)
+	if got := a.Distance(c).Radians(); !float64Near(got, dist.Radians(), epsilon) {
+		t.Errorf("PointToLeft(%v, %v, %v) = %v, want %v", a, b, dist, got, dist.Radians())
+	}
+	// CAB must be a right angle with C to the left of AB.
+	if got := TurnAngle(c, a, b).Radians(); !float64Near(got, math.Pi/2.0, epsilon) {
+		t.Errorf("TurnAngle(%v, %v, %v) = %v, want %v", c, a, b, got, math.Pi/2.0)
+	}
+}
+
+func TestEdgeDistancesPointToRight(t *testing.T) {
+	a := PointFromLatLng(LatLngFromDegrees(0, 0))
+	b := PointFromLatLng(LatLngFromDegrees(0, 5)) // east
+	dist := kmToAngle(10 / 1000.0)
+
+	c := PointToRight(a, b, dist)
+	if got := a.Distance(c).Radians(); !float64Near(got, dist.Radians(), epsilon) {
+		t.Errorf("PointToRight(%v, %v, %v) = %v, want %v", a, b, dist, got, dist.Radians())
+	}
+	// CAB must be a right angle with C to the right of AB.
+	if got := TurnAngle(c, a, b).Radians(); !float64Near(got, -math.Pi/2.0, epsilon) {
+		t.Errorf("TurnAngle(%v, %v, %v) = %v, want %v", c, a, b, got, -math.Pi/2.0)
+	}
+}
+
+// TODO(rsned): Differences from C++
+//
 // TestEdgeDistancesEdgeBNearEdgeA
+// TestProjectError

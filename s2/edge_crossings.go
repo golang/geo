@@ -257,10 +257,11 @@ func projection(x, aNorm r3.Vector, aNormLen float64, a0, a1 Point) (proj, bound
 	// normalized in double precision.
 	//
 	// For reference, the bounds that went into this calculation are:
-	// ||N'-N|| <= ((1 + 2 * sqrt(3))||N|| + 32 * sqrt(3) * dblError) * epsilon
-	// |(A.B)'-(A.B)| <= (1.5 * (A.B) + 1.5 * ||A|| * ||B||) * epsilon
-	// ||(X-Y)'-(X-Y)|| <= ||X-Y|| * epsilon
-	bound = (((3.5+2*math.Sqrt(3))*aNormLen+32*math.Sqrt(3)*dblError)*dist + 1.5*math.Abs(proj)) * epsilon
+	// ||N'-N|| <= ((1 + 2 * sqrt(3))||N|| + 32 * sqrt(3) * dblError) * tErr
+	// |(A.B)'-(A.B)| <= (1.5 * (A.B) + 1.5 * ||A|| * ||B||) * tErr
+	// ||(X-Y)'-(X-Y)|| <= ||X-Y|| * tErr
+	tErr := roundingEpsilon(x.X)
+	bound = (((3.5+2*math.Sqrt(3))*aNormLen+32*math.Sqrt(3)*dblError)*dist + 1.5*math.Abs(proj)) * tErr
 	return proj, bound
 }
 
@@ -334,14 +335,25 @@ func intersectionStableSorted(a0, a1, b0, b1 Point) (Point, bool) {
 	}
 
 	x := b1.Mul(b0Dist).Sub(b0.Mul(b1Dist))
+	tErr := roundingEpsilon(x.X)
 	err := bLen*math.Abs(b0Dist*b1Error-b1Dist*b0Error)/
-		(distSum-errorSum) + 2*distSum*epsilon
+		(distSum-errorSum) + 2*distSum*tErr
 
 	// Finally we normalize the result, compute the corresponding error, and
 	// check whether the total error is acceptable.
+
+	// TODO(rsned): C++ checks Norm2 > some small amount to prevent precision loss.
+	// xLen2 := x.Norm2()
+	// if xLen2 < math.SmallestNonzeroFloat64 {
+	//         // If x.Norm2() is less than the minimum normalized value of T, xLen might
+	//         // lose precision and the result might fail to satisfy IsUnitLength().
+	//         // TODO(rsned): Implement RobustNormalize().
+	//         return pt, false
+	// }
+
 	xLen := x.Norm()
 	maxError := intersectionError
-	if err > (float64(maxError)-epsilon)*xLen {
+	if err > (float64(maxError)-tErr)*xLen {
 		return pt, false
 	}
 

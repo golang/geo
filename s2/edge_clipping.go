@@ -76,6 +76,11 @@ const (
 // This method guarantees that the clipped vertices lie within the [-1,1]x[-1,1]
 // cube face rectangle and are within faceClipErrorUVDist of the line AB, but
 // the results may differ from those produced by FaceSegments.
+//
+// Returns false if AB does not intersect the given face.
+//
+// The test for face intersection is exact, so if this function returns false
+// then the edge definitively does not intersect the face.
 func ClipToFace(a, b Point, face int) (aUV, bUV r2.Point, intersects bool) {
 	return ClipToPaddedFace(a, b, face, 0.0)
 }
@@ -484,10 +489,19 @@ func clipEdgeBound(a, b r2.Point, clip, bound r2.Rect) (r2.Rect, bool) {
 // given value x is of a and b. This function makes the following guarantees:
 //   - If x == a, then x1 = a1 (exactly).
 //   - If x == b, then x1 = b1 (exactly).
-//   - If a <= x <= b, then a1 <= x1 <= b1 (even if a1 == b1).
+//   - If a <= x <= b and a1 <= b1, then a1 <= x1 <= b1 (even if a1 == b1).
+//   - More generally, if x is between a and b, then x1 is between a1 and b1.
 //
 // This requires a != b.
+//
+// When a <= x <= b or b <= x <= a we can prove the error bound on the resulting
+// value is 2.25*dblEpsilon. The error for extrapolating an x value outside of
+// a and b can be much worse. See the gappa proof at the end of the file.
 func interpolateFloat64(x, a, b, a1, b1 float64) float64 {
+	// If A == B == X all we can return is the single point.
+	if a == b {
+		return a1
+	}
 	// To get results that are accurate near both A and B, we interpolate
 	// starting from the closer of the two points.
 	if math.Abs(a-x) <= math.Abs(b-x) {

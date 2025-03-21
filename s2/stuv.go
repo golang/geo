@@ -20,6 +20,8 @@ import (
 	"github.com/golang/geo/r3"
 )
 
+// TODO(rsned): Rename this to coords.go to match the C++
+
 //
 // This file contains documentation of the various coordinate systems used
 // throughout the library. Most importantly, S2 defines a framework for
@@ -144,6 +146,13 @@ import (
 // implementations may offer other choices.
 
 const (
+	// The maximum absolute error in U/V coordinates when converting from XYZ.
+	//
+	// The XYZ -> UV conversion is a single division per coordinate, which is
+	// promised to be at most 0.5*dblEpsilon absolute error for values with
+	// magnitude less than two.
+	maxXYZtoUVError = 0.5 * dblEpsilon
+
 	// maxSiTi is the maximum value of an si- or ti-coordinate.
 	// It is one shift more than MaxSize. The range of valid (si,ti)
 	// values is [0..maxSiTi].
@@ -203,6 +212,19 @@ func face(r r3.Vector) int {
 		f += 3
 	}
 	return int(f)
+}
+
+// ijToSTMin converts the i- or j-index of a leaf cell to the minimum corresponding
+// s- or t-value contained by that cell. The argument must be in the range
+// [0..2**30], i.e. up to one position beyond the normal range of valid leaf
+// cell indices.
+func ijToSTMin(i int) float64 {
+	return float64(i) / float64(MaxSize)
+}
+
+// stToIJ converts value in ST coordinates to a value in IJ coordinates.
+func stToIJ(s float64) int {
+	return clampInt(int(math.Floor(MaxSize*s)), 0, MaxSize-1)
 }
 
 // validFaceXYZToUV given a valid face for the given point r (meaning that

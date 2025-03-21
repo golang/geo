@@ -62,15 +62,15 @@ func TestCellFaces(t *testing.T) {
 			t.Errorf("cell should not be a leaf: IsLeaf = %v", cell.IsLeaf())
 		}
 		for k := 0; k < 4; k++ {
-			edgeCounts[cell.Edge(k)]++
-			vertexCounts[cell.Vertex(k)]++
-			if d := cell.Vertex(k).Dot(cell.Edge(k).Vector); !float64Eq(0.0, d) {
+			edgeCounts[cell.EdgeRaw(k)]++
+			vertexCounts[cell.VertexRaw(k)]++
+			if d := cell.VertexRaw(k).Dot(cell.EdgeRaw(k).Vector); !float64Eq(0.0, d) {
 				t.Errorf("dot product of vertex and edge failed, got %v, want 0", d)
 			}
-			if d := cell.Vertex((k + 1) & 3).Dot(cell.Edge(k).Vector); !float64Eq(0.0, d) {
+			if d := cell.VertexRaw((k + 1) & 3).Dot(cell.EdgeRaw(k).Vector); !float64Eq(0.0, d) {
 				t.Errorf("dot product for edge and next vertex failed, got %v, want 0", d)
 			}
-			if d := cell.Vertex(k).Vector.Cross(cell.Vertex((k + 1) & 3).Vector).Normalize().Dot(cell.Edge(k).Vector); !float64Eq(1.0, d) {
+			if d := cell.VertexRaw(k).Vector.Cross(cell.VertexRaw((k + 1) & 3).Vector).Normalize().Dot(cell.Edge(k).Vector); !float64Eq(1.0, d) {
 				t.Errorf("dot product of cross product for vertices failed, got %v, want 1.0", d)
 			}
 		}
@@ -85,6 +85,74 @@ func TestCellFaces(t *testing.T) {
 	for k, v := range vertexCounts {
 		if v != 3 {
 			t.Errorf("vertex %v counts wrong, got %d, want 3", k, v)
+		}
+	}
+}
+
+func TestCellUVCoordOfEdge(t *testing.T) {
+	// Four cells on face 0 with two boundaries each on 0/0.
+	cell0 := []Cell{
+		CellFromCellID(CellIDFromToken("0f")),
+		CellFromCellID(CellIDFromToken("05")),
+		CellFromCellID(CellIDFromToken("1b")),
+		CellFromCellID(CellIDFromToken("11")),
+	}
+
+	// And four cells on face 4 which is rotated w.r.t face 0.
+	cell4 := []Cell{
+		CellFromCellID(CellIDFromToken("8f")),
+		CellFromCellID(CellIDFromToken("85")),
+		CellFromCellID(CellIDFromToken("9b")),
+		CellFromCellID(CellIDFromToken("91")),
+	}
+
+	for k := 0; k < 4; k++ {
+		if got, want := cell0[k].UVCoordOfEdge(k+0), 0.0; !float64Eq(got, want) {
+			t.Errorf("%v.UVCoordOfEdge[%d] = %f, want %f", cell4[k], k+0, got, want)
+		}
+		if got, want := cell0[k].UVCoordOfEdge(k+1), 0.0; !float64Eq(got, want) {
+			t.Errorf("%v.UVCoordOfEdge[%d] = %f, want %f", cell4[k], k+1, got, want)
+		}
+		if got, want := cell4[k].UVCoordOfEdge(k+0), 0.0; !float64Eq(got, want) {
+			t.Errorf("%v.UVCoordOfEdge[%d] = %f, want %f", cell4[k], k+1, got, want)
+		}
+		if got, want := cell4[k].UVCoordOfEdge(k+1), 0.0; !float64Eq(got, want) {
+			t.Errorf("%v.UVCoordOfEdge[%d] = %f, want %f", cell4[k], k+1, got, want)
+		}
+	}
+}
+
+func Test2CellIJCoordOfEdge(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		id := randomCellID()
+		cell := CellFromCellID(id)
+
+		// Look up the canonical IJ coordinates of the cell boundary.
+		var ij [2]int
+		_, ij[0], ij[1], _ = id.faceIJOrientation()
+
+		ijSize := sizeIJ(id.Level())
+		var ijBounds r2.Rect
+		ijLo := ij[0] & -ijSize
+		ijBounds.X.Lo = float64(ijLo)
+		ijBounds.X.Hi = float64(ijLo + ijSize)
+
+		ijLo = ij[1] & -ijSize
+		ijBounds.Y.Lo = float64(ijLo)
+		ijBounds.Y.Hi = float64(ijLo + ijSize)
+
+		// Check that each boundary coordinate is correct.
+		for k := 0; k < 4; k++ {
+			got := cell.IJCoordOfEdge(k)
+			var want int
+			if (k+1)%2 == 0 {
+				want = int(ijBounds.Vertices()[k].X)
+			} else {
+				want = int(ijBounds.Vertices()[k].Y)
+			}
+			if got != want {
+				t.Errorf("%v.IJCoordOfEdge(%d) = %v, want %v", cell, k, got, want)
+			}
 		}
 	}
 }
@@ -134,11 +202,11 @@ func testCellChildren(t *testing.T, cell Cell) {
 		}
 
 		for k := 0; k < 4; k++ {
-			if !direct.Vertex(k).ApproxEqual(ci.Vertex(k)) {
-				t.Errorf("child %d %v.Vertex(%d) = %v, want %v", i, ci, k, ci.Vertex(k), direct.Vertex(k))
+			if !direct.VertexRaw(k).ApproxEqual(ci.VertexRaw(k)) {
+				t.Errorf("child %d %v.VertexRaw(%d) = %v, want %v", i, ci, k, ci.VertexRaw(k), direct.VertexRaw(k))
 			}
-			if direct.Edge(k) != ci.Edge(k) {
-				t.Errorf("child %d %v.Edge(%d) = %v, want %v", i, ci, k, ci.Edge(k), direct.Edge(k))
+			if direct.EdgeRaw(k) != ci.EdgeRaw(k) {
+				t.Errorf("child %d %v.EdgeRaw(%d) = %v, want %v", i, ci, k, ci.EdgeRaw(k), direct.EdgeRaw(k))
 			}
 		}
 
@@ -156,8 +224,8 @@ func testCellChildren(t *testing.T, cell Cell) {
 			t.Errorf("%v.ContainsPoint(%v) = false, want true", cell, ci.Center())
 		}
 		for j := 0; j < 4; j++ {
-			if !cell.ContainsPoint(ci.Vertex(j)) {
-				t.Errorf("%v.ContainsPoint(%v.Vertex(%d)) = false, want true", cell, ci, j)
+			if !cell.ContainsPoint(ci.VertexRaw(j)) {
+				t.Errorf("%v.ContainsPoint(%v.VertexRaw(%d)) = false, want true", cell, ci, j)
 			}
 			if j != i {
 				if ci.ContainsPoint(children[j].Center()) {
@@ -198,11 +266,17 @@ func testCellChildren(t *testing.T, cell Cell) {
 			if !childRect.ContainsPoint(ci.Vertex(j)) {
 				t.Errorf("childRect %v.ContainsPoint(%v.Vertex(%d)) = false, want true", childRect, ci, j)
 			}
+			if !childRect.ContainsPoint(ci.VertexRaw(j)) {
+				t.Errorf("childRect %v.ContainsPoint(%v.VertexRaw(%d)) = false, want true", childRect, ci, j)
+			}
 			if !parentCap.ContainsPoint(ci.Vertex(j)) {
 				t.Errorf("parentCap %v.ContainsPoint(%v.Vertex(%d)) = false, want true", parentCap, ci, j)
 			}
 			if !parentRect.ContainsPoint(ci.Vertex(j)) {
 				t.Errorf("parentRect %v.ContainsPoint(%v.Vertex(%d)) = false, want true", parentRect, ci, j)
+			}
+			if !parentRect.ContainsPoint(ci.VertexRaw(j)) {
+				t.Errorf("parentRect %v.ContainsPoint(%v.VertexRaw(%d)) = false, want true", parentRect, ci, j)
 			}
 			if j != i {
 				// The bounding caps and rectangles should be tight enough so that
@@ -213,7 +287,7 @@ func testCellChildren(t *testing.T, cell Cell) {
 					if childCap.ContainsPoint(children[j].Vertex(k)) {
 						capCount++
 					}
-					if childRect.ContainsPoint(children[j].Vertex(k)) {
+					if childRect.ContainsPoint(children[j].VertexRaw(k)) {
 						rectCount++
 					}
 				}
@@ -679,6 +753,8 @@ func TestCellDistanceToEdge(t *testing.T) {
 			expectedError = 3e-8
 		} else if expectedMin.Radians() <= math.Pi/3 {
 			expectedError = 1e-15
+		} else {
+			expectedError = 1e-12
 		}
 
 		if !float64Near(expectedMin.Radians(), actualMin.Radians(), expectedError) {

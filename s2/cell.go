@@ -24,6 +24,26 @@ import (
 	"github.com/golang/geo/s1"
 )
 
+// CellBoundary represents canonical identifiers for the boundaries of the cell.
+// It's promised that both Vertex() and BoundUV().Vertices() return vertices in this
+// order.
+//
+// That is, for a given boundary k, the edge defining the boundary is:
+//
+//	{Vertex(k), Vertex(k+1)}
+//
+// The boundaries are defined in UV coordinates. The orientation may be
+// rotated relative to other face cells, but are consistent within a face
+// (i.e. a cell's left edge is its left-ward neighbor's right edge).
+type CellBoundary int
+
+const (
+	CellBoundaryBottomEdge CellBoundary = iota
+	CellBoundaryRightEdge
+	CellBoundaryTopEdge
+	CellBoundaryLeftEdge
+)
+
 // Cell is an S2 region object that represents a cell. Unlike CellIDs,
 // it supports efficient containment and intersection tests. However, it is
 // also a more expensive representation.
@@ -92,30 +112,91 @@ func (c Cell) SizeST() float64 {
 	return c.id.sizeST(int(c.level))
 }
 
-// Vertex returns the k-th vertex of the cell (k = 0,1,2,3) in CCW order
+// Vertex returns the normalized k-th vertex of the cell (k = 0,1,2,3) in CCW order
 // (lower left, lower right, upper right, upper left in the UV plane).
 func (c Cell) Vertex(k int) Point {
-	return Point{faceUVToXYZ(int(c.face), c.uv.Vertices()[k].X, c.uv.Vertices()[k].Y).Normalize()}
+	return Point{c.VertexRaw(k).Normalize()}
 }
 
-// Edge returns the inward-facing normal of the great circle passing through
-// the CCW ordered edge from vertex k to vertex k+1 (mod 4) (for k = 0,1,2,3).
+// VertexRaw returns the unnormalized k-th vertex of the cell (k = 0,1,2,3) in CCW order
+// (lower left, lower right, upper right, upper left in the UV plane).
+func (c Cell) VertexRaw(k int) Point {
+	return Point{faceUVToXYZ(int(c.face), c.uv.Vertices()[k].X, c.uv.Vertices()[k].Y)}
+}
+
+// Edge returns the nomalized inward-facing normal of the great circle passing through
+// the CCW ordered edge from vertex k to vertex k+1 (mod 4) (for k = 0,1,2,3)
 func (c Cell) Edge(k int) Point {
+	return Point{c.EdgeRaw(k).Normalize()}
+}
+
+// EdgeRaw returns the inward-facing normal of the great circle passing through
+// the CCW ordered edge from vertex k to vertex k+1 (mod 4) (for k = 0,1,2,3).
+//
+// The normals returned by EdgeRaw are not necessarily unit length, but their
+// length is bounded by Sqrt(2) since the worst case is two components of magnitude 1.
+//
+// The vertices returned by Vertex are not guaranteed to actually be on the
+// boundary of the cell exactly. Instead, they're the nearest representable
+// point to the corner.
+//
+// Cell edge normals returned by EdgeRaw, however, are computed exactly and
+// can be used with exact predicates to determine spatial relationships to the
+// cell exactly.
+func (c Cell) EdgeRaw(k int) Point {
 	switch k {
 	case 0:
-		return Point{vNorm(int(c.face), c.uv.Y.Lo).Normalize()} // Bottom
+		return Point{vNorm(int(c.face), c.uv.Y.Lo)} // Bottom
 	case 1:
-		return Point{uNorm(int(c.face), c.uv.X.Hi).Normalize()} // Right
+		return Point{uNorm(int(c.face), c.uv.X.Hi)} // Right
 	case 2:
-		return Point{vNorm(int(c.face), c.uv.Y.Hi).Mul(-1.0).Normalize()} // Top
+		return Point{vNorm(int(c.face), c.uv.Y.Hi).Mul(-1.0)} // Top
 	default:
-		return Point{uNorm(int(c.face), c.uv.X.Lo).Mul(-1.0).Normalize()} // Left
+		return Point{uNorm(int(c.face), c.uv.X.Lo).Mul(-1.0)} // Left
 	}
 }
 
 // BoundUV returns the bounds of this cell in (u,v)-space.
 func (c Cell) BoundUV() r2.Rect {
 	return c.uv
+}
+
+// UVCoordOfEdge returns either U or V for the given edge, whichever is constant along it.
+//
+// E.g. boundaries 0 and 2 are constant in the V axis so we return those
+// coordinates, but boundaries 1 and 3 are constant in the U axis, so we
+// return those coordinates.
+//
+// For convenience, the argument is reduced modulo 4 to the range [0..3].
+func (c Cell) UVCoordOfEdge(k int) float64 {
+	k %= 4
+	if k%2 == 0 {
+		return c.BoundUV().Vertices()[k].Y
+	}
+	return c.BoundUV().Vertices()[k].X
+}
+
+// IJCoordOfEdge returns either I or J for the given edge, whichever is constant along it.
+//
+// E.g. boundaries 0 and 2 are constant in the J axis so we return those
+// coordinates, but boundaries 1 and 3 are constant in the I axis, so we
+// return those coordinates.
+//
+// The returned value is not clamped to kLimitIJ-1 as in StToIJ, so
+// that cell edges at the maximum extent of a face are properly returned as
+// kLimitIJ.
+//
+// For convenience, the argument is reduced modulo 4 to the range [0..3].
+func (c Cell) IJCoordOfEdge(k int) int {
+	// We can just convert UV->ST->IJ for this because the IJ coordinates only
+	// have 30 bits of resolution in each axis.  The error in the conversion
+	// will be a couple of epsilon which is <<< 2^-30, so if we use a proper
+	// round-to-nearest operation, we'll always round to the correct IJ value.
+	//
+	// Intel CPUs that support SSE4.1 have the ROUNDSD instruction, and ARM CPUs
+	// with VFP have the VCVT instruction, both of which can implement correct
+	// rounding efficiently regardless of the current FPU rounding mode.
+	return int(math.Round(MaxSize * uvToST(c.UVCoordOfEdge(k))))
 }
 
 // Center returns the direction vector corresponding to the center in

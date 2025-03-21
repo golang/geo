@@ -39,18 +39,25 @@ import (
 )
 
 // writePoint formats the point and writes it to the given writer.
-func writePoint(w io.Writer, p Point) {
+//
+// If roundtripPrecision is true, the coordinates are formatted using
+// enough precision to exactly preserve the floating point values.
+func writePoint(w io.Writer, p Point, roundtripPrecision bool) {
 	ll := LatLngFromPoint(p)
-	fmt.Fprintf(w, "%.15g:%.15g", ll.Lat.Degrees(), ll.Lng.Degrees())
+	if roundtripPrecision {
+		fmt.Fprintf(w, "%.17g:%.17g", ll.Lat.Degrees(), ll.Lng.Degrees())
+	} else {
+		fmt.Fprintf(w, "%.15g:%.15g", ll.Lat.Degrees(), ll.Lng.Degrees())
+	}
 }
 
 // writePoints formats the given points in debug format and writes them to the given writer.
-func writePoints(w io.Writer, pts []Point) {
+func writePoints(w io.Writer, pts []Point, roundtripPrecision bool) {
 	for i, pt := range pts {
 		if i > 0 {
 			fmt.Fprint(w, ", ")
 		}
-		writePoint(w, pt)
+		writePoint(w, pt, roundtripPrecision)
 	}
 }
 
@@ -67,9 +74,9 @@ func parsePoint(s string) Point {
 
 // pointToString returns a string representation suitable for reconstruction
 // by the parsePoint method.
-func pointToString(point Point) string {
+func pointToString(point Point, roundtripPrecision bool) string {
 	var buf bytes.Buffer
-	writePoint(&buf, point)
+	writePoint(&buf, point, roundtripPrecision)
 	return buf.String()
 }
 
@@ -88,9 +95,9 @@ func parsePoints(s string) []Point {
 
 // pointsToString returns a string representation suitable for reconstruction
 // by the parsePoints method.
-func pointsToString(points []Point) string {
+func pointsToString(points []Point, roundtripPrecision bool) string {
 	var buf bytes.Buffer
-	writePoints(&buf, points)
+	writePoints(&buf, points, roundtripPrecision)
 	return buf.String()
 }
 
@@ -224,7 +231,7 @@ func makeLaxPolyline(s string) *LaxPolyline {
 // by the makeLaxPolyline method.
 func laxPolylineToString(l *LaxPolyline) string {
 	var buf bytes.Buffer
-	writePoints(&buf, l.vertices)
+	writePoints(&buf, l.vertices, false) // TODO(rsned): Add rountripPrecision param.
 	return buf.String()
 
 }
@@ -269,6 +276,11 @@ func makeLaxPolygon(s string) *LaxPolygon {
 //
 // Note: Because whitespace is ignored, empty polygons must be specified
 // as the string "empty" rather than as the empty string ("").
+//
+// If roundtripPrecision is true, the coordinates are formatted using
+// enough precision to exactly preserve the floating point values.
+//
+// TODO(rsned): plumb roundtripPrecision parameter through here.
 func makeShapeIndex(s string) *ShapeIndex {
 	fields := strings.Split(s, "#")
 	if len(fields) != 3 {
@@ -317,7 +329,7 @@ func makeShapeIndex(s string) *ShapeIndex {
 // format. The index may contain Shapes of any type. Shapes are reordered
 // if necessary so that all point geometry (shapes of dimension 0) are first,
 // followed by all polyline geometry, followed by all polygon geometry.
-func shapeIndexDebugString(index *ShapeIndex) string {
+func shapeIndexDebugString(index *ShapeIndex, roundtripPrecision bool) string {
 	var buf bytes.Buffer
 
 	for dim := 0; dim <= 2; dim++ {
@@ -341,7 +353,9 @@ func shapeIndexDebugString(index *ShapeIndex) string {
 				buf.WriteString(" | ")
 			} else {
 				if dim > 0 {
-					buf.WriteByte(' ')
+					buf.WriteString(" ")
+				} else {
+					buf.WriteString("")
 				}
 			}
 
@@ -354,16 +368,20 @@ func shapeIndexDebugString(index *ShapeIndex) string {
 					}
 				}
 				chain := shape.Chain(c)
-				pts := []Point{shape.Edge(chain.Start).V0}
+				if chain.Length == 0 {
+					buf.WriteString("full")
+				} else {
+					writePoint(&buf, shape.Edge(chain.Start).V0, roundtripPrecision)
+				}
 				limit := chain.Start + chain.Length
 				if dim != 1 {
 					limit--
 				}
 
 				for e := chain.Start; e < limit; e++ {
-					pts = append(pts, shape.Edge(e).V1)
+					buf.WriteString(", ")
+					writePoint(&buf, shape.Edge(e).V1, roundtripPrecision)
 				}
-				writePoints(&buf, pts)
 				count++
 			}
 		}

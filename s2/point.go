@@ -128,7 +128,7 @@ func (p Point) Distance(b Point) s1.Angle {
 
 // ApproxEqual reports whether the two points are similar enough to be equal.
 func (p Point) ApproxEqual(other Point) bool {
-	return p.approxEqual(other, s1.Angle(epsilon))
+	return p.approxEqual(other, s1.Angle(1e-15))
 }
 
 // approxEqual reports whether the two points are within the given epsilon.
