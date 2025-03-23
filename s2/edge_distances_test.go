@@ -529,7 +529,7 @@ func TestEdgeDistanceUpdateMinInteriorDistanceMaxError(t *testing.T) {
 		}
 		a1 := PointOnLine(a0, randomPoint(), length)
 
-		// TODO(ericv): The error bound holds for antipodal points, but the S2
+		// TODO(rsned): The error bound holds for antipodal points, but the S2
 		// predicates used to test the error do not support antipodal points yet.
 		if a1.Vector == a0.Mul(-1) {
 			continue
@@ -545,22 +545,25 @@ func TestEdgeDistanceUpdateMinInteriorDistanceMaxError(t *testing.T) {
 		minDist := s1.InfChordAngle()
 
 		var ok bool
-		if minDist, ok = UpdateMinInteriorDistance(x, a0, a1, minDist); !ok {
+		// TODO(rsned): The first param here should be minDist which is needed
+		// for the two commented out tests below.  When they are implemented
+		// return this to "if minDist, ok == Update...."
+		if _, ok = UpdateMinInteriorDistance(x, a0, a1, minDist); !ok {
 			iter--
 			continue
 		}
 		// TODO(rsned): Uncomment once predicates has CompareEdgeDistance
 		/*
-		   maxErr := minUpdateDistanceMaxError(minDist)
-		   if got := CompareEdgeDistance(x, a0, a1, minDist.Expanded(maxErr)); got > 0 {
-		           t.Errorf("CompareEdgeDistance(%v, %v, %v, %v) = got, want <= 0",
-		                   x, a0, a1, minDist.Expanded(maxErr), got)
+			maxErr := minUpdateDistanceMaxError(minDist)
+			if got := CompareEdgeDistance(x, a0, a1, minDist.Expanded(maxErr)); got > 0 {
+				t.Errorf("CompareEdgeDistance(%v, %v, %v, %v) = got, want <= 0",
+					x, a0, a1, minDist.Expanded(maxErr), got)
 
-		   }
-		   if got := CompareEdgeDistance(x, a0, a1, minDist.Expanded(-maxErr)); got < 0 {
-		           t.Errorf("CompareEdgeDistance(%v, %v, %v, %v) = got, want >= 0",
-		                   x, a0, a1, minDist.Expanded(-maxErr), got)
-		   }
+			}
+			if got := CompareEdgeDistance(x, a0, a1, minDist.Expanded(-maxErr)); got < 0 {
+				t.Errorf("CompareEdgeDistance(%v, %v, %v, %v) = got, want >= 0",
+					x, a0, a1, minDist.Expanded(-maxErr), got)
+			}
 		*/
 	}
 }
