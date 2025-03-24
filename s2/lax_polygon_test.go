@@ -14,200 +14,267 @@
 
 package s2
 
-// Shape interface enforcement
-var _ Shape = (*laxPolygon)(nil)
+import (
+	"testing"
+)
 
-// laxPolygon represents a region defined by a collection of zero or more
-// closed loops. The interior is the region to the left of all loops. This
-// is similar to Polygon except that this class supports polygons
-// with degeneracies. Degeneracies are of two types: degenerate edges (from a
-// vertex to itself) and sibling edge pairs (consisting of two oppositely
-// oriented edges). Degeneracies can represent either "shells" or "holes"
-// depending on the loop they are contained by. For example, a degenerate
-// edge or sibling pair contained by a "shell" would be interpreted as a
-// degenerate hole. Such edges form part of the boundary of the polygon.
-//
-// Loops with fewer than three vertices are interpreted as follows:
-//   - A loop with two vertices defines two edges (in opposite directions).
-//   - A loop with one vertex defines a single degenerate edge.
-//   - A loop with no vertices is interpreted as the "full loop" containing
-//     all points on the sphere. If this loop is present, then all other loops
-//     must form degeneracies (i.e., degenerate edges or sibling pairs). For
-//     example, two loops {} and {X} would be interpreted as the full polygon
-//     with a degenerate single-point hole at X.
-//
-// laxPolygon does not have any error checking, and it is perfectly fine to
-// create laxPolygon objects that do not meet the requirements below (e.g., in
-// order to analyze or fix those problems). However, laxPolygons must satisfy
-// some additional conditions in order to perform certain operations:
-//
-//   - In order to be valid for point containment tests, the polygon must
-//     satisfy the "interior is on the left" rule. This means that there must
-//     not be any crossing edges, and if there are duplicate edges then all but
-//     at most one of thm must belong to a sibling pair (i.e., the number of
-//     edges in opposite directions must differ by at most one).
-//
-//   - To be valid for polygon operations (BoundaryOperation), degenerate
-//     edges and sibling pairs cannot coincide with any other edges. For
-//     example, the following situations are not allowed:
-//
-//     {AA, AA}     // degenerate edge coincides with another edge
-//     {AA, AB}     // degenerate edge coincides with another edge
-//     {AB, BA, AB} // sibling pair coincides with another edge
-//
-// Note that laxPolygon is much faster to initialize and is more compact than
-// Polygon, but unlike Polygon it does not have any built-in operations.
-// Instead you should use ShapeIndex based operations such as BoundaryOperation,
-// ClosestEdgeQuery, etc.
-type laxPolygon struct {
-	numLoops int
-	vertices []Point
-
-	numVerts           int
-	cumulativeVertices []int
+func TestLaxPolygonShapeEmptyPolygon(t *testing.T) {
+	shape := LaxPolygonFromPolygon((&Polygon{}))
+	if got, want := shape.numLoops, 0; got != want {
+		t.Errorf("shape.numLoops = %d, want %d", got, want)
+	}
+	if got, want := shape.numVertices(), 0; got != want {
+		t.Errorf("shape.numVertices() = %d, want %d", got, want)
+	}
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained should be false")
+	}
 }
 
-// laxPolygonFromPolygon creates a laxPolygon from the given Polygon.
-func laxPolygonFromPolygon(p *Polygon) *laxPolygon {
-	spans := make([][]Point, len(p.loops))
-	for i, loop := range p.loops {
-		if loop.IsFull() {
-			spans[i] = []Point{} // Empty span.
-		} else {
-			spans[i] = make([]Point, len(loop.vertices))
-			copy(spans[i], loop.vertices)
+func TestLaxPolygonFull(t *testing.T) {
+	shape := LaxPolygonFromPolygon(PolygonFromLoops([]*Loop{makeLoop("full")}))
+	if got, want := shape.numLoops, 1; got != want {
+		t.Errorf("shape.numLoops = %d, want %d", got, want)
+	}
+	if got, want := shape.numVertices(), 0; got != want {
+		t.Errorf("shape.numVertices() = %d, want %d", got, want)
+	}
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 1; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if !shape.IsFull() {
+		t.Errorf("shape.IsFull() = false, want true")
+	}
+	if !shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = false, want true")
+	}
+}
+
+func TestLaxPolygonSingleVertexPolygon(t *testing.T) {
+	// Polygon doesn't support single-vertex loops, so we need to construct
+	// the LaxPolygon directly.
+	var loops [][]Point
+	loops = append(loops, parsePoints("0:0"))
+
+	shape := LaxPolygonFromPoints(loops)
+	if got, want := shape.numLoops, 1; got != want {
+		t.Errorf("shape.numLoops = %d, want %d", got, want)
+	}
+	if got, want := shape.numVertices(), 1; got != want {
+		t.Errorf("shape.numVertices() = %d, want %d", got, want)
+	}
+	if got, want := shape.NumEdges(), 1; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 1; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.Chain(0).Start, 0; got != want {
+		t.Errorf("shape.Chain(0).Start = %d, want %d", got, want)
+	}
+	if got, want := shape.Chain(0).Length, 1; got != want {
+		t.Errorf("shape.Chain(0).Length = %d, want %d", got, want)
+	}
+
+	edge := shape.Edge(0)
+	if loops[0][0] != edge.V0 {
+		t.Errorf("shape.Edge(0).V0 = %v, want %v", edge.V0, loops[0][0])
+	}
+	if loops[0][0] != edge.V1 {
+		t.Errorf("shape.Edge(0).V0 = %v, want %v", edge.V1, loops[0][0])
+	}
+	if edge != shape.ChainEdge(0, 0) {
+		t.Errorf("shape.Edge(0) should equal shape.ChainEdge(0, 0)")
+	}
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = true, want false")
+	}
+}
+
+func TestLaxPolygonShapeSingleLoopPolygon(t *testing.T) {
+	vertices := parsePoints("0:0, 0:1, 1:1, 1:0")
+	lenVerts := len(vertices)
+	shape := LaxPolygonFromPolygon(PolygonFromLoops([]*Loop{LoopFromPoints(vertices)}))
+
+	if got, want := shape.numLoops, 1; got != want {
+		t.Errorf("shape.numLoops = %d, want %d", got, want)
+	}
+	if got, want := shape.numVertices(), lenVerts; got != want {
+		t.Errorf("shape.numVertices() = %d, want %d", got, want)
+	}
+	if got, want := shape.numLoopVertices(0), lenVerts; got != want {
+		t.Errorf("shape.numLoopVertices(0) = %d, want %d", got, want)
+	}
+	if got, want := shape.NumEdges(), lenVerts; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 1; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.Chain(0).Start, 0; got != want {
+		t.Errorf("shape.Chain(0).Start = %d, want %d", got, want)
+	}
+	if got, want := shape.Chain(0).Length, lenVerts; got != want {
+		t.Errorf("shape.Chain(0).Length = %d, want %d", got, want)
+	}
+	for i := 0; i < lenVerts; i++ {
+		if got, want := shape.loopVertex(0, i), vertices[i]; got != want {
+			t.Errorf("shape.loopVertex(%d) = %v, want %v", i, got, want)
+		}
+
+		edge := shape.Edge(i)
+		if got, want := vertices[i], edge.V0; got != want {
+			t.Errorf("shape.Edge(%d).V0 = %v, want %v", i, got, want)
+		}
+		if got, want := vertices[(i+1)%lenVerts], edge.V1; got != want {
+			t.Errorf("shape.Edge(%d).V1 = %v, want %v", i, got, want)
+		}
+		if got, want := shape.ChainEdge(0, i).V0, edge.V0; got != want {
+			t.Errorf("shape.ChainEdge(0, %d).V0 = %v, want %v", i, got, want)
+		}
+		if got, want := shape.ChainEdge(0, i).V1, edge.V1; got != want {
+			t.Errorf("shape.ChainEdge(0, %d).V1 = %v, want %v", i, got, want)
 		}
 	}
-	return laxPolygonFromPoints(spans)
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if containsBruteForce(shape, OriginPoint()) {
+		t.Errorf("containsBruteForce(%v, %v) = true, want false", shape, OriginPoint())
+	}
 }
 
-// laxPolygonFromPoints creates a laxPolygon from the given points.
-func laxPolygonFromPoints(loops [][]Point) *laxPolygon {
-	p := &laxPolygon{}
-	p.numLoops = len(loops)
-	if p.numLoops == 0 {
-		p.numVerts = 0
-		p.vertices = nil
-	} else if p.numLoops == 1 {
-		p.numVerts = len(loops[0])
-		p.vertices = make([]Point, p.numVerts)
-		copy(p.vertices, loops[0])
-	} else {
-		p.cumulativeVertices = make([]int, p.numLoops+1)
-		numVertices := 0
-		for i, loop := range loops {
-			p.cumulativeVertices[i] = numVertices
-			numVertices += len(loop)
+func TestLaxPolygonShapeMultiLoopPolygon(t *testing.T) {
+	// Test to make sure that the loops are oriented so that the interior of the
+	// polygon is always on the left.
+	loops := [][]Point{
+		parsePoints("0:0, 0:3, 3:3"), // CCW
+		parsePoints("1:1, 2:2, 1:2"), // CW
+	}
+	lenLoops := len(loops)
+	shape := LaxPolygonFromPoints(loops)
+	if got, want := shape.numLoops, lenLoops; got != want {
+		t.Errorf("shape.numLoops = %d, want %d", got, want)
+	}
+	if got, want := shape.NumChains(), lenLoops; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+
+	numVertices := 0
+	for i, loop := range loops {
+		if got, want := shape.numLoopVertices(i), len(loop); got != want {
+			t.Errorf("shape.numLoopVertices(%d) = %d, want %d", i, got, want)
 		}
-
-		p.cumulativeVertices[p.numLoops] = numVertices
-		for _, points := range loops {
-			p.vertices = append(p.vertices, points...)
+		if got, want := shape.Chain(i).Start, numVertices; got != want {
+			t.Errorf("shape.Chain(%d).Start = %d, want %d", i, got, want)
 		}
+		if got, want := shape.Chain(i).Length, len(loop); got != want {
+			t.Errorf("shape.Chain(%d).Length = %d, want %d", i, got, want)
+		}
+		for j, pt := range loop {
+			if pt != shape.loopVertex(i, j) {
+				t.Errorf("shape.loopVertex(%d, %d) = %v, want %v", i, j, shape.loopVertex(i, j), pt)
+			}
+			edge := shape.Edge(numVertices + j)
+			if pt != edge.V0 {
+				t.Errorf("shape.Edge(%d).V0 = %v, want %v", numVertices+j, edge.V0, pt)
+			}
+			if got, want := loop[(j+1)%len(loop)], edge.V1; got != want {
+				t.Errorf("shape.Edge(%d).V1 = %v, want %v", numVertices+j, got, want)
+			}
+		}
+		numVertices += len(loop)
 	}
-	return p
+
+	if got, want := shape.numVertices(), numVertices; got != want {
+		t.Errorf("shape.numVertices() = %d, want %d", got, want)
+	}
+	if got, want := shape.NumEdges(), numVertices; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if containsBruteForce(shape, OriginPoint()) {
+		t.Errorf("containsBruteForce(%v, %v) = true, want false", shape, OriginPoint())
+	}
 }
 
-// numVertices reports the total number of vertices in all loops.
-func (p *laxPolygon) numVertices() int {
-	if p.numLoops <= 1 {
-		return p.numVerts
+func TestLaxPolygonShapeDegenerateLoops(t *testing.T) {
+	loops := [][]Point{
+		parsePoints("1:1, 1:2, 2:2, 1:2, 1:3, 1:2, 1:1"),
+		parsePoints("0:0, 0:3, 0:6, 0:9, 0:6, 0:3, 0:0"),
+		parsePoints("5:5, 6:6"),
 	}
-	return p.cumulativeVertices[p.numLoops]
+
+	shape := LaxPolygonFromPoints(loops)
+	if shape.ReferencePoint().Contained {
+		t.Errorf("%v.ReferencePoint().Contained() = true, want false", shape)
+	}
 }
 
-// numLoopVertices reports the total number of vertices in the given loop.
-func (p *laxPolygon) numLoopVertices(i int) int {
-	if p.numLoops == 1 {
-		return p.numVerts
+func TestLaxPolygonShapeInvertedLoops(t *testing.T) {
+	loops := [][]Point{
+		parsePoints("1:2, 1:1, 2:2"),
+		parsePoints("3:4, 3:3, 4:4"),
 	}
-	return p.cumulativeVertices[i+1] - p.cumulativeVertices[i]
+	shape := LaxPolygonFromPoints(loops)
+
+	if !containsBruteForce(shape, OriginPoint()) {
+		t.Errorf("containsBruteForce(%v, %v) = false, want true", shape, OriginPoint())
+	}
 }
 
-// loopVertex returns the vertex from loop i at index j.
+// TODO(roberts): Remaining to port:
+// LaxPolygonManyLoopPolygon
+// LaxPolygonMultiLoopS2Polygon
+// LaxPolygonCompareToLoop once fractal testing is added.
+// LaxPolygonCoderWorks
+// LaxPolygonChainIteratorWorks
+// LaxPolygonChainVertexIteratorWorks
 //
-// This requires:
-//
-//	0 <= i < len(loops)
-//	0 <= j < len(loop[i].vertices)
-func (p *laxPolygon) loopVertex(i, j int) Point {
-	if p.numLoops == 1 {
-		return p.vertices[j]
-	}
-
-	return p.vertices[p.cumulativeVertices[i]+j]
-}
-
-func (p *laxPolygon) NumEdges() int { return p.numVertices() }
-
-func (p *laxPolygon) Edge(e int) Edge {
-	e1 := e + 1
-	if p.numLoops == 1 {
-		// wrap the end vertex if this is the last edge.
-		if e1 == p.numVerts {
-			e1 = 0
-		}
-		return Edge{p.vertices[e], p.vertices[e1]}
-	}
-
-	// TODO(roberts): If this turns out to be performance critical in tests
-	// incorporate the maxLinearSearchLoops like in C++.
-
-	// Check if e1 would cross a loop boundary in the set of all vertices.
-	nextLoop := 0
-	for p.cumulativeVertices[nextLoop] <= e {
-		nextLoop++
-	}
-
-	// If so, wrap around to the first vertex of the loop.
-	if e1 == p.cumulativeVertices[nextLoop] {
-		e1 = p.cumulativeVertices[nextLoop-1]
-	}
-
-	return Edge{p.vertices[e], p.vertices[e1]}
-}
-
-func (p *laxPolygon) Dimension() int                 { return 2 }
-func (p *laxPolygon) typeTag() typeTag               { return typeTagLaxPolygon }
-func (p *laxPolygon) privateInterface()              {}
-func (p *laxPolygon) IsEmpty() bool                  { return defaultShapeIsEmpty(p) }
-func (p *laxPolygon) IsFull() bool                   { return defaultShapeIsFull(p) }
-func (p *laxPolygon) ReferencePoint() ReferencePoint { return referencePointForShape(p) }
-func (p *laxPolygon) NumChains() int                 { return p.numLoops }
-func (p *laxPolygon) Chain(i int) Chain {
-	if p.numLoops == 1 {
-		return Chain{0, p.numVertices()}
-	}
-	start := p.cumulativeVertices[i]
-	return Chain{start, p.cumulativeVertices[i+1] - start}
-}
-
-func (p *laxPolygon) ChainEdge(i, j int) Edge {
-	n := p.numLoopVertices(i)
-	k := 0
-	if j+1 != n {
-		k = j + 1
-	}
-	if p.numLoops == 1 {
-		return Edge{p.vertices[j], p.vertices[k]}
-	}
-	base := p.cumulativeVertices[i]
-	return Edge{p.vertices[base+j], p.vertices[base+k]}
-}
-
-func (p *laxPolygon) ChainPosition(e int) ChainPosition {
-	if p.numLoops == 1 {
-		return ChainPosition{0, e}
-	}
-
-	// TODO(roberts): If this turns out to be performance critical in tests
-	// incorporate the maxLinearSearchLoops like in C++.
-
-	// Find the index of the first vertex of the loop following this one.
-	nextLoop := 1
-	for p.cumulativeVertices[nextLoop] <= e {
-		nextLoop++
-	}
-
-	return ChainPosition{p.cumulativeVertices[nextLoop] - p.cumulativeVertices[1], e - p.cumulativeVertices[nextLoop-1]}
-}
