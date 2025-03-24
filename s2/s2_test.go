@@ -31,6 +31,11 @@ var (
 	// When using blaze/bazel add "--test_arg=--benchmark_brute_force=true"
 	benchmarkBruteForce = flag.Bool("benchmark_brute_force", false,
 		"When set, use brute force algorithms in benchmarking.")
+
+	// To set in go testing add "--s2_random_seed=123" to your test command.
+	// When using blaze/bazel add "--test_arg=--s2_random_seed=123"
+	s2RandomSeed = flag.Int("s2_random_seed", 1,
+		"Seed value that can be used in testing and benchmarks.")
 )
 
 const (
