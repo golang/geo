@@ -49,7 +49,7 @@ const (
 var (
 	// set up a random generator for use in tests.
 	// Prior to Go 1.20, the generator was seeded like Seed(1) at program startup.
-	// Using the default see flag value will produce the prior behavior.
+	// Using the default seed flag value will produce the prior behavior.
 	random = rand.New(rand.NewSource(*s2RandomSeed))
 )
 
