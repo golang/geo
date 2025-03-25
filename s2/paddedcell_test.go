@@ -146,7 +146,7 @@ func TestPaddedCellShrinkToFit(t *testing.T) {
 		// Find the biggest rectangle that fits in "result" after padding.
 		// (These calculations ignore numerical errors.)
 		maxPadding := 0.5 * math.Min(sizeUV.X, sizeUV.Y)
-		padding := maxPadding * randomFloat64()
+		padding := maxPadding * randomUniformFloat64(0, maxPadding)
 		maxRect := resultUV.ExpandedByMargin(-padding)
 
 		// Start with a random subset of the maximum rectangle.
