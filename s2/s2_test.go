@@ -34,7 +34,7 @@ var (
 
 	// To set in go testing add "--s2_random_seed=123" to your test command.
 	// When using blaze/bazel add "--test_arg=--s2_random_seed=123"
-	s2RandomSeed = flag.Int("s2_random_seed", 1,
+	s2RandomSeed = flag.Int64("s2_random_seed", 1,
 		"Seed value that can be used in testing and benchmarks.")
 )
 
@@ -46,6 +46,13 @@ const (
 	epsilon = 1e-15
 )
 
+var (
+	// set up a random generator for use in tests.
+	// Prior to Go 1.20, the generator was seeded like Seed(1) at program startup.
+	// Using the default see flag value will produce the prior behavior.
+	random = rand.New(rand.NewSource(*s2RandomSeed))
+)
+
 // float64Eq reports whether the two values are within the default epsilon.
 func float64Eq(x, y float64) bool { return float64Near(x, y, epsilon) }
 
@@ -53,8 +60,6 @@ func float64Eq(x, y float64) bool { return float64Near(x, y, epsilon) }
 func float64Near(x, y, ε float64) bool {
 	return math.Abs(x-y) <= ε
 }
-
-// TODO(roberts): Add in flag to allow specifying the random seed for repeatable tests.
 
 // The Earth's mean radius in kilometers (according to NASA).
 const earthRadiusKm = 6371.01
@@ -66,66 +71,75 @@ func kmToAngle(km float64) s1.Angle {
 
 // randomBits returns a 64-bit random unsigned integer whose lowest "num" are random, and
 // whose other bits are zero.
-func randomBits(num uint32) uint64 {
+func randomBits(num uint32, r ...*rand.Rand) uint64 {
+	rnd := random
+	if len(r) > 0 {
+		rnd = r[0]
+	}
 	// Make sure the request is for not more than 63 bits.
 	if num > 63 {
 		num = 63
 	}
-	return uint64(rand.Int63()) & ((1 << num) - 1)
+	return uint64(rnd.Int63()) & ((1 << num) - 1)
 }
 
 // Return a uniformly distributed 64-bit unsigned integer.
-func randomUint64() uint64 {
-	return uint64(rand.Int63() | (rand.Int63() << 63))
+func randomUint64(r ...*rand.Rand) uint64 {
+	rnd := random
+	if len(r) > 0 {
+		rnd = r[0]
+	}
+
+	return uint64(rnd.Int63() | (rnd.Int63() << 63))
 }
 
 // Return a uniformly distributed 32-bit unsigned integer.
-func randomUint32() uint32 {
-	return uint32(randomBits(32))
+func randomUint32(r ...*rand.Rand) uint32 {
+	return uint32(randomBits(32, r...))
 }
 
 // randomFloat64 returns a uniformly distributed value in the range [0,1).
 // Note that the values returned are all multiples of 2**-53, which means that
 // not all possible values in this range are returned.
-func randomFloat64() float64 {
+func randomFloat64(r ...*rand.Rand) float64 {
 	const randomFloatBits = 53
-	return math.Ldexp(float64(randomBits(randomFloatBits)), -randomFloatBits)
+	return math.Ldexp(float64(randomBits(randomFloatBits, r...)), -randomFloatBits)
 }
 
 // randomUniformInt returns a uniformly distributed integer in the range [0,n).
 // NOTE: This is replicated here to stay in sync with how the C++ code generates
 // uniform randoms. (instead of using Go's math/rand package directly).
-func randomUniformInt(n int) int {
-	return int(randomFloat64() * float64(n))
+func randomUniformInt(n int, r ...*rand.Rand) int {
+	return int(randomFloat64(r...) * float64(n))
 }
 
 // randomUniformFloat64 returns a uniformly distributed value in the range [min, max).
-func randomUniformFloat64(min, max float64) float64 {
-	return min + randomFloat64()*(max-min)
+func randomUniformFloat64(min, max float64, r ...*rand.Rand) float64 {
+	return min + randomFloat64(r...)*(max-min)
 }
 
 // oneIn returns true with a probability of 1/n.
-func oneIn(n int) bool {
-	return randomUniformInt(n) == 0
+func oneIn(n int, r ...*rand.Rand) bool {
+	return randomUniformInt(n, r...) == 0
 }
 
 // randomPoint returns a random unit-length vector.
-func randomPoint() Point {
-	return PointFromCoords(randomUniformFloat64(-1, 1),
-		randomUniformFloat64(-1, 1), randomUniformFloat64(-1, 1))
+func randomPoint(r ...*rand.Rand) Point {
+	return PointFromCoords(randomUniformFloat64(-1, 1, r...),
+		randomUniformFloat64(-1, 1, r...), randomUniformFloat64(-1, 1, r...))
 }
 
 // randomFrame returns a right-handed coordinate frame (three orthonormal vectors) for
 // a randomly generated point.
-func randomFrame() *matrix3x3 {
-	return randomFrameAtPoint(randomPoint())
+func randomFrame(r ...*rand.Rand) *matrix3x3 {
+	return randomFrameAtPoint(randomPoint(r...))
 }
 
 // randomFrameAtPoint returns a right-handed coordinate frame using the given
 // point as the z-axis. The x- and y-axes are computed such that (x,y,z) is a
 // right-handed coordinate frame (three orthonormal vectors).
-func randomFrameAtPoint(z Point) *matrix3x3 {
-	x := Point{z.Cross(randomPoint().Vector).Normalize()}
+func randomFrameAtPoint(z Point, r ...*rand.Rand) *matrix3x3 {
+	x := Point{z.Cross(randomPoint(r...).Vector).Normalize()}
 	y := Point{z.Cross(x.Vector).Normalize()}
 
 	m := &matrix3x3{}
@@ -138,24 +152,24 @@ func randomFrameAtPoint(z Point) *matrix3x3 {
 // randomCellIDForLevel returns a random CellID at the given level.
 // The distribution is uniform over the space of cell ids, but only
 // approximately uniform over the surface of the sphere.
-func randomCellIDForLevel(level int) CellID {
-	face := randomUniformInt(NumFaces)
-	pos := randomUint64() & uint64((1<<PosBits)-1)
+func randomCellIDForLevel(level int, r ...*rand.Rand) CellID {
+	face := randomUniformInt(NumFaces, r...)
+	pos := randomUint64(r...) & uint64((1<<PosBits)-1)
 	return CellIDFromFacePosLevel(face, pos, level)
 }
 
 // randomCellID returns a random CellID at a randomly chosen
 // level. The distribution is uniform over the space of cell ids,
 // but only approximately uniform over the surface of the sphere.
-func randomCellID() CellID {
-	return randomCellIDForLevel(randomUniformInt(MaxLevel + 1))
+func randomCellID(r ...*rand.Rand) CellID {
+	return randomCellIDForLevel(randomUniformInt(MaxLevel+1), r...)
 }
 
 // randomCellUnion returns a CellUnion of the given size of randomly selected cells.
-func randomCellUnion(n int) CellUnion {
+func randomCellUnion(n int, r ...*rand.Rand) CellUnion {
 	var cu CellUnion
 	for i := 0; i < n; i++ {
-		cu = append(cu, randomCellID())
+		cu = append(cu, randomCellID(r...))
 	}
 	return cu
 }
@@ -172,17 +186,22 @@ func concentricLoopsPolygon(center Point, numLoops, verticesPerLoop int) *Polygo
 }
 
 // skewedInt returns a number in the range [0,2^max_log-1] with bias towards smaller numbers.
-func skewedInt(maxLog int) int {
-	base := uint32(rand.Int31n(int32(maxLog + 1)))
-	return int(randomBits(31) & ((1 << base) - 1))
+func skewedInt(maxLog int, r ...*rand.Rand) int {
+	rnd := random
+	if len(r) > 0 {
+		rnd = r[0]
+	}
+
+	base := uint32(rnd.Int31n(int32(maxLog + 1)))
+	return int(randomBits(31, r...) & ((1 << base) - 1))
 }
 
 // randomCap returns a cap with a random axis such that the log of its area is
 // uniformly distributed between the logs of the two given values. The log of
 // the cap angle is also approximately uniformly distributed.
-func randomCap(minArea, maxArea float64) Cap {
-	capArea := maxArea * math.Pow(minArea/maxArea, randomFloat64())
-	return CapFromCenterArea(randomPoint(), capArea)
+func randomCap(minArea, maxArea float64, r ...*rand.Rand) Cap {
+	capArea := maxArea * math.Pow(minArea/maxArea, randomFloat64(r...))
+	return CapFromCenterArea(randomPoint(r...), capArea)
 }
 
 // latLngsApproxEqual reports of the two LatLngs are within the given epsilon.
@@ -276,21 +295,21 @@ func matricesApproxEqual(m1, m2 *matrix3x3) bool {
 
 // samplePointFromRect returns a point chosen uniformly at random (with respect
 // to area on the sphere) from the given rectangle.
-func samplePointFromRect(rect Rect) Point {
+func samplePointFromRect(rect Rect, r ...*rand.Rand) Point {
 	// First choose a latitude uniformly with respect to area on the sphere.
 	sinLo := math.Sin(rect.Lat.Lo)
 	sinHi := math.Sin(rect.Lat.Hi)
-	lat := math.Asin(randomUniformFloat64(sinLo, sinHi))
+	lat := math.Asin(randomUniformFloat64(sinLo, sinHi, r...))
 
 	// Now choose longitude uniformly within the given range.
-	lng := rect.Lng.Lo + randomFloat64()*rect.Lng.Length()
+	lng := rect.Lng.Lo + randomFloat64(r...)*rect.Lng.Length()
 
 	return PointFromLatLng(LatLng{s1.Angle(lat), s1.Angle(lng)}.Normalized())
 }
 
 // samplePointFromCap returns a point chosen uniformly at random (with respect
 // to area) from the given cap.
-func samplePointFromCap(c Cap) Point {
+func samplePointFromCap(c Cap, r ...*rand.Rand) Point {
 	// We consider the cap axis to be the "z" axis. We choose two other axes to
 	// complete the coordinate frame.
 	m := getFrame(c.Center())
@@ -298,19 +317,19 @@ func samplePointFromCap(c Cap) Point {
 	// The surface area of a spherical cap is directly proportional to its
 	// height. First we choose a random height, and then we choose a random
 	// point along the circle at that height.
-	h := randomFloat64() * c.Height()
-	theta := 2 * math.Pi * randomFloat64()
-	r := math.Sqrt(h * (2 - h))
+	h := randomFloat64(r...) * c.Height()
+	theta := 2 * math.Pi * randomFloat64(r...)
+	rad := math.Sqrt(h * (2 - h))
 
 	// The result should already be very close to unit-length, but we might as
 	// well make it accurate as possible.
-	return Point{fromFrame(m, PointFromCoords(math.Cos(theta)*r, math.Sin(theta)*r, 1-h)).Normalize()}
+	return Point{fromFrame(m, PointFromCoords(math.Cos(theta)*rad, math.Sin(theta)*rad, 1-h)).Normalize()}
 }
 
 // perturbATowardsB returns a point that has been shifted some distance towards the
 // second point based on a random number.
-func perturbATowardsB(a, b Point) Point {
-	choice := randomFloat64()
+func perturbATowardsB(a, b Point, r ...*rand.Rand) Point {
+	choice := randomFloat64(r...)
 	if choice < 0.1 {
 		return a
 	}
@@ -318,7 +337,7 @@ func perturbATowardsB(a, b Point) Point {
 		// Return a point that is exactly proportional to A and that still
 		// satisfies IsUnitLength().
 		for {
-			b := Point{a.Mul(2 - a.Norm() + 5*(randomFloat64()-0.5)*dblEpsilon)}
+			b := Point{a.Mul(2 - a.Norm() + 5*(randomFloat64(r...)-0.5)*dblEpsilon)}
 			if !b.ApproxEqual(a) && b.IsUnit() {
 				return b
 			}
@@ -330,7 +349,7 @@ func perturbATowardsB(a, b Point) Point {
 	}
 	// Otherwise return a point whose distance from A is near dblEpsilon such
 	// that the log of the pdf is uniformly distributed.
-	distance := dblEpsilon * 1e-5 * math.Pow(1e6, randomFloat64())
+	distance := dblEpsilon * 1e-5 * math.Pow(1e6, randomFloat64(r...))
 	return InterpolateAtDistance(s1.Angle(distance), a, b)
 }
 
@@ -339,20 +358,20 @@ func perturbATowardsB(a, b Point) Point {
 // it returns either an edge midpoint, face midpoint, or corner vertex that is
 // in the plane of PQ and that has been perturbed slightly. It also sometimes
 // returns a random point from anywhere on the sphere.
-func perturbedCornerOrMidpoint(p, q Point) Point {
-	a := p.Mul(float64(randomUniformInt(3) - 1)).Add(q.Mul(float64(randomUniformInt(3) - 1)))
+func perturbedCornerOrMidpoint(p, q Point, r ...*rand.Rand) Point {
+	a := p.Mul(float64(randomUniformInt(3, r...) - 1)).Add(q.Mul(float64(randomUniformInt(3, r...) - 1)))
 	if oneIn(10) {
 		// This perturbation often has no effect except on coordinates that are
 		// zero, in which case the perturbed value is so small that operations on
 		// it often result in underflow.
-		a = a.Add(randomPoint().Mul(math.Pow(1e-300, randomFloat64())))
+		a = a.Add(randomPoint(r...).Mul(math.Pow(1e-300, randomFloat64(r...))))
 	} else if oneIn(2) {
 		// For coordinates near 1 (say > 0.5), this perturbation yields values
 		// that are only a few representable values away from the initial value.
-		a = a.Add(randomPoint().Mul(4 * dblEpsilon))
+		a = a.Add(randomPoint(r...).Mul(4 * dblEpsilon))
 	} else {
 		// A perturbation whose magnitude is in the range [1e-25, 1e-10].
-		a = a.Add(randomPoint().Mul(1e-10 * math.Pow(1e-15, randomFloat64())))
+		a = a.Add(randomPoint(r...).Mul(1e-10 * math.Pow(1e-15, randomFloat64(r...))))
 	}
 
 	if a.Norm2() < math.SmallestNonzeroFloat64 {
