@@ -17,7 +17,6 @@ package s2
 import (
 	"fmt"
 	"math"
-	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/r1"
@@ -250,7 +249,9 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 func TestEdgeClippingClipToPaddedFace(t *testing.T) {
 	// About 1.2% flaky with a random seed.
 	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(1)
+	// If still flaky after using new seeded random in testing,
+	// refactor to pass in a specific Source in the calls to random things here.
+	// r := rand.New(rand.NewSource(1))
 
 	// Start with a few simple cases.
 	// An edge that is entirely contained within one cube face:
