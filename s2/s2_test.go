@@ -386,6 +386,8 @@ func perturbedCornerOrMidpoint(p, q Point, r ...*rand.Rand) Point {
 		// This perturbation often has no effect except on coordinates that are
 		// zero, in which case the perturbed value is so small that operations on
 		// it often result in underflow.
+		// TODO(rsned): Change this to
+		// a += s2random::LogUniform(bitgen, 1e-300, 1.0) * s2random::Point(bitgen);
 		a = a.Add(randomPoint(r...).Mul(math.Pow(1e-300, randomFloat64(r...))))
 	} else if oneIn(2) {
 		// For coordinates near 1 (say > 0.5), this perturbation yields values
@@ -393,12 +395,14 @@ func perturbedCornerOrMidpoint(p, q Point, r ...*rand.Rand) Point {
 		a = a.Add(randomPoint(r...).Mul(4 * dblEpsilon))
 	} else {
 		// A perturbation whose magnitude is in the range [1e-25, 1e-10].
+		// TODO(rsned): Change this to
+		// a += s2random::LogUniform(bitgen, 1e-25, 1e-10) * s2random::Point(bitgen);
 		a = a.Add(randomPoint(r...).Mul(1e-10 * math.Pow(1e-15, randomFloat64(r...))))
 	}
 
 	if a.Norm2() < math.SmallestNonzeroFloat64 {
 		// If a.Norm2() is denormalized, Normalize() loses too much precision.
-		return perturbedCornerOrMidpoint(p, q)
+		return perturbedCornerOrMidpoint(p, q, r...)
 	}
 	return Point{a}
 }
