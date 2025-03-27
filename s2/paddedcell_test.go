@@ -132,11 +132,8 @@ func TestPaddedCellEntryExitVertices(t *testing.T) {
 }
 
 func TestPaddedCellShrinkToFit(t *testing.T) {
-	// About 0.2% flaky with a random seed.
+	// TODO: Verify if it's still about 0.2% flaky with a random seed.
 	// TODO(rsned): https://github.com/golang/geo/issues/120
-	// If still flaky after using new seeded random in testing,
-	// refactor to pass in a specific Source in the calls to random things here.
-	// r := rand.New(rand.NewSource(1))
 
 	for iter := 0; iter < 1000; iter++ {
 		// Start with the desired result and work backwards.

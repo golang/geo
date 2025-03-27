@@ -242,7 +242,7 @@ func testEdgeQueryWithGenerator(t *testing.T,
 	var indexCaps []Cap
 	var indexes []*ShapeIndex
 	for i := 0; i < numIndexes; i++ {
-		// Replace with:
+		// TODO(rsned): Replace with:
 	        // r := rand.New(rand.NewSource(i))
 		rand.Seed(int64(i))
 		indexCaps = append(indexCaps, CapFromCenterAngle(randomPoint(), testCapRadius))
@@ -251,7 +251,7 @@ func testEdgeQueryWithGenerator(t *testing.T,
 	}
 
 	for i := 0; i < numQueries; i++ {
-		// Replace with:
+		// TODO(rsned): Replace with:
 	        // r := rand.New(rand.NewSource(i))
 		rand.Seed(int64(i))
 		iIndex := randomUniformInt(numIndexes)

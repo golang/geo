@@ -50,11 +50,8 @@ func numVerticesAtLevel(level int) int {
 }
 
 func TestTestingFractal(t *testing.T) {
-	// About 2.4% flaky with a random seed, due to CesaroMultiFractal.
-	// TODO: https://github.com/golang/geo/issues/120
-	// If still flaky after using new seeded random in testing,
-	// refactor to pass in a specific Source in the calls to random things here.
-	// r := rand.New(rand.NewSource(1))
+	// TODO: Verify if it's about 2.4% flaky with a random seed, due to CesaroMultiFractal.
+	// TODO(rsned): https://github.com/golang/geo/issues/120
 
 	tests := []struct {
 		label     string
@@ -247,7 +244,7 @@ func TestChordAngleMaxPointError(t *testing.T) {
 	}
 }
 
-// TODO(roberts): Remaining tests
+// TODO(rsned): Remaining tests
 // TriangleFractal
 // TriangleMultiFractal
 // SpaceFillingFractal

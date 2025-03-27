@@ -374,11 +374,8 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 // to stay more inline with what's current in C++.
 
 func TestCellUnionNormalizePseudoRandom(t *testing.T) {
-	// About 2.4% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	// If still flaky after using new seeded random in testing,
-	// refactor to pass in a specific Source in the calls to random things here.
-	// r := rand.New(rand.NewSource(2))
+	// TODO: Verify if it's still about 2.4% flaky with a random seed.
+	// TODO(rsned): https://github.com/golang/geo/issues/120
 
 	// Try a bunch of random test cases, and keep track of average statistics
 	// for normalization (to see if they agree with the analysis above).

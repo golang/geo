@@ -34,7 +34,7 @@ var (
 
 	// To set in go testing add "--s2_random_seed=123" to your test command.
 	// When using blaze/bazel add "--test_arg=--s2_random_seed=123"
-	s2RandomSeed = flag.Int64("s2_random_seed", 1,
+	s2RandomSeed = flag.Int64("s2_random_seed", 0,
 		"Seed value that can be used in testing and benchmarks.")
 )
 
@@ -48,10 +48,22 @@ const (
 
 var (
 	// set up a random generator for use in tests.
-	// Prior to Go 1.20, the generator was seeded like Seed(1) at program startup.
-	// Using the default seed flag value will produce the prior behavior.
-	random = rand.New(rand.NewSource(*s2RandomSeed))
+	// Prior to Go 1.20, the default random generator was seeded like Seed(1)
+	// at program startup. Now we seed our local random generator with a
+	// pseduo-random value to get things started. If the flag for the seed
+	// is set, the tests will update it at init() time to reseed with the
+	// requested value.
+	random = rand.New(rand.NewSource(rand.Int63()))
 )
+
+func init() {
+	// Init runs after the default flag parsing has happened, so check
+	// to see if the user specified a different value to use. If so,
+	// reseed the generator with that value.
+	if *s2RandomSeed != 0 {
+		random = rand.New(rand.NewSource(*s2RandomSeed))
+	}
+}
 
 // float64Eq reports whether the two values are within the default epsilon.
 func float64Eq(x, y float64) bool { return float64Near(x, y, epsilon) }
@@ -71,6 +83,8 @@ func kmToAngle(km float64) s1.Angle {
 
 // randomBits returns a 64-bit random unsigned integer whose lowest "num" are random, and
 // whose other bits are zero.
+//
+// The parameter r will only use the first supplied Rand source even if more are passed in.
 func randomBits(num uint32, r ...*rand.Rand) uint64 {
 	rnd := random
 	if len(r) > 0 {
@@ -84,6 +98,12 @@ func randomBits(num uint32, r ...*rand.Rand) uint64 {
 }
 
 // Return a uniformly distributed 64-bit unsigned integer.
+//
+// The parameter r will only use the first supplied Rand source even if more are passed in.
+// TODO(rsned): C++ has moved to absl::Uniform and absl/random/random.h. See if
+// this can be converted to just use the standard rand.Uint64() instead. Similarly
+// for other low level random methods in here.
+// https://github.com/golang/geo/issues/131
 func randomUint64(r ...*rand.Rand) uint64 {
 	rnd := random
 	if len(r) > 0 {
@@ -186,6 +206,8 @@ func concentricLoopsPolygon(center Point, numLoops, verticesPerLoop int) *Polygo
 }
 
 // skewedInt returns a number in the range [0,2^max_log-1] with bias towards smaller numbers.
+//
+// The parameter r will only use the first supplied Rand source even if more are passed in.
 func skewedInt(maxLog int, r ...*rand.Rand) int {
 	rnd := random
 	if len(r) > 0 {
@@ -578,7 +600,7 @@ func (f *fractal) makeLoop(frame *matrix3x3, nominalRadius s1.Angle) *Loop {
 	return LoopFromPoints(verts)
 }
 
-// TODO(roberts): Items remaining to port:
+// TODO(rsned): Items remaining to port:
 // CheckCovering
 // CheckResultSet
 // CheckDistanceResults
