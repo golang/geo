@@ -317,3 +317,48 @@ func Rotate(p, axis Point, angle s1.Angle) Point {
 func (p Point) stableAngle(o Point) s1.Angle {
 	return s1.Angle(2 * math.Atan2(p.Sub(o.Vector).Norm(), p.Add(o.Vector).Norm()))
 }
+
+// IsNormalizable reports if the given Point's magnitude is large enough such that the
+// angle to another vector of the same magnitude can be measured using Angle()
+// without loss of precision due to floating-point underflow.  (This requirement
+// is also sufficient to ensure that Normalize() can be called without risk of
+// precision loss.)
+func (p Point) IsNormalizable() bool {
+	// Let ab = RobustCrossProd(a, b) and cd = RobustCrossProd(cd).  In order for
+	// ab.Angle(cd) to not lose precision, the squared magnitudes of ab and cd
+	// must each be at least 2**-484.  This ensures that the sum of the squared
+	// magnitudes of ab.CrossProd(cd) and ab.DotProd(cd) is at least 2**-968,
+	// which ensures that any denormalized terms in these two calculations do
+	// not affect the accuracy of the result (since all denormalized numbers are
+	// smaller than 2**-1022, which is less than dblError * 2**-968).
+	//
+	// The fastest way to ensure this is to test whether the largest component of
+	// the result has a magnitude of at least 2**-242.
+	return maxFloat64(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z)) >= math.Ldexp(1, -242)
+}
+
+// EnsureNormalizable scales a vector as necessary to ensure that the result can
+// be normalized without loss of precision due to floating-point underflow.
+//
+// This requires p != (0, 0, 0)
+func (p Point) EnsureNormalizable() Point {
+	// TODO(rsned): Zero vector isn't normalizable, and we don't have DCHECK in Go.
+	// What is the appropriate return value in this case? Is it {NaN, NaN, NaN}?
+	if p == (Point{r3.Vector{0, 0, 0}}) {
+		return p
+	}
+	if !p.IsNormalizable() {
+		// We can't just scale by a fixed factor because the smallest representable
+		// double is 2**-1074, so if we multiplied by 2**(1074 - 242) then the
+		// result might be so large that we couldn't square it without overflow.
+		//
+		// Note that we must scale by a power of two to avoid rounding errors.
+		// The code below scales "p" such that the largest component is
+		// in the range [1, 2).
+		pMax := maxFloat64(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z))
+
+		// This avoids signed overflow for any value of Ilogb().
+		return Point{p.Mul(math.Ldexp(2, -1-math.Ilogb(pMax)))}
+	}
+	return p
+}
