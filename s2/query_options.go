@@ -130,7 +130,7 @@ func (q *queryOptions) MaxError(x s1.ChordAngle) *queryOptions {
 // This must be at least 1.
 func (q *queryOptions) MaxResults(x int) *queryOptions {
 	// TODO(roberts): What should be done if the value is <= 0?
-	q.maxResults = int(x)
+	q.maxResults = x
 	return q
 }
 
