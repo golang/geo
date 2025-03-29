@@ -1204,5 +1204,5 @@ func TestRectCentroidFullRange(t *testing.T) {
 	// the centroids of the pieces add to give the centroid of their parent.
 	// To make the code simpler we avoid rectangles that cross the 180 degree
 	// line of longitude.
-	testRectCentroidSplitting(t, Rect{r1.Interval{Lo: -math.Pi / 2, Hi: math.Pi / 2}, s1.Interval{Lo: -math.Pi, Hi: math.Pi}}, 10)
+	testRectCentroidSplitting(t, Rect{validRectLatRange, s1.Interval{Lo: -3.14, Hi: 3.14}}, 10)
 }

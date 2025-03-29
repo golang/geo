@@ -31,6 +31,7 @@ type Rect struct {
 }
 
 var (
+	// TODO(rsned): Make these public to match FullLat/FullLng from C++
 	validRectLatRange = r1.Interval{Lo: -math.Pi / 2, Hi: math.Pi / 2}
 	validRectLngRange = s1.FullInterval()
 )

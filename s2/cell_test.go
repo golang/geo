@@ -16,7 +16,6 @@ package s2
 
 import (
 	"math"
-	"math/rand"
 	"testing"
 	"unsafe"
 
@@ -559,9 +558,8 @@ func TestCellContainsPoint(t *testing.T) {
 }
 
 func TestCellContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
-	// About 1% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(1)
+	// TODO: Is it still about 1% flaky with a random seed.
+	// TODO(rsned): https://github.com/golang/geo/issues/120
 
 	// Construct many points that are nearly on a Cell edge, and verify that
 	// CellFromCellID(cellIDFromPoint(p)).Contains(p) is always true.
@@ -571,7 +569,7 @@ func TestCellContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
 		i2 := (i1 + 1) & 3
 		v1 := cell.Vertex(i1)
 		v2 := samplePointFromCap(CapFromCenterAngle(cell.Vertex(i2), s1.Angle(epsilon)))
-		p := Interpolate(randomFloat64(), v1, v2)
+		p := Interpolate(randomUniformFloat64(0, 1.0), v1, v2)
 		if !CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) {
 			t.Errorf("For p=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p)
 		}
@@ -732,9 +730,8 @@ func maxDistanceToEdgeBruteForce(cell Cell, a, b Point) s1.ChordAngle {
 }
 
 func TestCellDistanceToEdge(t *testing.T) {
-	// About 0.1% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(2)
+	// TODO: Is it still about 0.1% flaky with a random seed.
+	// TODO(rsned): https://github.com/golang/geo/issues/120
 
 	for iter := 0; iter < 1000; iter++ {
 		cell := CellFromCellID(randomCellID())
@@ -814,6 +811,6 @@ func TestCellMaxDistanceToCell(t *testing.T) {
 	}
 }
 
-// TODO(roberts): Differences from C++.
+// TODO(rsned): Differences from C++.
 // CellVsLoopRectBound
 // RectBoundIsLargeEnough

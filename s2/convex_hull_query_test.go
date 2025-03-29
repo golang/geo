@@ -16,7 +16,6 @@ package s2
 
 import (
 	"math"
-	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/s1"
@@ -194,9 +193,8 @@ func TestConvexHullQueryLoopsAroundNorthPole(t *testing.T) {
 }
 
 func TestConvexHullQueryPointsInsideHull(t *testing.T) {
-	// About 0.3% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(1)
+	// TODO: Verify if it's still about 0.3% flaky with a random seed.
+	// TODO(rsned): https://github.com/golang/geo/issues/120
 
 	// Repeatedly build the convex hull of a set of points, then add more points
 	// inside that loop and build the convex hull again. The result should
@@ -223,7 +221,7 @@ func TestConvexHullQueryPointsInsideHull(t *testing.T) {
 		// test pass reliably it means that we need to reject convex hulls whose
 		// bounding cap (when computed from a bounding rectangle) is not convex.
 		//
-		// TODO(roberts): This test can still fail (about 1 iteration in 500,000)
+		// TODO(rsned): This test can still fail (about 1 iteration in 500,000)
 		// because the Rect.CapBound implementation does not guarantee
 		// that A.Contains(B) implies A.CapBound().Contains(B.CapBound()).
 		if hull.CapBound().Height() >= 1 {
