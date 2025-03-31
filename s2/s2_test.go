@@ -97,12 +97,13 @@ func randomBits(num uint32, r ...*rand.Rand) uint64 {
 	return uint64(rnd.Int63()) & ((1 << num) - 1)
 }
 
-// Return a uniformly distributed 64-bit unsigned integer.
+// randomUint64 returns a uniformly distributed 64-bit unsigned integer.
 //
 // The parameter r will only use the first supplied Rand source even if more are passed in.
+//
 // TODO(rsned): C++ has moved to absl::Uniform and absl/random/random.h. See if
-// this can be converted to just use the standard rand.Uint64() instead. Similarly
-// for other low level random methods in here.
+// these lower level random helpers can be converted to just use the standard
+// rand.Uint64() instead.
 // https://github.com/golang/geo/issues/131
 func randomUint64(r ...*rand.Rand) uint64 {
 	rnd := random
@@ -113,7 +114,7 @@ func randomUint64(r ...*rand.Rand) uint64 {
 	return uint64(rnd.Int63() | (rnd.Int63() << 63))
 }
 
-// Return a uniformly distributed 32-bit unsigned integer.
+// randomUint32 returns a uniformly distributed 32-bit unsigned integer.
 func randomUint32(r ...*rand.Rand) uint32 {
 	return uint32(randomBits(32, r...))
 }
@@ -383,20 +384,21 @@ func perturbATowardsB(a, b Point, r ...*rand.Rand) Point {
 func perturbedCornerOrMidpoint(p, q Point, r ...*rand.Rand) Point {
 	a := p.Mul(float64(randomUniformInt(3, r...) - 1)).Add(q.Mul(float64(randomUniformInt(3, r...) - 1)))
 	if oneIn(10) {
-		// This perturbation often has no effect except on coordinates that are
-		// zero, in which case the perturbed value is so small that operations on
-		// it often result in underflow.
-		// TODO(rsned): Change this to
-		// a += s2random::LogUniform(bitgen, 1e-300, 1.0) * s2random::Point(bitgen);
+		// This perturbation often has no effect except on coordinates
+		// that are zero, in which case the perturbed value is so
+		// small that operations on it often result in underflow.
+		// TODO(rsned): Change this from math.Pow to
+		// randomLogUniformFloat64(1e-300, 1.0)
 		a = a.Add(randomPoint(r...).Mul(math.Pow(1e-300, randomFloat64(r...))))
 	} else if oneIn(2) {
-		// For coordinates near 1 (say > 0.5), this perturbation yields values
-		// that are only a few representable values away from the initial value.
+		// For coordinates near 1 (say > 0.5), this perturbation
+		// yields values that are only a few representable values
+		// away from the initial value.
 		a = a.Add(randomPoint(r...).Mul(4 * dblEpsilon))
 	} else {
 		// A perturbation whose magnitude is in the range [1e-25, 1e-10].
-		// TODO(rsned): Change this to
-		// a += s2random::LogUniform(bitgen, 1e-25, 1e-10) * s2random::Point(bitgen);
+		// TODO(rsned): Change this from Mul(1e-10 * math.Pow...) to
+		// randomLogUniformFloat64(1e-25, 1e-10)
 		a = a.Add(randomPoint(r...).Mul(1e-10 * math.Pow(1e-15, randomFloat64(r...))))
 	}
 
