@@ -362,7 +362,7 @@ func TestCellIndexIntersectionOptimization(t *testing.T) {
 	for _, test := range tests {
 		index := &CellIndex{}
 		for _, v := range test.have {
-			index.Add(cellIDFromString(v.cellID), v.label)
+			index.Add(CellIDFromString(v.cellID), v.label)
 		}
 		index.Build()
 		checkIntersection(t, test.label, makeCellUnion("1/010", "1/3"), index)
@@ -387,7 +387,7 @@ func TestCellIndexIntersectionRandomCellUnions(t *testing.T) {
 func TestCellIndexIntersectionSemiRandomCellUnions(t *testing.T) {
 	for i := 0; i < 200; i++ {
 		index := &CellIndex{}
-		id := cellIDFromString("1/0123012301230123")
+		id := CellIDFromString("1/0123012301230123")
 		var target CellUnion
 		for j := 0; j < 100; j++ {
 			switch {
