@@ -116,17 +116,17 @@ func checkCoveringTight(t *testing.T, r Region, cover CellUnion, checkTight bool
 func TestCovererRandomCaps(t *testing.T) {
 	rc := &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 1, MaxCells: 1}
 	for i := 0; i < 1000; i++ {
-		rc.MinLevel = int(rand.Int31n(maxLevel + 1))
-		rc.MaxLevel = int(rand.Int31n(maxLevel + 1))
+		rc.MinLevel = int(rand.Int31n(MaxLevel + 1))
+		rc.MaxLevel = int(rand.Int31n(MaxLevel + 1))
 		for rc.MinLevel > rc.MaxLevel {
-			rc.MinLevel = int(rand.Int31n(maxLevel + 1))
-			rc.MaxLevel = int(rand.Int31n(maxLevel + 1))
+			rc.MinLevel = int(rand.Int31n(MaxLevel + 1))
+			rc.MaxLevel = int(rand.Int31n(MaxLevel + 1))
 		}
 		rc.LevelMod = int(1 + rand.Int31n(3))
 		rc.MaxCells = skewedInt(10)
 
 		maxArea := math.Min(4*math.Pi, float64(3*rc.MaxCells+1)*AvgAreaMetric.Value(rc.MinLevel))
-		r := Region(randomCap(0.1*AvgAreaMetric.Value(maxLevel), maxArea))
+		r := Region(randomCap(0.1*AvgAreaMetric.Value(MaxLevel), maxArea))
 
 		covering := rc.Covering(r)
 		checkCovering(t, rc, r, covering, false)
@@ -152,7 +152,7 @@ func TestRegionCovererInteriorCovering(t *testing.T) {
 	// We construct the region the following way. Start with Cell of level l.
 	// Remove from it one of its grandchildren (level l+2). If we then set
 	//   minLevel < l + 1
-	//   maxLevel > l + 2
+	//   MaxLevel > l + 2
 	//   maxCells = 3
 	// the best interior covering should contain 3 children of the initial cell,
 	// that were not effected by removal of a grandchild.
@@ -182,11 +182,11 @@ func TestRegionCovererInteriorCovering(t *testing.T) {
 }
 
 func TestRegionCovererSimpleRegionCovering(t *testing.T) {
-	const maxLevel = maxLevel
+	const MaxLevel = MaxLevel
 	for i := 0; i < 100; i++ {
-		level := randomUniformInt(maxLevel + 1)
+		level := randomUniformInt(MaxLevel + 1)
 		maxArea := math.Min(4*math.Pi, 1000.0*AvgAreaMetric.Value(level))
-		c := randomCap(0.1*AvgAreaMetric.Value(maxLevel), maxArea)
+		c := randomCap(0.1*AvgAreaMetric.Value(MaxLevel), maxArea)
 		covering := SimpleRegionCovering(c, c.Center(), level)
 		rc := &RegionCoverer{MaxLevel: level, MinLevel: level, MaxCells: math.MaxInt32, LevelMod: 1}
 		checkCovering(t, rc, c, covering, false)
@@ -298,6 +298,9 @@ func TestRegionCovererIsCanonical(t *testing.T) {
 	}
 }
 
+// To run these benchmarks with blaze/bazel use:
+// blaze test -c opt --test_output=all --test_arg=--test.bench=BenchmarkRegion --test_arg=--test.benchmem util/geometry/go:s2_test
+
 const numCoveringBMRegions = 1000
 
 func BenchmarkRegionCovererCoveringCap(b *testing.B) {
@@ -307,7 +310,7 @@ func BenchmarkRegionCovererCoveringCap(b *testing.B) {
 		func(n int) []Region {
 			regions := make([]Region, numCoveringBMRegions)
 			for i := 0; i < numCoveringBMRegions; i++ {
-				regions[i] = randomCap(0.1*AvgAreaMetric.Value(maxLevel), 4*math.Pi)
+				regions[i] = randomCap(0.1*AvgAreaMetric.Value(MaxLevel), 4*math.Pi)
 			}
 			return regions
 		})
@@ -320,7 +323,7 @@ func BenchmarkRegionCovererCoveringCell(b *testing.B) {
 		func(n int) []Region {
 			regions := make([]Region, numCoveringBMRegions)
 			for i := 0; i < numCoveringBMRegions; i++ {
-				regions[i] = CellFromCellID(randomCellIDForLevel(maxLevel - randomUniformInt(n)))
+				regions[i] = CellFromCellID(randomCellIDForLevel(MaxLevel - randomUniformInt(n)))
 			}
 			return regions
 		})

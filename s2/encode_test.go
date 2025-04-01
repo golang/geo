@@ -50,11 +50,11 @@ const (
 	encodedCellIDFace0 = "0000000000000010"
 	// CellID from Face 5.
 	encodedCellIDFace5 = "00000000000000B0"
-	// CellID from Face 0 in the last Cell at maxLevel.
+	// CellID from Face 0 in the last Cell at MaxLevel.
 	encodedCellIDFace0MaxLevel = "0100000000000020"
-	// CellID from Face 5 in the last Cell at maxLevel.
+	// CellID from Face 5 in the last Cell at MaxLevel.
 	encodedCellIDFace5MaxLevel = "01000000000000C0"
-	// CellID FromFacePosLevel(3, 0x12345678, maxLevel - 4)
+	// CellID FromFacePosLevel(3, 0x12345678, MaxLevel - 4)
 	encodedCellIDFacePosLevel = "0057341200000060"
 	// CellID from the 0 value.
 	encodedCellIDInvalid = "0000000000000000"
@@ -63,7 +63,7 @@ const (
 	encodedCellFromPoint = "F51392E0F35DCC43"
 	// Cell from (39.0, -120.0) - The Lake Tahoe border corner of CA/NV.
 	encodedCellFromLatLng = "6308962A95849980"
-	// Cell FromFacePosLevel(3, 0x12345678, maxLevel - 4)
+	// Cell FromFacePosLevel(3, 0x12345678, MaxLevel - 4)
 	encodedCellFromFacePosLevel = "0057341200000060"
 	// Cell from Face 0.
 	encodedCellFace0 = "0000000000000010"
@@ -188,16 +188,16 @@ func TestEncodeDecode(t *testing.T) {
 		// CellIDs
 		{encodedCellIDFace0, cidPtr(CellIDFromFace(0))},
 		{encodedCellIDFace5, cidPtr(CellIDFromFace(5))},
-		{encodedCellIDFace0MaxLevel, cidPtr(CellIDFromFace(0).ChildEndAtLevel(maxLevel))},
-		{encodedCellIDFace5MaxLevel, cidPtr(CellIDFromFace(5).ChildEndAtLevel(maxLevel))},
-		{encodedCellIDFacePosLevel, cidPtr(CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4))},
+		{encodedCellIDFace0MaxLevel, cidPtr(CellIDFromFace(0).ChildEndAtLevel(MaxLevel))},
+		{encodedCellIDFace5MaxLevel, cidPtr(CellIDFromFace(5).ChildEndAtLevel(MaxLevel))},
+		{encodedCellIDFacePosLevel, cidPtr(CellIDFromFacePosLevel(3, 0x12345678, MaxLevel-4))},
 		{encodedCellIDInvalid, cidPtr(CellID(0))},
 
 		// Cells
-		{encodedCellFromPoint, cellPtr(CellFromPoint(Point{r3.Vector{1, 2, 3}}))},
+		{encodedCellFromPoint, cellPtr(CellFromPoint(Point{r3.Vector{X: 1, Y: 2, Z: 3}}))},
 		// Lake Tahoe CA/NV border corner
 		{encodedCellFromLatLng, cellPtr(CellFromLatLng(LatLngFromDegrees(39.0, -120.0)))},
-		{encodedCellFromFacePosLevel, cellPtr(CellFromCellID(CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)))},
+		{encodedCellFromFacePosLevel, cellPtr(CellFromCellID(CellIDFromFacePosLevel(3, 0x12345678, MaxLevel-4)))},
 		{encodedCellFace0, cellPtr(CellFromCellID(CellIDFromFace(0)))},
 
 		// CellUnions
@@ -266,7 +266,7 @@ func TestDecodeCompressedLoop(t *testing.T) {
 	}
 	d := &decoder{r: bytes.NewReader(dat)}
 	gotDecoded := new(Loop)
-	gotDecoded.decodeCompressed(d, maxLevel)
+	gotDecoded.decodeCompressed(d, MaxLevel)
 	if d.err != nil {
 		t.Fatalf("loop.decodeCompressed: %v", d.err)
 	}
@@ -281,7 +281,7 @@ func TestDecodeCompressedLoop(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	e := &encoder{w: &buf}
-	gotDecoded.encodeCompressed(e, maxLevel, gotDecoded.xyzFaceSiTiVertices())
+	gotDecoded.encodeCompressed(e, MaxLevel, gotDecoded.xyzFaceSiTiVertices())
 	if e.err != nil {
 		t.Fatalf("encodeCompressed(decodeCompressed(loop)): %v", err)
 	}

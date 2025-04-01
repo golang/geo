@@ -21,7 +21,7 @@ import (
 
 // preciseEq compares two big.Floats and checks if the are the same.
 func preciseEq(a, b *big.Float) bool {
-	return a.SetPrec(prec).Cmp(b.SetPrec(prec)) == 0
+	return a.SetPrec(MaxPrec).Cmp(b.SetPrec(MaxPrec)) == 0
 }
 
 func TestPreciseRoundtrip(t *testing.T) {
@@ -470,6 +470,52 @@ func TestPreciseLargestSmallestComponents(t *testing.T) {
 		}
 		if got := test.v.SmallestComponent(); got != test.smallest {
 			t.Errorf("%v.SmallestComponent() = %v, want %v", test.v, got, test.smallest)
+		}
+	}
+}
+
+func TestPreciseVectorIsZero(t *testing.T) {
+
+	x := NewPreciseVector(1e20, 0, 0)
+	y := NewPreciseVector(1, 0, 0)
+	xy := x.Add(y)
+
+	tests := []struct {
+		have PreciseVector
+		want bool
+	}{
+		{
+			have: NewPreciseVector(0, 0, 0),
+			want: true,
+		},
+		{
+			// Test with one element being negatively signed 0.
+			have: NewPreciseVector(0, -0, 0),
+			want: true,
+		},
+		{
+			// Test a non-zero value.
+			have: NewPreciseVector(0, 0, 1),
+			want: false,
+		},
+		{
+			// 1e20+1-1e20 should equal 1.  Testing the case where the
+			// numbers are outside the range a traditional double would
+			// be able to handle correctly.
+			have: x.Add(y).Add(x.Mul(precFloat(-1))),
+			want: false,
+		},
+		{
+			// (1e20+1) - (1e20+1) should be zero. Test the same case
+			// where a non-representable double minus itself is 0.
+			have: xy.Sub(xy),
+			want: true,
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.have.IsZero(); got != test.want {
+			t.Errorf("%s.IsZero() = %v, want %v", test.have, got, test.want)
 		}
 	}
 }

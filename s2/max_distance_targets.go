@@ -211,10 +211,8 @@ func NewMaxDistanceToShapeIndexTarget(index *ShapeIndex) *MaxDistanceToShapeInde
 // capBound returns a Cap that bounds the antipode of the target. This
 // is the set of points whose maxDistance to the target is maxDistance.zero()
 func (m *MaxDistanceToShapeIndexTarget) capBound() Cap {
-	// TODO(roberts): Depends on ShapeIndexRegion
-	// c := makeShapeIndexRegion(m.index).CapBound()
-	// return CapFromCenterRadius(Point{c.Center.Mul(-1)}, c.Radius())
-	panic("not implemented yet")
+	c := m.index.Region().CapBound()
+	return CapFromCenterAngle(Point{c.Center().Mul(-1)}, c.Radius())
 }
 
 func (m *MaxDistanceToShapeIndexTarget) updateDistanceToPoint(p Point, dist distance) (distance, bool) {
@@ -302,5 +300,4 @@ func (m *MaxDistanceToShapeIndexTarget) setUseBruteForce(b bool) { m.query.opts.
 
 // TODO(roberts): Remaining methods
 //
-// func (m *MaxDistanceToShapeIndexTarget) capBound() Cap {
 // CellUnionTarget

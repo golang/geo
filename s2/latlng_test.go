@@ -168,3 +168,19 @@ func TestLatLngApproxEqual(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkPointFromLatLng(b *testing.B) {
+	ll := LatLng{s1.E7 * 0x150bc888, s1.E7 * 0x5099d63f}
+	for i := 0; i < b.N; i++ {
+		PointFromLatLng(ll)
+	}
+}
+
+func BenchmarkLatLngGetDistance(b *testing.B) {
+	var sum s1.Angle
+	x := LatLngFromDegrees(25.0, -78.0)
+	for i := 0; i < b.N; i++ {
+		y := LatLng{s1.E7 * s1.Angle(i), 56.0 * s1.Degree}
+		sum += x.Distance(y)
+	}
+}

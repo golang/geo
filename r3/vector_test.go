@@ -261,6 +261,23 @@ func TestVectorOrtho(t *testing.T) {
 	}
 }
 
+func TestVectorOrthoAlignment(t *testing.T) {
+	tests := []struct {
+		have Vector
+		want Vector
+	}{
+		{have: Vector{1, 0, 0}, want: Vector{0, -1, 0}},
+		{have: Vector{0, 1, 0}, want: Vector{0, 0, -1}},
+		{have: Vector{0, 0, 1}, want: Vector{-1, 0, 0}},
+	}
+
+	for _, test := range tests {
+		if got := test.have.Ortho(); got != test.want {
+			t.Errorf("%v.Ortho() = %v, want %v", test.have, got, test.want)
+		}
+	}
+}
+
 func TestVectorIdentities(t *testing.T) {
 	tests := []struct {
 		v1, v2 Vector

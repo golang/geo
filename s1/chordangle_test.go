@@ -98,8 +98,8 @@ func TestChordAngleIsFunctions(t *testing.T) {
 		if got := test.have == 0; got != test.isZero {
 			t.Errorf("%v.isZero() = %t, want %t", test.have, got, test.isZero)
 		}
-		if got := test.have.isInf(); got != test.isInf {
-			t.Errorf("%v.isInf() = %t, want %t", test.have, got, test.isInf)
+		if got := test.have.IsInfinity(); got != test.isInf {
+			t.Errorf("%v.IsInfinity() = %t, want %t", test.have, got, test.isInf)
 		}
 		if got := test.have.isSpecial(); got != test.isSpecial {
 			t.Errorf("%v.isSpecial() = %t, want %t", test.have, got, test.isSpecial)

@@ -157,10 +157,10 @@ func TestDistanceTargetMaxCellTargetVisitContainingShapes(t *testing.T) {
 	target := NewMaxDistanceToCellTarget(targetCell)
 
 	if got, want := containingShapesForTarget(target, index, 1), []int{2}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", target, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", target, shapeIndexDebugString(index, false), got, want)
 	}
 	if got, want := containingShapesForTarget(target, index, 5), []int{2, 4}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index, false), got, want)
 	}
 
 	// For a larger antipodal cell that properly contains one or more index
@@ -169,7 +169,7 @@ func TestDistanceTargetMaxCellTargetVisitContainingShapes(t *testing.T) {
 	// polygons (whose shape_ids are 2 and 4).
 	target2 := NewMaxDistanceToCellTarget(CellFromCellID(targetCell.ID().Parent(5)))
 	if got, want := containingShapesForTarget(target2, index, 5), []int{2, 4}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target2, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target2, shapeIndexDebugString(index, false), got, want)
 	}
 }
 
@@ -285,10 +285,10 @@ func TestDistanceTargetMaxPointTargetVisitContainingShapes(t *testing.T) {
 	target := NewMaxDistanceToPointTarget(point)
 
 	if got, want := containingShapesForTarget(target, index, 1), []int{2}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", point, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", point, shapeIndexDebugString(index, false), got, want)
 	}
 	if got, want := containingShapesForTarget(target, index, 5), []int{2, 4}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", point, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", point, shapeIndexDebugString(index, false), got, want)
 	}
 }
 
@@ -413,43 +413,40 @@ func TestDistanceTargetMaxEdgeTargetVisitContainingShapes(t *testing.T) {
 	target := NewMaxDistanceToEdgeTarget(edge)
 
 	if got, want := containingShapesForTarget(target, index, 1), []int{2}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", target, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", target, shapeIndexDebugString(index, false), got, want)
 	}
 	if got, want := containingShapesForTarget(target, index, 5), []int{2, 4}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index, false), got, want)
 	}
 }
 
 func TestDistanceTargetMaxShapeIndexTargetCapBound(t *testing.T) {
-	// TODO(roberts): Uncomment when ShapeIndexRegion is implemented.
-	/*
-		var md maxDistance
-		zero := md.zero()
-		inf := md.infinity()
+	var md maxDistance
+	zero := md.zero()
+	inf := md.infinity()
 
-		index := NewShapeIndex()
-		index.Add(PolygonFromCell(CellFromCellID(randomCellID())))
-		pv := PointVector([]Point{randomPoint()})
-		index.Add(Shape(&pv))
-		target := NewMaxDistanceToShapeIndexTarget(index)
-		c := target.capBound()
+	index := NewShapeIndex()
+	index.Add(PolygonFromCell(CellFromCellID(randomCellID())))
+	pv := PointVector([]Point{randomPoint()})
+	index.Add(Shape(&pv))
+	target := NewMaxDistanceToShapeIndexTarget(index)
+	c := target.capBound()
 
-		for j := 0; j < 100; j++ {
-			pTest := randomPoint()
-			// Check points outside of cap to be away from maxDistance's zero().
-			if !c.ContainsPoint(pTest) {
-				var curDist distance = inf
-				var ok bool
-				if curDist, ok = target.updateDistanceToPoint(pTest, curDist); !ok {
-					t.Errorf("updateDistanceToPoint failed, but should have succeeeded")
-					continue
-				}
-				if !zero.less(curDist) {
-					t.Errorf("point %v outside of cap should be less than %v distance, but were %v", pTest, zero, curDist)
-				}
+	for j := 0; j < 100; j++ {
+		pTest := randomPoint()
+		// Check points outside of cap to be away from maxDistance's zero().
+		if !c.ContainsPoint(pTest) {
+			var curDist distance = inf
+			var ok bool
+			if curDist, ok = target.updateDistanceToPoint(pTest, curDist); !ok {
+				t.Errorf("updateDistanceToPoint failed, but should have succeeded")
+				continue
+			}
+			if !zero.less(curDist) {
+				t.Errorf("point %v outside of cap should be less than %v distance, but were %v", pTest, zero, curDist)
 			}
 		}
-	*/
+	}
 }
 
 func TestDistanceTargetMaxShapeIndexTargetUpdateDistanceToCellWhenEqual(t *testing.T) {
@@ -522,7 +519,7 @@ func TestDistanceTargetMaxShapeIndexTargetVisitContainingShapes(t *testing.T) {
 		reflectPoints(parsePoints("20:20, 20:21, 21:20")),
 		reflectPoints(parsePoints("10:10, 10:11, 11:10")),
 	}
-	laxPoly := laxPolygonFromPoints(loops)
+	laxPoly := LaxPolygonFromPoints(loops)
 	targetIndex.Add(laxPoly)
 
 	target := NewMaxDistanceToShapeIndexTarget(targetIndex)
@@ -530,7 +527,7 @@ func TestDistanceTargetMaxShapeIndexTargetVisitContainingShapes(t *testing.T) {
 	// These are the shape_ids of the 1st, 2nd, and 4th polygons of "index"
 	// (noting that the 4 points are represented by one S2PointVectorShape).
 	if got, want := containingShapesForTarget(target, index, 5), []int{5, 6, 8}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index, false), got, want)
 	}
 }
 
@@ -545,14 +542,14 @@ func TestDistanceTargetMaxShapeIndexTargetVisitContainingShapesEmptyAndFull(t *t
 	pointIndex := makeShapeIndex("1:1 # #")
 	pointTarget := NewMinDistanceToShapeIndexTarget(pointIndex)
 	if got, want := containingShapesForTarget(pointTarget, index, 5), []int{1}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", pointTarget, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", pointTarget, shapeIndexDebugString(index, false), got, want)
 	}
 
 	// Check only the full polygon is returned for a full polygon target.
 	fullPolygonIndex := makeShapeIndex("# # full")
 	fullTarget := NewMinDistanceToShapeIndexTarget(fullPolygonIndex)
 	if got, want := containingShapesForTarget(fullTarget, index, 5), []int{1}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", fullTarget, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", fullTarget, shapeIndexDebugString(index, false), got, want)
 	}
 
 	// Check that nothing is returned for an empty polygon target.  (An empty
@@ -561,6 +558,6 @@ func TestDistanceTargetMaxShapeIndexTargetVisitContainingShapesEmptyAndFull(t *t
 	emptyPolygonIndex := makeShapeIndex("# # empty")
 	emptyTarget := NewMinDistanceToShapeIndexTarget(emptyPolygonIndex)
 	if got, want := containingShapesForTarget(emptyTarget, index, 5), []int(nil); !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", emptyTarget, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", emptyTarget, shapeIndexDebugString(index, false), got, want)
 	}
 }

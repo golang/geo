@@ -23,46 +23,45 @@ import (
 )
 
 var (
-	pz   = Point{r3.Vector{0, 0, 1}}
-	p000 = Point{r3.Vector{1, 0, 0}}
-	p045 = Point{r3.Vector{1, 1, 0}.Normalize()}
-	p090 = Point{r3.Vector{0, 1, 0}}
-	p180 = Point{r3.Vector{-1, 0, 0}}
+	pz   = Point{r3.Vector{X: 0, Y: 0, Z: 1}}
+	p000 = Point{r3.Vector{X: 1, Y: 0, Z: 0}}
+	p045 = Point{r3.Vector{X: 1, Y: 1, Z: 0}.Normalize()}
+	p090 = Point{r3.Vector{X: 0, Y: 1, Z: 0}}
+	p180 = Point{r3.Vector{X: -1, Y: 0, Z: 0}}
 	// Degenerate triangles.
-	pr = Point{r3.Vector{0.257, -0.5723, 0.112}}
-	pq = Point{r3.Vector{-0.747, 0.401, 0.2235}}
+	pr = Point{r3.Vector{X: 0.257, Y: -0.5723, Z: 0.112}}
+	pq = Point{r3.Vector{X: -0.747, Y: 0.401, Z: 0.2235}}
 
 	// For testing the Girard area fall through case.
-	g1 = Point{r3.Vector{1, 1, 1}}
+	g1 = Point{r3.Vector{X: 1, Y: 1, Z: 1}}
 	g2 = Point{g1.Add(pr.Mul(1e-15)).Normalize()}
 	g3 = Point{g1.Add(pq.Mul(1e-15)).Normalize()}
 )
 
 func TestPointMeasuresPointArea(t *testing.T) {
-	epsilon := 1e-10
+	const eps = 1e-10
+	const exp1 = 0.5 * eps * eps
+	const exp2 = 5.8578643762690495119753e-11
 	tests := []struct {
 		a, b, c  Point
 		want     float64
 		nearness float64
 	}{
 		{p000, p090, pz, math.Pi / 2.0, 0},
-		// This test case should give 0 as the epsilon, but either Go or C++'s value for Pi,
-		// or the accuracy of the multiplications along the way, cause a difference ~15 decimal
-		// places into the result, so it is not quite a difference of 0.
-		{p045, pz, p180, 3.0 * math.Pi / 4.0, 1e-14},
+		{p045, pz, p180, 3.0 * math.Pi / 4.0, 0},
 		// Make sure that Area has good *relative* accuracy even for very small areas.
-		{Point{r3.Vector{epsilon, 0, 1}}, Point{r3.Vector{0, epsilon, 1}}, pz, 0.5 * epsilon * epsilon, 1e-14},
+		{Point{r3.Vector{X: eps, Y: 0, Z: 1}.Normalize()}, Point{r3.Vector{X: 0, Y: eps, Z: 1}.Normalize()}, pz, exp1, 1e-14 * exp1},
 		// Make sure that it can handle degenerate triangles.
 		{pr, pr, pr, 0.0, 0},
 		{pr, pq, pr, 0.0, 1e-15},
 		{p000, p045, p090, 0.0, 0},
 		// Try a very long and skinny triangle.
-		{p000, Point{r3.Vector{1, 1, epsilon}}, p090, 5.8578643762690495119753e-11, 1e-9},
-		{g1, g2, g3, 0.0, 1e-15},
+		{p000, Point{r3.Vector{X: 1, Y: 1, Z: eps}.Normalize()}, p090, exp2, 1e-9 * exp2},
 	}
-	for _, test := range tests {
+
+	for d, test := range tests {
 		if got := PointArea(test.a, test.b, test.c); !float64Near(got, test.want, test.nearness) {
-			t.Errorf("PointArea(%v, %v, %v), got %v want %v", test.a, test.b, test.c, got, test.want)
+			t.Errorf("%d, PointArea(%v, %v, %v), got %v want %v", d, test.a, test.b, test.c, got, test.want)
 		}
 	}
 
@@ -86,17 +85,27 @@ func TestPointMeasuresPointArea(t *testing.T) {
 	if maxGirard > 1e-14 {
 		t.Errorf("maximum GirardArea = %v, want <= %v", maxGirard, 1e-14)
 	}
+
+	// This tests a case where the triangle has zero area, but PointArea()
+	// computes (dmin > 0) due to rounding errors.
+	a := PointFromLatLng(LatLngFromDegrees(-45, -170))
+	b := PointFromLatLng(LatLngFromDegrees(45, -170))
+	c := PointFromLatLng(LatLngFromDegrees(0, -170))
+	if area := PointArea(a, b, c); area != 0.0 {
+		t.Errorf("PointArea(%v, %v, %v) = %v, want 0.0", a, b, c, area)
+	}
 }
 
 func TestPointMeasuresPointAreaQuarterHemisphere(t *testing.T) {
+	const eps2 = 1e-14
 	tests := []struct {
 		a, b, c, d, e Point
 		want          float64
 	}{
 		// Triangles with near-180 degree edges that sum to a quarter-sphere.
-		{PointFromCoords(1, 0.1*epsilon, epsilon), p000, p045, p180, pz, math.Pi},
+		{PointFromCoords(1, 0.1*eps2, eps2), p000, p045, p180, pz, math.Pi},
 		// Four other triangles that sum to a quarter-sphere.
-		{PointFromCoords(1, 1, epsilon), p000, p045, p180, pz, math.Pi},
+		{PointFromCoords(1, 1, eps2), p000, p045, p180, pz, math.Pi},
 	}
 	for _, test := range tests {
 		area := PointArea(test.a, test.b, test.c) +
@@ -147,6 +156,22 @@ func TestPointMeasuresAngleMethods(t *testing.T) {
 		if got := TurnAngle(test.a, test.b, test.c); math.Abs(float64(got-test.wantTurnAngle)) > epsilon {
 			t.Errorf("TurnAngle(%v, %v, %v) = %v, want %v", test.a, test.b, test.c, got, test.wantTurnAngle)
 		}
+	}
+}
+
+// Previously these three points shows catastrophic error in their cross product
+// which prevented Area() from falling back to the Girard method properly. They
+// returned an area on the order of 1e-14 and the real area is ~1e-21, 7 orders
+// of magnitude relative error. Check that they return zero now.
+func TestPointMeasuresPointAreaRegression(t *testing.T) {
+	a := Point{r3.Vector{X: -1.705424004316021258e-01, Y: -8.242696197922716461e-01,
+		Z: 5.399026611737816062e-01}}
+	b := Point{r3.Vector{X: -1.706078905422188652e-01, Y: -8.246067119418969416e-01,
+		Z: 5.393669607095969987e-01}}
+	c := Point{r3.Vector{X: -1.705800600596222294e-01, Y: -8.244634596153025408e-01,
+		Z: 5.395947061167500891e-01}}
+	if area := PointArea(a, b, c); area != 0 {
+		t.Errorf("PointArea(%v, %v, %v) should have been 0, got %v", a, b, c, area)
 	}
 }
 

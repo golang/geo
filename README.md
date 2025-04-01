@@ -4,7 +4,7 @@ S2 is a library for spherical geometry that aims to have the same robustness,
 flexibility, and performance as the best planar geometry libraries.
 
 This is a library for manipulating geometric shapes. Unlike many geometry
-libraries, S2 is primarily designed to work with _spherical geometry_, i.e.,
+libraries, S2 is primarily designed to work with *spherical geometry*, i.e.,
 shapes drawn on a sphere rather than on a planar 2D map. (In fact, the name S2
 is derived from the mathematical notation for the unit sphere *S²*.) This makes
 it especially suitable for working with geographic data.
@@ -92,109 +92,150 @@ This library is principally a port of the
 where it makes sense. We detail the progress of this port below relative to that
 C++ library.
 
+Legend:
+
+*   ✅ - Feature Complete
+*   🟡 - Mostly Complete
+*   ❌ - Not available
+
 ## [ℝ¹](https://pkg.go.dev/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
 
-Full parity with C++.
+C++ Type   | Go
+:--------- | ---
+R1Interval | ✅
 
 ## [ℝ²](https://pkg.go.dev/github.com/golang/geo/r2) - Two-dimensional Cartesian coordinates
 
-Full parity with C++.
+C++ Type | Go
+:------- | ---
+R2Point  | ✅
+R2Rect   | ✅
 
 ## [ℝ³](https://pkg.go.dev/github.com/golang/geo/r3) - Three-dimensional Cartesian coordinates
 
-Full parity with C++.
+C++ Type      | Go
+:------------ | ---
+R3Vector      | ✅
+R3ExactVector | ✅
+Matrix3x3     | ✅
 
 ## [S¹](https://pkg.go.dev/github.com/golang/geo/s1) - Circular Geometry
 
-Full parity with C++.
+C++ Type     | Go
+:----------- | ---
+S1Angle      | ✅
+S1ChordAngle | ✅
+S1Interval   | ✅
 
 ## [S²](https://pkg.go.dev/github.com/golang/geo/s2) - Spherical Geometry
 
-Approximately ~40% complete.
+### Basic Types
 
-**Complete** These files have full parity with the C++ implementation.
+C++ Type             | Go
+:------------------- | ---
+S2Cap                | ✅
+S2Cell               | ✅
+S2CellId             | ✅
+S2CellIdVector       | ❌
+S2CellIndex          | 🟡
+S2CellUnion          | ✅
+S2Coords             | ✅
+S2DensityTree        | ❌
+S2DistanceTarget     | ✅
+S2EdgeVector         | ✅
+S2LatLng             | ✅
+S2LatLngRect         | ✅
+S2LaxLoop            | 🟡
+S2LaxPolygon         | 🟡
+S2LaxPolyline        | 🟡
+S2Loop               | ✅
+S2PaddedCell         | ✅
+S2Point              | ✅
+S2PointIndex         | ❌
+S2PointSpan          | ❌
+S2PointRegion        | ❌
+S2PointVector        | ✅
+S2Polygon            | 🟡
+S2Polyline           | ✅
+S2R2Rect             | ❌
+S2Region             | ✅
+S2RegionCoverer      | ✅
+S2RegionIntersection | ❌
+S2RegionUnion        | ✅
+S2Shape              | ✅
+S2ShapeIndex         | ✅
+S2ShapeIndexRegion   | ❌
+EncodedLaxPolygon    | ❌
+EncodedLaxPolyline   | ❌
+EncodedShapeIndex    | ❌
+EncodedStringVector  | ❌
+EncodedUintVector    | ❌
+IdSetLexicon         | ❌
+ValueSetLexicon      | ❌
+SequenceLexicon      | ❌
+LaxClosedPolyline    | ❌
+VertexIDLaxLoop      | ❌
 
-*   Cap
-*   Cell
-*   CellID
-*   CellUnion
-*   ContainsVertexQuery
-*   ConvexHullQuery
-*   CrossingEdgeQuery
-*   LatLng
-*   matrix3x3
-*   Metric
-*   PaddedCell
-*   Point
-*   PointCompression
-*   Region
-*   RegionCoverer
-*   RegionUnion
-*   s2edge_clipping
-*   s2edge_crosser
-*   s2edge_crossings
-*   s2edge_distances
-*   edgeVectorShape
-*   laxLoop
-*   laxPolyline
-*   s2projections - Helpers for projecting points between R2 and S2.
-*   s2rect_bounder
-*   s2stuv.go (s2coords.h in C++) - This file is a collection of helper and
-    conversion methods to and from ST-space, UV-space, and XYZ-space.
-*   s2wedge_relations
-*   ShapeIndex
-*   idSetLexicon,sequenceLexicon
+### Query Types
 
-**Mostly Complete** Files that have almost all of the features of the original
-C++ code, and are reasonably complete enough to use in live code. Up to date
-listing of the incomplete methods are documented at the end of each file.
+C++ Type             | Go
+:------------------- | ---
+S2ChainInterpolation | ❌
+S2ClosestCell        | ❌
+S2FurthestCell       | ❌
+S2ClosestEdge        | ✅
+S2FurthestEdge       | ✅
+S2ClosestPoint       | ❌
+S2FurthestPoint      | ❌
+S2ContainsPoint      | ✅
+S2ContainsVertex     | ✅
+S2ConvexHull         | ✅
+S2CrossingEdge       | ✅
+S2HausdorffDistance  | ❌
+S2ShapeNesting       | ❌
 
-*   EdgeQuery/Closest/Furthest - missing Project, GetEdge
-*   ContainsPointQuery - missing visit edges
-*   laxPolygon
-*   Loop - Loop is mostly complete now. Missing Project, Distance, Union, etc.
-*   Polyline - Missing InitTo... methods, NearlyCoversPolyline
-*   Rect (AKA s2latlngrect in C++) - Missing Centroid, InteriorContains.
-*   s2_test.go (AKA s2testing and s2textformat in C++) - Missing Fractal test
-    shape generation. This file is a collection of testing helper methods.
-*   s2edge_distances - Missing Intersection
+### Supporting Types
 
-**In Progress** Files that have some work done, but are probably not complete
-enough for general use in production code.
-
-*   CellIndex - A queryable index of CellIDs.
-*   Polygon - Polygons with multiple loops are supported. It fully implements
-    Shape and Region, but it's missing most other methods. (Area, Centroid,
-    Distance, Projection, Intersection, Union, Contains, Normalized, etc.)
-*   PolylineSimplifier - Initial work has begun on this.
-*   s2predicates.go - This file is a collection of helper methods used by other
-    parts of the library.
-*   s2shapeutil - Initial elements added. Missing VisitCrossings.
-
-**Not Started Yet.** These files (and their associated unit tests) have
-dependencies on most of the In Progress files before they can begin to be
-started.
-
-*   BooleanOperation - used when assembling polygons and loops.
-*   Builder - This is a robust tool for creating the various Shape types from
-    collection of simpler S2 types.
-*   BuilderClosedSetNormalizer
-*   BuilderFindPolygonDegneracies
-*   BuilderGraph
-*   BuilderLayers
-*   BuilderSnapFunctions
-*   BuilderTesting
-*   Centroids
-*   ClosestPointQuery
-*   EdgeTesselator
-*   LoopMeasures
-*   PointIndex
-*   PointRegion
-*   PointUtil
-*   PolygonMeasures
-*   RegionIntersection
-*   RegionTermIndexer
-*   ShapeIndexRegion - Allows ShapeIndexes to be used as Regions for things like
+C++ Type                         | Go
+:------------------------------- | ---
+S2BooleanOperation               | ❌
+S2BufferOperation                | ❌
+S2Builder                        | ❌
+S2BuilderClosedSetNormalizer     | ❌
+S2BuilderFindPolygonDegeneracies | ❌
+S2BuilderGraph                   | ❌
+S2BuilderLayers                  | ❌
+S2BuilderSnapFunctions           | ❌
+S2BuilderTesting                 | ❌
+S2Builderutil\*                  | ❌
+S2Coder                          | ❌
+S2EdgeClipping                   | ✅
+S2EdgeCrosser                    | ✅
+S2EdgeCrossings                  | ✅
+S2EdgeDistances                  | ✅
+S2EdgeTessellator                | ✅
+S2LoopMeasures                   | ❌
+S2Measures                       | ✅
+S2MemoryTracker                  | ❌
+S2Metrics                        | ❌
+S2PointUtil                      | 🟡
+S2PolygonBuilder                 | ❌
+S2PolylineAlignment              | ❌
+S2PolylineMeasures               | ✅
+S2PolylineSimplifier             | ❌
+S2Predicates                     | ✅
+S2Projections                    | ❌
+S2rectBounder                    | ❌
+S2RegionTermIndexer              | ❌
+S2ShapeIndexMeasures             | ❌
+S2ShapeIndexUtil\*               | 🟡
+S2ShapeMeasures                  | ❌
+S2ShapeUtil\*                    | 🟡
+S2Stats                          | ❌
+S2Testing                        | ✅
+S2TextFormat                     | ✅
+S2WedgeRelations                 | ✅
+S2WindingOperation               | ❌
 
 ### Encode/Decode
 

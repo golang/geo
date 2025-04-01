@@ -53,24 +53,35 @@ func TestShapeutilRangeIteratorNext(t *testing.T) {
 	// Create an index with one point each on CellID faces 0, 1, and 2.
 	index := makeShapeIndex("0:0 | 0:90 | 90:0 # #")
 	it := newRangeIterator(index)
+	itCount := 0
+	next := func() {
+		itCount++
+		it.next()
+		if it.done() {
+			t.Errorf("There should be 3 items in the index but there were only %d", itCount)
+		}
+	}
 
 	if got, want := it.cellID().Face(), 0; got != want {
 		t.Errorf("it.CellID().Face() = %v, want %v", got, want)
 	}
-	it.next()
+	next()
 
 	if got, want := it.cellID().Face(), 1; got != want {
 		t.Errorf("it.CellID().Face() = %v, want %v", got, want)
 	}
-	it.next()
+	next()
 
 	if got, want := it.cellID().Face(), 2; got != want {
 		t.Errorf("it.CellID().Face() = %v, want %v", got, want)
 	}
-	it.next()
 
+	it.next()
 	if !it.done() {
 		t.Errorf("iterator over index of three items should be done after 3 calls to next")
+	}
+	if got, want := it.cellID(), SentinelCellID; got != want {
+		t.Errorf("it.CellID() = %v, want %v", got, want)
 	}
 }
 

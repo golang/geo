@@ -21,12 +21,75 @@ import (
 	"github.com/golang/geo/r3"
 )
 
-func TestSTUV(t *testing.T) {
-	if x := stToUV(uvToST(.125)); x != .125 {
-		t.Error("stToUV(uvToST(.125) == ", x)
+// TODO(rsned): Rename this file to coords_test.go to match its C++ counterpart.
+
+func swapAxes(ij int) int {
+	return ((ij >> 1) & 1) + ((ij & 1) << 1)
+}
+
+func invertBits(ij int) int {
+	return ij ^ 3
+}
+
+func TestSTUVTraversalOrder(t *testing.T) {
+	for r := 0; r < 4; r++ {
+		for i := 0; i < 4; i++ {
+			// Check consistency with respect to swapping axes.
+			if got, want := ijToPos[r][i], ijToPos[r^swapMask][swapAxes(i)]; got != want {
+				t.Errorf("(ijToPos[%d][%d] = %d) != ijToPos[%d^swapMask][swapAxes(%d)] = %d",
+					r, i, got, r, i, want)
+			}
+			if got, want := posToIJ[r][i], swapAxes(posToIJ[r^swapMask][i]); got != want {
+				t.Errorf("(posToIJ[%d][%d] = %d) != swapAxes(posToIJ[%d^swapMask][%d]) = %d",
+					r, i, got, r, i, want)
+			}
+
+			// Check consistency with respect to reversing axis directions.
+			if got, want := ijToPos[r][i], ijToPos[r^invertMask][invertBits(i)]; got != want {
+				t.Errorf("(ijToPos[%d][%d]= %d) != ijToPos[%d^invertMask][invertBits(%d)] = %d",
+					r, i, got, r, i, want)
+			}
+			if got, want := posToIJ[r][i], invertBits(posToIJ[r^invertMask][i]); got != want {
+				t.Errorf("(posToIJ[%d][%d] = %d) != invertBits(posToIJ[%d^invertMask][%d] = %d",
+					r, i, got, r, i, want)
+			}
+
+			// Check that the two tables are inverses of each other.
+			if got, want := ijToPos[r][posToIJ[r][i]], i; got != want {
+				t.Errorf("(ijToPos[%d][posToIJ[%d][%d]] = %d) != %d",
+					r, r, i, got, want)
+			}
+			if got, want := posToIJ[r][ijToPos[r][i]], i; got != want {
+				t.Errorf("(posToIJ[%d][ijToPos[%d][%d]] = %d) != %d",
+					r, r, i, got, want)
+			}
+		}
 	}
-	if x := uvToST(stToUV(.125)); x != .125 {
-		t.Error("uvToST(stToUV(.125) == ", x)
+}
+
+func TestSTUVConversions(t *testing.T) {
+	// Check boundary conditions.
+	for s := 0.0; s <= 1.0; s += 0.5 {
+		u := stToUV(s)
+		if want := 2*s - 1; !float64Eq(u, want) {
+			t.Errorf("stToUV(%f) = %f, want %f", s, u, want)
+		}
+	}
+	for u := -1.0; u <= 1.0; u++ {
+		s := uvToST(u)
+		if want := 0.5 * (u + 1); !float64Eq(s, want) {
+			t.Errorf("stToUV(%f) = %f, want %f", u, s, want)
+		}
+	}
+
+	// Check that uvToST and stToUV are inverses.
+	for x := 0.0; x <= 1.0; x += 0.0001 {
+		if got := uvToST(stToUV(x)); !float64Near(got, x, 1e-15) {
+			t.Errorf("uvToST(stToUV(%f)) = %f, want %f", x, got, x)
+		}
+		if got, want := stToUV(uvToST(2*x-1)), 2*x-1; !float64Near(got, want, 1e-15) {
+			t.Errorf("stToUV(uvToST(%f)) = %f, want %f", x, got, want)
+		}
 	}
 }
 
@@ -87,15 +150,15 @@ func TestFaceUVToXYZ(t *testing.T) {
 	}
 
 	// Adding up the absolute value all all the face normals should equal 2 on each axis.
-	if !sum.ApproxEqual(r3.Vector{2, 2, 2}) {
-		t.Errorf("sum of the abs of the 6 face norms should = %v, got %v", r3.Vector{2, 2, 2}, sum)
+	if !sum.ApproxEqual(r3.Vector{X: 2, Y: 2, Z: 2}) {
+		t.Errorf("sum of the abs of the 6 face norms should = %v, got %v", r3.Vector{X: 2, Y: 2, Z: 2}, sum)
 	}
 }
 
 func TestFaceXYZToUV(t *testing.T) {
 	var (
-		point    = Point{r3.Vector{1.1, 1.2, 1.3}}
-		pointNeg = Point{r3.Vector{-1.1, -1.2, -1.3}}
+		point    = Point{r3.Vector{X: 1.1, Y: 1.2, Z: 1.3}}
+		pointNeg = Point{r3.Vector{X: -1.1, Y: -1.2, Z: -1.3}}
 	)
 
 	tests := []struct {
@@ -128,13 +191,13 @@ func TestFaceXYZToUV(t *testing.T) {
 
 func TestFaceXYZtoUVW(t *testing.T) {
 	var (
-		origin = Point{r3.Vector{0, 0, 0}}
-		posX   = Point{r3.Vector{1, 0, 0}}
-		negX   = Point{r3.Vector{-1, 0, 0}}
-		posY   = Point{r3.Vector{0, 1, 0}}
-		negY   = Point{r3.Vector{0, -1, 0}}
-		posZ   = Point{r3.Vector{0, 0, 1}}
-		negZ   = Point{r3.Vector{0, 0, -1}}
+		origin = Point{r3.Vector{X: 0, Y: 0, Z: 0}}
+		posX   = Point{r3.Vector{X: 1, Y: 0, Z: 0}}
+		negX   = Point{r3.Vector{X: -1, Y: 0, Z: 0}}
+		posY   = Point{r3.Vector{X: 0, Y: 1, Z: 0}}
+		negY   = Point{r3.Vector{X: 0, Y: -1, Z: 0}}
+		posZ   = Point{r3.Vector{X: 0, Y: 0, Z: 1}}
+		negZ   = Point{r3.Vector{X: 0, Y: 0, Z: -1}}
 	)
 
 	for face := 0; face < 6; face++ {
@@ -211,7 +274,7 @@ func TestSiTiSTRoundtrip(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		st := randomUniformFloat64(0, 1.0)
 		// this uses near not exact because there is some loss in precision
-		// when scaling down to the nearest 1/maxLevel and back.
+		// when scaling down to the nearest 1/MaxLevel and back.
 		if got := siTiToST(stToSiTi(st)); !float64Near(got, st, 1e-8) {
 			t.Errorf("siTiToST(stToSiTi(%v)) = %v, want %v", st, got, st)
 		}
@@ -233,7 +296,7 @@ func TestUVWFace(t *testing.T) {
 }
 
 func TestXYZToFaceSiTi(t *testing.T) {
-	for level := 0; level < maxLevel; level++ {
+	for level := 0; level < MaxLevel; level++ {
 		for i := 0; i < 1000; i++ {
 			ci := randomCellIDForLevel(level)
 			f, si, ti, gotLevel := xyzToFaceSiTi(ci.Point())
@@ -246,7 +309,7 @@ func TestXYZToFaceSiTi(t *testing.T) {
 			}
 
 			// Test a point near the cell center but not equal to it.
-			pMoved := ci.Point().Add(r3.Vector{1e-13, 1e-13, 1e-13})
+			pMoved := ci.Point().Add(r3.Vector{X: 1e-13, Y: 1e-13, Z: 1e-13})
 			fMoved, siMoved, tiMoved, gotLevel := xyzToFaceSiTi(Point{pMoved})
 
 			if gotLevel != -1 {
@@ -267,8 +330,8 @@ func TestXYZToFaceSiTi(t *testing.T) {
 
 			// Finally, test some random (si,ti) values that may be at different
 			// levels, or not at a valid level at all (for example, si == 0).
-			faceRandom := randomUniformInt(numFaces)
-			mask := -1 << uint32(maxLevel-level)
+			faceRandom := randomUniformInt(NumFaces)
+			mask := -1 << uint32(MaxLevel-level)
 			siRandom := randomUint32() & uint32(mask)
 			tiRandom := randomUint32() & uint32(mask)
 			for siRandom > maxSiTi || tiRandom > maxSiTi {
@@ -306,7 +369,7 @@ func TestXYZToFaceSiTi(t *testing.T) {
 }
 
 func TestXYZFaceSiTiRoundtrip(t *testing.T) {
-	for level := 0; level < maxLevel; level++ {
+	for level := 0; level < MaxLevel; level++ {
 		for i := 0; i < 1000; i++ {
 			ci := randomCellIDForLevel(level)
 			f, si, ti, _ := xyzToFaceSiTi(ci.Point())
@@ -323,33 +386,33 @@ func TestSTUVFace(t *testing.T) {
 		v    r3.Vector
 		want int
 	}{
-		{r3.Vector{-1, -1, -1}, 5},
-		{r3.Vector{-1, -1, 0}, 4},
-		{r3.Vector{-1, -1, 1}, 2},
-		{r3.Vector{-1, 0, -1}, 5},
-		{r3.Vector{-1, 0, 0}, 3},
-		{r3.Vector{-1, 0, 1}, 2},
-		{r3.Vector{-1, 1, -1}, 5},
-		{r3.Vector{-1, 1, 0}, 1},
-		{r3.Vector{-1, 1, 1}, 2},
-		{r3.Vector{0, -1, -1}, 5},
-		{r3.Vector{0, -1, 0}, 4},
-		{r3.Vector{0, -1, 1}, 2},
-		{r3.Vector{0, 0, -1}, 5},
-		{r3.Vector{0, 0, 0}, 2},
-		{r3.Vector{0, 0, 1}, 2},
-		{r3.Vector{0, 1, -1}, 5},
-		{r3.Vector{0, 1, 0}, 1},
-		{r3.Vector{0, 1, 1}, 2},
-		{r3.Vector{1, -1, -1}, 5},
-		{r3.Vector{1, -1, 0}, 4},
-		{r3.Vector{1, -1, 1}, 2},
-		{r3.Vector{1, 0, -1}, 5},
-		{r3.Vector{1, 0, 0}, 0},
-		{r3.Vector{1, 0, 1}, 2},
-		{r3.Vector{1, 1, -1}, 5},
-		{r3.Vector{1, 1, 0}, 1},
-		{r3.Vector{1, 1, 1}, 2},
+		{r3.Vector{X: -1, Y: -1, Z: -1}, 5},
+		{r3.Vector{X: -1, Y: -1, Z: 0}, 4},
+		{r3.Vector{X: -1, Y: -1, Z: 1}, 2},
+		{r3.Vector{X: -1, Y: 0, Z: -1}, 5},
+		{r3.Vector{X: -1, Y: 0, Z: 0}, 3},
+		{r3.Vector{X: -1, Y: 0, Z: 1}, 2},
+		{r3.Vector{X: -1, Y: 1, Z: -1}, 5},
+		{r3.Vector{X: -1, Y: 1, Z: 0}, 1},
+		{r3.Vector{X: -1, Y: 1, Z: 1}, 2},
+		{r3.Vector{X: 0, Y: -1, Z: -1}, 5},
+		{r3.Vector{X: 0, Y: -1, Z: 0}, 4},
+		{r3.Vector{X: 0, Y: -1, Z: 1}, 2},
+		{r3.Vector{X: 0, Y: 0, Z: -1}, 5},
+		{r3.Vector{X: 0, Y: 0, Z: 0}, 2},
+		{r3.Vector{X: 0, Y: 0, Z: 1}, 2},
+		{r3.Vector{X: 0, Y: 1, Z: -1}, 5},
+		{r3.Vector{X: 0, Y: 1, Z: 0}, 1},
+		{r3.Vector{X: 0, Y: 1, Z: 1}, 2},
+		{r3.Vector{X: 1, Y: -1, Z: -1}, 5},
+		{r3.Vector{X: 1, Y: -1, Z: 0}, 4},
+		{r3.Vector{X: 1, Y: -1, Z: 1}, 2},
+		{r3.Vector{X: 1, Y: 0, Z: -1}, 5},
+		{r3.Vector{X: 1, Y: 0, Z: 0}, 0},
+		{r3.Vector{X: 1, Y: 0, Z: 1}, 2},
+		{r3.Vector{X: 1, Y: 1, Z: -1}, 5},
+		{r3.Vector{X: 1, Y: 1, Z: 0}, 1},
+		{r3.Vector{X: 1, Y: 1, Z: 1}, 2},
 	}
 
 	for _, test := range tests {

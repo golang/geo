@@ -17,6 +17,7 @@ package s2
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/s1"
@@ -50,6 +51,10 @@ func numVerticesAtLevel(level int) int {
 }
 
 func TestTestingFractal(t *testing.T) {
+	// About 2.4% flaky with a random seed, due to CesaroMultiFractal.
+	// TODO: https://github.com/golang/geo/issues/120
+	rand.Seed(1)
+
 	tests := []struct {
 		label     string
 		minLevel  int
@@ -212,7 +217,7 @@ func TestTestingFractal(t *testing.T) {
 }
 
 // TestChordAngleMaxPointError is located in here to work around circular
-// import issues. This s1 test needs s2.Points which wont work with our
+// import issues. This s1 test needs s2.Points which won't work with our
 // packages. The test is in this file since while it uses Points, it's not
 // part of Points methods so it shouldn't be in s2point_test.
 func TestChordAngleMaxPointError(t *testing.T) {
