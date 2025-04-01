@@ -65,10 +65,10 @@ func TestDistanceTargetMinCellTargetVisitContainingShapes(t *testing.T) {
 	target := NewMinDistanceToCellTarget(targetCell)
 
 	if got, want := containingShapesForTarget(target, index, 1), []int{2}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", target, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", target, shapeIndexDebugString(index, false), got, want)
 	}
 	if got, want := containingShapesForTarget(target, index, 5), []int{2, 4}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index, false), got, want)
 	}
 
 	// For a larger cell that properly contains one or more index cells, all
@@ -77,12 +77,12 @@ func TestDistanceTargetMinCellTargetVisitContainingShapes(t *testing.T) {
 	// (whose shape_ids are 2 and 4).
 	target2 := NewMinDistanceToCellTarget(CellFromCellID(targetCell.ID().Parent(5)))
 	if got, want := containingShapesForTarget(target2, index, 5), []int{2, 4}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target2, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target2, shapeIndexDebugString(index, false), got, want)
 	}
 }
 
 func TestDistanceTargetMinCellUnionTargetUpdateDistanceToCellWhenEqual(t *testing.T) {
-	// TODO(roberts): Uncomment when implented.
+	// TODO(roberts): Uncomment when implemented.
 	/*
 		var minDist minDistance
 
@@ -104,7 +104,7 @@ func TestDistanceTargetMinCellUnionTargetUpdateDistanceToCellWhenEqual(t *testin
 }
 
 func TestDistanceTargetMinCellUnionTargetUpdateDistanceToEdgeWhenEqual(t *testing.T) {
-	// TODO(roberts): Uncomment when implented.
+	// TODO(roberts): Uncomment when implemented.
 	/*
 		var minDist minDistance
 
@@ -127,7 +127,7 @@ func TestDistanceTargetMinCellUnionTargetUpdateDistanceToEdgeWhenEqual(t *testin
 }
 
 func TestDistanceTargetMinCellUnionTargetVisitContainingShapes(t *testing.T) {
-	// TODO(roberts): Uncomment when implented.
+	// TODO(roberts): Uncomment when implemented.
 	/*
 		index := makeShapeIndex("1:1 # 1:1, 2:2 # 0:0, 0:3, 3:0 | 6:6, 6:9, 9:6 | -1:-1, -1:5, 5:-1")
 
@@ -140,10 +140,10 @@ func TestDistanceTargetMinCellUnionTargetVisitContainingShapes(t *testing.T) {
 		target := NewMinDistanceToCellUnionTarget(targetCellUnion)
 
 		if got, want := containingShapesForTarget(target, index, 1), []int{2}; !reflect.DeepEqual(got, want) {
-			t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", targetEdge, shapeIndexDebugString(index), got, want)
+			t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", targetEdge, shapeIndexDebugString(index, false), got, want)
 		}
 		if got, want := containingShapesForTarget(target, index, 5), []int{2, 3, 4}; !reflect.DeepEqual(got, want) {
-			t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", targetEdge, shapeIndexDebugString(index), got, want)
+			t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", targetEdge, shapeIndexDebugString(index, false), got, want)
 		}
 	*/
 }
@@ -195,10 +195,10 @@ func TestDistanceTargetMinEdgeTargetVisitContainingShapes(t *testing.T) {
 	target := NewMinDistanceToEdgeTarget(Edge{targetEdge[0], targetEdge[1]})
 
 	if got, want := containingShapesForTarget(target, index, 1), []int{2}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", targetEdge, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", targetEdge, shapeIndexDebugString(index, false), got, want)
 	}
 	if got, want := containingShapesForTarget(target, index, 5), []int{2, 4}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", targetEdge, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", targetEdge, shapeIndexDebugString(index, false), got, want)
 	}
 }
 
@@ -243,10 +243,10 @@ func TestDistanceTargetMinPointTargetVisitContainingShapes(t *testing.T) {
 	target := NewMinDistanceToPointTarget(point)
 
 	if got, want := containingShapesForTarget(target, index, 1), []int{2}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", point, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 1) = %+v, want %+v", point, shapeIndexDebugString(index, false), got, want)
 	}
 	if got, want := containingShapesForTarget(target, index, 5), []int{2, 4}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", point, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", point, shapeIndexDebugString(index, false), got, want)
 	}
 }
 
@@ -305,7 +305,7 @@ func TestDistanceTargetMinShapeIndexTargetVisitContainingShapes(t *testing.T) {
 	// These are the shape_ids of the 1st, 2nd, and 4th polygons of "index"
 	// (noting that the 4 points are represented by one PointVectorShape).
 	if got, want := containingShapesForTarget(target, index, 5), []int{5, 6, 8}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", target, shapeIndexDebugString(index, false), got, want)
 	}
 }
 
@@ -320,14 +320,14 @@ func TestDistanceTargetMinShapeIndexTargetVisitContainingShapesEmptyAndFull(t *t
 	pointIndex := makeShapeIndex("1:1 # #")
 	pointTarget := NewMinDistanceToShapeIndexTarget(pointIndex)
 	if got, want := containingShapesForTarget(pointTarget, index, 5), []int{1}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", pointTarget, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", pointTarget, shapeIndexDebugString(index, false), got, want)
 	}
 
 	// Check only the full polygon is returned for a full polygon target.
 	fullPolygonIndex := makeShapeIndex("# # full")
 	fullTarget := NewMinDistanceToShapeIndexTarget(fullPolygonIndex)
 	if got, want := containingShapesForTarget(fullTarget, index, 5), []int{1}; !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", fullTarget, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", fullTarget, shapeIndexDebugString(index, false), got, want)
 	}
 
 	// Check that nothing is returned for an empty polygon target.  (An empty
@@ -336,6 +336,6 @@ func TestDistanceTargetMinShapeIndexTargetVisitContainingShapesEmptyAndFull(t *t
 	emptyPolygonIndex := makeShapeIndex("# # empty")
 	emptyTarget := NewMinDistanceToShapeIndexTarget(emptyPolygonIndex)
 	if got, want := containingShapesForTarget(emptyTarget, index, 5), []int(nil); !reflect.DeepEqual(got, want) {
-		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", emptyTarget, shapeIndexDebugString(index), got, want)
+		t.Errorf("containingShapesForTarget(%v, %q, 5) = %+v, want %+v", emptyTarget, shapeIndexDebugString(index, false), got, want)
 	}
 }

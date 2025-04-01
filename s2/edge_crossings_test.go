@@ -125,6 +125,47 @@ func TestEdgeutilIntersectionError(t *testing.T) {
 	}
 }
 
+func TestAngleContainsVertex(t *testing.T) {
+	a := PointFromCoords(1, 0, 0)
+	b := PointFromCoords(0, 1, 0)
+	refB := b.referenceDir()
+
+	// Degenerate angle ABA.
+	if AngleContainsVertex(a, b, a) {
+		t.Errorf("AngleContainsVertex(%v, %v, %v = true, want false", a, b, a)
+	}
+
+	// An angle where A == referenceDir(B).
+	if !AngleContainsVertex(refB, b, a) {
+		t.Errorf("AngleContainsVertex(%v, %v, %v = false, want true", refB, b, a)
+	}
+
+	// An angle where C == referenceDir(B).
+	if AngleContainsVertex(a, b, refB) {
+		t.Errorf("AngleContainsVertex(%v, %v, %v = true, want false", a, b, refB)
+	}
+
+	// Verify that when a set of polygons tile the region around the vertex,
+	// exactly one of those polygons contains the vertex.
+	loop := RegularLoop(b, s1.Angle(10)*s1.Degree, 10)
+	count := 0
+	for i, v := range loop.Vertices() {
+		if AngleContainsVertex(loop.Vertex(i+1), b, v) {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("with a set of polygons tiled around a vertex, only one should contain the vertex, got %d", count)
+	}
+}
+
 // TODO(roberts): Differences from C++:
-// TestEdgeCrossingsGrazingIntersections
-// TestEdgeCrossingsGetIntersectionInvariants
+// func TestEdgeCrossingsRobustCrossProdCoverage(t* testing.T)
+// func TestEdgeCrossingsSymbolicCrossProdConsistentWithSign(t* testing.T)
+// func TestEdgeCrossingsRobustCrossProdMagnitude(t* testing.T)
+// func TestEdgeCrossingsRobustCrossProdError(t* testing.T)
+// func TestEdgeCrossingsIntersectionError(t* testing.T)
+// func TestEdgeCrossingsGrazingIntersections(t* testing.T)
+// func TestEdgeCrossingsExactIntersectionUnderflow(t* testing.T)
+// func TestEdgeCrossingsExactIntersectionSign(t* testing.T)
+// func TestEdgeCrossingsIntersectionInvariants(t* testing.T)

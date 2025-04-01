@@ -24,6 +24,60 @@ import (
 	"github.com/golang/geo/s1"
 )
 
+func TestPredicatesEpsilonForDigits(t *testing.T) {
+	tests := []struct {
+		have int
+		want float64
+	}{
+		{
+			have: 0,
+			want: 1.0,
+		},
+		{
+			have: 24,
+			want: math.Ldexp(1.0, -24),
+		},
+		{
+			have: 53,
+			want: math.Ldexp(1.0, -53),
+		},
+		{
+			have: 64,
+			want: math.Ldexp(1.0, -64),
+		},
+		{
+			have: 106,
+			want: math.Ldexp(1.0, -106),
+		},
+		{
+			have: 113,
+			want: math.Ldexp(1.0, -113),
+		},
+	}
+
+	for _, test := range tests {
+		got := epsilonForDigits(test.have)
+		if !float64Eq(got, test.want) {
+			t.Errorf("epsilonForDigits(%d) = %g, want %g", test.have, got, test.want)
+		}
+	}
+}
+
+func TestRoundingEpsilon(t *testing.T) {
+	var f32 float32
+	var f64 float64
+
+	const f32Epsilon = 1.1920928955078125e-7
+
+	if got, want := roundingEpsilon(f32), f32Epsilon*0.5; got != want {
+		t.Errorf("roundingEpsilon(float32) = %g, want %g", got, want)
+	}
+
+	if got, want := roundingEpsilon(f64), dblEpsilon*0.5; got != want {
+		t.Errorf("roundingEpsilon(float64) = %g, want %g", got, want)
+	}
+}
+
 func TestPredicatesSign(t *testing.T) {
 	tests := []struct {
 		p1x, p1y, p1z, p2x, p2y, p2z, p3x, p3y, p3z float64
@@ -63,9 +117,9 @@ func TestPredicatesSign(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		p1 := Point{r3.Vector{test.p1x, test.p1y, test.p1z}}
-		p2 := Point{r3.Vector{test.p2x, test.p2y, test.p2z}}
-		p3 := Point{r3.Vector{test.p3x, test.p3y, test.p3z}}
+		p1 := Point{r3.Vector{X: test.p1x, Y: test.p1y, Z: test.p1z}}
+		p2 := Point{r3.Vector{X: test.p2x, Y: test.p2y, Z: test.p2z}}
+		p3 := Point{r3.Vector{X: test.p3x, Y: test.p3y, Z: test.p3z}}
 		result := Sign(p1, p2, p3)
 		if result != test.want {
 			t.Errorf("Sign(%v, %v, %v) = %v, want %v", p1, p2, p3, result, test.want)
@@ -86,26 +140,26 @@ var (
 	// approximate tangent to the surface of the unit sphere. In fact, C is the
 	// exact midpoint of the line segment AB. All of these points are close
 	// enough to unit length to satisfy r3.Vector.IsUnit().
-	poA = Point{r3.Vector{0.72571927877036835, 0.46058825605889098, 0.51106749730504852}}
-	poB = Point{r3.Vector{0.7257192746638208, 0.46058826573818168, 0.51106749441312738}}
-	poC = Point{r3.Vector{0.72571927671709457, 0.46058826089853633, 0.51106749585908795}}
+	poA = Point{r3.Vector{X: 0.72571927877036835, Y: 0.46058825605889098, Z: 0.51106749730504852}}
+	poB = Point{r3.Vector{X: 0.7257192746638208, Y: 0.46058826573818168, Z: 0.51106749441312738}}
+	poC = Point{r3.Vector{X: 0.72571927671709457, Y: 0.46058826089853633, Z: 0.51106749585908795}}
 
 	// The points "x1" and "x2" are exactly proportional, i.e. they both lie
 	// on a common line through the origin. Both points are considered to be
 	// normalized, and in fact they both satisfy (x == x.Normalize()).
 	// Therefore the triangle (x1, x2, -x1) consists of three distinct points
 	// that all lie on a common line through the origin.
-	x1 = Point{r3.Vector{0.99999999999999989, 1.4901161193847655e-08, 0}}
-	x2 = Point{r3.Vector{1, 1.4901161193847656e-08, 0}}
+	x1 = Point{r3.Vector{X: 0.99999999999999989, Y: 1.4901161193847655e-08, Z: 0}}
+	x2 = Point{r3.Vector{X: 1, Y: 1.4901161193847656e-08, Z: 0}}
 
 	// Here are two more points that are distinct, exactly proportional, and
 	// that satisfy (x == x.Normalize()).
-	x3 = Point{r3.Vector{1, 1, 1}.Normalize()}
+	x3 = Point{r3.Vector{X: 1, Y: 1, Z: 1}.Normalize()}
 	x4 = Point{x3.Mul(0.99999999999999989)}
 
 	// The following three points demonstrate that Normalize() is not idempotent, i.e.
 	// y0.Normalize() != y0.Normalize().Normalize(). Both points are exactly proportional.
-	y0 = Point{r3.Vector{1, 1, 0}}
+	y0 = Point{r3.Vector{X: 1, Y: 1, Z: 0}}
 	y1 = Point{y0.Normalize()}
 	y2 = Point{y1.Normalize()}
 )
@@ -133,9 +187,9 @@ func TestPredicatesRobustSignEqualities(t *testing.T) {
 }
 
 func TestPredicatesRobustSign(t *testing.T) {
-	x := Point{r3.Vector{1, 0, 0}}
-	y := Point{r3.Vector{0, 1, 0}}
-	z := Point{r3.Vector{0, 0, 1}}
+	x := Point{r3.Vector{X: 1, Y: 0, Z: 0}}
+	y := Point{r3.Vector{X: 0, Y: 1, Z: 0}}
+	z := Point{r3.Vector{X: 0, Y: 0, Z: 1}}
 
 	tests := []struct {
 		p1, p2, p3 Point
@@ -291,96 +345,96 @@ func TestPredicatesSymbolicallyPerturbedSign(t *testing.T) {
 	}{
 		{
 			// det(M_1) = b0*c1 - b1*c0
-			a:    Point{r3.Vector{-3, -1, 0}},
-			b:    Point{r3.Vector{-2, 1, 0}},
-			c:    Point{r3.Vector{1, -2, 0}},
+			a:    Point{r3.Vector{X: -3, Y: -1, Z: 0}},
+			b:    Point{r3.Vector{X: -2, Y: 1, Z: 0}},
+			c:    Point{r3.Vector{X: 1, Y: -2, Z: 0}},
 			want: CounterClockwise,
 		},
 		{
 			// det(M_2) = b2*c0 - b0*c2
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-6, 3, 3}},
-			b:    Point{r3.Vector{-4, 2, -1}},
-			c:    Point{r3.Vector{-2, 1, 4}},
+			a:    Point{r3.Vector{X: -6, Y: 3, Z: 3}},
+			b:    Point{r3.Vector{X: -4, Y: 2, Z: -1}},
+			c:    Point{r3.Vector{X: -2, Y: 1, Z: 4}},
 		},
 		{
 			// det(M_3) = b1*c2 - b2*c1
 			want: CounterClockwise,
-			a:    Point{r3.Vector{0, -1, -1}},
-			b:    Point{r3.Vector{0, 1, -2}},
-			c:    Point{r3.Vector{0, 2, 1}},
+			a:    Point{r3.Vector{X: 0, Y: -1, Z: -1}},
+			b:    Point{r3.Vector{X: 0, Y: 1, Z: -2}},
+			c:    Point{r3.Vector{X: 0, Y: 2, Z: 1}},
 		},
 		// From this point onward, B or C must be zero, or B is proportional to C.
 		{
 			// det(M_4) = c0*a1 - c1*a0
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-1, 2, 7}},
-			b:    Point{r3.Vector{2, 1, -4}},
-			c:    Point{r3.Vector{4, 2, -8}},
+			a:    Point{r3.Vector{X: -1, Y: 2, Z: 7}},
+			b:    Point{r3.Vector{X: 2, Y: 1, Z: -4}},
+			c:    Point{r3.Vector{X: 4, Y: 2, Z: -8}},
 		},
 		{
 			// det(M_5) = c0
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-4, -2, 7}},
-			b:    Point{r3.Vector{2, 1, -4}},
-			c:    Point{r3.Vector{4, 2, -8}},
+			a:    Point{r3.Vector{X: -4, Y: -2, Z: 7}},
+			b:    Point{r3.Vector{X: 2, Y: 1, Z: -4}},
+			c:    Point{r3.Vector{X: 4, Y: 2, Z: -8}},
 		},
 		{
 			// det(M_6) = -c1
 			want: CounterClockwise,
-			a:    Point{r3.Vector{0, -5, 7}},
-			b:    Point{r3.Vector{0, -4, 8}},
-			c:    Point{r3.Vector{0, -2, 4}},
+			a:    Point{r3.Vector{X: 0, Y: -5, Z: 7}},
+			b:    Point{r3.Vector{X: 0, Y: -4, Z: 8}},
+			c:    Point{r3.Vector{X: 0, Y: -2, Z: 4}},
 		},
 		{
 			// det(M_7) = c2*a0 - c0*a2
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-5, -2, 7}},
-			b:    Point{r3.Vector{0, 0, -2}},
-			c:    Point{r3.Vector{0, 0, -1}},
+			a:    Point{r3.Vector{X: -5, Y: -2, Z: 7}},
+			b:    Point{r3.Vector{X: 0, Y: 0, Z: -2}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: -1}},
 		},
 		{
 			// det(M_8) = c2
 			want: CounterClockwise,
-			a:    Point{r3.Vector{0, -2, 7}},
-			b:    Point{r3.Vector{0, 0, 1}},
-			c:    Point{r3.Vector{0, 0, 2}},
+			a:    Point{r3.Vector{X: 0, Y: -2, Z: 7}},
+			b:    Point{r3.Vector{X: 0, Y: 0, Z: 1}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 2}},
 		},
 		// From this point onward, C must be zero.
 		{
 			// det(M_9) = a0*b1 - a1*b0
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-3, 1, 7}},
-			b:    Point{r3.Vector{-1, -4, 1}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: -3, Y: 1, Z: 7}},
+			b:    Point{r3.Vector{X: -1, Y: -4, Z: 1}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 		{
 			// det(M_10) = -b0
 			want: CounterClockwise,
-			a:    Point{r3.Vector{-6, -4, 7}},
-			b:    Point{r3.Vector{-3, -2, 1}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: -6, Y: -4, Z: 7}},
+			b:    Point{r3.Vector{X: -3, Y: -2, Z: 1}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 		{
 			// det(M_11) = b1
 			want: Clockwise,
-			a:    Point{r3.Vector{0, -4, 7}},
-			b:    Point{r3.Vector{0, -2, 1}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: 0, Y: -4, Z: 7}},
+			b:    Point{r3.Vector{X: 0, Y: -2, Z: 1}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 		{
 			// det(M_12) = a0
 			want: Clockwise,
-			a:    Point{r3.Vector{-1, -4, 5}},
-			b:    Point{r3.Vector{0, 0, -3}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: -1, Y: -4, Z: 5}},
+			b:    Point{r3.Vector{X: 0, Y: 0, Z: -3}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 		{
 			// det(M_13) = 1
 			want: CounterClockwise,
-			a:    Point{r3.Vector{0, -4, 5}},
-			b:    Point{r3.Vector{0, 0, -5}},
-			c:    Point{r3.Vector{0, 0, 0}},
+			a:    Point{r3.Vector{X: 0, Y: -4, Z: 5}},
+			b:    Point{r3.Vector{X: 0, Y: 0, Z: -5}},
+			c:    Point{r3.Vector{X: 0, Y: 0, Z: 0}},
 		},
 	}
 	// Given 3 points A, B, C that are exactly coplanar with the origin and where
@@ -475,9 +529,9 @@ func TestPredicatesCompareDistancesCoverage(t *testing.T) {
 			wantPrec: doublePrecision,
 		},
 		{
-			x:        Point{r3.Vector{2, 0, 0}},
-			a:        Point{r3.Vector{2, -1, 0}},
-			b:        Point{r3.Vector{2, 1, 1e-100}},
+			x:        Point{r3.Vector{X: 2, Y: 0, Z: 0}},
+			a:        Point{r3.Vector{X: 2, Y: -1, Z: 0}},
+			b:        Point{r3.Vector{X: 2, Y: 1, Z: 1e-100}},
 			distFunc: triageCompareSin2Distances,
 			wantSign: -1,
 			wantPrec: exactPrecision,
@@ -937,10 +991,224 @@ func TestPredicatesCompareDistanceConsistency(t *testing.T) {
 	}
 }
 
+// Verifies that SignDotProd(a, b) == expected, and that the minimum
+// required precision is "expected_prec".
+func TestPredicatesSignDotProd(t *testing.T) {
+	tests := []struct {
+		a, b      Point
+		want      int
+		precision string
+	}{
+		{
+			// Orthogonal
+			a:         PointFromCoords(1, 0, 0),
+			b:         PointFromCoords(0, 1, 0),
+			want:      0,
+			precision: "EXACT",
+		},
+		{
+			//  NearlyOrthogonalPositive
+			a:         PointFromCoords(1, 0, 0),
+			b:         PointFromCoords(dblEpsilon, 1, 0),
+			want:      1,
+			precision: "EXACT",
+		},
+		{
+			//  NearlyOrthogonalPositive
+			a:         PointFromCoords(1, 0, 0),
+			b:         PointFromCoords(1e-45, 1, 0),
+			want:      1,
+			precision: "EXACT",
+		},
+		{
+			// NearlyOrthogonalNegative
+			a:         PointFromCoords(1, 0, 0),
+			b:         PointFromCoords(-dblEpsilon, 1, 0),
+			want:      -1,
+			precision: "EXACT",
+		},
+		{
+			// NearlyOrthogonalNegative
+			a:         PointFromCoords(1, 0, 0),
+			b:         PointFromCoords(-1e-45, 1, 0),
+			want:      -1,
+			precision: "EXACT",
+		},
+	}
+
+	for _, test := range tests {
+		got := SignDotProd(test.a, test.b)
+		if got != test.want {
+			t.Errorf("SignDotProd(%+v, %+v) = %d, wnat %d", test.a, test.b, got, test.want)
+		}
+
+		gotPrec := "EXACT"
+		if triageSignDotProd(test.a, test.b) != 0 {
+			gotPrec = "DOUBLE"
+		}
+		if test.precision != gotPrec {
+			t.Errorf("triageSignDotProd precision = %q, wanted %q", gotPrec, test.precision)
+		}
+	}
+}
+func TestPredicatesCircleEdgeIntersectionOrdering(t *testing.T) {
+	// Verifies that CircleEdgeIntersectionOrdering(a, b, c, d, n, m) == expected,
+	// and that the minimum required precision is "expected_prec".
+
+	// Two cells who's left and right edges are on the prime meridian,
+	// cell0 := CellFromCellID(CellIDFromToken("054"))
+	cell1 := CellFromCellID(CellIDFromToken("1ac"))
+
+	// And then the three neighbors above them.
+	// cella := CellFromCellID(CellIDFromToken("0fc"))
+	cellb := CellFromCellID(CellIDFromToken("104"))
+	//      cellc := CellFromCellID(CellIDFromToken("10c"))
+
+	// Top, left and right edges of the cell as unnormalized vectors.
+	e3 := cell1.EdgeRaw(3)
+	e2 := cell1.EdgeRaw(2)
+	e1 := cell1.EdgeRaw(1) // EdgeRaw
+	c1 := cell1.Center()
+	cb := cellb.Center()
+	yeps := r3.Vector{X: 0, Y: epsilon, Z: 0}
+
+	tests := []struct {
+		a, b, c, d, m, n Point
+		want             int
+		prec             string
+	}{
+		{
+			// The same edge should cross at the same spot exactly.
+			a:    c1,
+			b:    cb,
+			c:    c1,
+			d:    cb,
+			m:    e2,
+			n:    e1,
+			want: 0,
+			prec: "DOUBLE",
+		},
+		{
+			// Simple case where the crossings aren't too close, AB should cross after CD.
+			a:    c1,
+			b:    cellb.Vertex(3),
+			c:    c1,
+			d:    cellb.Vertex(2),
+			m:    e2,
+			n:    e1,
+			want: 1,
+			prec: "DOUBLE",
+		},
+		// Swapping the boundary we're comparing against should negate the sign.
+		{
+			a:    c1,
+			b:    cellb.Vertex(3),
+			c:    c1,
+			d:    cellb.Vertex(2),
+			m:    e2,
+			n:    e3,
+			want: -1,
+			prec: "DOUBLE",
+		},
+
+		// As should swapping the edge ordering.
+		{
+			a:    c1,
+			b:    cellb.Vertex(2),
+			c:    c1,
+			d:    cellb.Vertex(3),
+			m:    e2,
+			n:    e1,
+			want: -1,
+			prec: "DOUBLE",
+		},
+		{
+			a:    c1,
+			b:    cellb.Vertex(2),
+			c:    c1,
+			d:    cellb.Vertex(3),
+			m:    e2,
+			n:    e3,
+			want: 1,
+			prec: "DOUBLE",
+		},
+
+		// Nearly the same edge but with one endpoint perturbed enough to require
+		// long double precision.
+		{
+			a:    c1,
+			b:    Point{cb.Add(yeps)},
+			c:    c1,
+			d:    cb,
+			m:    e2,
+			n:    e1,
+			want: -1,
+			prec: "EXACT",
+		},
+		{
+			a:    c1,
+			b:    Point{cb.Sub(yeps)},
+			c:    c1,
+			d:    cb,
+			m:    e2,
+			n:    e1,
+			want: 1,
+			prec: "EXACT",
+		},
+		{
+			a:    c1,
+			b:    cb,
+			c:    c1,
+			d:    Point{cb.Add(yeps)},
+			m:    e2,
+			n:    e1,
+			want: 1,
+			prec: "EXACT",
+		},
+		{
+			a:    c1,
+			b:    cb,
+			c:    c1,
+			d:    Point{cb.Sub(yeps)},
+			m:    e2,
+			n:    e1,
+			want: -1,
+			prec: "EXACT",
+		},
+	}
+
+	for i, test := range tests {
+		got := CircleEdgeIntersectionOrdering(test.a, test.b, test.c, test.d, test.m, test.n)
+
+		if got != test.want {
+			t.Errorf("%d: CircleEdgeIntersectionOrdering(%v, %v, %v, %v, %v, %v) = %d, want %d ",
+				i, test.a, test.b, test.c, test.d, test.m, test.n, got, test.want)
+		}
+
+		// We triage in double precision and then fall back to exact for 0.
+		actualPrec := "EXACT"
+		if triageIntersectionOrdering(test.a, test.b, test.c, test.d, test.m, test.n) != 0 {
+			actualPrec = "DOUBLE"
+		} else {
+			// We got zero, check for duplicate/reverse duplicate edges before falling
+			// back to more precision.
+			if (test.a == test.c && test.b == test.d) || (test.a == test.d && test.b == test.c) {
+				actualPrec = "DOUBLE"
+			}
+		}
+		if actualPrec != test.prec {
+			t.Errorf("%d: CircleEdgeIntersectionOrdering(%v, %v, %v, %v, %v, %v( used precision %q, wanted %q",
+				i, test.a, test.b, test.c, test.d, test.m, test.n, actualPrec, test.prec)
+		}
+	}
+}
+
+// ---------------------------------- Benchmarks ---------------------------
+
 func BenchmarkSign(b *testing.B) {
-	p1 := Point{r3.Vector{-3, -1, 4}}
-	p2 := Point{r3.Vector{2, -1, -3}}
-	p3 := Point{r3.Vector{1, -2, 0}}
+	p1 := Point{r3.Vector{X: -3, Y: -1, Z: 4}}
+	p2 := Point{r3.Vector{X: 2, Y: -1, Z: -3}}
+	p3 := Point{r3.Vector{X: 1, Y: -2, Z: 0}}
 	for i := 0; i < b.N; i++ {
 		Sign(p1, p2, p3)
 	}
@@ -949,9 +1217,9 @@ func BenchmarkSign(b *testing.B) {
 // BenchmarkRobustSignSimple runs the benchmark for points that satisfy the first
 // checks in RobustSign to compare the performance to that of Sign().
 func BenchmarkRobustSignSimple(b *testing.B) {
-	p1 := Point{r3.Vector{-3, -1, 4}}
-	p2 := Point{r3.Vector{2, -1, -3}}
-	p3 := Point{r3.Vector{1, -2, 0}}
+	p1 := Point{r3.Vector{X: -3, Y: -1, Z: 4}}
+	p2 := Point{r3.Vector{X: 2, Y: -1, Z: -3}}
+	p3 := Point{r3.Vector{X: 1, Y: -2, Z: 0}}
 	for i := 0; i < b.N; i++ {
 		RobustSign(p1, p2, p3)
 	}
@@ -965,3 +1233,25 @@ func BenchmarkRobustSignNearCollinear(b *testing.B) {
 		RobustSign(poA, poB, poC)
 	}
 }
+
+// TODO(rsned): Differences from C++
+//
+// TEST(epsilon_for_digits, recursion) {
+// TEST(rounding_epsilon, vs_numeric_limits) {
+// TEST(Sign, CollinearPoints) {
+// TEST(Sign, StableSignUnderflow) {
+// TEST_F(SignTest, StressTest) {
+// TEST_F(StableSignTest, FailureRate) {
+// TEST(Sign, SymbolicPerturbationCodeCoverage) {
+// TEST(CompareDistances, Coverage) {
+// TEST(CompareDistance, Coverage) {
+// TEST(CompareEdgeDistance, Coverage) {
+// TEST(CompareEdgeDistance, Consistency) {
+// TEST(CompareEdgePairDistance, Coverage) {
+// TEST(CompareEdgeDirections, Coverage) {
+// TEST(CircleEdgeIntersectionSign, Works) {
+// TEST(CompareEdgeDirections, Consistency) {
+// TEST(EdgeCircumcenterSign, Coverage) {
+// TEST(EdgeCircumcenterSign, Consistency) {
+// TEST(VoronoiSiteExclusion, Coverage) {
+// TEST(VoronoiSiteExclusion, Consistency) {

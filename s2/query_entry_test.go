@@ -43,7 +43,7 @@ func TestQueryQueueEntry(t *testing.T) {
 	for _, s := range cells {
 		q.push(&queryQueueEntry{
 			distance:  s.dist,
-			id:        cellIDFromString(s.cell),
+			id:        CellIDFromString(s.cell),
 			indexCell: nil,
 		})
 	}
@@ -51,20 +51,20 @@ func TestQueryQueueEntry(t *testing.T) {
 	// Insert one new item (should end up in position 2)
 	item := &queryQueueEntry{
 		distance:  minDistance(s1.ChordAngleFromAngle(s1.Angle(0.107601))),
-		id:        cellIDFromString("1/3201003"),
+		id:        CellIDFromString("1/3201003"),
 		indexCell: nil,
 	}
 	q.push(item)
 
 	expectedCellIDs := []CellID{
-		cellIDFromString("1/3201"),
-		cellIDFromString("1/33103"),
-		cellIDFromString("1/3201003"),
-		cellIDFromString("1/3200"),
-		cellIDFromString("1/3311"),
-		cellIDFromString("1/321"),
-		cellIDFromString("1/31"),
-		cellIDFromString("1/3022"),
+		CellIDFromString("1/3201"),
+		CellIDFromString("1/33103"),
+		CellIDFromString("1/3201003"),
+		CellIDFromString("1/3200"),
+		CellIDFromString("1/3311"),
+		CellIDFromString("1/321"),
+		CellIDFromString("1/31"),
+		CellIDFromString("1/3022"),
 	}
 
 	if got, want := q.size(), len(expectedCellIDs); got != want {

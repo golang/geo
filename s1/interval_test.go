@@ -22,10 +22,11 @@ import (
 // Some standard intervals for use throughout the tests.
 // These include the intervals spanning one or more "quadrants" which are
 // numbered as follows:
-//    quad1 == [0, π/2]
-//    quad2 == [π/2, π]
-//    quad3 == [-π, -π/2]
-//    quad4 == [-π/2, 0]
+//
+//	quad1 == [0, π/2]
+//	quad2 == [π/2, π]
+//	quad3 == [-π, -π/2]
+//	quad4 == [-π/2, 0]
 var (
 	empty = EmptyInterval()
 	full  = FullInterval()

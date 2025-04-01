@@ -15,12 +15,30 @@
 package s2
 
 import (
+	"flag"
+
 	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
 
 	"github.com/golang/geo/s1"
+)
+
+var (
+	// The edge query benchmarks scale up the number of edges each time in the
+	// benchmarking loop. This flag allows for changing up or down the number
+	// of scalings that occur in benchmarking.  The default value gets to
+	// ~50k edges in the test, and completes in a reasonable amount of time.
+	// Sometimes though there is a need to push the limits on the benchmarks
+	// without wanting to do a complete redeploy to change the counter, and
+	// this flag allows that to happen.
+	//
+	// To set in testing add "--benchmark_edge_query_range=5" to your test command.
+	// When using blaze/bazel add "--test_arg=--benchmark_edge_query_range=5"
+	benchmarkEdgeQueryRange = flag.Int("benchmark_edge_query_range", 7,
+		"Set the upper limit on times to scale up the edge query "+
+			"edge counts in benchmark runs.")
 )
 
 // Note that most of the actual testing is done in s2edge_query_{closest|furthest}_test.
@@ -284,7 +302,7 @@ func testEdgeQueryWithGenerator(t *testing.T,
 		case 2:
 			// Find the edges furthest from a given cell.
 			minLevel := MaxDiagMetric.MinLevel(queryRadius.Radians())
-			level := minLevel + randomUniformInt(maxLevel-minLevel+1)
+			level := minLevel + randomUniformInt(MaxLevel-minLevel+1)
 			a := samplePointFromCap(queryCap)
 			cell := CellFromCellID(cellIDFromPoint(a).Parent(level))
 			target := NewMaxDistanceToCellTarget(cell)
@@ -319,9 +337,6 @@ func testEdgeQueryWithGenerator(t *testing.T,
 // Furthest isn't doing anything different under the covers than Closest, so there
 // isn't really a huge need for benchmarking both.
 func benchmarkEdgeQueryFindClosest(b *testing.B, bmOpts *edgeQueryBenchmarkOptions) {
-	const numIndexSamples = 8
-
-	b.StopTimer()
 	index := NewShapeIndex()
 	opts := NewClosestEdgeQueryOptions().MaxResults(1).IncludeInteriors(bmOpts.includeInteriors)
 
@@ -336,35 +351,29 @@ func benchmarkEdgeQueryFindClosest(b *testing.B, bmOpts *edgeQueryBenchmarkOptio
 	opts.UseBruteForce(*benchmarkBruteForce)
 	query := NewClosestEdgeQuery(index, opts)
 
-	delta := 0 // Bresenham-type algorithm for geometry sampling.
 	var targets []distanceTarget
 
 	// To follow the sizing on the C++ tests to ease comparisons, the number of
-	// edges in the index range on 3 * 4^n (up to 16384).
+	// edges in the index range on 3 * 4^n (up to ~48k by default).
 	bmOpts.numIndexEdges = 3
-	for n := 1; n <= 7; n++ {
+	for n := 1; n <= *benchmarkEdgeQueryRange; n++ {
 		bmOpts.numIndexEdges *= 4
 		b.Run(fmt.Sprintf("%d", bmOpts.numIndexEdges),
 			func(b *testing.B) {
-				iTarget := 0
+				// TODO(roberts): Return value 2 here is the slice of target
+				// ShapeIndexes. Incorporate it once ShapeIndexTargets
+				// are able to be used in tests.
+				targets, _ = generateEdgeQueryWithTargets(bmOpts, query, index)
 				for i := 0; i < b.N; i++ {
-					delta -= numIndexSamples
-					if delta < 0 {
-						// Generate a new index and a new set of
-						// targets to go with it. Reset the random
-						// number seed so that we use the same sequence
-						// of indexed shapes no matter how many
-						// iterations are specified.
-						b.StopTimer()
-						delta += i
-						targets, _ = generateEdgeQueryWithTargets(bmOpts, query, index)
-						b.StartTimer()
-					}
-					query.FindEdges(targets[iTarget])
-					iTarget++
-					if iTarget == len(targets) {
-						iTarget = 0
-					}
+					// TODO(roberts): In the reference C++ benchmark
+					// they use the tooling to split the benchmark
+					// run iterations up into kNumIndexSamples (8)
+					// times and pause to generate a new geometry
+					// and targets to do so.  If the current set
+					// of Go benchmark results are not sufficient, see
+					// about incorporating that same behavior using
+					// b.N to estimate when to pause and recreate.
+					query.FindEdges(targets[i%len(targets)])
 				}
 			})
 	}
@@ -374,7 +383,7 @@ func benchmarkEdgeQueryFindClosest(b *testing.B, bmOpts *edgeQueryBenchmarkOptio
 // benchmarking runners.
 type edgeQueryBenchmarkOptions struct {
 	iters                    int
-	fact                     shapeIndexGeneratorFunc
+	indexGenerator           shapeIndexGeneratorFunc
 	numIndexEdges            int
 	includeInteriors         bool
 	targetType               queryTargetType
@@ -398,39 +407,39 @@ type edgeQueryBenchmarkOptions struct {
 //
 // Also generates a set of target geometries for the query, based on the
 // targetType and the input parameters. If targetType is INDEX, then:
-//   (i) the target will have approximately numTargetEdges edges.
-//   (ii) includeInteriors will be set on the target index.
 //
-//   - If chooseTargetFromIndex is true, then the target will be chosen
-//     from the geometry in the index itself, otherwise it will be chosen
-//     randomly according to the parameters below:
+//	(i) the target will have approximately numTargetEdges edges.
+//	(ii) includeInteriors will be set on the target index.
 //
-//   - If targetRadiusFraction > 0, the target radius will be approximately
-//     the given fraction of the index radius; if targetRadiusFraction < 0,
-//     it will be chosen randomly up to corresponding positive fraction.
+//	- If chooseTargetFromIndex is true, then the target will be chosen
+//	  from the geometry in the index itself, otherwise it will be chosen
+//	  randomly according to the parameters below:
 //
-//   - If centerSeparationFraction > 0, then the centers of index and target
-//     bounding caps will be separated by the given fraction of the index
-//     radius; if centerSeparationFraction < 0, they will be separated by up
-//     to the corresponding positive fraction.
+//	- If targetRadiusFraction > 0, the target radius will be approximately
+//	  the given fraction of the index radius; if targetRadiusFraction < 0,
+//	  it will be chosen randomly up to corresponding positive fraction.
 //
-//   - The randomSeed is used to initialize an internal seed, which is
-//     incremented at the start of each call to generateEdgeQueryWithTargets.
-//     This is for debugging purposes.
+//	- If centerSeparationFraction > 0, then the centers of index and target
+//	  bounding caps will be separated by the given fraction of the index
+//	  radius; if centerSeparationFraction < 0, they will be separated by up
+//	  to the corresponding positive fraction.
 //
+//	- The randomSeed is used to initialize an internal seed, which is
+//	  incremented at the start of each call to generateEdgeQueryWithTargets.
+//	  This is for debugging purposes.
 func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQuery, queryIndex *ShapeIndex) (targets []distanceTarget, targetIndexes []*ShapeIndex) {
 
 	// To save time, we generate at most this many distinct targets per index.
 	const maxTargetsPerIndex = 100
 
-	// Set a specific seed to allow repeatabilty
+	// Set a specific seed to allow repeatability
 	rand.Seed(opts.randomSeed)
 	opts.randomSeed++
 	indexCap := CapFromCenterAngle(randomPoint(), opts.radiusKm)
 
 	query.Reset()
 	queryIndex.Reset()
-	opts.fact(indexCap, opts.numIndexEdges, queryIndex)
+	opts.indexGenerator(indexCap, opts.numIndexEdges, queryIndex)
 
 	targets = make([]distanceTarget, 0)
 	targetIndexes = make([]*ShapeIndex, 0)
@@ -485,11 +494,12 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 				}
 				targetIndex.Add(&shape)
 			} else {
-				opts.fact(targetCap, opts.numTargetEdges, targetIndex)
+				opts.indexGenerator(targetCap, opts.numTargetEdges, targetIndex)
 			}
 			target := NewMinDistanceToShapeIndexTarget(targetIndex)
 			target.setIncludeInteriors(opts.includeInteriors)
 			targets = append(targets, target)
+			targetIndexes = append(targetIndexes, targetIndex)
 		default:
 			panic(fmt.Sprintf("unknown query target type %v", opts.targetType))
 		}

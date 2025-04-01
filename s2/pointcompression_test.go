@@ -46,7 +46,7 @@ func makeSnappedPoints(nvertices int, level int) []Point {
 }
 
 func TestPointsCompression(t *testing.T) {
-	loop100Mixed15 := makeSnappedPoints(100, maxLevel)
+	loop100Mixed15 := makeSnappedPoints(100, MaxLevel)
 	for i := 0; i < 15; i++ {
 		loop100Mixed15[3*i] = CellFromPoint(loop100Mixed15[3*i]).ID().Parent(4).Point()
 	}
@@ -56,14 +56,14 @@ func TestPointsCompression(t *testing.T) {
 		pts   []Point
 		level int
 	}{
-		{"loop4", makeSnappedPoints(4, maxLevel), maxLevel},
-		{"loop4unsnapped", makeSnappedPoints(4, 4), maxLevel},
+		{"loop4", makeSnappedPoints(4, MaxLevel), MaxLevel},
+		{"loop4unsnapped", makeSnappedPoints(4, 4), MaxLevel},
 		// Radius is 100m, so points are about 141 meters apart.
 		// Snapping to level 14 will move them by < 47m.
 		{"loop4Level14", makeSnappedPoints(4, 14), 14},
-		{"loop100", makeSnappedPoints(100, maxLevel), maxLevel},
-		{"loop100Unsnapped", makeSnappedPoints(100, 100), maxLevel},
-		{"loop100Mixed15", loop100Mixed15, maxLevel},
+		{"loop100", makeSnappedPoints(100, MaxLevel), MaxLevel},
+		{"loop100Unsnapped", makeSnappedPoints(100, 100), MaxLevel},
+		{"loop100Mixed15", loop100Mixed15, MaxLevel},
 	}
 
 NextTest:

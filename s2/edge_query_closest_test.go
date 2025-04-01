@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -107,8 +108,8 @@ func TestClosestEdgeQueryTrueDistanceLessThanChordAngleDistance(t *testing.T) {
 	// true distance is slightly less than the one computed by ChordAngle.
 	//
 	// The points below had the worst error from among 100,000 random pairs.
-	p0 := Point{r3.Vector{0.78516762584829192, -0.50200400690845970, -0.36263449417782678}}
-	p1 := Point{r3.Vector{0.78563011732429433, -0.50187655940493503, -0.36180828883938054}}
+	p0 := Point{r3.Vector{X: 0.78516762584829192, Y: -0.50200400690845970, Z: -0.36263449417782678}}
+	p1 := Point{r3.Vector{X: 0.78563011732429433, Y: -0.50187655940493503, Z: -0.36180828883938054}}
 	pv := &PointVector{p0}
 
 	index := NewShapeIndex()
@@ -212,78 +213,126 @@ func TestClosestEdgeQueryTargetPolygonContainingIndexedPoints(t *testing.T) {
 	}
 }
 
-func BenchmarkEdgeQueryFindEdgesClosestFractal(b *testing.B) {
-	// Test searching within the general vicinity of the indexed shapes.
-	opts := &edgeQueryBenchmarkOptions{
-		fact:                     fractalLoopShapeIndexGenerator,
-		includeInteriors:         false,
-		targetType:               queryTypePoint,
-		numTargetEdges:           0,
-		chooseTargetFromIndex:    false,
-		radiusKm:                 1000,
-		maxDistanceFraction:      -1,
-		maxErrorFraction:         -1,
-		targetRadiusFraction:     0.0,
-		centerSeparationFraction: -2.0,
+// BenchmarkEdgeQueryFindEdges encapulates the benchmarks into a more standard
+// form to cut down on repeated copy and paste with all the combinations of
+// benchmarks for EdgeQuery.
+func BenchmarkEdgeQueryFindEdges(b *testing.B) {
+	generators := []struct {
+		name string
+		gen  shapeIndexGeneratorFunc
+	}{
+		{"Fractal", fractalLoopShapeIndexGenerator},
+		{"Regular", loopShapeIndexGenerator},
+		{"PointCloud", pointCloudShapeIndexGenerator},
 	}
 
-	benchmarkEdgeQueryFindClosest(b, opts)
-}
-
-func BenchmarkEdgeQueryFindEdgesClosestInterior(b *testing.B) {
-	// Test searching within the general vicinity of the indexed shapes including interiors.
-	opts := &edgeQueryBenchmarkOptions{
-		fact:                     fractalLoopShapeIndexGenerator,
-		includeInteriors:         true,
-		targetType:               queryTypePoint,
-		numTargetEdges:           0,
-		chooseTargetFromIndex:    false,
-		radiusKm:                 1000,
-		maxDistanceFraction:      -1,
-		maxErrorFraction:         -1,
-		targetRadiusFraction:     0.0,
-		centerSeparationFraction: -2.0,
+	benchmarks := []struct {
+		benchCase string
+		opts      *edgeQueryBenchmarkOptions
+	}{
+		{
+			// Test searching within the general vicinity of the indexed shapes.
+			benchCase: "ClosestToPoint",
+			opts: &edgeQueryBenchmarkOptions{
+				includeInteriors:         false,
+				targetType:               queryTypePoint,
+				numTargetEdges:           0,
+				chooseTargetFromIndex:    false,
+				radiusKm:                 1000,
+				maxDistanceFraction:      -1,
+				maxErrorFraction:         -1,
+				targetRadiusFraction:     0.0,
+				centerSeparationFraction: -2.0,
+			},
+		},
+		{
+			// Test searching within the general vicinity of the
+			// indexed shapes including interiors.
+			benchCase: "ClosestToPointInterior",
+			opts: &edgeQueryBenchmarkOptions{
+				includeInteriors:         true,
+				targetType:               queryTypePoint,
+				numTargetEdges:           0,
+				chooseTargetFromIndex:    false,
+				radiusKm:                 1000,
+				maxDistanceFraction:      -1,
+				maxErrorFraction:         -1,
+				targetRadiusFraction:     0.0,
+				centerSeparationFraction: -2.0,
+			},
+		},
+		{
+			// Test searching with an error tolerance. Allowing 1%
+			// error makes searches 6x faster in the case of regular
+			// loops with a large number of vertices.
+			benchCase: "ClosestToPointErrorPoint1Pct",
+			opts: &edgeQueryBenchmarkOptions{
+				includeInteriors:         false,
+				targetType:               queryTypePoint,
+				numTargetEdges:           0,
+				chooseTargetFromIndex:    false,
+				radiusKm:                 1000,
+				maxDistanceFraction:      -1,
+				maxErrorFraction:         0.1,
+				targetRadiusFraction:     0.0,
+				centerSeparationFraction: -2.0,
+			},
+		},
+		{
+			// Test searching with an error tolerance. Allowing 1%
+			// error makes searches 6x faster in the case of regular
+			// loops with a large number of vertices.
+			benchCase: "ClosestToPointErrorPoint01Pct",
+			opts: &edgeQueryBenchmarkOptions{
+				includeInteriors:         false,
+				targetType:               queryTypePoint,
+				numTargetEdges:           0,
+				chooseTargetFromIndex:    false,
+				radiusKm:                 1000,
+				maxDistanceFraction:      -1,
+				maxErrorFraction:         0.01,
+				targetRadiusFraction:     0.0,
+				centerSeparationFraction: -2.0,
+			},
+		},
+		{
+			benchCase: "ClosestToEdge",
+			opts: &edgeQueryBenchmarkOptions{
+				includeInteriors:         false,
+				targetType:               queryTypeEdge,
+				numTargetEdges:           0,
+				chooseTargetFromIndex:    false,
+				radiusKm:                 1000,
+				maxDistanceFraction:      -1,
+				maxErrorFraction:         -1,
+				targetRadiusFraction:     -1.0,
+				centerSeparationFraction: -2.0,
+			},
+		},
+		{
+			benchCase: "ClosestToCell",
+			opts: &edgeQueryBenchmarkOptions{
+				includeInteriors:         false,
+				targetType:               queryTypeCell,
+				numTargetEdges:           0,
+				chooseTargetFromIndex:    false,
+				radiusKm:                 1000,
+				maxDistanceFraction:      -1,
+				maxErrorFraction:         -1,
+				targetRadiusFraction:     -1.0,
+				centerSeparationFraction: -2.0,
+			},
+		},
 	}
 
-	benchmarkEdgeQueryFindClosest(b, opts)
-}
-
-func BenchmarkEdgeQueryFindEdgesClosestErrorPoint01Percent(b *testing.B) {
-	// Test searching with an error tolerance.  Allowing 1% error makes searches
-	// 6x faster in the case of regular loops with a large number of vertices.
-	opts := &edgeQueryBenchmarkOptions{
-		fact:                     fractalLoopShapeIndexGenerator,
-		includeInteriors:         false,
-		targetType:               queryTypePoint,
-		numTargetEdges:           0,
-		chooseTargetFromIndex:    false,
-		radiusKm:                 1000,
-		maxDistanceFraction:      -1,
-		maxErrorFraction:         0.01,
-		targetRadiusFraction:     0.0,
-		centerSeparationFraction: -2.0,
+	for _, bench := range benchmarks {
+		for _, g := range generators {
+			bench.opts.indexGenerator = g.gen
+			b.Run(fmt.Sprintf("%s/%s", bench.benchCase, g.name), func(b *testing.B) {
+				benchmarkEdgeQueryFindClosest(b, bench.opts)
+			})
+		}
 	}
-
-	benchmarkEdgeQueryFindClosest(b, opts)
-}
-
-func BenchmarkEdgeQueryFindEdgesClosestErrorPoint1Percent(b *testing.B) {
-	// Test searching with an error tolerance.  Allowing 1% error makes searches
-	// 6x faster in the case of regular loops with a large number of vertices.
-	opts := &edgeQueryBenchmarkOptions{
-		fact:                     fractalLoopShapeIndexGenerator,
-		includeInteriors:         false,
-		targetType:               queryTypePoint,
-		numTargetEdges:           0,
-		chooseTargetFromIndex:    false,
-		radiusKm:                 1000,
-		maxDistanceFraction:      -1,
-		maxErrorFraction:         0.1,
-		targetRadiusFraction:     0.0,
-		centerSeparationFraction: -2.0,
-	}
-
-	benchmarkEdgeQueryFindClosest(b, opts)
 }
 
 // TODO(roberts): Remaining tests to implement.
@@ -302,4 +351,20 @@ func BenchmarkEdgeQueryFindEdgesClosestErrorPoint1Percent(b *testing.B) {
 // TestClosestEdgeQueryPointCloudEdges) {
 // TestClosestEdgeQueryConservativeCellDistanceIsUsed) {
 //
-// More of the Benchmarking code.
+// Add the remaining Benchmarking cases for each generator type.
+// FindClosestMaxDistPow10
+// FindClosestNearVertex
+// FindClosestNearVertexMaxDistPow10
+// FindClosestToEdgeInterior
+// FindClosestToEdgeNearEdge
+// FindClosestToCellInterior
+// FindClosestToCellInIndex
+// FindClosestToSmallAbuttingIndex
+// FindClosestFromSmallAbuttingIndex
+// FindClosestToSameSizeAbuttingIndex
+// FindClosestToSameSizeContainedIndex
+// FindClosestToSameSizeContainingIndex
+// FindClosestToSameSizeDistantIndex
+// IsDistanceLessSameSizeDistantIndexFalse
+// IsDistanceLessSameSizeDistantIndexTrue
+// FindClosestToSmallIndexEdgeSample

@@ -26,9 +26,20 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-// To set in testing add "--benchmark_brute_force=true" to your test command.
-var benchmarkBruteForce = flag.Bool("benchmark_brute_force", false,
-	"When set, use brute force algorithms in benchmarking.")
+var (
+	// To set in testing add "--benchmark_brute_force=true" to your test command.
+	// When using blaze/bazel add "--test_arg=--benchmark_brute_force=true"
+	benchmarkBruteForce = flag.Bool("benchmark_brute_force", false,
+		"When set, use brute force algorithms in benchmarking.")
+)
+
+const (
+	// epsilon is a small number that represents a reasonable level of noise between two
+	// values that can be considered to be equal.
+	// C++ FLT_EPSILON is actually to 1.1920928955078125e-7, but this requires
+	// overriding the value specifically in a whole lot of tests.
+	epsilon = 1e-15
+)
 
 // float64Eq reports whether the two values are within the default epsilon.
 func float64Eq(x, y float64) bool { return float64Near(x, y, epsilon) }
@@ -123,8 +134,8 @@ func randomFrameAtPoint(z Point) *matrix3x3 {
 // The distribution is uniform over the space of cell ids, but only
 // approximately uniform over the surface of the sphere.
 func randomCellIDForLevel(level int) CellID {
-	face := randomUniformInt(numFaces)
-	pos := randomUint64() & uint64((1<<posBits)-1)
+	face := randomUniformInt(NumFaces)
+	pos := randomUint64() & uint64((1<<PosBits)-1)
 	return CellIDFromFacePosLevel(face, pos, level)
 }
 
@@ -132,7 +143,7 @@ func randomCellIDForLevel(level int) CellID {
 // level. The distribution is uniform over the space of cell ids,
 // but only approximately uniform over the surface of the sphere.
 func randomCellID() CellID {
-	return randomCellIDForLevel(randomUniformInt(maxLevel + 1))
+	return randomCellIDForLevel(randomUniformInt(MaxLevel + 1))
 }
 
 // randomCellUnion returns a CellUnion of the given size of randomly selected cells.
@@ -400,7 +411,7 @@ type fractal struct {
 	minLevel int
 
 	// dimension of the fractal. A value of approximately 1.26 corresponds
-	// to the stardard Koch curve. The value must lie in the range [1.0, 2.0).
+	// to the standard Koch curve. The value must lie in the range [1.0, 2.0).
 	dimension float64
 
 	// The ratio of the sub-edge length to the original edge length at each
@@ -472,7 +483,7 @@ func (f *fractal) minRadiusFactor() float64 {
 func (f *fractal) maxRadiusFactor() float64 {
 	// The maximum radius is always attained at either an original triangle
 	// vertex or at a middle vertex from the first subdivision step.
-	return math.Max(1.0, f.offsetFraction*math.Sqrt(3)+0.5)
+	return math.Max(1.0, f.offsetFraction*sqrt3+0.5)
 }
 
 // r2VerticesHelper recursively subdivides the edge to the desired level given
@@ -508,9 +519,9 @@ func (f *fractal) generateR2Vertices() []r2.Point {
 
 	// The Koch "snowflake" consists of three Koch curves whose initial edges
 	// form an equilateral triangle.
-	v0 := r2.Point{1.0, 0.0}
-	v1 := r2.Point{-0.5, math.Sqrt(3) / 2}
-	v2 := r2.Point{-0.5, -math.Sqrt(3) / 2}
+	v0 := r2.Point{X: 1.0, Y: 0.0}
+	v1 := r2.Point{X: -0.5, Y: sqrt3 / 2}
+	v2 := r2.Point{X: -0.5, Y: -sqrt3 / 2}
 	vertices = append(vertices, f.r2VerticesHelper(v0, v1, 0)...)
 	vertices = append(vertices, f.r2VerticesHelper(v1, v2, 0)...)
 	vertices = append(vertices, f.r2VerticesHelper(v2, v0, 0)...)

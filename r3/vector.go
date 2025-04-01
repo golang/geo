@@ -68,14 +68,16 @@ func (v Vector) Sub(ov Vector) Vector { return Vector{v.X - ov.X, v.Y - ov.Y, v.
 func (v Vector) Mul(m float64) Vector { return Vector{m * v.X, m * v.Y, m * v.Z} }
 
 // Dot returns the standard dot product of v and ov.
-func (v Vector) Dot(ov Vector) float64 { return v.X*ov.X + v.Y*ov.Y + v.Z*ov.Z }
+func (v Vector) Dot(ov Vector) float64 {
+	return float64(v.X*ov.X) + float64(v.Y*ov.Y) + float64(v.Z*ov.Z)
+}
 
 // Cross returns the standard cross product of v and ov.
 func (v Vector) Cross(ov Vector) Vector {
 	return Vector{
-		v.Y*ov.Z - v.Z*ov.Y,
-		v.Z*ov.X - v.X*ov.Z,
-		v.X*ov.Y - v.Y*ov.X,
+		float64(v.Y*ov.Z) - float64(v.Z*ov.Y),
+		float64(v.Z*ov.X) - float64(v.X*ov.Z),
+		float64(v.X*ov.Y) - float64(v.Y*ov.X),
 	}
 }
 
@@ -100,7 +102,7 @@ const (
 // Ortho returns a unit vector that is orthogonal to v.
 // Ortho(-v) = -Ortho(v) for all v.
 func (v Vector) Ortho() Vector {
-	ov := Vector{0.012, 0.0053, 0.00457}
+	ov := Vector{}
 	switch v.LargestComponent() {
 	case XAxis:
 		ov.Z = 1
@@ -146,9 +148,9 @@ func (v Vector) SmallestComponent() Axis {
 
 // Cmp compares v and ov lexicographically and returns:
 //
-//   -1 if v <  ov
-//    0 if v == ov
-//   +1 if v >  ov
+//	-1 if v <  ov
+//	 0 if v == ov
+//	+1 if v >  ov
 //
 // This method is based on C++'s std::lexicographical_compare. Two entities
 // are compared element by element with the given operator. The first mismatch

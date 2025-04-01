@@ -44,7 +44,7 @@ func TestCellIDSentinelRangeMinMax(t *testing.T) {
 }
 
 func TestCellIDParentChildRelationships(t *testing.T) {
-	ci := CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)
+	ci := CellIDFromFacePosLevel(3, 0x12345678, MaxLevel-4)
 
 	if !ci.IsValid() {
 		t.Errorf("CellID %v should be valid", ci)
@@ -55,7 +55,7 @@ func TestCellIDParentChildRelationships(t *testing.T) {
 	if p := ci.Pos(); p != 0x12345700 {
 		t.Errorf("ci.Pos() is 0x%X, want 0x12345700", p)
 	}
-	if l := ci.Level(); l != 26 { // 26 is maxLevel - 4
+	if l := ci.Level(); l != 26 { // 26 is MaxLevel - 4
 		t.Errorf("ci.Level() is %v, want 26", l)
 	}
 	if ci.IsLeaf() {
@@ -87,11 +87,11 @@ func TestCellIDParentChildRelationships(t *testing.T) {
 	if ci.ChildEnd() != ci.ChildBegin().Next().Next().Next().Next() {
 		t.Errorf("ci.ChildEnd() is 0x%X, want 0x%X", ci.ChildEnd(), ci.ChildBegin().Next().Next().Next().Next())
 	}
-	if ci.RangeMin() != ci.ChildBeginAtLevel(maxLevel) {
-		t.Errorf("ci.RangeMin() is 0x%X, want 0x%X", ci.RangeMin(), ci.ChildBeginAtLevel(maxLevel))
+	if ci.RangeMin() != ci.ChildBeginAtLevel(MaxLevel) {
+		t.Errorf("ci.RangeMin() is 0x%X, want 0x%X", ci.RangeMin(), ci.ChildBeginAtLevel(MaxLevel))
 	}
-	if ci.RangeMax().Next() != ci.ChildEndAtLevel(maxLevel) {
-		t.Errorf("ci.RangeMax().Next() is 0x%X, want 0x%X", ci.RangeMax().Next(), ci.ChildEndAtLevel(maxLevel))
+	if ci.RangeMax().Next() != ci.ChildEndAtLevel(MaxLevel) {
+		t.Errorf("ci.RangeMax().Next() is 0x%X, want 0x%X", ci.RangeMax().Next(), ci.ChildEndAtLevel(MaxLevel))
 	}
 }
 
@@ -161,8 +161,8 @@ func TestCellIDFromString(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := cellIDFromString(test.have); got != test.want {
-			t.Errorf("cellIDFromString(%q) = %v, want %v", test.have, got, test.want)
+		if got := CellIDFromString(test.have); got != test.want {
+			t.Errorf("CellIDFromString(%q) = %v, want %v", test.have, got, test.want)
 		}
 	}
 }
@@ -215,8 +215,8 @@ func TestCellIDEdgeNeighbors(t *testing.T) {
 	}
 	// Check the edge neighbors of the corner cells at all levels.  This case is
 	// trickier because it requires projecting onto adjacent faces.
-	const maxIJ = maxSize - 1
-	for level := 1; level <= maxLevel; level++ {
+	const maxIJ = MaxSize - 1
+	for level := 1; level <= MaxLevel; level++ {
 		id := cellIDFromFaceIJ(1, 0, 0).Parent(level)
 		// These neighbors were determined manually using the face and axis
 		// relationships.
@@ -257,7 +257,7 @@ func TestCellIDVertexNeighbors(t *testing.T) {
 	}
 
 	// Check the vertex neighbors of the corner of faces 0, 4, and 5.
-	id = CellIDFromFacePosLevel(0, 0, maxLevel)
+	id = CellIDFromFacePosLevel(0, 0, MaxLevel)
 	neighbors = id.VertexNeighbors(0)
 	sortCellIDs(neighbors)
 	if len(neighbors) != 3 {
@@ -296,7 +296,7 @@ func TestCellIDAllNeighbors(t *testing.T) {
 
 		// testAllNeighbors computes approximately 2**(2*(diff+1)) cell ids,
 		// so it's not reasonable to use large values of diff.
-		maxDiff := minInt(6, maxLevel-id.Level()-1)
+		maxDiff := minInt(6, MaxLevel-id.Level()-1)
 		level := id.Level() + randomUniformInt(maxDiff)
 
 		// We compute AllNeighbors, and then add in all the children of id
@@ -411,7 +411,7 @@ func TestCellIDFromTokensErrorCases(t *testing.T) {
 }
 
 func TestIJLevelToBoundUV(t *testing.T) {
-	maxIJ := 1<<maxLevel - 1
+	maxIJ := 1<<MaxLevel - 1
 
 	tests := []struct {
 		i     int
@@ -422,87 +422,87 @@ func TestIJLevelToBoundUV(t *testing.T) {
 		// The i/j space is [0, 2^30 - 1) which maps to [-1, 1] for the
 		// x/y axes of the face surface. Results are scaled by the size of a cell
 		// at the given level. At level 0, everything is one cell of the full size
-		// of the space.  At maxLevel, the bounding rect is almost floating point
+		// of the space.  At MaxLevel, the bounding rect is almost floating point
 		// noise.
 
 		// What should be out of bounds values, but passes the C++ code as well.
 		{
 			-1, -1, 0,
-			r2.RectFromPoints(r2.Point{-5, -5}, r2.Point{-1, -1}),
+			r2.RectFromPoints(r2.Point{X: -5, Y: -5}, r2.Point{X: -1, Y: -1}),
 		},
 		{
 			-1 * maxIJ, -1 * maxIJ, 0,
-			r2.RectFromPoints(r2.Point{-5, -5}, r2.Point{-1, -1}),
+			r2.RectFromPoints(r2.Point{X: -5, Y: -5}, r2.Point{X: -1, Y: -1}),
 		},
 		{
-			-1, -1, maxLevel,
-			r2.RectFromPoints(r2.Point{-1.0000000024835267, -1.0000000024835267},
-				r2.Point{-1, -1}),
+			-1, -1, MaxLevel,
+			r2.RectFromPoints(r2.Point{X: -1.0000000024835267, Y: -1.0000000024835267},
+				r2.Point{X: -1, Y: -1}),
 		},
 		{
-			0, 0, maxLevel + 1,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{-1, -1}),
+			0, 0, MaxLevel + 1,
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: -1, Y: -1}),
 		},
 
 		// Minimum i,j at different levels
 		{
 			0, 0, 0,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: 1, Y: 1}),
 		},
 		{
-			0, 0, maxLevel / 2,
-			r2.RectFromPoints(r2.Point{-1, -1},
-				r2.Point{-0.999918621033430099, -0.999918621033430099}),
+			0, 0, MaxLevel / 2,
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1},
+				r2.Point{X: -0.999918621033430099, Y: -0.999918621033430099}),
 		},
 		{
-			0, 0, maxLevel,
-			r2.RectFromPoints(r2.Point{-1, -1},
-				r2.Point{-0.999999997516473060, -0.999999997516473060}),
+			0, 0, MaxLevel,
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1},
+				r2.Point{X: -0.999999997516473060, Y: -0.999999997516473060}),
 		},
 
 		// Just a hair off the outer bounds at different levels.
 		{
 			1, 1, 0,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: 1, Y: 1}),
 		},
 		{
-			1, 1, maxLevel / 2,
-			r2.RectFromPoints(r2.Point{-1, -1},
-				r2.Point{-0.999918621033430099, -0.999918621033430099}),
+			1, 1, MaxLevel / 2,
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1},
+				r2.Point{X: -0.999918621033430099, Y: -0.999918621033430099}),
 		},
 		{
-			1, 1, maxLevel,
-			r2.RectFromPoints(r2.Point{-0.9999999975164731, -0.9999999975164731},
-				r2.Point{-0.9999999950329462, -0.9999999950329462}),
+			1, 1, MaxLevel,
+			r2.RectFromPoints(r2.Point{X: -0.9999999975164731, Y: -0.9999999975164731},
+				r2.Point{X: -0.9999999950329462, Y: -0.9999999950329462}),
 		},
 
 		// Center point of the i,j space at different levels.
 		{
 			maxIJ / 2, maxIJ / 2, 0,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1})},
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: 1, Y: 1})},
 		{
-			maxIJ / 2, maxIJ / 2, maxLevel / 2,
-			r2.RectFromPoints(r2.Point{-0.000040691345930099, -0.000040691345930099},
-				r2.Point{0, 0})},
+			maxIJ / 2, maxIJ / 2, MaxLevel / 2,
+			r2.RectFromPoints(r2.Point{X: -0.000040691345930099, Y: -0.000040691345930099},
+				r2.Point{X: 0, Y: 0})},
 		{
-			maxIJ / 2, maxIJ / 2, maxLevel,
-			r2.RectFromPoints(r2.Point{-0.000000001241763433, -0.000000001241763433},
-				r2.Point{0, 0})},
+			maxIJ / 2, maxIJ / 2, MaxLevel,
+			r2.RectFromPoints(r2.Point{X: -0.000000001241763433, Y: -0.000000001241763433},
+				r2.Point{X: 0, Y: 0})},
 
 		// Maximum i, j at different levels.
 		{
 			maxIJ, maxIJ, 0,
-			r2.RectFromPoints(r2.Point{-1, -1}, r2.Point{1, 1}),
+			r2.RectFromPoints(r2.Point{X: -1, Y: -1}, r2.Point{X: 1, Y: 1}),
 		},
 		{
-			maxIJ, maxIJ, maxLevel / 2,
-			r2.RectFromPoints(r2.Point{0.999918621033430099, 0.999918621033430099},
-				r2.Point{1, 1}),
+			maxIJ, maxIJ, MaxLevel / 2,
+			r2.RectFromPoints(r2.Point{X: 0.999918621033430099, Y: 0.999918621033430099},
+				r2.Point{X: 1, Y: 1}),
 		},
 		{
-			maxIJ, maxIJ, maxLevel,
-			r2.RectFromPoints(r2.Point{0.999999997516473060, 0.999999997516473060},
-				r2.Point{1, 1}),
+			maxIJ, maxIJ, MaxLevel,
+			r2.RectFromPoints(r2.Point{X: 0.999999997516473060, Y: 0.999999997516473060},
+				r2.Point{X: 1, Y: 1}),
 		},
 	}
 
@@ -599,8 +599,8 @@ func TestCellIDDistanceToBegin(t *testing.T) {
 		{
 			// from the last cell on the last face at the smallest cell size,
 			// there are the maximum number of possible cells.
-			id:   CellIDFromFace(5).ChildEndAtLevel(maxLevel),
-			want: 6 * (1 << uint(2*maxLevel)),
+			id:   CellIDFromFace(5).ChildEndAtLevel(MaxLevel),
+			want: 6 * (1 << uint(2*MaxLevel)),
 		},
 		{
 			// from the first cell on the first face.
@@ -609,7 +609,7 @@ func TestCellIDDistanceToBegin(t *testing.T) {
 		},
 		{
 			// from the first cell at the smallest level on the first face.
-			id:   CellIDFromFace(0).ChildBeginAtLevel(maxLevel),
+			id:   CellIDFromFace(0).ChildBeginAtLevel(MaxLevel),
 			want: 0,
 		},
 	}
@@ -622,14 +622,14 @@ func TestCellIDDistanceToBegin(t *testing.T) {
 
 	// Test that advancing from the beginning by the distance from a cell gets
 	// us back to that cell.
-	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)
+	id := CellIDFromFacePosLevel(3, 0x12345678, MaxLevel-4)
 	if got := CellIDFromFace(0).ChildBeginAtLevel(id.Level()).Advance(id.distanceFromBegin()); got != id {
 		t.Errorf("advancing from the beginning by the distance of a cell should return us to that cell. got %v, want %v", got, id)
 	}
 }
 
 func TestCellIDWrapping(t *testing.T) {
-	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4)
+	id := CellIDFromFacePosLevel(3, 0x12345678, MaxLevel-4)
 
 	tests := []struct {
 		msg  string
@@ -643,18 +643,18 @@ func TestCellIDWrapping(t *testing.T) {
 		},
 		{
 			"smallest end leaf wraps to smallest first leaf using PrevWrap",
-			CellIDFromFacePosLevel(5, ^uint64(0)>>faceBits, maxLevel),
-			CellIDFromFace(0).ChildBeginAtLevel(maxLevel).PrevWrap(),
+			CellIDFromFacePosLevel(5, ^uint64(0)>>FaceBits, MaxLevel),
+			CellIDFromFace(0).ChildBeginAtLevel(MaxLevel).PrevWrap(),
 		},
 		{
 			"smallest end leaf wraps to smallest first leaf using AdvanceWrap",
-			CellIDFromFacePosLevel(5, ^uint64(0)>>faceBits, maxLevel),
-			CellIDFromFace(0).ChildBeginAtLevel(maxLevel).AdvanceWrap(-1),
+			CellIDFromFacePosLevel(5, ^uint64(0)>>FaceBits, MaxLevel),
+			CellIDFromFace(0).ChildBeginAtLevel(MaxLevel).AdvanceWrap(-1),
 		},
 		{
 			"PrevWrap is the same as AdvanceWrap(-1)",
-			CellIDFromFace(0).ChildBeginAtLevel(maxLevel).AdvanceWrap(-1),
-			CellIDFromFace(0).ChildBeginAtLevel(maxLevel).PrevWrap(),
+			CellIDFromFace(0).ChildBeginAtLevel(MaxLevel).AdvanceWrap(-1),
+			CellIDFromFace(0).ChildBeginAtLevel(MaxLevel).PrevWrap(),
 		},
 		{
 			"Prev + NextWrap stays the same at given level",
@@ -668,13 +668,13 @@ func TestCellIDWrapping(t *testing.T) {
 		},
 		{
 			"Prev().NextWrap() stays same for first cell at level",
-			CellIDFromFacePosLevel(0, 0, maxLevel),
-			CellIDFromFace(5).ChildEndAtLevel(maxLevel).Prev().NextWrap(),
+			CellIDFromFacePosLevel(0, 0, MaxLevel),
+			CellIDFromFace(5).ChildEndAtLevel(MaxLevel).Prev().NextWrap(),
 		},
 		{
 			"AdvanceWrap forward and back stays same for first cell at level",
-			CellIDFromFacePosLevel(0, 0, maxLevel),
-			CellIDFromFace(5).ChildEndAtLevel(maxLevel).Advance(-1).AdvanceWrap(1),
+			CellIDFromFacePosLevel(0, 0, MaxLevel),
+			CellIDFromFace(5).ChildEndAtLevel(MaxLevel).Advance(-1).AdvanceWrap(1),
 		},
 		// Check basic properties of AdvanceWrap().
 		{
@@ -704,13 +704,13 @@ func TestCellIDWrapping(t *testing.T) {
 		},
 		{
 			"moving 256 should advance us one cell at max level",
-			id.Next().ChildBeginAtLevel(maxLevel),
-			id.ChildBeginAtLevel(maxLevel).AdvanceWrap(256),
+			id.Next().ChildBeginAtLevel(MaxLevel),
+			id.ChildBeginAtLevel(MaxLevel).AdvanceWrap(256),
 		},
 		{
 			"wrapping by 4 times cells per face should advance 4 faces",
-			CellIDFromFacePosLevel(1, 0, maxLevel),
-			CellIDFromFacePosLevel(5, 0, maxLevel).AdvanceWrap(2 << (2 * maxLevel)),
+			CellIDFromFacePosLevel(1, 0, MaxLevel),
+			CellIDFromFacePosLevel(5, 0, MaxLevel).AdvanceWrap(2 << (2 * MaxLevel)),
 		},
 	}
 
@@ -753,14 +753,14 @@ func TestCellIDAdvance(t *testing.T) {
 			CellIDFromFace(5).ChildEndAtLevel(5).Advance(500 - (6 << (2 * 5))),
 		},
 		{
-			CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4).ChildBeginAtLevel(maxLevel),
+			CellIDFromFacePosLevel(3, 0x12345678, MaxLevel-4).ChildBeginAtLevel(MaxLevel),
 			256,
-			CellIDFromFacePosLevel(3, 0x12345678, maxLevel-4).Next().ChildBeginAtLevel(maxLevel),
+			CellIDFromFacePosLevel(3, 0x12345678, MaxLevel-4).Next().ChildBeginAtLevel(MaxLevel),
 		},
 		{
-			CellIDFromFacePosLevel(1, 0, maxLevel),
-			4 << (2 * maxLevel),
-			CellIDFromFacePosLevel(5, 0, maxLevel),
+			CellIDFromFacePosLevel(1, 0, MaxLevel),
+			4 << (2 * MaxLevel),
+			CellIDFromFacePosLevel(5, 0, MaxLevel),
 		},
 	}
 
@@ -772,11 +772,11 @@ func TestCellIDAdvance(t *testing.T) {
 }
 
 func TestCellIDFaceSiTi(t *testing.T) {
-	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel)
+	id := CellIDFromFacePosLevel(3, 0x12345678, MaxLevel)
 	// Check that the (si, ti) coordinates of the center end in a
 	// 1 followed by (30 - level) 0's.
-	for level := 0; level <= maxLevel; level++ {
-		l := maxLevel - level
+	for level := 0; level <= MaxLevel; level++ {
+		l := MaxLevel - level
 		want := uint32(1) << uint(level)
 		mask := uint32(1)<<(uint(level)+1) - 1
 
@@ -855,16 +855,16 @@ func projectToBoundary(u, v float64, rect r2.Rect) r2.Point {
 
 	dmin := math.Min(math.Min(du0, du1), math.Min(dv0, dv1))
 	if du0 == dmin {
-		return r2.Point{rect.X.Lo, rect.Y.ClampPoint(v)}
+		return r2.Point{X: rect.X.Lo, Y: rect.Y.ClampPoint(v)}
 	}
 	if du1 == dmin {
-		return r2.Point{rect.X.Hi, rect.Y.ClampPoint(v)}
+		return r2.Point{X: rect.X.Hi, Y: rect.Y.ClampPoint(v)}
 	}
 	if dv0 == dmin {
-		return r2.Point{rect.X.ClampPoint(u), rect.Y.Lo}
+		return r2.Point{X: rect.X.ClampPoint(u), Y: rect.Y.Lo}
 	}
 
-	return r2.Point{rect.X.ClampPoint(u), rect.Y.Hi}
+	return r2.Point{X: rect.X.ClampPoint(u), Y: rect.Y.Hi}
 }
 
 func TestCellIDExpandedByDistanceUV(t *testing.T) {
@@ -890,7 +890,7 @@ func TestCellIDExpandedByDistanceUV(t *testing.T) {
 				continue
 			}
 
-			uv := r2.Point{u, v}
+			uv := r2.Point{X: u, Y: v}
 			closestUV := projectToBoundary(u, v, bound)
 			closest := faceUVToXYZ(face, closestUV.X, closestUV.Y).Normalize()
 			actualDist := p.Distance(Point{closest})
@@ -1000,7 +1000,7 @@ func TestCellIDCenterFaceSiTi(t *testing.T) {
 	// Check that the (si, ti) coordinates of the center end in a
 	// 1 followed by (30 - level) 0s.
 
-	id := CellIDFromFacePosLevel(3, 0x12345678, maxLevel)
+	id := CellIDFromFacePosLevel(3, 0x12345678, MaxLevel)
 
 	tests := []struct {
 		id          CellID
@@ -1009,15 +1009,15 @@ func TestCellIDCenterFaceSiTi(t *testing.T) {
 		// Leaf level, 30.
 		{id, 0},
 		// Level 29.
-		{id.Parent(maxLevel - 1), 1},
+		{id.Parent(MaxLevel - 1), 1},
 		// Level 28.
-		{id.Parent(maxLevel - 2), 2},
+		{id.Parent(MaxLevel - 2), 2},
 		// Level 20.
-		{id.Parent(maxLevel - 10), 10},
+		{id.Parent(MaxLevel - 10), 10},
 		// Level 10.
-		{id.Parent(maxLevel - 20), 20},
+		{id.Parent(MaxLevel - 20), 20},
 		// Level 0.
-		{id.Parent(0), maxLevel},
+		{id.Parent(0), MaxLevel},
 	}
 
 	for _, test := range tests {

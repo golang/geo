@@ -480,12 +480,12 @@ func (c *CellIndex) Build() {
 	// We also create two special deltas to ensure that a RangeNode is emitted at
 	// the beginning and end of the CellID range.
 	deltas = append(deltas, delta{
-		startID: CellIDFromFace(0).ChildBeginAtLevel(maxLevel),
+		startID: CellIDFromFace(0).ChildBeginAtLevel(MaxLevel),
 		cellID:  CellID(0),
 		label:   -1,
 	})
 	deltas = append(deltas, delta{
-		startID: CellIDFromFace(5).ChildEndAtLevel(maxLevel),
+		startID: CellIDFromFace(5).ChildEndAtLevel(MaxLevel),
 		cellID:  CellID(0),
 		label:   -1,
 	})
