@@ -294,11 +294,11 @@ func TestCellUnion(t *testing.T) {
 }
 
 func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *testing.T) {
-	// Decides whether to add "id" and/or some of its descendants to the test case.  If "selected"
-	// is true, then the region covered by "id" *must* be added to the test case (either by adding
-	// "id" itself, or some combination of its descendants, or both).  If cell ids are to the test
-	// case "input", then the corresponding expected result after simplification is added to
-	// "expected".
+	// Decides whether to add "id" and/or some of its descendants to the test case.
+	// If "selected" is true, then the region covered by "id" *must* be added to
+	// the test case (either by adding "id" itself, or some combination of its
+	// descendants, or both). If cell ids are to the test case "input", then the
+	// corresponding expected result after simplification is added to "expected".
 
 	if id == 0 {
 		// Initial call: decide whether to add cell(s) from each face.
@@ -309,8 +309,8 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 	}
 
 	if id.IsLeaf() {
-		// The oneIn() call below ensures that the parent of a leaf cell will always be selected (if
-		// we make it that far down the hierarchy).
+		// The oneIn() call below ensures that the parent of a leaf cell will
+		// always be selected (if we make it that far down the hierarchy).
 		if selected != true {
 			t.Errorf("id IsLeaf() and not selected")
 		}
@@ -320,12 +320,14 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 
 	// The following code ensures that the probability of selecting a cell at each level is
 	// approximately the same, i.e. we test normalization of cells at all levels.
+	// TODO(rsned): Change this probability to match
+	// absl::Bernoulli(bitgen, 1.0 / (MaxLevel - id.level()))
 	if !selected && oneIn(MaxLevel-id.Level()) {
-		//  Once a cell has been selected, the expected output is predetermined.  We then make sure
-		//  that cells are selected that will normalize to the desired output.
+		// Once a cell has been selected, the expected output is predetermined.
+		// We then make sure that cells are selected that will normalize to
+		// the desired output.
 		*expected = append(*expected, id)
 		selected = true
-
 	}
 
 	// With the rnd.OneIn() constants below, this function adds an average
@@ -340,6 +342,7 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 		*input = append(*input, id)
 		added = true
 	}
+
 	numChildren := 0
 	for child := id.ChildBegin(); child != id.ChildEnd(); child = child.Next() {
 		// If the cell is selected, on average we recurse on 4/12 = 1/3 child.
@@ -360,20 +363,23 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 			addCells(child, selected, input, expected, t)
 			numChildren++
 		}
+
 		// If this cell was selected but the cell itself was not added, we
 		// must ensure that all 4 children (or some combination of their
 		// descendants) are added.
-
 		if selected && !added {
 			addCells(child, selected, input, expected, t)
 		}
 	}
 }
 
+// TODO(rsned): This test has been split out into several smaller test cases in C++.
+// It might make sense to refactor this to stay more inline with what's current.
 func TestCellUnionNormalizePseudoRandom(t *testing.T) {
-	// About 2.4% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(2)
+	// TODO(rsned): https://github.com/golang/geo/issues/120
+	// Test is still flaky without a fixed seed. Specify one for now until
+	// issue 120 is fully resolved.
+	random = rand.New(rand.NewSource(1))
 
 	// Try a bunch of random test cases, and keep track of average statistics
 	// for normalization (to see if they agree with the analysis above).
