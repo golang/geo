@@ -16,7 +16,6 @@ package s2
 
 import (
 	"math"
-	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/r1"
@@ -133,9 +132,8 @@ func TestPaddedCellEntryExitVertices(t *testing.T) {
 }
 
 func TestPaddedCellShrinkToFit(t *testing.T) {
-	// About 0.2% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(1)
+	// TODO: Verify if it's still about 0.2% flaky with a random seed.
+	// TODO(rsned): https://github.com/golang/geo/issues/120
 
 	for iter := 0; iter < 1000; iter++ {
 		// Start with the desired result and work backwards.
@@ -146,7 +144,7 @@ func TestPaddedCellShrinkToFit(t *testing.T) {
 		// Find the biggest rectangle that fits in "result" after padding.
 		// (These calculations ignore numerical errors.)
 		maxPadding := 0.5 * math.Min(sizeUV.X, sizeUV.Y)
-		padding := maxPadding * randomFloat64()
+		padding := randomUniformFloat64(0, maxPadding)
 		maxRect := resultUV.ExpandedByMargin(-padding)
 
 		// Start with a random subset of the maximum rectangle.
