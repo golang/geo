@@ -1,0 +1,35 @@
+version: "2"
+linters:
+  disable:
+    - errcheck      # TODO(rsned): Enable once outstanding lint bugs are fixed.
+    - mnd
+    - paralleltest
+    - staticcheck   # TODO(rsned): Enable once outstanding lint bugs are fixed.
+    - testpackage
+    - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      # Simplify code: gofmt with `-s` option.
+      # Default: true
+      simplify: false
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
