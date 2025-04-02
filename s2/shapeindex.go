@@ -1466,9 +1466,8 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 	}
 
 	// Update the edge list and delete this cell from the index.
-	edges, newEdges = newEdges, edges //nolint
+	edges, _ = newEdges, edges
 	delete(s.cellMap, p.id)
-	// TODO(roberts): delete from s.Cells
 }
 
 // testAllEdges calls the trackers testEdge on all edges from shapes that have interiors.
