@@ -129,9 +129,7 @@ func (l *sequenceLexicon) add(ids []int32) int32 {
 	if id, ok := l.idSet[hashSet(ids)]; ok {
 		return id
 	}
-	for _, v := range ids {
-		l.values = append(l.values, v)
-	}
+	l.values = append(l.values, ids...)
 	l.begins = append(l.begins, uint32(len(l.values)))
 
 	id := int32(len(l.begins)) - 2
