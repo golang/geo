@@ -750,8 +750,6 @@ func TestCellDistanceToEdge(t *testing.T) {
 			expectedError = 3e-8
 		} else if expectedMin.Radians() <= math.Pi/3 {
 			expectedError = 1e-15
-		} else {
-			expectedError = 1e-12
 		}
 
 		if !float64Near(expectedMin.Radians(), actualMin.Radians(), expectedError) {

@@ -344,7 +344,7 @@ func (p Point) IsNormalizable() bool {
 func (p Point) EnsureNormalizable() Point {
 	// TODO(rsned): Zero vector isn't normalizable, and we don't have DCHECK in Go.
 	// What is the appropriate return value in this case? Is it {NaN, NaN, NaN}?
-	if p == (Point{r3.Vector{0, 0, 0}}) {
+	if p == (Point{r3.Vector{X: 0, Y: 0, Z: 0}}) {
 		return p
 	}
 	if !p.IsNormalizable() {

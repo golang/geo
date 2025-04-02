@@ -1466,7 +1466,7 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 	}
 
 	// Update the edge list and delete this cell from the index.
-	edges, newEdges = newEdges, edges
+	edges, newEdges = newEdges, edges //nolint
 	delete(s.cellMap, p.id)
 	// TODO(roberts): delete from s.Cells
 }
