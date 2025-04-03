@@ -498,28 +498,28 @@ func (e *EdgeQuery) addResult(r EdgeQueryResult) {
 	// is used for the results.
 }
 
-func (e *EdgeQuery) maybeAddResult(shape Shape, edgeID int32) {
-	if _, ok := e.testedEdges[ShapeEdgeID{e.index.idForShape(shape), edgeID}]; e.avoidDuplicates && !ok {
+func (e *EdgeQuery) maybeAddResult(shape Shape, shapeID, edgeID int32) {
+	if _, ok := e.testedEdges[ShapeEdgeID{shapeID, edgeID}]; e.avoidDuplicates && !ok {
 		return
 	}
 	edge := shape.Edge(int(edgeID))
 	dist := e.distanceLimit
 
 	if dist, ok := e.target.updateDistanceToEdge(edge, dist); ok {
-		e.addResult(EdgeQueryResult{dist, e.index.idForShape(shape), edgeID})
+		e.addResult(EdgeQueryResult{dist, shapeID, edgeID})
 	}
 }
 
 func (e *EdgeQuery) findEdgesBruteForce() {
 	// Range over all shapes in the index. Does order matter here? if so
 	// switch to for i = 0 .. n?
-	for _, shape := range e.index.shapes {
+	for shapeID, shape := range e.index.shapes {
 		// TODO(roberts): can this happen if we are only ranging over current entries?
 		if shape == nil {
 			continue
 		}
 		for edgeID := int32(0); edgeID < int32(shape.NumEdges()); edgeID++ {
-			e.maybeAddResult(shape, edgeID)
+			e.maybeAddResult(shape, shapeID, edgeID)
 		}
 	}
 }
@@ -749,7 +749,7 @@ func (e *EdgeQuery) processEdges(entry *queryQueueEntry) {
 	for _, clipped := range entry.indexCell.shapes {
 		shape := e.index.Shape(clipped.shapeID)
 		for j := 0; j < clipped.numEdges(); j++ {
-			e.maybeAddResult(shape, int32(clipped.edges[j]))
+			e.maybeAddResult(shape, clipped.shapeID, int32(clipped.edges[j]))
 		}
 	}
 }
