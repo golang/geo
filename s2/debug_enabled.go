@@ -25,3 +25,11 @@ func dcheck(condition bool, message string) {
 		panic("dcheck failed: " + message)
 	}
 }
+
+// TODO(rsned): Also create equivalents for
+// ABSL_DCHECK_EQ
+// ABSL_DCHECK_GE
+// ABSL_DCHECK_GT
+// ABSL_DCHECK_LE
+// ABSL_DCHECK_LT
+// ABSL_DCHECK_NE
