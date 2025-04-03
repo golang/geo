@@ -336,7 +336,6 @@ func updateEdgePairMinDistance(a0, a1, b0, b1 Point, minDist s1.ChordAngle) (s1.
 		return 0, false
 	}
 	if CrossingSign(a0, a1, b0, b1) == Cross {
-		minDist = 0
 		return 0, true
 	}
 
