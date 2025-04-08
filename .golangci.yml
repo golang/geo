@@ -20,41 +20,58 @@ linters:
     # - wastedassign  # fix and enable
     # - whitespacew  # fix and enable
   disable:
-    # Reduce cleverness with unicode chars and enable.
+    # A number of these checks run by default so they are explicitly
+    # disabled here. 
+    # TODO(rsned): Move the checks to enable: once the flagged 
+    # problems are resolved for each check.
+    # https://github.com/golang/geo/issues/145
+   
+    # Enable one we reduce the cleverness with unicode chars.
     # Identifier "ε" contain non-ASCII character: U+03B5 'ε' 
     - asciicheck
     # TODO(rsned): This should be enabled once we define the appropriate
     # list of acceptable external imports.  (e.g. should only be trusted
     # verifiable sources)
     - depguard  
-    # Fix the detected doubled words and then enable.
+    # Enable one we fix the detected doubled words.
     # e.g. Duplicate words (bound) found (dupword)
     #      // 3. Best asymptotic bound: This bound bound is derived by
     - dupword
-    # TODO(rsned): Enable once outstanding lint bugs are fixed.
+    # Enable once outstanding lint bugs are fixed.
     - errcheck     
-    # not necessary as we only use types internally we fully control.
+    # This check is not necessary as we only use types internally we
+    # fully control.
     - forcetypeassert 
+    # Enable once these are fixed.
     # goconst found a few instances where repeated values could be const-ified.
     - goconst
+    # Enable once these are fixed. 
     # gocritic suggests a number of code cleanups to be implemented.
     - gocritic
-    # Thee are too many package globals constants and types used in s2.
+    # There are too many package globals constants and types used in s2.
+    # (lookup tables and such)
     - gochecknoglobals
+    # Enable once these are all fixed.
     # gosec detects a bunch of unsafe integer conversions.
     - gosec
-    # triggers on many many of the math values chosen by S2.
+    # This triggers on many many of the math values chosen by S2.
     # e.g., Magic number: 2, in <argument> detected (mnd)
     #     math.Remainder(i.Lo-margin, 2*math.Pi),
+    # Not clear if these are every likely to be all fixed so leave
+    # this check disabled.
+    # TODO(rsned): Enable manually once in a while to look for any
+    # actually fixable cases.
     - mnd          
     # triggers on most tests for failing to call paralleltest.
     - paralleltest 
-    # TODO(rsned): Enable once outstanding lint bugs are fixed.
+    # Enable once outstanding lint bugs are fixed.
     - staticcheck   
-    # triggers on every _test file saying they should be separate.
+    # This triggers on every _test file saying they should be separate
+    # parallel packages  e.g. s2->s2_test package.
     - testpackage 
-    # triggers on many parts written in advance of the code that
-    # actually calls them. 
+    # This triggers on many parts written in advance of the code that
+    # actually calls them.  It may occasionally find some real unused
+    # code so running it by hand once in while could be useful.
     - unused      
   exclusions:
     presets:
