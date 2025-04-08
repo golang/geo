@@ -7,7 +7,6 @@ linters:
     # - errorlint # found 2 cases to be fixed.
     # - exhaustive # found some cases that should be fixed.
     # - exhaustruct # found some structs which missed fields in initializing.
-    - govet
     # - inamedparam  # fix missing named param
     # - makezero  # fix the unallocated elements.
     # - misspell  # fix spelling
@@ -22,6 +21,10 @@ linters:
   disable:
     # A number of these checks run by default so they are explicitly
     # disabled here. 
+    #
+    # Other of these checks are disabled by default, but we want to
+    # comment on why we plan to keep them excluded going forward.
+    #
     # TODO(rsned): Move the checks to enable: once the flagged 
     # problems are resolved for each check.
     # https://github.com/golang/geo/issues/145
@@ -39,8 +42,8 @@ linters:
     - dupword
     # Enable once outstanding lint bugs are fixed.
     - errcheck     
-    # This check is not necessary as we only use types internally we
-    # fully control.
+    # This check is not necessary as we only use types internally that we
+    # fully control so we do not expect type assertion failures.
     - forcetypeassert 
     # Enable once these are fixed.
     # goconst found a few instances where repeated values could be const-ified.
@@ -62,23 +65,19 @@ linters:
     # TODO(rsned): Enable manually once in a while to look for any
     # actually fixable cases.
     - mnd          
-    # triggers on most tests for failing to call paralleltest.
+    # Triggers on most tests for failing to call paralleltest.
+    # We don't have a need to use this so keep it disabled.
     - paralleltest 
     # Enable once outstanding lint bugs are fixed.
     - staticcheck   
     # This triggers on every _test file saying they should be separate
-    # parallel packages  e.g. s2->s2_test package.
+    # parallel packages e.g. s2->s2_test package. We do not plan to ever
+    # reshuffle the tests into a separate package.
     - testpackage 
     # This triggers on many parts written in advance of the code that
     # actually calls them.  It may occasionally find some real unused
     # code so running it by hand once in while could be useful.
     - unused      
-  exclusions:
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
 formatters:
   enable:
     - gofmt
