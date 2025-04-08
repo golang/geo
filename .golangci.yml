@@ -1,23 +1,67 @@
 version: "2"
 linters:
+  enable:
+    # Commented entries here are not enabled by default, but that we should
+    # add once the relevant lines are fixed up.
+    
+    # - errorlint # found 2 cases to be fixed.
+    # - exhaustive # found some cases that should be fixed.
+    # - exhaustruct # found some structs which missed fields in initializing.
+    - govet
+    # - inamedparam  # fix missing named param
+    # - makezero  # fix the unallocated elements.
+    # - misspell  # fix spelling
+    # - nlreturn  # fix these missing blank line
+    # - nonamedreturns  # found some shadowing
+    # - predeclared  # found some shadowing
+    # - revive  # detects a number of good fixes
+    # - thelper  # fix test methods with t.Testing not as first param
+    - unconvert
+    # - wastedassign  # fix and enable
+    # - whitespacew  # fix and enable
   disable:
-    - errcheck      # TODO(rsned): Enable once outstanding lint bugs are fixed.
-    - mnd
-    - paralleltest
-    - staticcheck   # TODO(rsned): Enable once outstanding lint bugs are fixed.
-    - testpackage
-    - unused
+    # Reduce cleverness with unicode chars and enable.
+    # Identifier "ε" contain non-ASCII character: U+03B5 'ε' 
+    - asciicheck
+    # TODO(rsned): This should be enabled once we define the appropriate
+    # list of acceptable external imports.  (e.g. should only be trusted
+    # verifiable sources)
+    - depguard  
+    # Fix the detected doubled words and then enable.
+    # e.g. Duplicate words (bound) found (dupword)
+    #      // 3. Best asymptotic bound: This bound bound is derived by
+    - dupword
+    # TODO(rsned): Enable once outstanding lint bugs are fixed.
+    - errcheck     
+    # not necessary as we only use types internally we fully control.
+    - forcetypeassert 
+    # goconst found a few instances where repeated values could be const-ified.
+    - goconst
+    # gocritic suggests a number of code cleanups to be implemented.
+    - gocritic
+    # Thee are too many package globals constants and types used in s2.
+    - gochecknoglobals
+    # gosec detects a bunch of unsafe integer conversions.
+    - gosec
+    # triggers on many many of the math values chosen by S2.
+    # e.g., Magic number: 2, in <argument> detected (mnd)
+    #     math.Remainder(i.Lo-margin, 2*math.Pi),
+    - mnd          
+    # triggers on most tests for failing to call paralleltest.
+    - paralleltest 
+    # TODO(rsned): Enable once outstanding lint bugs are fixed.
+    - staticcheck   
+    # triggers on every _test file saying they should be separate.
+    - testpackage 
+    # triggers on many parts written in advance of the code that
+    # actually calls them. 
+    - unused      
   exclusions:
-    generated: lax
     presets:
       - comments
       - common-false-positives
       - legacy
       - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 formatters:
   enable:
     - gofmt
@@ -27,9 +71,3 @@ formatters:
       # Simplify code: gofmt with `-s` option.
       # Default: true
       simplify: false
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
