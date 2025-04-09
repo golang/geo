@@ -50,9 +50,6 @@ func numVerticesAtLevel(level int) int {
 }
 
 func TestTestingFractal(t *testing.T) {
-	// TODO: Verify if it's about 2.4% flaky with a random seed, due to CesaroMultiFractal.
-	// TODO(rsned): https://github.com/golang/geo/issues/120
-
 	tests := []struct {
 		label     string
 		minLevel  int
