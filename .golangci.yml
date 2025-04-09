@@ -29,14 +29,14 @@ linters:
     # problems are resolved for each check.
     # https://github.com/golang/geo/issues/145
    
-    # Enable one we reduce the cleverness with unicode chars.
+    # Enable once we reduce the cleverness with unicode chars.
     # Identifier "ε" contain non-ASCII character: U+03B5 'ε' 
     - asciicheck
     # TODO(rsned): This should be enabled once we define the appropriate
     # list of acceptable external imports.  (e.g. should only be trusted
     # verifiable sources)
     - depguard  
-    # Enable one we fix the detected doubled words.
+    # Enable once we fix the detected doubled words.
     # e.g. Duplicate words (bound) found (dupword)
     #      // 3. Best asymptotic bound: This bound bound is derived by
     - dupword
