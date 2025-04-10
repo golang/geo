@@ -1,12 +1,4 @@
-
-[![Go Build and Test](https://github.com/golang/geo/actions/workflows/go.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/go.yml)
-
-[![CodeQL](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql)
-
-[![golangci-lint](https://github.com/golang/geo/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/golangci-lint.yml)
-
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/golang/geo/badge)](https://scorecard.dev/viewer/?uri=github.com/golang/geo)
-
+[![Go Build and Test](https://github.com/golang/geo/actions/workflows/go.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/go.yml) [![CodeQL](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql) [![golangci-lint](https://github.com/golang/geo/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/golangci-lint.yml) [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/golang/geo/badge)](https://scorecard.dev/viewer/?uri=github.com/golang/geo)
 
 # Overview
 
