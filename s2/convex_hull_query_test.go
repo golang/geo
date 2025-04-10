@@ -193,9 +193,6 @@ func TestConvexHullQueryLoopsAroundNorthPole(t *testing.T) {
 }
 
 func TestConvexHullQueryPointsInsideHull(t *testing.T) {
-	// TODO: Verify if it's still about 0.3% flaky with a random seed.
-	// TODO(rsned): https://github.com/golang/geo/issues/120
-
 	// Repeatedly build the convex hull of a set of points, then add more points
 	// inside that loop and build the convex hull again. The result should
 	// always be the same.

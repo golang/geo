@@ -38,7 +38,7 @@ func TestParseLatLng(t *testing.T) {
 		},
 		{
 			have: "0:0",
-			want: []LatLng{LatLng{Lat: 0, Lng: 0}},
+			want: []LatLng{{Lat: 0, Lng: 0}},
 		},
 		{
 			have: "0:0, 0:-90",
