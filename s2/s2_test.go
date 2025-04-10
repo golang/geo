@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"math"
@@ -425,7 +426,7 @@ func readLoops(filename string) ([]*Loop, error) {
 	for {
 		l := &Loop{}
 		err := l.Decode(f)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
