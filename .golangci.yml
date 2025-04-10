@@ -6,8 +6,8 @@ linters:
     
     - errorlint # found 2 cases to be fixed.
     - exhaustive # found some cases that should be fixed.
-      #- exhaustruct # found some structs which missed fields in initializing.
-    # - inamedparam  # fix missing named param
+    # - exhaustruct # found some structs which missed fields in initializing.
+    - inamedparam  # fix missing named param
     # - makezero  # fix the unallocated elements.
     # - misspell  # fix spelling
     # - nlreturn  # fix these missing blank line
