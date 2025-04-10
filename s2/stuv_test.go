@@ -115,7 +115,7 @@ func TestFaceUVToXYZ(t *testing.T) {
 		if !center.ApproxEqual(unitNorm(face).Vector) {
 			t.Errorf("faceUVToXYZ(%d, 0, 0) != unitNorm(%d), should be equal", face, face)
 		}
-		switch center.LargestComponent() {
+		switch center.LargestComponent() { // nolint exhaustive - default catches the 'missing' case.
 		case r3.XAxis:
 			if math.Abs(center.X) != 1 {
 				t.Errorf("%v.X = %v, want %v", center, math.Abs(center.X), 1)
