@@ -103,7 +103,7 @@ const (
 // Ortho(-v) = -Ortho(v) for all v.
 func (v Vector) Ortho() Vector {
 	ov := Vector{}
-	switch v.LargestComponent() {
+	switch v.LargestComponent() { // nolint exhaustive - default catches the 'missing' case.
 	case XAxis:
 		ov.Z = 1
 	case YAxis:
