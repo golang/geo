@@ -27,11 +27,11 @@ import (
 )
 
 type encodableRegion interface {
-	Encode(io.Writer) error
+	Encode(w io.Writer) error
 }
 
 type decodableRegion interface {
-	Decode(io.Reader) error
+	Decode(w io.Reader) error
 }
 
 const (
