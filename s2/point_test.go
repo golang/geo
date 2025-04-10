@@ -100,9 +100,6 @@ func TestPointDistance(t *testing.T) {
 }
 
 func TestChordAngleBetweenPoints(t *testing.T) {
-	// TODO: Verify if it's still about 0.2% flaky with a random seed.
-	// TODO(rsned): https://github.com/golang/geo/issues/120
-
 	for iter := 0; iter < 100; iter++ {
 		m := randomFrame()
 		x := m.col(0)

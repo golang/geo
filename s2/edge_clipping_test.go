@@ -247,9 +247,6 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 }
 
 func TestEdgeClippingClipToPaddedFace(t *testing.T) {
-	// TODO: Verify if it's still about 1.2% flaky with a random seed.
-	// TODO(rsned): https://github.com/golang/geo/issues/120
-
 	// Start with a few simple cases.
 	// An edge that is entirely contained within one cube face:
 	testClipToPaddedFace(t, Point{r3.Vector{X: 1, Y: -0.5, Z: -0.5}}, Point{r3.Vector{X: 1, Y: 0.5, Z: 0.5}})
