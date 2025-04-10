@@ -347,7 +347,7 @@ func TestXYZToFaceSiTi(t *testing.T) {
 				if gotLevel != -1 {
 					t.Errorf("level of random CellID = %v, want %v", gotLevel, -1)
 				}
-				if !(si == 0 || si == maxSiTi || ti == 0 || ti == maxSiTi) {
+				if si != 0 && si != maxSiTi && ti != 0 && ti != maxSiTi {
 					t.Errorf("face %d, si = %v, ti = %v, want 0 or %v for both", f, si, ti, maxSiTi)
 				}
 				continue

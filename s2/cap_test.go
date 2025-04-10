@@ -487,7 +487,7 @@ func TestCapContainsCell(t *testing.T) {
 			if got, want := covering.ContainsCell(rootCell), capFace == face; got != want {
 				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", covering, rootCell, got, want)
 			}
-			if got, want := covering.ContainsCell(edgeCell), center.Vector.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
+			if got, want := covering.ContainsCell(edgeCell), center.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
 				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", covering, edgeCell, got, want)
 			}
 			if got, want := covering.ContainsCell(edgeCell), covering.IntersectsCell(edgeCell); got != want {
@@ -552,7 +552,7 @@ func TestCapIntersectsCell(t *testing.T) {
 			if got, want := covering.IntersectsCell(edgeCell), covering.ContainsCell(edgeCell); got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", covering, edgeCell, got, want)
 			}
-			if got, want := covering.IntersectsCell(cornerCell), center.Vector.Dot(cornerCell.id.Point().Vector) > 0; got != want {
+			if got, want := covering.IntersectsCell(cornerCell), center.Dot(cornerCell.id.Point().Vector) > 0; got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", covering, cornerCell, got, want)
 			}
 
@@ -561,7 +561,7 @@ func TestCapIntersectsCell(t *testing.T) {
 			if got, want := bulging.IntersectsCell(rootCell), capFace != antiFace; got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", bulging, rootCell, got, want)
 			}
-			if got, want := bulging.IntersectsCell(edgeCell), center.Vector.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
+			if got, want := bulging.IntersectsCell(edgeCell), center.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", bulging, edgeCell, got, want)
 			}
 			if bulging.IntersectsCell(cornerCell) {

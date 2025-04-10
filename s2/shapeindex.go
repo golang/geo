@@ -1026,15 +1026,18 @@ func (s *ShapeIndex) updateEdges(pcell *PaddedCell, edges []*clippedEdge, t *tra
 		// the existing cell contents by absorbing the cell.
 		iter := s.Iterator()
 		r := iter.LocateCellID(pcell.id)
-		if r == Disjoint {
+		switch r { // nolint exhaustive
+		case Disjoint:
 			disjointFromIndex = true
-		} else if r == Indexed {
+		case Indexed:
 			// Absorb the index cell by transferring its contents to edges and
 			// deleting it. We also start tracking the interior of any new shapes.
 			s.absorbIndexCell(pcell, iter, edges, t)
 			indexCellAbsorbed = true
 			disjointFromIndex = true
-		} else {
+		default:
+			// TODO(rsned): Figure out the right way to deal with
+			// this case since we don't DCHECK.
 			// ABSL_DCHECK_EQ(SUBDIVIDED, r)
 		}
 	}

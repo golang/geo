@@ -238,7 +238,7 @@ func latLngsApproxEqual(a, b LatLng, epsilon float64) bool {
 // of each other. This is the same as Point.ApproxEqual but permits specifying
 // the epsilon.
 func pointsApproxEqual(a, b Point, epsilon float64) bool {
-	return float64(a.Vector.Angle(b.Vector)) <= epsilon
+	return float64(a.Angle(b.Vector)) <= epsilon
 }
 
 // pointSlicesApproxEqual reports whether corresponding elements of each slice are approximately equal.

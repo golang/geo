@@ -252,10 +252,13 @@ func TestPredicatesRobustSign(t *testing.T) {
 				test.p1, test.p2, test.p3, test.p2, test.p3, test.p1, rotated, result)
 		}
 		// Test RobustSign(c,b,a) == -RobustSign(a,b,c) for all a,b,c
-		want := Clockwise
-		if result == Clockwise {
+		var want Direction
+		switch result {
+		case CounterClockwise:
+			want = Clockwise
+		case Clockwise:
 			want = CounterClockwise
-		} else if result == Indeterminate {
+		case Indeterminate:
 			want = Indeterminate
 		}
 		reversed := RobustSign(test.p3, test.p2, test.p1)

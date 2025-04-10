@@ -277,16 +277,20 @@ func (c *CrossingEdgeQuery) getCellsForEdge(a, b Point) {
 		//  3. edgeRoot does not intersect any index cells. In this case there
 		//     is nothing to do.
 		relation := c.iter.LocateCellID(edgeRoot)
-		if relation == Indexed {
-			// edgeRoot is an index cell or is contained by an index cell (case 1).
+		switch relation {
+		case Indexed:
+			// edgeRoot is an index cell or is contained by an
+			// index cell (case 1).
 			c.cells = append(c.cells, c.iter.IndexCell())
-		} else if relation == Subdivided {
-			// edgeRoot is subdivided into one or more index cells (case 2). We
-			// find the cells intersected by AB using recursive subdivision.
+		case Subdivided:
+			// edgeRoot is subdivided into one or more index cells
+			// (case 2). We find the cells intersected by AB using
+			// recursive subdivision.
 			if !edgeRoot.isFace() {
 				pcell = PaddedCellFromCellID(edgeRoot, 0)
 			}
 			c.computeCellsIntersected(pcell, edgeBound)
+		case Disjoint:
 		}
 	}
 }

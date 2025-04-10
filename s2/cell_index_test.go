@@ -138,7 +138,7 @@ func verifyCellIndexRangeIterators(t *testing.T, desc string, index *CellIndex) 
 			if start != it2.StartID() {
 				t.Errorf("%s: it2.StartID() = %v, want %v", desc, it2.StartID(), start)
 			}
-			if 0 != prevStart {
+			if prevStart != 0 {
 				t.Errorf("%s: prevStart = %v, want %v", desc, prevStart, 0)
 			}
 		}
