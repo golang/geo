@@ -3,7 +3,7 @@ package s2
 import (
 	"testing"
 
-	"github.com/golang/geo/s1"
+	"github.com/pavlov061356/geo/s1"
 )
 
 const (
@@ -819,8 +819,182 @@ func TestSliceDivided(t *testing.T) {
 		if len(got) != test.args.divisions && len(got) != len(want) {
 			t.Errorf("length mismatch: got %d, want %d", len(got), test.args.divisions)
 		}
-		if !pointSlicesApproxEqual(got, want, kEpsilon) {
+		points := make([]Point, len(got))
+		for i := range got {
+			points[i] = got[i].Point
+		}
+		if !pointSlicesApproxEqual(points, want, kEpsilon) {
 			t.Errorf("%v: got %v, want %v", test.name, got, want)
 		}
+
+		for i := 1; i < len(got)-1; i++ {
+			prev := LatLngFromPoint(got[i-1].Point)
+			curr := LatLngFromPoint(got[i].Point)
+
+			if curr.Lng < prev.Lng {
+				t.Errorf("%v: got %v, want %v", test.name, got, want)
+			}
+		}
+	}
+}
+
+// goos: linux
+// goarch: amd64
+// pkg: github.com/pavlov061356/geo/s2
+// cpu: AMD Ryzen 5 5600G with Radeon Graphics
+// === RUN   Benchmark_SliceDivided
+// Benchmark_SliceDivided
+// Benchmark_SliceDivided-12           8101            128452 ns/op           24577 B/op         2 allocs/op
+
+func Benchmark_SliceDivided(b *testing.B) {
+	chainInterpolationQuery := InitChainInterpolationQuery(
+		laxPolylineFromPoints(
+			[]Point{
+				PointFromLatLng(LatLngFromDegrees(0, 0)),
+				PointFromLatLng(LatLngFromDegrees(0, 1)),
+				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			},
+		),
+		0,
+	)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		chainInterpolationQuery.SliceDivided(0.3, 0.84, 500)
+	}
+
+	b.StopTimer()
+
+	points := make([]Point, 500)
+
+	for i := 0; i < 100; i++ {
+		points[i] = PointFromLatLng(LatLngFromDegrees(0, float64(i)))
+	}
+
+	chainInterpolationQuery = InitChainInterpolationQuery(
+		laxPolylineFromPoints(
+			points,
+		),
+		0,
+	)
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		chainInterpolationQuery.SliceDivided(0.3, 0.84, 500)
+	}
+}
+
+func TestChainInterpolationQuery_EdgesBetween(t *testing.T) {
+	query := InitChainInterpolationQuery(laxPolylineFromPoints([]Point{
+		PointFromLatLng(LatLngFromDegrees(0, 0)),
+		PointFromLatLng(LatLngFromDegrees(0, 1)),
+		PointFromLatLng(LatLngFromDegrees(0, 2)),
+		PointFromLatLng(LatLngFromDegrees(0, 3)),
+		PointFromLatLng(LatLngFromDegrees(0, 4)),
+		PointFromLatLng(LatLngFromDegrees(0, 5)),
+	},
+	), 0)
+	type args struct {
+		beginFraction float64
+		endFraction   float64
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{
+			name: "beginFraction = 0, endFraction = 0.5",
+			args: args{beginFraction: 0, endFraction: 0.5},
+			want: 2,
+		},
+		{
+			name: "beginFraction = 0, endFraction = 0.8",
+			args: args{beginFraction: 0, endFraction: 0.8},
+			want: 3,
+		},
+		{
+			name: "beginFraction = 0, endFraction = 0.85",
+			args: args{beginFraction: 0, endFraction: 0.85},
+			want: 4,
+		},
+		{
+			name: "beginFraction = 0, endFraction = 1",
+			args: args{beginFraction: 0, endFraction: 1},
+			want: 4,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			atBegin, beginEdgeID, _, err := query.AtFraction(tt.args.beginFraction)
+			if err != nil {
+				t.Errorf("ChainInterpolationQuery.AtFraction() error = %v", err)
+			}
+
+			atEnd, endEdgeID, _, err := query.AtFraction(tt.args.endFraction)
+			if err != nil {
+				t.Errorf("ChainInterpolationQuery.AtFraction() error = %v", err)
+			}
+			if got := query.EdgesBetween(atBegin, atEnd, beginEdgeID, endEdgeID); got != tt.want {
+				t.Errorf("ChainInterpolationQuery.EdgesBetween() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Benchmark_InitChinInterpolationQuery(b *testing.B) {
+	points := make([]Point, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		points = append(points, PointFromLatLng(LatLngFromDegrees(0, float64(i))))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		InitChainInterpolationQuery(laxPolylineFromPoints(points), 0)
+	}
+}
+
+// goos: linux
+// goarch: amd64
+// pkg: github.com/pavlov061356/geo/s2
+// cpu: AMD Ryzen 7 5800H with Radeon Graphics
+// === RUN   Benchmark_Slice
+// Benchmark_Slice
+// Benchmark_Slice-16        303748              3403 ns/op            3216 B/op         10 allocs/op
+func Benchmark_Slice(b *testing.B) {
+	chainInterpolationQuery := InitChainInterpolationQuery(
+		laxPolylineFromPoints(
+			[]Point{
+				PointFromLatLng(LatLngFromDegrees(0, 0)),
+				PointFromLatLng(LatLngFromDegrees(0, 1)),
+				PointFromLatLng(LatLngFromDegrees(0, 2)),
+			},
+		),
+		0,
+	)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		chainInterpolationQuery.Slice(0.3, 0.84)
+	}
+
+	b.StopTimer()
+
+	points := make([]Point, 500)
+
+	for i := 0; i < 100; i++ {
+		points[i] = PointFromLatLng(LatLngFromDegrees(0, float64(i)))
+	}
+
+	chainInterpolationQuery = InitChainInterpolationQuery(
+		laxPolylineFromPoints(
+			points,
+		),
+		0,
+	)
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		chainInterpolationQuery.Slice(0.3, 0.84)
 	}
 }

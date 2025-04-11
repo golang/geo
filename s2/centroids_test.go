@@ -18,7 +18,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang/geo/r3"
+	"github.com/pavlov061356/geo/r3"
 )
 
 func TestCentroidsPlanarCentroid(t *testing.T) {

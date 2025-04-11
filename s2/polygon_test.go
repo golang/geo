@@ -19,7 +19,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/golang/geo/s1"
+	"github.com/pavlov061356/geo/s1"
 )
 
 const (

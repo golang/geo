@@ -20,8 +20,8 @@ import (
 	"math"
 	"sort"
 
-	"github.com/golang/geo/r3"
-	"github.com/golang/geo/s1"
+	"github.com/pavlov061356/geo/r3"
+	"github.com/pavlov061356/geo/s1"
 )
 
 // Point represents a point on the unit sphere as a normalized 3D vector.
