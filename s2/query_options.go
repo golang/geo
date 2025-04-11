@@ -17,7 +17,7 @@ package s2
 import (
 	"math"
 
-	"github.com/golang/geo/geo/s1"
+	"github.com/golang/geo/s1"
 )
 
 const maxQueryResults = math.MaxInt32

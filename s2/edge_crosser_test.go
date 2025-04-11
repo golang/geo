@@ -19,7 +19,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang/geo/geo/r3"
+	"github.com/golang/geo/r3"
 )
 
 func TestEdgeCrosserCrossings(t *testing.T) {

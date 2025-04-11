@@ -19,8 +19,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/geo/geo/r3"
-	"github.com/golang/geo/geo/s1"
+	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
 
 func TestPolylineBasics(t *testing.T) {

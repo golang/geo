@@ -18,7 +18,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang/geo/geo/s1"
+	"github.com/golang/geo/s1"
 )
 
 // The various Crossing methods are tested via s2edge_crosser_test

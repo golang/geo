@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/geo/geo/r3"
+	"github.com/golang/geo/r3"
 )
 
 type encodableRegion interface {

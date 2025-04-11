@@ -19,9 +19,9 @@ import (
 	"io"
 	"math"
 
-	"github.com/golang/geo/geo/r1"
-	"github.com/golang/geo/geo/r3"
-	"github.com/golang/geo/geo/s1"
+	"github.com/golang/geo/r1"
+	"github.com/golang/geo/r3"
+	"github.com/golang/geo/s1"
 )
 
 // Loop represents a simple spherical polygon. It consists of a sequence

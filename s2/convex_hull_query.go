@@ -17,7 +17,7 @@ package s2
 import (
 	"sort"
 
-	"github.com/golang/geo/geo/r3"
+	"github.com/golang/geo/r3"
 )
 
 // ConvexHullQuery builds the convex hull of any collection of points,

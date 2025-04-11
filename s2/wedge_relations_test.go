@@ -17,7 +17,7 @@ package s2
 import (
 	"testing"
 
-	"github.com/golang/geo/geo/r3"
+	"github.com/golang/geo/r3"
 )
 
 func TestWedgeRelations(t *testing.T) {

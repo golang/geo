@@ -18,7 +18,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang/geo/geo/s1"
+	"github.com/golang/geo/s1"
 )
 
 func TestLatLngNormalized(t *testing.T) {

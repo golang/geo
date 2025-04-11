@@ -18,7 +18,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang/geo/geo/r3"
+	"github.com/golang/geo/r3"
 )
 
 // TODO(rsned): Rename this file to coords_test.go to match its C++ counterpart.

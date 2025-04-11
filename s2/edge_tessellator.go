@@ -15,8 +15,8 @@
 package s2
 
 import (
-	"github.com/golang/geo/geo/r2"
-	"github.com/golang/geo/geo/s1"
+	"github.com/golang/geo/r2"
+	"github.com/golang/geo/s1"
 )
 
 // Tessellation is implemented by subdividing the edge until the estimated

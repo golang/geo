@@ -15,8 +15,8 @@
 package s2
 
 import (
-	"github.com/golang/geo/geo/r1"
-	"github.com/golang/geo/geo/r2"
+	"github.com/golang/geo/r1"
+	"github.com/golang/geo/r2"
 )
 
 // PaddedCell represents a Cell whose (u,v)-range has been expanded on
