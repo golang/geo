@@ -21,7 +21,7 @@ import (
 
 // preciseEq compares two big.Floats and checks if the are the same.
 func preciseEq(a, b *big.Float) bool {
-	return a.SetPrec(prec).Cmp(b.SetPrec(prec)) == 0
+	return a.SetPrec(MaxPrec).Cmp(b.SetPrec(MaxPrec)) == 0
 }
 
 func TestPreciseRoundtrip(t *testing.T) {

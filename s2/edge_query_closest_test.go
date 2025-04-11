@@ -108,8 +108,8 @@ func TestClosestEdgeQueryTrueDistanceLessThanChordAngleDistance(t *testing.T) {
 	// true distance is slightly less than the one computed by ChordAngle.
 	//
 	// The points below had the worst error from among 100,000 random pairs.
-	p0 := Point{r3.Vector{0.78516762584829192, -0.50200400690845970, -0.36263449417782678}}
-	p1 := Point{r3.Vector{0.78563011732429433, -0.50187655940493503, -0.36180828883938054}}
+	p0 := Point{r3.Vector{X: 0.78516762584829192, Y: -0.50200400690845970, Z: -0.36263449417782678}}
+	p1 := Point{r3.Vector{X: 0.78563011732429433, Y: -0.50187655940493503, Z: -0.36180828883938054}}
 	pv := &PointVector{p0}
 
 	index := NewShapeIndex()

@@ -31,7 +31,8 @@ type Rect struct {
 }
 
 var (
-	validRectLatRange = r1.Interval{-math.Pi / 2, math.Pi / 2}
+	// TODO(rsned): Make these public to match FullLat/FullLng from C++
+	validRectLatRange = r1.Interval{Lo: -math.Pi / 2, Hi: math.Pi / 2}
 	validRectLngRange = s1.FullInterval()
 )
 
@@ -44,8 +45,8 @@ func FullRect() Rect { return Rect{validRectLatRange, validRectLngRange} }
 // RectFromLatLng constructs a rectangle containing a single point p.
 func RectFromLatLng(p LatLng) Rect {
 	return Rect{
-		Lat: r1.Interval{p.Lat.Radians(), p.Lat.Radians()},
-		Lng: s1.Interval{p.Lng.Radians(), p.Lng.Radians()},
+		Lat: r1.Interval{Lo: p.Lat.Radians(), Hi: p.Lat.Radians()},
+		Lng: s1.Interval{Lo: p.Lng.Radians(), Hi: p.Lng.Radians()},
 	}
 }
 
@@ -240,7 +241,7 @@ func (r Rect) CapBound() Cap {
 		poleZ = 1
 		poleAngle = math.Pi/2 - r.Lat.Lo
 	}
-	poleCap := CapFromCenterAngle(Point{r3.Vector{0, 0, poleZ}}, s1.Angle(poleAngle)*s1.Radian)
+	poleCap := CapFromCenterAngle(Point{r3.Vector{X: 0, Y: 0, Z: poleZ}}, s1.Angle(poleAngle)*s1.Radian)
 
 	// For bounding rectangles that span 180 degrees or less in longitude, the
 	// maximum cap size is achieved at one of the rectangle vertices.  For
@@ -310,7 +311,7 @@ func intersectsLatEdge(a, b Point, lat s1.Angle, lng s1.Interval) bool {
 	}
 
 	// Extend this to an orthonormal frame (x,y,z) where x is the direction
-	// where the great circle through AB achieves its maximium latitude.
+	// where the great circle through AB achieves its maximum latitude.
 	y := Point{z.PointCross(PointFromCoords(0, 0, 1)).Normalize()}
 	x := y.Cross(z.Vector)
 
@@ -588,13 +589,13 @@ func directedHausdorffDistance(lngDiff s1.Angle, a, b r1.Interval) s1.Angle {
 
 	// Case B3.
 	if pLat > s1.Angle(a.Lo) {
-		intDist, ok := interiorMaxDistance(r1.Interval{a.Lo, math.Min(float64(pLat), a.Hi)}, bLo)
+		intDist, ok := interiorMaxDistance(r1.Interval{Lo: a.Lo, Hi: math.Min(float64(pLat), a.Hi)}, bLo)
 		if ok {
 			maxDistance = maxAngle(maxDistance, intDist)
 		}
 	}
 	if pLat < s1.Angle(a.Hi) {
-		intDist, ok := interiorMaxDistance(r1.Interval{math.Max(float64(pLat), a.Lo), a.Hi}, bHi)
+		intDist, ok := interiorMaxDistance(r1.Interval{Lo: math.Max(float64(pLat), a.Lo), Hi: a.Hi}, bHi)
 		if ok {
 			maxDistance = maxAngle(maxDistance, intDist)
 		}
@@ -635,7 +636,7 @@ func bisectorIntersection(lat r1.Interval, lng s1.Angle) Point {
 	}
 
 	// A vector orthogonal to longitude 0.
-	orthoLng := Point{r3.Vector{0, -1, 0}}
+	orthoLng := Point{r3.Vector{X: 0, Y: -1, Z: 0}}
 
 	return orthoLng.PointCross(PointFromLatLng(orthoBisector))
 }
@@ -706,7 +707,7 @@ func (r Rect) Centroid() Point {
 	lng := r.Lng.Center()
 	z := alpha * (z2 + z1) * (z2 - z1) // scaled by the area
 
-	return Point{r3.Vector{r0 * math.Cos(lng), r0 * math.Sin(lng), z}}
+	return Point{r3.Vector{X: r0 * math.Cos(lng), Y: r0 * math.Sin(lng), Z: z}}
 }
 
 // BUG: The major differences from the C++ version are:

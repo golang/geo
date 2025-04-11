@@ -430,7 +430,7 @@ func TestShapeIndexManyTinyEdges(t *testing.T) {
 
 	// Construct two points in the same leaf cell.
 	a := cellIDFromPoint(PointFromCoords(1, 0, 0)).Point()
-	b := Point{a.Add(r3.Vector{0, 1e-12, 0}).Normalize()}
+	b := Point{a.Add(r3.Vector{X: 0, Y: 1e-12, Z: 0}).Normalize()}
 	shape := &edgeVectorShape{}
 	for i := 0; i < 100; i++ {
 		shape.Add(a, b)

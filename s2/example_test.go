@@ -122,7 +122,14 @@ func ExampleEdgeQuery_FindEdges_findClosestEdges() {
 	polylines := []s2.Polyline{
 		// This is an iteration = 3 Koch snowflake centered at the
 		// center of the continental US.
-		s2.Polyline{
+		//
+		// This was generated as:
+		//
+		// fractal := newFractal()
+		// fractal.setLevelForApproxMaxEdges(48)
+		// fractal.makeLoop(randomFrameAtPoint(
+		//	PointFromLatLng(LatLngFromDegrees(39.833, -98.55))), s1.Angle(0.15))
+		{
 			s2.PointFromLatLng(s2.LatLngFromDegrees(47.5467, -103.6035)),
 			s2.PointFromLatLng(s2.LatLngFromDegrees(45.9214, -103.7320)),
 			s2.PointFromLatLng(s2.LatLngFromDegrees(45.1527, -105.8000)),
@@ -217,7 +224,7 @@ func ExampleEdgeQuery_FindEdges_findFurthestEdges() {
 	polylines := []s2.Polyline{
 		// This is an iteration = 3 Koch snowflake centered at the
 		// center of the continental US.
-		s2.Polyline{
+		{
 			s2.PointFromLatLng(s2.LatLngFromDegrees(47.5467, -103.6035)),
 			s2.PointFromLatLng(s2.LatLngFromDegrees(45.9214, -103.7320)),
 			s2.PointFromLatLng(s2.LatLngFromDegrees(45.1527, -105.8000)),

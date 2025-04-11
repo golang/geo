@@ -194,7 +194,7 @@ func TestEncodeDecode(t *testing.T) {
 		{encodedCellIDInvalid, cidPtr(CellID(0))},
 
 		// Cells
-		{encodedCellFromPoint, cellPtr(CellFromPoint(Point{r3.Vector{1, 2, 3}}))},
+		{encodedCellFromPoint, cellPtr(CellFromPoint(Point{r3.Vector{X: 1, Y: 2, Z: 3}}))},
 		// Lake Tahoe CA/NV border corner
 		{encodedCellFromLatLng, cellPtr(CellFromLatLng(LatLngFromDegrees(39.0, -120.0)))},
 		{encodedCellFromFacePosLevel, cellPtr(CellFromCellID(CellIDFromFacePosLevel(3, 0x12345678, MaxLevel-4)))},

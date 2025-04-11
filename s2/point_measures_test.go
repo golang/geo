@@ -23,17 +23,17 @@ import (
 )
 
 var (
-	pz   = Point{r3.Vector{0, 0, 1}}
-	p000 = Point{r3.Vector{1, 0, 0}}
-	p045 = Point{r3.Vector{1, 1, 0}.Normalize()}
-	p090 = Point{r3.Vector{0, 1, 0}}
-	p180 = Point{r3.Vector{-1, 0, 0}}
+	pz   = Point{r3.Vector{X: 0, Y: 0, Z: 1}}
+	p000 = Point{r3.Vector{X: 1, Y: 0, Z: 0}}
+	p045 = Point{r3.Vector{X: 1, Y: 1, Z: 0}.Normalize()}
+	p090 = Point{r3.Vector{X: 0, Y: 1, Z: 0}}
+	p180 = Point{r3.Vector{X: -1, Y: 0, Z: 0}}
 	// Degenerate triangles.
-	pr = Point{r3.Vector{0.257, -0.5723, 0.112}}
-	pq = Point{r3.Vector{-0.747, 0.401, 0.2235}}
+	pr = Point{r3.Vector{X: 0.257, Y: -0.5723, Z: 0.112}}
+	pq = Point{r3.Vector{X: -0.747, Y: 0.401, Z: 0.2235}}
 
 	// For testing the Girard area fall through case.
-	g1 = Point{r3.Vector{1, 1, 1}}
+	g1 = Point{r3.Vector{X: 1, Y: 1, Z: 1}}
 	g2 = Point{g1.Add(pr.Mul(1e-15)).Normalize()}
 	g3 = Point{g1.Add(pq.Mul(1e-15)).Normalize()}
 )
@@ -50,13 +50,13 @@ func TestPointMeasuresPointArea(t *testing.T) {
 		{p000, p090, pz, math.Pi / 2.0, 0},
 		{p045, pz, p180, 3.0 * math.Pi / 4.0, 0},
 		// Make sure that Area has good *relative* accuracy even for very small areas.
-		{Point{r3.Vector{eps, 0, 1}.Normalize()}, Point{r3.Vector{0, eps, 1}.Normalize()}, pz, exp1, 1e-14 * exp1},
+		{Point{r3.Vector{X: eps, Y: 0, Z: 1}.Normalize()}, Point{r3.Vector{X: 0, Y: eps, Z: 1}.Normalize()}, pz, exp1, 1e-14 * exp1},
 		// Make sure that it can handle degenerate triangles.
 		{pr, pr, pr, 0.0, 0},
 		{pr, pq, pr, 0.0, 1e-15},
 		{p000, p045, p090, 0.0, 0},
 		// Try a very long and skinny triangle.
-		{p000, Point{r3.Vector{1, 1, eps}.Normalize()}, p090, exp2, 1e-9 * exp2},
+		{p000, Point{r3.Vector{X: 1, Y: 1, Z: eps}.Normalize()}, p090, exp2, 1e-9 * exp2},
 	}
 
 	for d, test := range tests {
@@ -164,12 +164,12 @@ func TestPointMeasuresAngleMethods(t *testing.T) {
 // returned an area on the order of 1e-14 and the real area is ~1e-21, 7 orders
 // of magnitude relative error. Check that they return zero now.
 func TestPointMeasuresPointAreaRegression(t *testing.T) {
-	a := Point{r3.Vector{-1.705424004316021258e-01, -8.242696197922716461e-01,
-		5.399026611737816062e-01}}
-	b := Point{r3.Vector{-1.706078905422188652e-01, -8.246067119418969416e-01,
-		5.393669607095969987e-01}}
-	c := Point{r3.Vector{-1.705800600596222294e-01, -8.244634596153025408e-01,
-		5.395947061167500891e-01}}
+	a := Point{r3.Vector{X: -1.705424004316021258e-01, Y: -8.242696197922716461e-01,
+		Z: 5.399026611737816062e-01}}
+	b := Point{r3.Vector{X: -1.706078905422188652e-01, Y: -8.246067119418969416e-01,
+		Z: 5.393669607095969987e-01}}
+	c := Point{r3.Vector{X: -1.705800600596222294e-01, Y: -8.244634596153025408e-01,
+		Z: 5.395947061167500891e-01}}
 	if area := PointArea(a, b, c); area != 0 {
 		t.Errorf("PointArea(%v, %v, %v) should have been 0, got %v", a, b, c, area)
 	}

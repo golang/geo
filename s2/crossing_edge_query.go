@@ -356,7 +356,7 @@ func (c *CrossingEdgeQuery) clipVAxis(edgeBound r2.Rect, center float64, i int, 
 	}
 }
 
-// splitUBound returns the bound for two children as a result of spliting the
+// splitUBound returns the bound for two children as a result of splitting the
 // current edge at the given value U.
 func (c *CrossingEdgeQuery) splitUBound(edgeBound r2.Rect, u float64) [2]r2.Rect {
 	v := edgeBound.Y.ClampPoint(interpolateFloat64(u, c.a.X, c.b.X, c.a.Y, c.b.Y))
@@ -369,7 +369,7 @@ func (c *CrossingEdgeQuery) splitUBound(edgeBound r2.Rect, u float64) [2]r2.Rect
 	return splitBound(edgeBound, 0, diag, u, v)
 }
 
-// splitVBound returns the bound for two children as a result of spliting the
+// splitVBound returns the bound for two children as a result of splitting the
 // current edge into two child edges at the given value V.
 func (c *CrossingEdgeQuery) splitVBound(edgeBound r2.Rect, v float64) [2]r2.Rect {
 	u := edgeBound.X.ClampPoint(interpolateFloat64(v, c.a.Y, c.b.Y, c.a.X, c.b.X))
@@ -380,7 +380,7 @@ func (c *CrossingEdgeQuery) splitVBound(edgeBound r2.Rect, v float64) [2]r2.Rect
 	return splitBound(edgeBound, diag, 0, u, v)
 }
 
-// splitBound returns the bounds for the two childrenn as a result of spliting
+// splitBound returns the bounds for the two childrenn as a result of splitting
 // the current edge into two child edges at the given point (u,v). uEnd and vEnd
 // indicate which bound endpoints of the first child will be updated.
 func splitBound(edgeBound r2.Rect, uEnd, vEnd int, u, v float64) [2]r2.Rect {

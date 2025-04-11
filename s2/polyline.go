@@ -90,7 +90,7 @@ func (p *Polyline) Equal(b *Polyline) bool {
 // ApproxEqual reports whether two polylines have the same number of vertices,
 // and corresponding vertex pairs are separated by no more the standard margin.
 func (p *Polyline) ApproxEqual(o *Polyline) bool {
-	return p.approxEqual(o, s1.Angle(epsilon))
+	return p.approxEqual(o, s1.Angle(1e-15))
 }
 
 // approxEqual reports whether two polylines are equal within the given margin.

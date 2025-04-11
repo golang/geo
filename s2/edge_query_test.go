@@ -27,7 +27,7 @@ import (
 
 var (
 	// The edge query benchmarks scale up the number of edges each time in the
-	// benchmarking loop. This flag allows for chaning up or down the number
+	// benchmarking loop. This flag allows for changing up or down the number
 	// of scalings that occur in benchmarking.  The default value gets to
 	// ~50k edges in the test, and completes in a reasonable amount of time.
 	// Sometimes though there is a need to push the limits on the benchmarks
@@ -35,6 +35,7 @@ var (
 	// this flag allows that to happen.
 	//
 	// To set in testing add "--benchmark_edge_query_range=5" to your test command.
+	// When using blaze/bazel add "--test_arg=--benchmark_edge_query_range=5"
 	benchmarkEdgeQueryRange = flag.Int("benchmark_edge_query_range", 7,
 		"Set the upper limit on times to scale up the edge query "+
 			"edge counts in benchmark runs.")
@@ -241,6 +242,8 @@ func testEdgeQueryWithGenerator(t *testing.T,
 	var indexCaps []Cap
 	var indexes []*ShapeIndex
 	for i := 0; i < numIndexes; i++ {
+		// TODO(rsned): Replace with:
+	        // r := rand.New(rand.NewSource(i))
 		rand.Seed(int64(i))
 		indexCaps = append(indexCaps, CapFromCenterAngle(randomPoint(), testCapRadius))
 		indexes = append(indexes, NewShapeIndex())
@@ -248,6 +251,8 @@ func testEdgeQueryWithGenerator(t *testing.T,
 	}
 
 	for i := 0; i < numQueries; i++ {
+		// TODO(rsned): Replace with:
+	        // r := rand.New(rand.NewSource(i))
 		rand.Seed(int64(i))
 		iIndex := randomUniformInt(numIndexes)
 		indexCap := indexCaps[iIndex]
@@ -331,7 +336,7 @@ func testEdgeQueryWithGenerator(t *testing.T,
 //   - If maxErrorFraction > 0, then MaxError is set to the given
 //     fraction of the index radius.
 //
-// TODO(roberts): If there is a need to benchmark Furthest as well, this will need
+// TODO(rsned): If there is a need to benchmark Furthest as well, this will need
 // some changes to not use just the Closest variants of parts.
 // Furthest isn't doing anything different under the covers than Closest, so there
 // isn't really a huge need for benchmarking both.
@@ -359,12 +364,12 @@ func benchmarkEdgeQueryFindClosest(b *testing.B, bmOpts *edgeQueryBenchmarkOptio
 		bmOpts.numIndexEdges *= 4
 		b.Run(fmt.Sprintf("%d", bmOpts.numIndexEdges),
 			func(b *testing.B) {
-				// TODO(roberts): Return value 2 here is the slice of target
+				// TODO(rsned): Return value 2 here is the slice of target
 				// ShapeIndexes. Incorporate it once ShapeIndexTargets
 				// are able to be used in tests.
 				targets, _ = generateEdgeQueryWithTargets(bmOpts, query, index)
 				for i := 0; i < b.N; i++ {
-					// TODO(roberts): In the reference C++ benchmark
+					// TODO(rsned): In the reference C++ benchmark
 					// they use the tooling to split the benchmark
 					// run iterations up into kNumIndexSamples (8)
 					// times and pause to generate a new geometry
@@ -432,6 +437,7 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 	const maxTargetsPerIndex = 100
 
 	// Set a specific seed to allow repeatability
+	// Replace with r := rand.New(rand.NewSource(opts.randomSeed)) and pass through.
 	rand.Seed(opts.randomSeed)
 	opts.randomSeed++
 	indexCap := CapFromCenterAngle(randomPoint(), opts.radiusKm)

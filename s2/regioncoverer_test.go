@@ -298,6 +298,9 @@ func TestRegionCovererIsCanonical(t *testing.T) {
 	}
 }
 
+// To run these benchmarks with blaze/bazel use:
+// blaze test -c opt --test_output=all --test_arg=--test.bench=BenchmarkRegion --test_arg=--test.benchmem util/geometry/go:s2_test
+
 const numCoveringBMRegions = 1000
 
 func BenchmarkRegionCovererCoveringCap(b *testing.B) {

@@ -132,7 +132,7 @@ func (r *RectBounder) AddPoint(b Point) {
 	// and B attains its minimum and maximum latitudes). To test whether AB
 	// crosses this plane, we compute a vector M perpendicular to this
 	// plane and then project A and B onto it.
-	m := n.Cross(r3.Vector{0, 0, 1})
+	m := n.Cross(r3.Vector{X: 0, Y: 0, Z: 1})
 	mA := m.Dot(r.a.Vector)
 	mB := m.Dot(b.Vector)
 

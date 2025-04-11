@@ -14,42 +14,97 @@
 
 package s2
 
-// laxPolyline represents a polyline. It is similar to Polyline except
-// that duplicate vertices are allowed, and the representation is slightly
-// more compact.
-//
-// Polylines may have any number of vertices, but note that polylines with
-// fewer than 2 vertices do not define any edges. (To create a polyline
-// consisting of a single degenerate edge, either repeat the same vertex twice
-// or use laxClosedPolyline.
-type laxPolyline struct {
-	vertices []Point
-}
+import (
+	"testing"
+)
 
-func laxPolylineFromPoints(vertices []Point) *laxPolyline {
-	return &laxPolyline{
-		vertices: append([]Point(nil), vertices...),
+func TestLaxPolylineNoVertices(t *testing.T) {
+	shape := Shape(LaxPolylineFromPoints([]Point{}))
+
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.Dimension(), 1; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = true, want false")
 	}
 }
 
-func laxPolylineFromPolyline(p Polyline) *laxPolyline {
-	return laxPolylineFromPoints(p)
+func TestLaxPolylineOneVertex(t *testing.T) {
+	shape := Shape(LaxPolylineFromPoints([]Point{PointFromCoords(1, 0, 0)}))
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.Dimension(), 1; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
 }
 
-func (l *laxPolyline) NumEdges() int                  { return maxInt(0, len(l.vertices)-1) }
-func (l *laxPolyline) Edge(e int) Edge                { return Edge{l.vertices[e], l.vertices[e+1]} }
-func (l *laxPolyline) ReferencePoint() ReferencePoint { return OriginReferencePoint(false) }
-func (l *laxPolyline) NumChains() int                 { return minInt(1, l.NumEdges()) }
-func (l *laxPolyline) Chain(i int) Chain {
-	if l.NumEdges() == 1 {
-		return Chain{0, l.NumEdges()}
+func TestLaxPolylineEdgeAccess(t *testing.T) {
+	vertices := parsePoints("0:0, 0:1, 1:1")
+	shape := Shape(LaxPolylineFromPoints(vertices))
+
+	if got, want := shape.NumEdges(), 2; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
 	}
-	return Chain{i, l.NumEdges() - i}
+	if got, want := shape.NumChains(), 1; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.Chain(0).Start, 0; got != want {
+		t.Errorf("shape.Chain(%d).Start = %d, want 0", got, want)
+	}
+	if got, want := shape.Chain(0).Length, 2; got != want {
+		t.Errorf("shape.Chain(%d).Length = %d, want 2", got, want)
+	}
+	if got, want := shape.Dimension(), 1; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+
+	edge0 := shape.Edge(0)
+	if !edge0.V0.ApproxEqual(vertices[0]) {
+		t.Errorf("shape.Edge(0).V0 = %v, want %v", edge0.V0, vertices[0])
+	}
+	if !edge0.V1.ApproxEqual(vertices[1]) {
+		t.Errorf("shape.Edge(0).V1 = %v, want %v", edge0.V1, vertices[1])
+	}
+
+	edge1 := shape.Edge(1)
+	if !edge1.V0.ApproxEqual(vertices[1]) {
+		t.Errorf("shape.Edge(1).V0 = %v, want %v", edge1.V0, vertices[1])
+	}
+	if !edge1.V1.ApproxEqual(vertices[2]) {
+		t.Errorf("shape.Edge(1).V1 = %v, want %v", edge1.V1, vertices[2])
+	}
 }
-func (l *laxPolyline) ChainEdge(i, j int) Edge           { return Edge{l.vertices[j], l.vertices[j+1]} }
-func (l *laxPolyline) ChainPosition(e int) ChainPosition { return ChainPosition{0, e} }
-func (l *laxPolyline) Dimension() int                    { return 1 }
-func (l *laxPolyline) IsEmpty() bool                     { return defaultShapeIsEmpty(l) }
-func (l *laxPolyline) IsFull() bool                      { return defaultShapeIsFull(l) }
-func (l *laxPolyline) typeTag() typeTag                  { return typeTagLaxPolyline }
-func (l *laxPolyline) privateInterface()                 {}
+
+// TODO(roberts): Remaining tests to complete:
+// RoundtripEncoding
+// CoderWorks
+// ChainIteratorWorks
+// ChainVertexIteratorWorks

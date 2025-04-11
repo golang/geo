@@ -28,17 +28,17 @@ func TestCentroidsPlanarCentroid(t *testing.T) {
 	}{
 		{
 			name: "xyz axis",
-			p0:   Point{r3.Vector{0, 0, 1}},
-			p1:   Point{r3.Vector{0, 1, 0}},
-			p2:   Point{r3.Vector{1, 0, 0}},
-			want: Point{r3.Vector{1. / 3, 1. / 3, 1. / 3}},
+			p0:   Point{r3.Vector{X: 0, Y: 0, Z: 1}},
+			p1:   Point{r3.Vector{X: 0, Y: 1, Z: 0}},
+			p2:   Point{r3.Vector{X: 1, Y: 0, Z: 0}},
+			want: Point{r3.Vector{X: 1. / 3, Y: 1. / 3, Z: 1. / 3}},
 		},
 		{
 			name: "Same point",
-			p0:   Point{r3.Vector{1, 0, 0}},
-			p1:   Point{r3.Vector{1, 0, 0}},
-			p2:   Point{r3.Vector{1, 0, 0}},
-			want: Point{r3.Vector{1, 0, 0}},
+			p0:   Point{r3.Vector{X: 1, Y: 0, Z: 0}},
+			p1:   Point{r3.Vector{X: 1, Y: 0, Z: 0}},
+			p2:   Point{r3.Vector{X: 1, Y: 0, Z: 0}},
+			want: Point{r3.Vector{X: 1, Y: 0, Z: 0}},
 		},
 	}
 

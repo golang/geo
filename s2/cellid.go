@@ -203,6 +203,7 @@ func (ci CellID) Children() [4]CellID {
 	return ch
 }
 
+// sizeIJ reports the edge length of cells at the given level in (i,j)-space.
 func sizeIJ(level int) int {
 	return 1 << uint(MaxLevel-level)
 }
@@ -222,9 +223,9 @@ func (ci CellID) EdgeNeighbors() [4]CellID {
 	}
 }
 
-// VertexNeighbors returns the neighboring cellIDs with vertex closest to this cell at the given level.
-// (Normally there are four neighbors, but the closest vertex may only have three neighbors if it is one of
-// the 8 cube vertices.)
+// VertexNeighbors returns the cellIDs of the neighbors of the closest vertex to
+// this cell at the given level. Normally there are four neighbors, but the closest
+// vertex may only have three neighbors if it is one of the 8 cube vertices.
 func (ci CellID) VertexNeighbors(level int) []CellID {
 	halfSize := sizeIJ(level + 1)
 	size := halfSize << 1
@@ -267,8 +268,13 @@ func (ci CellID) VertexNeighbors(level int) []CellID {
 // same neighbor may be returned more than once. There could be up to eight
 // neighbors including the diagonal ones that share the vertex.
 //
-// This requires level >= ci.Level().
+// Returns nil if level < ci.Level() (cells would not be neighboring) or
+// level > MaxLevel (no such cells exist).
 func (ci CellID) AllNeighbors(level int) []CellID {
+	if level < ci.Level() || level > MaxLevel {
+		return nil
+	}
+
 	var neighbors []CellID
 
 	face, i, j, _ := ci.faceIJOrientation()
@@ -355,8 +361,9 @@ func CellIDFromString(s string) CellID {
 	}
 	id := CellIDFromFace(face)
 	for i := 2; i < len(s); i++ {
-		childPos := s[i] - '0'
-		if childPos < 0 || childPos > 3 {
+		var childPos byte = s[i] - '0'
+		// Bytes are non-negative.
+		if childPos > 3 {
 			return CellID(0)
 		}
 		id = id.Children()[childPos]
@@ -627,19 +634,6 @@ func cellIDFromFaceIJSame(f, i, j int, sameFace bool) CellID {
 	return cellIDFromFaceIJWrap(f, i, j)
 }
 
-// ijToSTMin converts the i- or j-index of a leaf cell to the minimum corresponding
-// s- or t-value contained by that cell. The argument must be in the range
-// [0..2**30], i.e. up to one position beyond the normal range of valid leaf
-// cell indices.
-func ijToSTMin(i int) float64 {
-	return float64(i) / float64(MaxSize)
-}
-
-// stToIJ converts value in ST coordinates to a value in IJ coordinates.
-func stToIJ(s float64) int {
-	return clampInt(int(math.Floor(MaxSize*s)), 0, MaxSize-1)
-}
-
 // cellIDFromPoint returns a leaf cell containing point p. Usually there is
 // exactly one such cell, but for points along the edge of a cell, any
 // adjacent cell may be (deterministically) chosen. This is because
@@ -650,7 +644,7 @@ func stToIJ(s float64) int {
 //
 // is always true.
 func cellIDFromPoint(p Point) CellID {
-	f, u, v := xyzToFaceUV(r3.Vector{p.X, p.Y, p.Z})
+	f, u, v := xyzToFaceUV(r3.Vector{X: p.X, Y: p.Y, Z: p.Z})
 	i := stToIJ(uvToST(u))
 	j := stToIJ(uvToST(v))
 	return cellIDFromFaceIJ(f, i, j)
@@ -788,7 +782,7 @@ func (ci CellID) Advance(steps int64) CellID {
 // centerST return the center of the CellID in (s,t)-space.
 func (ci CellID) centerST() r2.Point {
 	_, si, ti := ci.faceSiTi()
-	return r2.Point{siTiToST(si), siTiToST(ti)}
+	return r2.Point{X: siTiToST(si), Y: siTiToST(ti)}
 }
 
 // sizeST returns the edge length of this CellID in (s,t)-space at the given level.
@@ -799,7 +793,7 @@ func (ci CellID) sizeST(level int) float64 {
 // boundST returns the bound of this CellID in (s,t)-space.
 func (ci CellID) boundST() r2.Rect {
 	s := ci.sizeST(ci.Level())
-	return r2.RectFromCenterSize(ci.centerST(), r2.Point{s, s})
+	return r2.RectFromCenterSize(ci.centerST(), r2.Point{X: s, Y: s})
 }
 
 // centerUV returns the center of this CellID in (u,v)-space. Note that
@@ -808,7 +802,7 @@ func (ci CellID) boundST() r2.Rect {
 // the (u,v) rectangle covered by the cell.
 func (ci CellID) centerUV() r2.Point {
 	_, si, ti := ci.faceSiTi()
-	return r2.Point{stToUV(siTiToST(si)), stToUV(siTiToST(ti))}
+	return r2.Point{X: stToUV(siTiToST(si)), Y: stToUV(siTiToST(ti))}
 }
 
 // boundUV returns the bound of this CellID in (u,v)-space.
@@ -837,7 +831,7 @@ func expandEndpoint(u, maxV, sinDist float64) float64 {
 // of the boundary.
 //
 // Distances are measured *on the sphere*, not in (u,v)-space. For example,
-// you can use this method to expand the (u,v)-bound of an CellID so that
+// you can use this method to expand the (u,v)-bound of a CellID so that
 // it contains all points within 5km of the original cell. You can then
 // test whether a point lies within the expanded bounds like this:
 //
@@ -862,10 +856,10 @@ func expandedByDistanceUV(uv r2.Rect, distance s1.Angle) r2.Rect {
 	maxV := math.Max(math.Abs(uv.Y.Lo), math.Abs(uv.Y.Hi))
 	sinDist := math.Sin(float64(distance))
 	return r2.Rect{
-		X: r1.Interval{expandEndpoint(uv.X.Lo, maxV, -sinDist),
-			expandEndpoint(uv.X.Hi, maxV, sinDist)},
-		Y: r1.Interval{expandEndpoint(uv.Y.Lo, maxU, -sinDist),
-			expandEndpoint(uv.Y.Hi, maxU, sinDist)}}
+		X: r1.Interval{Lo: expandEndpoint(uv.X.Lo, maxV, -sinDist),
+			Hi: expandEndpoint(uv.X.Hi, maxV, sinDist)},
+		Y: r1.Interval{Lo: expandEndpoint(uv.Y.Lo, maxU, -sinDist),
+			Hi: expandEndpoint(uv.Y.Hi, maxU, sinDist)}}
 }
 
 // MaxTile returns the largest cell with the same RangeMin such that

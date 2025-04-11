@@ -59,7 +59,7 @@ func TestRectArea(t *testing.T) {
 	}{
 		{Rect{}, 0},
 		{FullRect(), 4 * math.Pi},
-		{Rect{r1.Interval{0, math.Pi / 2}, s1.Interval{0, math.Pi / 2}}, math.Pi / 2},
+		{Rect{r1.Interval{Lo: 0, Hi: math.Pi / 2}, s1.Interval{Lo: 0, Hi: math.Pi / 2}}, math.Pi / 2},
 	}
 	for _, test := range tests {
 		if got := test.rect.Area(); !float64Eq(got, test.want) {
@@ -164,7 +164,7 @@ func TestRectAddPoint(t *testing.T) {
 	}
 }
 func TestRectVertex(t *testing.T) {
-	r1 := Rect{r1.Interval{0, math.Pi / 2}, s1.IntervalFromEndpoints(-math.Pi, 0)}
+	r1 := Rect{r1.Interval{Lo: 0, Hi: math.Pi / 2}, s1.IntervalFromEndpoints(-math.Pi, 0)}
 	tests := []struct {
 		r    Rect
 		i    int
@@ -187,10 +187,10 @@ func TestRectVertexCCWOrder(t *testing.T) {
 		lat := math.Pi / 4 * float64(i-2)
 		lng := math.Pi/2*float64(i-2) + 0.2
 		r := Rect{
-			r1.Interval{lat, lat + math.Pi/4},
+			r1.Interval{Lo: lat, Hi: lat + math.Pi/4},
 			s1.Interval{
-				math.Remainder(lng, 2*math.Pi),
-				math.Remainder(lng+math.Pi/2, 2*math.Pi),
+				Lo: math.Remainder(lng, 2*math.Pi),
+				Hi: math.Remainder(lng+math.Pi/2, 2*math.Pi),
 			},
 		}
 
@@ -385,15 +385,15 @@ func TestRectCapBound(t *testing.T) {
 	}{
 		{ // Bounding cap at center is smaller.
 			rectFromDegrees(-45, -45, 45, 45),
-			CapFromCenterHeight(Point{r3.Vector{1, 0, 0}}, 0.5),
+			CapFromCenterHeight(Point{r3.Vector{X: 1, Y: 0, Z: 0}}, 0.5),
 		},
 		{ // Bounding cap at north pole is smaller.
 			rectFromDegrees(88, -80, 89, 80),
-			CapFromCenterAngle(Point{r3.Vector{0, 0, 1}}, s1.Angle(2)*s1.Degree),
+			CapFromCenterAngle(Point{r3.Vector{X: 0, Y: 0, Z: 1}}, s1.Angle(2)*s1.Degree),
 		},
 		{ // Longitude span > 180 degrees.
 			rectFromDegrees(-30, -150, -10, 50),
-			CapFromCenterAngle(Point{r3.Vector{0, 0, -1}}, s1.Angle(80)*s1.Degree),
+			CapFromCenterAngle(Point{r3.Vector{X: 0, Y: 0, Z: -1}}, s1.Angle(80)*s1.Degree),
 		},
 	}
 	for _, test := range tests {
@@ -535,7 +535,7 @@ func TestRectIntervalOps(t *testing.T) {
 }
 
 func TestRectCellOps(t *testing.T) {
-	cell0 := CellFromPoint(Point{r3.Vector{1 + 1e-12, 1, 1}})
+	cell0 := CellFromPoint(Point{r3.Vector{X: 1 + 1e-12, Y: 1, Z: 1}})
 	v0 := LatLngFromPoint(cell0.Vertex(0))
 
 	cell202 := CellFromCellID(CellIDFromFacePosLevel(2, 0, 2))
@@ -685,8 +685,8 @@ func TestRectContainsPoint(t *testing.T) {
 		p    Point
 		want bool
 	}{
-		{r1, Point{r3.Vector{0.5, -0.3, 0.1}}, true},
-		{r1, Point{r3.Vector{0.5, 0.2, 0.1}}, false},
+		{r1, Point{r3.Vector{X: 0.5, Y: -0.3, Z: 0.1}}, true},
+		{r1, Point{r3.Vector{X: 0.5, Y: 0.2, Z: 0.1}}, false},
 	}
 	for _, test := range tests {
 		if got, want := test.r.ContainsPoint(test.p), test.want; got != want {
@@ -704,56 +704,56 @@ func TestRectIntersectsLatEdge(t *testing.T) {
 		want  bool
 	}{
 		{
-			a:     Point{r3.Vector{-1, -1, 1}},
-			b:     Point{r3.Vector{1, -1, 1}},
+			a:     Point{r3.Vector{X: -1, Y: -1, Z: 1}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: 1}},
 			lat:   41 * s1.Degree,
 			lngLo: -87 * s1.Degree,
 			lngHi: -79 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     Point{r3.Vector{-1, -1, 1}},
-			b:     Point{r3.Vector{1, -1, 1}},
+			a:     Point{r3.Vector{X: -1, Y: -1, Z: 1}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: 1}},
 			lat:   42 * s1.Degree,
 			lngLo: -87 * s1.Degree,
 			lngHi: -79 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     Point{r3.Vector{-1, -1, -1}},
-			b:     Point{r3.Vector{1, 1, 0}},
+			a:     Point{r3.Vector{X: -1, Y: -1, Z: -1}},
+			b:     Point{r3.Vector{X: 1, Y: 1, Z: 0}},
 			lat:   -3 * s1.Degree,
 			lngLo: -1 * s1.Degree,
 			lngHi: 23 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     Point{r3.Vector{1, 0, 1}},
-			b:     Point{r3.Vector{1, -1, 0}},
+			a:     Point{r3.Vector{X: 1, Y: 0, Z: 1}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: 0}},
 			lat:   -28 * s1.Degree,
 			lngLo: 69 * s1.Degree,
 			lngHi: 115 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     Point{r3.Vector{0, 1, 0}},
-			b:     Point{r3.Vector{1, -1, -1}},
+			a:     Point{r3.Vector{X: 0, Y: 1, Z: 0}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: -1}},
 			lat:   44 * s1.Degree,
 			lngLo: 60 * s1.Degree,
 			lngHi: 177 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     Point{r3.Vector{0, 1, 1}},
-			b:     Point{r3.Vector{0, 1, -1}},
+			a:     Point{r3.Vector{X: 0, Y: 1, Z: 1}},
+			b:     Point{r3.Vector{X: 0, Y: 1, Z: -1}},
 			lat:   -25 * s1.Degree,
 			lngLo: -74 * s1.Degree,
 			lngHi: -165 * s1.Degree,
 			want:  true,
 		},
 		{
-			a:     Point{r3.Vector{1, 0, 0}},
-			b:     Point{r3.Vector{0, 0, -1}},
+			a:     Point{r3.Vector{X: 1, Y: 0, Z: 0}},
+			b:     Point{r3.Vector{X: 0, Y: 0, Z: -1}},
 			lat:   -4 * s1.Degree,
 			lngLo: -152 * s1.Degree,
 			lngHi: 171 * s1.Degree,
@@ -761,8 +761,8 @@ func TestRectIntersectsLatEdge(t *testing.T) {
 		},
 		// from a bug report
 		{
-			a:     Point{r3.Vector{-0.589375791872893683986945, 0.583248451588733285433364, 0.558978908075738245564423}},
-			b:     Point{r3.Vector{-0.587388131301997518107783, 0.581281455376392863776402, 0.563104832905072516524569}},
+			a:     Point{r3.Vector{X: -0.589375791872893683986945, Y: 0.583248451588733285433364, Z: 0.558978908075738245564423}},
+			b:     Point{r3.Vector{X: -0.587388131301997518107783, Y: 0.581281455376392863776402, Z: 0.563104832905072516524569}},
 			lat:   34.2572864 * s1.Degree,
 			lngLo: 2.3608609 * s1.Radian,
 			lngHi: 2.3614230 * s1.Radian,
@@ -771,7 +771,7 @@ func TestRectIntersectsLatEdge(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := intersectsLatEdge(test.a, test.b, test.lat, s1.Interval{float64(test.lngLo), float64(test.lngHi)}); got != test.want {
+		if got := intersectsLatEdge(test.a, test.b, test.lat, s1.Interval{Lo: float64(test.lngLo), Hi: float64(test.lngHi)}); got != test.want {
 			t.Errorf("intersectsLatEdge(%v, %v, %v, {%v, %v}) = %t, want %t",
 				test.a, test.b, test.lat, test.lngLo, test.lngHi, got, test.want)
 		}
@@ -787,64 +787,64 @@ func TestRectIntersectsLngEdge(t *testing.T) {
 		want  bool
 	}{
 		{
-			a:     Point{r3.Vector{-1, -1, 1}},
-			b:     Point{r3.Vector{1, -1, 1}},
+			a:     Point{r3.Vector{X: -1, Y: -1, Z: 1}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: 1}},
 			latLo: 41 * s1.Degree,
 			latHi: 42 * s1.Degree,
 			lng:   -79 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     Point{r3.Vector{-1, -1, 1}},
-			b:     Point{r3.Vector{1, -1, 1}},
+			a:     Point{r3.Vector{X: -1, Y: -1, Z: 1}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: 1}},
 			latLo: 41 * s1.Degree,
 			latHi: 42 * s1.Degree,
 			lng:   -87 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     Point{r3.Vector{-1, -1, 1}},
-			b:     Point{r3.Vector{1, -1, 1}},
+			a:     Point{r3.Vector{X: -1, Y: -1, Z: 1}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: 1}},
 			latLo: 42 * s1.Degree,
 			latHi: 41 * s1.Degree,
 			lng:   79 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     Point{r3.Vector{-1, -1, 1}},
-			b:     Point{r3.Vector{1, -1, 1}},
+			a:     Point{r3.Vector{X: -1, Y: -1, Z: 1}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: 1}},
 			latLo: 41 * s1.Degree,
 			latHi: 42 * s1.Degree,
 			lng:   87 * s1.Degree,
 			want:  false,
 		},
 		{
-			a:     Point{r3.Vector{0, -1, -1}},
-			b:     Point{r3.Vector{-1, 0, -1}},
+			a:     Point{r3.Vector{X: 0, Y: -1, Z: -1}},
+			b:     Point{r3.Vector{X: -1, Y: 0, Z: -1}},
 			latLo: -87 * s1.Degree,
 			latHi: 13 * s1.Degree,
 			lng:   -143 * s1.Degree,
 			want:  true,
 		},
 		{
-			a:     Point{r3.Vector{1, 1, -1}},
-			b:     Point{r3.Vector{1, -1, 1}},
+			a:     Point{r3.Vector{X: 1, Y: 1, Z: -1}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: 1}},
 			latLo: -64 * s1.Degree,
 			latHi: 13 * s1.Degree,
 			lng:   40 * s1.Degree,
 			want:  true,
 		},
 		{
-			a:     Point{r3.Vector{1, 1, 0}},
-			b:     Point{r3.Vector{-1, 0, -1}},
+			a:     Point{r3.Vector{X: 1, Y: 1, Z: 0}},
+			b:     Point{r3.Vector{X: -1, Y: 0, Z: -1}},
 			latLo: -64 * s1.Degree,
 			latHi: 56 * s1.Degree,
 			lng:   151 * s1.Degree,
 			want:  true,
 		},
 		{
-			a:     Point{r3.Vector{-1, -1, 0}},
-			b:     Point{r3.Vector{1, -1, -1}},
+			a:     Point{r3.Vector{X: -1, Y: -1, Z: 0}},
+			b:     Point{r3.Vector{X: 1, Y: -1, Z: -1}},
 			latLo: -50 * s1.Degree,
 			latHi: 18 * s1.Degree,
 			lng:   -84 * s1.Degree,
@@ -853,7 +853,7 @@ func TestRectIntersectsLngEdge(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if got := intersectsLngEdge(test.a, test.b, r1.Interval{float64(test.latLo), float64(test.latHi)}, test.lng); got != test.want {
+		if got := intersectsLngEdge(test.a, test.b, r1.Interval{Lo: float64(test.latLo), Hi: float64(test.latHi)}, test.lng); got != test.want {
 			t.Errorf("intersectsLngEdge(%v, %v, {%v, %v}, %v) = %v, want %v",
 				test.a, test.b, test.latLo, test.latHi, test.lng, got, test.want)
 		}
@@ -1147,12 +1147,12 @@ func testRectCentroidSplitting(t *testing.T, r Rect, leftSplits int) {
 	var child0, child1 Rect
 	if oneIn(2) {
 		lat := randomUniformFloat64(r.Lat.Lo, r.Lat.Hi)
-		child0 = Rect{r1.Interval{r.Lat.Lo, lat}, r.Lng}
-		child1 = Rect{r1.Interval{lat, r.Lat.Hi}, r.Lng}
+		child0 = Rect{r1.Interval{Lo: r.Lat.Lo, Hi: lat}, r.Lng}
+		child1 = Rect{r1.Interval{Lo: lat, Hi: r.Lat.Hi}, r.Lng}
 	} else {
 		lng := randomUniformFloat64(r.Lng.Lo, r.Lng.Hi)
-		child0 = Rect{r.Lat, s1.Interval{r.Lng.Lo, lng}}
-		child1 = Rect{r.Lat, s1.Interval{lng, r.Lng.Hi}}
+		child0 = Rect{r.Lat, s1.Interval{Lo: r.Lng.Lo, Hi: lng}}
+		child1 = Rect{r.Lat, s1.Interval{Lo: lng, Hi: r.Lng.Hi}}
 	}
 
 	if got, want := r.Centroid().Sub(child0.Centroid().Vector).Sub(child1.Centroid().Vector).Norm(), 1e-15; got > want {
@@ -1169,12 +1169,12 @@ func TestRectCentroidFullRange(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		lat1 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
 		lat2 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
-		r := Rect{r1.Interval{lat1, lat2}, s1.FullInterval()}
+		r := Rect{r1.Interval{Lo: lat1, Hi: lat2}, s1.FullInterval()}
 		centroid := r.Centroid()
 		if want := 0.5 * (math.Sin(lat1) + math.Sin(lat2)) * r.Area(); !float64Near(want, centroid.Z, epsilon) {
 			t.Errorf("%v.Centroid().Z was %v, want %v", r, centroid.Z, want)
 		}
-		if got := (r2.Point{centroid.X, centroid.Y}.Norm()); got > epsilon {
+		if got := (r2.Point{X: centroid.X, Y: centroid.Y}.Norm()); got > epsilon {
 			t.Errorf("%v.Centroid().Norm() was %v, want > %v ", r, got, epsilon)
 		}
 	}
@@ -1183,7 +1183,7 @@ func TestRectCentroidFullRange(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		lat1 := randomUniformFloat64(-math.Pi, math.Pi)
 		lat2 := randomUniformFloat64(-math.Pi, math.Pi)
-		r := Rect{r1.Interval{-math.Pi / 2, math.Pi / 2}, s1.Interval{lat1, lat2}}
+		r := Rect{r1.Interval{Lo: -math.Pi / 2, Hi: math.Pi / 2}, s1.Interval{Lo: lat1, Hi: lat2}}
 		centroid := r.Centroid()
 
 		if got, want := math.Abs(centroid.Z), epsilon; got > want {
@@ -1195,7 +1195,7 @@ func TestRectCentroidFullRange(t *testing.T) {
 		}
 
 		alpha := 0.5 * r.Lng.Length()
-		if got, want := (r2.Point{centroid.X, centroid.Y}.Norm()), (0.25 * math.Pi * math.Sin(alpha) / alpha * r.Area()); !float64Near(got, want, epsilon) {
+		if got, want := (r2.Point{X: centroid.X, Y: centroid.Y}.Norm()), (0.25 * math.Pi * math.Sin(alpha) / alpha * r.Area()); !float64Near(got, want, epsilon) {
 			t.Errorf("%v.Centroid().Norm() = %v, want ~%v", got, want, epsilon)
 		}
 	}
@@ -1204,5 +1204,5 @@ func TestRectCentroidFullRange(t *testing.T) {
 	// the centroids of the pieces add to give the centroid of their parent.
 	// To make the code simpler we avoid rectangles that cross the 180 degree
 	// line of longitude.
-	testRectCentroidSplitting(t, Rect{r1.Interval{-math.Pi / 2, math.Pi / 2}, s1.Interval{-math.Pi, math.Pi}}, 10)
+	testRectCentroidSplitting(t, Rect{validRectLatRange, s1.Interval{Lo: -3.14, Hi: 3.14}}, 10)
 }

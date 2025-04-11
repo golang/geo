@@ -14,76 +14,78 @@
 
 package s2
 
-// Shape interface enforcement
-var _ Shape = (*laxLoop)(nil)
+import (
+	"testing"
+)
 
-// laxLoop represents a closed loop of edges surrounding an interior
-// region. It is similar to Loop except that this class allows
-// duplicate vertices and edges. Loops may have any number of vertices,
-// including 0, 1, or 2. (A one-vertex loop defines a degenerate edge
-// consisting of a single point.)
-//
-// Note that laxLoop is faster to initialize and more compact than
-// Loop, but does not support the same operations as Loop.
-type laxLoop struct {
-	numVertices int
-	vertices    []Point
+func TestLaxLoopEmptyLoop(t *testing.T) {
+	shape := Shape(LaxLoopFromLoop(EmptyLoop()))
+
+	if got, want := shape.NumEdges(), 0; got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 0; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if !shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = false, want true")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained should be false")
+	}
 }
 
-func laxLoopFromPoints(vertices []Point) *laxLoop {
-	l := &laxLoop{
-		numVertices: len(vertices),
-		vertices:    make([]Point, len(vertices)),
+func TestLaxLoopNonEmptyLoop(t *testing.T) {
+	vertices := parsePoints("0:0, 0:1, 1:1, 1:0")
+	shape := Shape(LaxLoopFromPoints(vertices))
+	if got, want := len(shape.(*LaxLoop).vertices), len(vertices); got != want {
+		t.Errorf("shape.numVertices = %v, want %v", got, want)
 	}
-	copy(l.vertices, vertices)
-	return l
+	if got, want := shape.NumEdges(), len(vertices); got != want {
+		t.Errorf("shape.NumEdges() = %v, want %v", got, want)
+	}
+	if got, want := shape.NumChains(), 1; got != want {
+		t.Errorf("shape.NumChains() = %v, want %v", got, want)
+	}
+	if got, want := shape.Chain(0).Start, 0; got != want {
+		t.Errorf("shape.Chain(0).Start = %v, want %v", got, want)
+	}
+	if got, want := shape.Chain(0).Length, len(vertices); got != want {
+		t.Errorf("shape.Chain(0).Length = %v, want %v", got, want)
+	}
+	for i := 0; i < len(vertices); i++ {
+		if got, want := shape.(*LaxLoop).vertex(i), vertices[i]; got != want {
+			t.Errorf("%d. vertex(%d) = %v, want %v", i, i, got, want)
+		}
+		edge := shape.Edge(i)
+		if vertices[i] != edge.V0 {
+			t.Errorf("%d. edge.V0 = %v, want %v", i, edge.V0, vertices[i])
+		}
+		if got, want := edge.V1, vertices[(i+1)%len(vertices)]; got != want {
+			t.Errorf("%d. edge.V1 = %v, want %v", i, got, want)
+		}
+	}
+	if got, want := shape.Dimension(), 2; got != want {
+		t.Errorf("shape.Dimension() = %v, want %v", got, want)
+	}
+	if shape.IsEmpty() {
+		t.Errorf("shape.IsEmpty() = true, want false")
+	}
+	if shape.IsFull() {
+		t.Errorf("shape.IsFull() = true, want false")
+	}
+	if shape.ReferencePoint().Contained {
+		t.Errorf("shape.ReferencePoint().Contained = true, want false")
+	}
 }
 
-func laxLoopFromLoop(loop *Loop) *laxLoop {
-	if loop.IsFull() {
-		panic("FullLoops are not yet supported")
-	}
-	if loop.IsEmpty() {
-		return &laxLoop{}
-	}
-
-	l := &laxLoop{
-		numVertices: len(loop.vertices),
-		vertices:    make([]Point, len(loop.vertices)),
-	}
-	copy(l.vertices, loop.vertices)
-	return l
-}
-
-func (l *laxLoop) vertex(i int) Point { return l.vertices[i] }
-func (l *laxLoop) NumEdges() int      { return l.numVertices }
-func (l *laxLoop) Edge(e int) Edge {
-	e1 := e + 1
-	if e1 == l.numVertices {
-		e1 = 0
-	}
-	return Edge{l.vertices[e], l.vertices[e1]}
-
-}
-func (l *laxLoop) Dimension() int                 { return 2 }
-func (l *laxLoop) ReferencePoint() ReferencePoint { return referencePointForShape(l) }
-func (l *laxLoop) NumChains() int                 { return minInt(1, l.numVertices) }
-func (l *laxLoop) Chain(i int) Chain {
-	if l.numVertices == 1 {
-		return Chain{0, l.numVertices}
-	}
-	return Chain{i, l.numVertices - i}
-}
-
-func (l *laxLoop) ChainEdge(i, j int) Edge {
-	var k int
-	if j+1 == l.numVertices {
-		k = j + 1
-	}
-	return Edge{l.vertices[j], l.vertices[k]}
-}
-func (l *laxLoop) ChainPosition(e int) ChainPosition { return ChainPosition{0, e} }
-func (l *laxLoop) IsEmpty() bool                     { return defaultShapeIsEmpty(l) }
-func (l *laxLoop) IsFull() bool                      { return defaultShapeIsFull(l) }
-func (l *laxLoop) typeTag() typeTag                  { return typeTagNone }
-func (l *laxLoop) privateInterface()                 {}
+// TODO(roberts): Remaining tests to be ported:
+// LaxClosedPolylineNoInterior
+// VertexIdLaxLoopEmptyLoop
+// VertexIdLaxLoopInvertedLoop

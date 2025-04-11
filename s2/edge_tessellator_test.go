@@ -39,7 +39,7 @@ func TestEdgeTessellatorUnprojectedNoTessellation(t *testing.T) {
 	tess := NewEdgeTessellator(proj, 0.01*s1.Degree)
 
 	var vertices []Point
-	vertices = tess.AppendUnprojected(r2.Point{0, 30}, r2.Point{0, 50}, vertices)
+	vertices = tess.AppendUnprojected(r2.Point{X: 0, Y: 30}, r2.Point{X: 0, Y: 50}, vertices)
 
 	if len(vertices) != 2 {
 		t.Errorf("2 points which don't need tessellation should only end with 2 points. got %d points", len(vertices))
@@ -53,7 +53,7 @@ func TestEdgeTessellatorUnprojectedWrapping(t *testing.T) {
 	tess := NewEdgeTessellator(proj, 0.01*s1.Degree)
 
 	var vertices []Point
-	vertices = tess.AppendUnprojected(r2.Point{-170, 0}, r2.Point{170, 80}, vertices)
+	vertices = tess.AppendUnprojected(r2.Point{X: -170, Y: 0}, r2.Point{X: 170, Y: 80}, vertices)
 	for i, v := range vertices {
 		if got := math.Abs(longitude(v).Degrees()); got < 170 {
 			t.Errorf("unprojected segment %d should be close to the meridian. got %v, want >= 170", i, got)
@@ -87,10 +87,10 @@ func TestEdgeTessellatorUnprojectedWrappingMultipleCrossings(t *testing.T) {
 
 	var vertices []Point
 	for lat := 1.0; lat <= 60; lat += 1.0 {
-		vertices = tess.AppendUnprojected(r2.Point{180 - 0.03*lat, lat},
-			r2.Point{-180 + 0.07*lat, lat}, vertices)
-		vertices = tess.AppendUnprojected(r2.Point{-180 + 0.07*lat, lat},
-			r2.Point{180 - 0.03*(lat+1), lat + 1}, vertices)
+		vertices = tess.AppendUnprojected(r2.Point{X: 180 - 0.03*lat, Y: lat},
+			r2.Point{X: -180 + 0.07*lat, Y: lat}, vertices)
+		vertices = tess.AppendUnprojected(r2.Point{X: -180 + 0.07*lat, Y: lat},
+			r2.Point{X: 180 - 0.03*(lat+1), Y: lat + 1}, vertices)
 	}
 
 	for i, v := range vertices {

@@ -218,7 +218,7 @@ func TestConvexHullQueryPointsInsideHull(t *testing.T) {
 		// test pass reliably it means that we need to reject convex hulls whose
 		// bounding cap (when computed from a bounding rectangle) is not convex.
 		//
-		// TODO(roberts): This test can still fail (about 1 iteration in 500,000)
+		// TODO(rsned): This test can still fail (about 1 iteration in 500,000)
 		// because the Rect.CapBound implementation does not guarantee
 		// that A.Contains(B) implies A.CapBound().Contains(B.CapBound()).
 		if hull.CapBound().Height() >= 1 {
