@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/pavlov061356/geo/s2"
+	"github.com/golang/geo/geo/s2"
 )
 
 // Re nomenclature used throughout this file: an "intersection" is a 2D

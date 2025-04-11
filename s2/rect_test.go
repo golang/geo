@@ -18,10 +18,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/pavlov061356/geo/r1"
-	"github.com/pavlov061356/geo/r2"
-	"github.com/pavlov061356/geo/r3"
-	"github.com/pavlov061356/geo/s1"
+	"github.com/golang/geo/geo/r1"
+	"github.com/golang/geo/geo/r2"
+	"github.com/golang/geo/geo/r3"
+	"github.com/golang/geo/geo/s1"
 )
 
 func TestRectEmptyAndFull(t *testing.T) {

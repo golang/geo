@@ -18,8 +18,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/pavlov061356/geo/r1"
-	"github.com/pavlov061356/geo/r2"
+	"github.com/golang/geo/geo/r1"
+	"github.com/golang/geo/geo/r2"
 )
 
 func TestPaddedCellMethods(t *testing.T) {

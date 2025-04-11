@@ -20,8 +20,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/pavlov061356/geo/r1"
-	"github.com/pavlov061356/geo/r2"
+	"github.com/golang/geo/geo/r1"
+	"github.com/golang/geo/geo/r2"
 )
 
 // CellRelation describes the possible relationships between a target cell

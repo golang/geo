@@ -1,4 +1,4 @@
-module github.com/pavlov061356/geo
+module github.com/golang/geo/geo
 
 go 1.21
 
