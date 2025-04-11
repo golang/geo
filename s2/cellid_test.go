@@ -323,6 +323,19 @@ func TestCellIDAllNeighbors(t *testing.T) {
 	}
 }
 
+func TestCellIDAllNeighborsBadLevels(t *testing.T) {
+	ci := CellIDFromLatLng(LatLngFromDegrees(47.38, 8.54)).Parent(29)
+	if got := ci.AllNeighbors(-1); got != nil {
+		t.Errorf("AllNeighbors(%v) = %v, want nil", -1, got)
+	}
+	if got := ci.AllNeighbors(28); got != nil {
+		t.Errorf("AllNeighbors(%v) = %v, want nil", 28, got)
+	}
+	if got := ci.AllNeighbors(31); got != nil {
+		t.Errorf("AllNeighbors(%v) = %v, want nil", 31, got)
+	}
+}
+
 func TestCellIDTokensNominal(t *testing.T) {
 	tests := []struct {
 		token string
