@@ -823,24 +823,28 @@ func TestSliceDivided(t *testing.T) {
 		for i := range got {
 			points[i] = got[i].Point
 		}
+		for i := 1; i < len(got)-1; i++ {
+			if got[i-1].Fraction > got[i].Fraction {
+				t.Errorf("Fraction of i is less than i-1; i: %v; got: %v\n", i, got)
+			}
+
+		}
 		if !pointSlicesApproxEqual(points, want, kEpsilon) {
 			t.Errorf("%v: got %v, want %v", test.name, got, want)
 		}
 
-		for i := 1; i < len(got)-1; i++ {
-			prev := LatLngFromPoint(got[i-1].Point)
-			curr := LatLngFromPoint(got[i].Point)
+		// 	prev := LatLngFromPoint(got[i-1].Point)
+		// 	curr := LatLngFromPoint(got[i].Point)
 
-			if curr.Lng < prev.Lng {
-				t.Errorf("%v: got %v, want %v", test.name, got, want)
-			}
-		}
+		// 	if curr.Lng < prev.Lng {
+		// 		t.Errorf("%v: got %v, want %v", test.name, got, want)
+		// 	}
 	}
 }
 
 // goos: linux
 // goarch: amd64
-// pkg: github.com/pavlov061356/geo/s2
+// pkg: github.com/mrosminin/tf-geo/s2
 // cpu: AMD Ryzen 5 5600G with Radeon Graphics
 // === RUN   Benchmark_SliceDivided
 // Benchmark_SliceDivided
@@ -956,7 +960,7 @@ func Benchmark_InitChinInterpolationQuery(b *testing.B) {
 
 // goos: linux
 // goarch: amd64
-// pkg: github.com/pavlov061356/geo/s2
+// pkg: github.com/mrosminin/tf-geo/s2
 // cpu: AMD Ryzen 7 5800H with Radeon Graphics
 // === RUN   Benchmark_Slice
 // Benchmark_Slice

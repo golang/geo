@@ -309,9 +309,9 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 		// If the current edge is the same as the previous edge, then skip it.
 		// Otherwise, append all edges in between.
 		if currentEdgeID != edgeID {
-			for i := currentEdgeID; i < edgeID; i++ {
+			for i := currentEdgeID + 1; i <= edgeID; i++ {
 				edge := s.Shape.Edge(i)
-				if edge.V1 != atFraction {
+				if edge.V0 != atFraction {
 					pointsLength++
 					total, err := s.GetLength()
 					if err != nil {
@@ -321,7 +321,7 @@ func (s ChainInterpolationQuery) AddDividedSlice(beginFraction, endFraction floa
 						return
 					}
 
-					*points = append(*points, PointWithFraction{Point: edge.V1, Fraction: s.cumulativeValues[i].Radians() / total.Radians()})
+					*points = append(*points, PointWithFraction{Point: edge.V0, Fraction: s.cumulativeValues[i].Radians() / total.Radians()})
 				}
 			}
 			currentEdgeID = edgeID
