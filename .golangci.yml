@@ -68,8 +68,6 @@ linters:
     # Triggers on most tests for failing to call paralleltest.
     # We don't have a need to use this so keep it disabled.
     - paralleltest 
-    # Enable once outstanding lint bugs are fixed.
-    - staticcheck   
     # This triggers on every _test file saying they should be separate
     # parallel packages e.g. s2->s2_test package. We do not plan to ever
     # reshuffle the tests into a separate package.
