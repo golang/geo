@@ -80,9 +80,3 @@ formatters:
   enable:
     - gofmt
     - goimports
-  settings:
-    gofmt:
-      # Fix existing code and remove this setting.
-      # Simplify code: gofmt with `-s` option.
-      # Default: true
-      simplify: false
