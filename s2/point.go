@@ -249,12 +249,12 @@ func (p *Point) decode(d *decoder) {
 // reduces the amount of time spent in functions that handle degeneracies.)
 func Ortho(a Point) Point {
 	temp := r3.Vector{X: 0.012, Y: 0.0053, Z: 0.00457}
-	switch a.LargestComponent() { // nolint exhaustive - default catches the 'missing' case.
+	switch a.LargestComponent() {
 	case r3.XAxis:
 		temp.Z = 1
 	case r3.YAxis:
 		temp.X = 1
-	default:
+	case r3.ZAxis:
 		temp.Y = 1
 	}
 	return Point{a.Cross(temp).Normalize()}
