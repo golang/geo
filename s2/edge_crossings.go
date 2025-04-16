@@ -147,12 +147,12 @@ func VertexCrossing(a, b, c, d Point) bool {
 // function such that point-in-polygon containment tests can be implemented
 // by simply counting edge crossings.
 func EdgeOrVertexCrossing(a, b, c, d Point) bool {
-	switch CrossingSign(a, b, c, d) { // nolint exhaustive - default catches the 'missing' case.
+	switch CrossingSign(a, b, c, d) {
 	case DoNotCross:
 		return false
 	case Cross:
 		return true
-	default:
+	case MaybeCross:
 		return VertexCrossing(a, b, c, d)
 	}
 }
