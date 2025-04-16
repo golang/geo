@@ -31,7 +31,7 @@ type encodableRegion interface {
 }
 
 type decodableRegion interface {
-	Decode(w io.Reader) error
+	Decode(r io.Reader) error
 }
 
 const (
