@@ -153,8 +153,9 @@ func EdgeOrVertexCrossing(a, b, c, d Point) bool {
 	case Cross:
 		return true
 	case MaybeCross:
-		return VertexCrossing(a, b, c, d)
+		// Fall through to the final return.
 	}
+	return VertexCrossing(a, b, c, d)
 }
 
 // Intersection returns the intersection point of two edges AB and CD that cross
