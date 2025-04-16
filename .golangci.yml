@@ -4,10 +4,10 @@ linters:
     # Commented entries here are not enabled by default, but that we should
     # add once the relevant lines are fixed up.
     
-    - errorlint # found 2 cases to be fixed.
-    - exhaustive # found some cases that should be fixed.
+    - errorlint
+    - exhaustive
     # - exhaustruct # found some structs which missed fields in initializing.
-    - inamedparam  # fix missing named param
+    - inamedparam
     # - makezero  # fix the unallocated elements.
     # - misspell  # fix spelling
     # - nlreturn  # fix these missing blank line
