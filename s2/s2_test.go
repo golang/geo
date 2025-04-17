@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"math"
@@ -237,7 +238,7 @@ func latLngsApproxEqual(a, b LatLng, epsilon float64) bool {
 // of each other. This is the same as Point.ApproxEqual but permits specifying
 // the epsilon.
 func pointsApproxEqual(a, b Point, epsilon float64) bool {
-	return float64(a.Vector.Angle(b.Vector)) <= epsilon
+	return float64(a.Angle(b.Vector)) <= epsilon
 }
 
 // pointSlicesApproxEqual reports whether corresponding elements of each slice are approximately equal.
@@ -425,7 +426,7 @@ func readLoops(filename string) ([]*Loop, error) {
 	for {
 		l := &Loop{}
 		err := l.Decode(f)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

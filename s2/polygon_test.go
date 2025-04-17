@@ -1063,7 +1063,7 @@ func TestPolygonRelations(t *testing.T) {
 		if !test.intersects {
 			testPolygonDisjointPair(t, test.a, test.b)
 		}
-		if test.intersects && !(test.contains || test.contained) {
+		if test.intersects && (!test.contains && !test.contained) {
 			testPolygonOverlappingPair(t, test.a, test.b)
 		}
 		testPolygonDestructiveUnion(t, test.a, test.b)
@@ -1119,7 +1119,7 @@ func TestPolygonCentroid(t *testing.T) {
 			have: makePolygon(loopCross1SideHole+loopCrossCenterHole, true),
 			// the strings for the loops contain ';' so copy and paste without it
 			want: Point{
-				makeLoop("-1.5:0.5, -1.2:0.5, -1.2:-0.5, -1.5:-0.5").Centroid().Vector.Add(
+				makeLoop("-1.5:0.5, -1.2:0.5, -1.2:-0.5, -1.5:-0.5").Centroid().Add(
 					makeLoop("-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5").Centroid().Vector)},
 		},
 		{
@@ -1127,13 +1127,13 @@ func TestPolygonCentroid(t *testing.T) {
 			have: makePolygon(loopCross1+loopCrossCenterHole, true),
 			// the strings for the loops contain ';' so copy and paste without it
 			want: Point{
-				makeLoop("-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1").Centroid().Vector.Sub(
+				makeLoop("-2:1, -1:1, 1:1, 2:1, 2:-1, 1:-1, -1:-1, -2:-1").Centroid().Sub(
 					makeLoop("-0.5:0.5, 0.5:0.5, 0.5:-0.5, -0.5:-0.5").Centroid().Vector)},
 		},
 	}
 
 	for _, test := range tests {
-		if got := test.have.Centroid(); got.Vector.Cmp(test.want.Vector) != 0 {
+		if got := test.have.Centroid(); got.Cmp(test.want.Vector) != 0 {
 			t.Errorf("%v.Centroid() = %v, want %v", test.have, got, test.want)
 		}
 	}

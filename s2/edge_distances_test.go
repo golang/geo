@@ -427,7 +427,8 @@ func TestEdgeDistancesInterpolate(t *testing.T) {
 					test.a, test.b, r, got, test.want)
 			}
 		}
-		if r.Radians() >= 0 && r.Radians() < 0.99*math.Pi {
+		if r.Radians() >= 0 && r.Radians() < 0.99*math.Pi { // nolint staticcheck
+			// TODO(rsned): Remove nolint when this test case is added.
 			// We don't have the parallel ChordAngle variants of
 			// PointOnLine/Ray/Left/Right
 			// so the second tests are not added here.
@@ -478,7 +479,7 @@ func TestEdgeDistancesRepeatedInterpolation(t *testing.T) {
 		for j := 0; j < 1000; j++ {
 			a = Interpolate(0.01, a, b)
 		}
-		if !a.Vector.IsUnit() {
+		if !a.IsUnit() {
 			t.Errorf("repeated Interpolate(%v, %v, %v) calls did not stay unit length for", 0.01, a, b)
 		}
 	}
@@ -725,7 +726,7 @@ func TestEdgeDistancesEdgePairMinDistance(t *testing.T) {
 		actualA, actualB := EdgePairClosestPoints(test.a0, test.a1, test.b0, test.b1)
 		if test.wantA == zero {
 			// either end point works.
-			if !(actualA == test.a0 || actualA == test.a1) {
+			if actualA != test.a0 && actualA != test.a1 {
 				t.Errorf("EdgePairClosestPoints(%v, %v, %v, %v) = %v, want %v or %v", test.a0, test.a1, test.b0, test.b1, actualA, test.a0, test.a1)
 			}
 		} else {
@@ -736,7 +737,7 @@ func TestEdgeDistancesEdgePairMinDistance(t *testing.T) {
 
 		if test.wantB == zero {
 			// either end point works.
-			if !(actualB == test.b0 || actualB == test.b1) {
+			if actualB != test.b0 && actualB != test.b1 {
 				t.Errorf("EdgePairClosestPoints(%v, %v, %v, %v) = %v, want %v or %v", test.a0, test.a1, test.b0, test.b1, actualB, test.b0, test.b1)
 			}
 		} else {

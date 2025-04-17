@@ -436,7 +436,7 @@ func TestDistanceTargetMaxShapeIndexTargetCapBound(t *testing.T) {
 		pTest := randomPoint()
 		// Check points outside of cap to be away from maxDistance's zero().
 		if !c.ContainsPoint(pTest) {
-			var curDist distance = inf
+			var curDist = inf
 			var ok bool
 			if curDist, ok = target.updateDistanceToPoint(pTest, curDist); !ok {
 				t.Errorf("updateDistanceToPoint failed, but should have succeeded")

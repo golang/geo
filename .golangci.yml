@@ -4,10 +4,10 @@ linters:
     # Commented entries here are not enabled by default, but that we should
     # add once the relevant lines are fixed up.
     
-    # - errorlint # found 2 cases to be fixed.
-    # - exhaustive # found some cases that should be fixed.
+    - errorlint
+    - exhaustive
     # - exhaustruct # found some structs which missed fields in initializing.
-    # - inamedparam  # fix missing named param
+    - inamedparam
     # - makezero  # fix the unallocated elements.
     # - misspell  # fix spelling
     # - nlreturn  # fix these missing blank line
@@ -68,8 +68,6 @@ linters:
     # Triggers on most tests for failing to call paralleltest.
     # We don't have a need to use this so keep it disabled.
     - paralleltest 
-    # Enable once outstanding lint bugs are fixed.
-    - staticcheck   
     # This triggers on every _test file saying they should be separate
     # parallel packages e.g. s2->s2_test package. We do not plan to ever
     # reshuffle the tests into a separate package.

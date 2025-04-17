@@ -1350,7 +1350,7 @@ func TestLoopRelations(t *testing.T) {
 			a1 := cloneLoop(test.a)
 			a1.Invert()
 			testLoopNestedPair(t, a1, test.b)
-		} else if !(test.contains || test.contained || test.covers) {
+		} else if !test.contains && !test.contained && !test.covers {
 			// Given loops A and B such that both A and its complement
 			// intersect both B and its complement, test various
 			// identities involving these four loops.

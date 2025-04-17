@@ -96,7 +96,7 @@ func UpdateMinInteriorDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAn
 func Project(x, a, b Point) Point {
 	aXb := a.PointCross(b)
 	// Find the closest point to X along the great circle through AB.
-	p := x.Sub(aXb.Mul(x.Dot(aXb.Vector) / aXb.Vector.Norm2()))
+	p := x.Sub(aXb.Mul(x.Dot(aXb.Vector) / aXb.Norm2()))
 
 	// If this point is on the edge AB, then it's the closest point.
 	if Sign(aXb, a, Point{p}) && Sign(Point{p}, b, aXb) {
@@ -146,7 +146,7 @@ func InterpolateAtDistance(ax s1.Angle, a, b Point) Point {
 	// result is always perpendicular to A, even if A=B or A=-B, but it is not
 	// necessarily unit length. (We effectively normalize it below.)
 	normal := a.PointCross(b)
-	tangent := normal.Vector.Cross(a.Vector)
+	tangent := normal.Cross(a.Vector)
 
 	// Now compute the appropriate linear combination of A and "tangent". With
 	// infinite precision the result would always be unit length, but we

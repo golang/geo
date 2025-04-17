@@ -123,7 +123,7 @@ func OrderedCCW(a, b, c, o Point) bool {
 
 // Distance returns the angle between two points.
 func (p Point) Distance(b Point) s1.Angle {
-	return p.Vector.Angle(b.Vector)
+	return p.Angle(b.Vector)
 }
 
 // ApproxEqual reports whether the two points are similar enough to be equal.
@@ -133,7 +133,7 @@ func (p Point) ApproxEqual(other Point) bool {
 
 // approxEqual reports whether the two points are within the given epsilon.
 func (p Point) approxEqual(other Point, eps s1.Angle) bool {
-	return p.Vector.Angle(other.Vector) <= eps
+	return p.Angle(other.Vector) <= eps
 }
 
 // ChordAngleBetweenPoints constructs a ChordAngle corresponding to the distance
@@ -254,7 +254,7 @@ func Ortho(a Point) Point {
 		temp.Z = 1
 	case r3.YAxis:
 		temp.X = 1
-	default:
+	case r3.ZAxis:
 		temp.Y = 1
 	}
 	return Point{a.Cross(temp).Normalize()}
