@@ -805,6 +805,31 @@ func TestLoopContainsMatchesCrossingSign(t *testing.T) {
 }
 
 func TestLoopRelations(t *testing.T) {
+
+	// Test cases from https://github.com/golang/geo/issues/77 and 78
+	// relating to loop relations contains giving wrong result some cases.
+	containingLoop := LoopFromPoints([]Point{
+		PointFromLatLng(LatLngFromDegrees(-38.0, -135.0)),
+		PointFromLatLng(LatLngFromDegrees(-38.0, 149.0)),
+		PointFromLatLng(LatLngFromDegrees(77.0, 149.0)),
+		PointFromLatLng(LatLngFromDegrees(77.0, -135.0)),
+	})
+
+	innerTile := LoopFromPoints([]Point{
+		PointFromLatLng(LatLngFromDegrees(37.99616267972809, 13.007812500000002)),
+		PointFromLatLng(LatLngFromDegrees(37.99616267972809, 13.359375000000002)),
+		PointFromLatLng(LatLngFromDegrees(38.272819658516866, 13.359375000000002)),
+		PointFromLatLng(LatLngFromDegrees(38.272819658516866, 13.007812500000002)),
+	})
+
+	// +0.2 lat +0.2 lon from innerTile
+	extendedTile := LoopFromPoints([]Point{
+		PointFromLatLng(LatLngFromDegrees(37.99616267972809, 13.007812500000002)),
+		PointFromLatLng(LatLngFromDegrees(37.99616267972809, 13.559375000000002)),
+		PointFromLatLng(LatLngFromDegrees(38.472819658516866, 13.559375000000002)),
+		PointFromLatLng(LatLngFromDegrees(38.472819658516866, 13.007812500000002)),
+	})
+
 	tests := []struct {
 		a, b       *Loop
 		contains   bool // A contains B
@@ -1332,6 +1357,18 @@ func TestLoopRelations(t *testing.T) {
 			contains:   true,
 			sharedEdge: true,
 		},
+		// https://github.com/golang/geo/issues/77 and 78
+		// These cases failed prior to this fix.
+		{
+			a:        containingLoop,
+			b:        innerTile,
+			contains: true,
+		},
+		{
+			a:        containingLoop,
+			b:        extendedTile,
+			contains: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -1817,3 +1854,17 @@ func BenchmarkLoopContainsPoint(b *testing.B) {
 		vertices *= 2
 	}
 }
+
+// TODO(rsned): Differences from C++
+// TEST_F(S2LoopTestBase, CompressedEncodedLoopDecodesApproxEqual) {
+// TEST_F(S2LoopTestBase, DistanceMethods) {
+// TEST_F(S2LoopTestBase, GetAreaAccuracy) {
+// TEST_F(S2LoopTestBase, GetAreaConsistentWithSign) {
+// TEST_F(S2LoopTestBase, MakeRegularLoop) {
+// TEST(S2Loop, BoundaryNear) {
+// TEST(S2Loop, BoundsForLoopContainment) {
+// TEST(S2LoopDeathTest, IsValidDetectsInvalidLoops) {
+// TEST(S2Loop, DefaultLoopIsInvalid) {
+// TEST(S2Loop, EmptyFullLossyConversions) {
+// TEST(S2Loop, EncodeDecode) {
+// TEST(S2Loop, LoopRelations2) {
