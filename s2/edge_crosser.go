@@ -149,11 +149,13 @@ func (e *EdgeCrosser) ChainCrossingSign(d Point) Crossing {
 func (e *EdgeCrosser) EdgeOrVertexChainCrossing(d Point) bool {
 	// We need to copy e.c since it is clobbered by ChainCrossingSign.
 	c := e.c
-	switch e.ChainCrossingSign(d) { // nolint exhaustive - the missing case is the final return.
+	switch e.ChainCrossingSign(d) {
 	case DoNotCross:
 		return false
 	case Cross:
 		return true
+	case MaybeCross:
+		// fall through
 	}
 	return VertexCrossing(e.a, e.b, c, d)
 }
