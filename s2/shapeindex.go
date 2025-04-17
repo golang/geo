@@ -129,6 +129,14 @@ func (s *ShapeIndexCell) numEdges() int {
 	return e
 }
 
+// clipped returns the clipped shape at the given index. Shapes are kept sorted in
+// increasing order of shape id.
+//
+// Requires: 0 <= i < len(shapes)
+func (s *ShapeIndexCell) clipped(i int) *clippedShape {
+	return s.shapes[i]
+}
+
 // add adds the given clipped shape to this index cell.
 func (s *ShapeIndexCell) add(c *clippedShape) {
 	// C++ uses a set, so it's ordered and unique. We don't currently catch
