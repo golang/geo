@@ -460,7 +460,6 @@ func (r *Rect) decode(d *decoder) {
 	r.Lat.Hi = d.readFloat64()
 	r.Lng.Lo = d.readFloat64()
 	r.Lng.Hi = d.readFloat64()
-	return
 }
 
 // DistanceToLatLng returns the minimum distance (measured along the surface of the sphere)

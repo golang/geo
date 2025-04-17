@@ -242,18 +242,14 @@ func testEdgeQueryWithGenerator(t *testing.T,
 	var indexCaps []Cap
 	var indexes []*ShapeIndex
 	for i := 0; i < numIndexes; i++ {
-		// TODO(rsned): Replace with:
-	        // r := rand.New(rand.NewSource(i))
-		rand.Seed(int64(i))
-		indexCaps = append(indexCaps, CapFromCenterAngle(randomPoint(), testCapRadius))
+	        r := rand.New(rand.NewSource(i))
+		indexCaps = append(indexCaps, CapFromCenterAngle(randomPoint(r), testCapRadius))
 		indexes = append(indexes, NewShapeIndex())
 		gen(indexCaps[i], numEdges, indexes[i])
 	}
 
 	for i := 0; i < numQueries; i++ {
-		// TODO(rsned): Replace with:
-	        // r := rand.New(rand.NewSource(i))
-		rand.Seed(int64(i))
+	        r := rand.New(rand.NewSource(i))
 		iIndex := randomUniformInt(numIndexes)
 		indexCap := indexCaps[iIndex]
 
@@ -273,23 +269,23 @@ func testEdgeQueryWithGenerator(t *testing.T,
 		// Occasionally we don't set any limit on the number of result edges.
 		// (This may return all edges if we also don't set a distance limit.)
 		if oneIn(5) {
-			opts.MaxResults(1 + randomUniformInt(10))
+			opts.MaxResults(1 + randomUniformInt(10, r))
 		}
 
 		// We set a distance limit 1/3 of the time.
 		if oneIn(3) {
-			opts.DistanceLimit(s1.ChordAngleFromAngle(s1.Angle(randomFloat64()) * queryRadius))
+			opts.DistanceLimit(s1.ChordAngleFromAngle(s1.Angle(randomFloat64(r)) * queryRadius))
 		}
 		if oneIn(2) {
 			// Choose a maximum error whose logarithm is uniformly distributed over
 			// a reasonable range, except that it is sometimes zero.
-			opts.MaxError(s1.ChordAngleFromAngle(s1.Angle(math.Pow(1e-4, randomFloat64()) * queryRadius.Radians())))
+			opts.MaxError(s1.ChordAngleFromAngle(s1.Angle(math.Pow(1e-4, randomFloat64(r)) * queryRadius.Radians())))
 		}
 		opts.IncludeInteriors(oneIn(2))
 
 		query := newQueryFunc(indexes[iIndex], opts)
 
-		switch randomUniformInt(4) {
+		switch randomUniformInt(4, r) {
 		case 0:
 			// Find the edges furthest from a given point.
 			point := samplePointFromCap(queryCap)
@@ -299,14 +295,14 @@ func testEdgeQueryWithGenerator(t *testing.T,
 			// Find the edges furthest from a given edge.
 			a := samplePointFromCap(queryCap)
 			b := samplePointFromCap(
-				CapFromCenterAngle(a, s1.Angle(math.Pow(1e-4, randomFloat64()))*queryRadius))
+				CapFromCenterAngle(a, s1.Angle(math.Pow(1e-4, randomFloat64(r)))*queryRadius))
 			target := NewMaxDistanceToEdgeTarget(Edge{a, b})
 			testFindEdges(target, query)
 
 		case 2:
 			// Find the edges furthest from a given cell.
 			minLevel := MaxDiagMetric.MinLevel(queryRadius.Radians())
-			level := minLevel + randomUniformInt(MaxLevel-minLevel+1)
+			level := minLevel + randomUniformInt(MaxLevel-minLevel+1, r)
 			a := samplePointFromCap(queryCap)
 			cell := CellFromCellID(cellIDFromPoint(a).Parent(level))
 			target := NewMaxDistanceToCellTarget(cell)
@@ -314,7 +310,7 @@ func testEdgeQueryWithGenerator(t *testing.T,
 
 		case 3:
 			// Use another one of the pre-built indexes as the target.
-			jIndex := randomUniformInt(numIndexes)
+			jIndex := randomUniformInt(numIndexes, r)
 			target := NewMaxDistanceToShapeIndexTarget(indexes[jIndex])
 			target.setIncludeInteriors(oneIn(2))
 			testFindEdges(target, query)
@@ -438,9 +434,9 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 
 	// Set a specific seed to allow repeatability
 	// Replace with r := rand.New(rand.NewSource(opts.randomSeed)) and pass through.
-	rand.Seed(opts.randomSeed)
+	r := rand.New(rand.NewSource(opts.randomSeed))
 	opts.randomSeed++
-	indexCap := CapFromCenterAngle(randomPoint(), opts.radiusKm)
+	indexCap := CapFromCenterAngle(randomPoint(r), opts.radiusKm)
 
 	query.Reset()
 	queryIndex.Reset()

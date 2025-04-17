@@ -109,7 +109,7 @@ func FullCap() Cap {
 
 // IsValid reports whether the Cap is considered valid.
 func (c Cap) IsValid() bool {
-	return c.center.Vector.IsUnit() && c.radius <= s1.StraightChordAngle
+	return c.center.IsUnit() && c.radius <= s1.StraightChordAngle
 }
 
 // IsEmpty reports whether the cap is empty, i.e. it contains no points.
@@ -391,7 +391,7 @@ func (c Cap) intersects(cell Cell, vertices [4]Point) bool {
 	sin2Angle := c.radius.Sin2()
 	for k := 0; k < 4; k++ {
 		edge := cell.Edge(k).Vector
-		dot := c.center.Vector.Dot(edge)
+		dot := c.center.Dot(edge)
 		if dot > 0 {
 			// The center is in the interior half-space defined by the edge. We do not need
 			// to consider these edges, since if the cap intersects this edge then it also

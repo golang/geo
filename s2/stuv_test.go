@@ -124,7 +124,7 @@ func TestFaceUVToXYZ(t *testing.T) {
 			if math.Abs(center.Y) != 1 {
 				t.Errorf("%v.Y = %v, want %v", center, math.Abs(center.Y), 1)
 			}
-		default:
+		case r3.ZAxis:
 			if math.Abs(center.Z) != 1 {
 				t.Errorf("%v.Z = %v, want %v", center, math.Abs(center.Z), 1)
 			}
@@ -347,7 +347,7 @@ func TestXYZToFaceSiTi(t *testing.T) {
 				if gotLevel != -1 {
 					t.Errorf("level of random CellID = %v, want %v", gotLevel, -1)
 				}
-				if !(si == 0 || si == maxSiTi || ti == 0 || ti == maxSiTi) {
+				if si != 0 && si != maxSiTi && ti != 0 && ti != maxSiTi {
 					t.Errorf("face %d, si = %v, ti = %v, want 0 or %v for both", f, si, ti, maxSiTi)
 				}
 				continue

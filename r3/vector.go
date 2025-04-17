@@ -108,7 +108,7 @@ func (v Vector) Ortho() Vector {
 		ov.Z = 1
 	case YAxis:
 		ov.X = 1
-	default:
+	case ZAxis:
 		ov.Y = 1
 	}
 	return v.Cross(ov).Normalize()

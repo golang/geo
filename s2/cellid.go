@@ -361,7 +361,7 @@ func CellIDFromString(s string) CellID {
 	}
 	id := CellIDFromFace(face)
 	for i := 2; i < len(s); i++ {
-		var childPos byte = s[i] - '0'
+		var childPos = s[i] - '0'
 		// Bytes are non-negative.
 		if childPos > 3 {
 			return CellID(0)

@@ -818,7 +818,7 @@ func TestCellUnionFromUnionDiffIntersection(t *testing.T) {
 			u := CellUnionFromIntersectionWithCellID(xcells, yid)
 			for _, xid := range xcells {
 				if xid.Contains(yid) {
-					if !(len(u) == 1 && u[0] == yid) {
+					if !(len(u) == 1 && u[0] == yid) { // nolint staticcheck - DeMorgan's doesn't work here.
 						t.Errorf("CellUnionFromIntersectionWithCellID(%v, %v) = %v with len: %d, want len of 1.", xcells, yid, u, len(u))
 					}
 				} else if yid.Contains(xid) {

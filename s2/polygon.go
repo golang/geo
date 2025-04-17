@@ -447,7 +447,7 @@ func (p *Polygon) Validate() error {
 	for i, l := range p.loops {
 		// Check for loop errors that don't require building a ShapeIndex.
 		if err := l.findValidationErrorNoIndex(); err != nil {
-			return fmt.Errorf("loop %d: %v", i, err)
+			return fmt.Errorf("loop %d: %w", i, err)
 		}
 		// Check that no loop is empty, and that the full loop only appears in the
 		// full polygon.
