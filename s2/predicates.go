@@ -123,7 +123,7 @@ func precSub(a, b *big.Float) *big.Float {
 	return new(big.Float).SetPrec(big.MaxPrec).Sub(a, b)
 }
 
-// precSub is a helper to wrap the boilerplate of multiplying two big.Floats.
+// precMul is a helper to wrap the boilerplate of multiplying two big.Floats.
 func precMul(a, b *big.Float) *big.Float {
 	return new(big.Float).SetPrec(big.MaxPrec).Mul(a, b)
 }

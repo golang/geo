@@ -300,7 +300,7 @@ func stToPiQi(s float64, level uint) uint32 {
 	return uint32(s * float64(int(1)<<level))
 }
 
-// siTiToPiQi returns the value transformed into the PiQi coordinate spade.
+// siTitoPiQi returns the value transformed into the PiQi coordinate spade.
 // encodeFirstPointFixedLength encodes the return value using level bits,
 // so we clamp si to the range [0, 2**level - 1] before trying to encode
 // it. This is okay because if si == maxSiTi, then it is not a cell center
