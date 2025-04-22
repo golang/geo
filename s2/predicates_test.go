@@ -886,7 +886,7 @@ func testCompareDistancesConsistency(t *testing.T, x, a, b Point, distFunc compa
 }
 
 // choosePointNearPlaneOrAxes returns a random Point that is often near the
-// intersection of one of the coodinates planes or coordinate axes with the unit
+// intersection of one of the coordinates planes or coordinate axes with the unit
 // sphere. (It is possible to represent very small perturbations near such points.)
 func choosePointNearPlaneOrAxes() Point {
 	p := randomPoint()
@@ -1042,7 +1042,7 @@ func TestPredicatesSignDotProd(t *testing.T) {
 	for _, test := range tests {
 		got := SignDotProd(test.a, test.b)
 		if got != test.want {
-			t.Errorf("SignDotProd(%+v, %+v) = %d, wnat %d", test.a, test.b, got, test.want)
+			t.Errorf("SignDotProd(%+v, %+v) = %d, want %d", test.a, test.b, got, test.want)
 		}
 
 		gotPrec := "EXACT"

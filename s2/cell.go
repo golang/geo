@@ -124,7 +124,7 @@ func (c Cell) VertexRaw(k int) Point {
 	return Point{faceUVToXYZ(int(c.face), c.uv.Vertices()[k].X, c.uv.Vertices()[k].Y)}
 }
 
-// Edge returns the nomalized inward-facing normal of the great circle passing through
+// Edge returns the normalized inward-facing normal of the great circle passing through
 // the CCW ordered edge from vertex k to vertex k+1 (mod 4) (for k = 0,1,2,3)
 func (c Cell) Edge(k int) Point {
 	return Point{c.EdgeRaw(k).Normalize()}
