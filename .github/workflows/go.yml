@@ -19,6 +19,9 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
+        # TODO: enable [matrix testing](https://github.com/marketplace/actions/setup-go-environment#matrix-testing)
+        # so that we can test on both stable, oldstable and the oldest version
+        # we currently support (as specified in go.mod).
         go-version: 'stable'
 
     - name: Build
