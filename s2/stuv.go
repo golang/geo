@@ -90,7 +90,7 @@ import (
 //  (x, y, z)
 //    Direction vector (Point). Direction vectors are not necessarily unit
 //    length, and are often chosen to be points on the biunit cube
-//    [-1,+1]x[-1,+1]x[-1,+1]. They can be be normalized to obtain the
+//    [-1,+1]x[-1,+1]x[-1,+1]. They can be normalized to obtain the
 //    corresponding point on the unit sphere.
 //
 //  (lat, lng)
@@ -427,7 +427,7 @@ func uvwAxis(face, axis int) Point {
 	return faceUVWAxes[face][axis]
 }
 
-// uvwFaces returns the face in the (u,v,w) coordinate system on the given axis
+// uvwFace returns the face in the (u,v,w) coordinate system on the given axis
 // in the given direction.
 func uvwFace(face, axis, direction int) int {
 	return faceUVWFaces[face][axis][direction]

@@ -33,7 +33,7 @@ func TestPolylineBasics(t *testing.T) {
 	}
 	empty.Reverse()
 	if len(empty) != 0 {
-		t.Errorf("reveresed empty Polyline should have no vertices")
+		t.Errorf("reversed empty Polyline should have no vertices")
 	}
 
 	latlngs := []LatLng{
