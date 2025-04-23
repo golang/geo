@@ -193,7 +193,7 @@ type Shape interface {
 	//  Chain(i).start + Chain(i).length == NumEdges(), for i == NumChains()-1
 	Chain(chainID int) Chain
 
-	// ChainEdgeReturns the edge at offset "offset" within edge chain "chainID".
+	// ChainEdge returns the edge at offset "offset" within edge chain "chainID".
 	// Equivalent to "shape.Edge(shape.Chain(chainID).start + offset)"
 	// but more efficient.
 	ChainEdge(chainID, offset int) Edge

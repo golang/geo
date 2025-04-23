@@ -1349,7 +1349,7 @@ func (s *ShapeIndex) clipVBound(edge *clippedEdge, vEnd int, v float64) *clipped
 	return s.updateBound(edge, uEnd, u, vEnd, v)
 }
 
-// cliupVAxis returns the given edge clipped to within the boundaries of the middle
+// clipVAxis returns the given edge clipped to within the boundaries of the middle
 // interval along the v-axis, and adds the result to its children.
 func (s *ShapeIndex) clipVAxis(edge *clippedEdge, middle r1.Interval) (a, b *clippedEdge) {
 	if edge.bound.Y.Hi <= middle.Lo {

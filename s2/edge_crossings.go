@@ -367,7 +367,7 @@ func intersectionStableSorted(a0, a1, b0, b1 Point) (Point, bool) {
 // is not guaranteed to have the correct sign (i.e., the return value may need
 // to be negated).
 func intersectionExact(a0, a1, b0, b1 Point) Point {
-	// Since we are using presice arithmetic, we don't need to worry about
+	// Since we are using precise arithmetic, we don't need to worry about
 	// numerical stability.
 	a0P := r3.PreciseVectorFromVector(a0.Vector)
 	a1P := r3.PreciseVectorFromVector(a1.Vector)

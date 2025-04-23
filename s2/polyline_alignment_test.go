@@ -448,4 +448,4 @@ func TestPolylineAlignmentExactAlignmentCost(t *testing.T) {
 
 // TODO()rsned): Differences from C++
 // Medoid tests
-// Consensus testss
+// Consensus tests

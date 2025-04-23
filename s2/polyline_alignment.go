@@ -97,7 +97,7 @@ type columnStride struct {
 	end   int
 }
 
-// inRange reports if the given index is in range of this stride.
+// InRange reports if the given index is in range of this stride.
 func (c columnStride) InRange(index int) bool {
 	return c.start <= index && index < c.end
 }
@@ -235,7 +235,7 @@ func (w *window) checkedColumnStride(row int) columnStride {
 	return w.strides[row]
 }
 
-// upscale returns a new, larger window that is an upscaled version of this window.
+// upsample returns a new, larger window that is an upscaled version of this window.
 //
 // Used by ApproximateAlignment window expansion step.
 func (w *window) upsample(newRows, newCols int) *window {
@@ -402,7 +402,7 @@ func ExactVertexAlignmentCost(a, b *Polyline) float64 {
 	return cost[len(cost)-1]
 }
 
-// GetExactVertexAlignment takes two non-empty polylines as input, and returns
+// ExactVertexAlignment takes two non-empty polylines as input, and returns
 // the VertexAlignment corresponding to the optimal alignment between them. This
 // method is quadratic O(A*B) in both space and time complexity.
 func ExactVertexAlignment(a, b *Polyline) *vertexAlignment {

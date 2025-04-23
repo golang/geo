@@ -149,7 +149,7 @@ func (l *sequenceLexicon) size() int {
 	return len(l.begins) - 1
 }
 
-// hash returns a hash of this sequence of int32s.
+// hashSet returns a hash of this sequence of int32s.
 func hashSet(s []int32) uint32 {
 	// TODO(roberts): We just need a way to nicely hash all the values down to
 	// a 32-bit value. To ensure no unnecessary dependencies we use the core

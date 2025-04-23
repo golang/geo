@@ -348,7 +348,7 @@ func (sf CellIDSnapper) SnapPoint(point Point) Point {
 }
 
 const (
-	// The minum exponent supported for snapping.
+	// The minimum exponent supported for snapping.
 	minIntSnappingExponent = 0
 	// The maximum exponent supported for snapping.
 	maxIntSnappingExponent = 10
