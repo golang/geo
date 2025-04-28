@@ -1584,11 +1584,11 @@ func (l *loopCrosser) hasCrossing(ai, bi *rangeIterator) bool {
 	l.bCells = nil
 
 	for {
-		if n := bi.it.IndexCell().shapes[0].numEdges(); n > 0 {
+		if n := bi.clipped().numEdges(); n > 0 {
 			totalEdges += n
 			if totalEdges >= edgeQueryMinEdges {
 				// There are too many edges to test them directly, so use CrossingEdgeQuery.
-				if l.cellCrossesAnySubcell(ai.it.IndexCell().shapes[0], ai.cellID()) {
+				if l.cellCrossesAnySubcell(ai.clipped(), ai.cellID()) {
 					return true
 				}
 				bi.seekBeyond(ai)
@@ -1604,7 +1604,7 @@ func (l *loopCrosser) hasCrossing(ai, bi *rangeIterator) bool {
 
 	// Test all the edge crossings directly.
 	for _, c := range l.bCells {
-		if l.cellCrossesCell(ai.it.IndexCell().shapes[0], c.shapes[0]) {
+		if l.cellCrossesCell(ai.clipped(), c.shapes[0]) {
 			return true
 		}
 	}
@@ -1615,9 +1615,9 @@ func (l *loopCrosser) hasCrossing(ai, bi *rangeIterator) bool {
 // containsCenterMatches reports if the clippedShapes containsCenter boolean
 // corresponds to the crossing target type given. (This is to work around C++
 // allowing false == 0, true == 1 type implicit conversions and comparisons)
-func containsCenterMatches(a bool, target crossingTarget) bool {
-	return (!a && target == crossingTargetDontCross) ||
-		(a && target == crossingTargetCross)
+func containsCenterMatches(containsCenter bool, target crossingTarget) bool {
+	return (!containsCenter && target == crossingTargetDontCross) ||
+		(containsCenter && target == crossingTargetCross)
 }
 
 // hasCrossingRelation reports whether given two iterators positioned such that
@@ -1710,8 +1710,8 @@ func hasCrossingRelation(a, b *Loop, relation loopRelation) bool {
 					return true
 				}
 				// Otherwise test all the edge crossings directly.
-				aClipped := ai.it.IndexCell().shapes[0]
-				bClipped := bi.it.IndexCell().shapes[0]
+				aClipped := ai.clipped()
+				bClipped := bi.clipped()
 				if aClipped.numEdges() > 0 && bClipped.numEdges() > 0 && ab.cellCrossesCell(aClipped, bClipped) {
 					return true
 				}

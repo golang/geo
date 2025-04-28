@@ -805,9 +805,7 @@ func TestLoopContainsMatchesCrossingSign(t *testing.T) {
 }
 
 func TestLoopRelations(t *testing.T) {
-
-	// Test cases from https://github.com/golang/geo/issues/77 and 78
-	// relating to loop relations contains giving wrong result some cases.
+	// this loop is used in the regression test cases below.
 	containingLoop := LoopFromPoints([]Point{
 		PointFromLatLng(LatLngFromDegrees(-38.0, -135.0)),
 		PointFromLatLng(LatLngFromDegrees(-38.0, 149.0)),
@@ -1357,8 +1355,9 @@ func TestLoopRelations(t *testing.T) {
 			contains:   true,
 			sharedEdge: true,
 		},
-		// https://github.com/golang/geo/issues/77 and 78
-		// These cases failed prior to this fix.
+		// Cases below here prevent regressions of bugs which
+		// previously appeared in the golang version
+		// and which are missing test coverage in the C++ codebase.
 		{
 			a:        containingLoop,
 			b:        innerTile,
