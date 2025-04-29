@@ -54,7 +54,7 @@ func (e Edge) Incoming(point Point) bool { return e.V1 == point }
 // Outgoing reports if point equals v0, indicating this edge is leaving.
 func (e Edge) Outgoing(point Point) bool { return e.V0 == point }
 
-// IncidentOn report if point is one of the vertices of this edge.
+// IncidentOn reports if point is one of the vertices of this edge.
 func (e Edge) IncidentOn(point Point) bool {
 	return e.Incoming(point) || e.Outgoing(point)
 }
