@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         # Test on supported go compiler releases as well as the oldest version we support from go.mod.
-        go: [ '1.21.0', 'oldstable', 'stable' ]
+        go: [ '1.21', 'oldstable', 'stable' ]
     name: Go version ${{ matrix.go }}
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
