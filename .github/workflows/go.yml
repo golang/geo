@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        # Test on supported go compiler releases as well as the oldest version we support from go.mod.
         go: [ '1.21.0', 'oldstable', 'stable' ]
     name: Go version ${{ matrix.go }}
     steps:
