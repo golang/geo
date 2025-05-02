@@ -1584,11 +1584,11 @@ func (l *loopCrosser) hasCrossing(ai, bi *rangeIterator) bool {
 	l.bCells = nil
 
 	for {
-		if n := bi.it.IndexCell().shapes[0].numEdges(); n > 0 {
+		if n := bi.clipped().numEdges(); n > 0 {
 			totalEdges += n
 			if totalEdges >= edgeQueryMinEdges {
 				// There are too many edges to test them directly, so use CrossingEdgeQuery.
-				if l.cellCrossesAnySubcell(ai.it.IndexCell().shapes[0], ai.cellID()) {
+				if l.cellCrossesAnySubcell(ai.clipped(), ai.cellID()) {
 					return true
 				}
 				bi.seekBeyond(ai)
@@ -1604,7 +1604,7 @@ func (l *loopCrosser) hasCrossing(ai, bi *rangeIterator) bool {
 
 	// Test all the edge crossings directly.
 	for _, c := range l.bCells {
-		if l.cellCrossesCell(ai.it.IndexCell().shapes[0], c.shapes[0]) {
+		if l.cellCrossesCell(ai.clipped(), c.shapes[0]) {
 			return true
 		}
 	}
@@ -1612,12 +1612,12 @@ func (l *loopCrosser) hasCrossing(ai, bi *rangeIterator) bool {
 	return false
 }
 
-// containsCenterMatches reports if the clippedShapes containsCenter boolean corresponds
-// to the crossing target type given. (This is to work around C++ allowing false == 0,
-// true == 1 type implicit conversions and comparisons)
-func containsCenterMatches(a *clippedShape, target crossingTarget) bool {
-	return (!a.containsCenter && target == crossingTargetDontCross) ||
-		(a.containsCenter && target == crossingTargetCross)
+// containsCenterMatches reports if the clippedShapes containsCenter boolean
+// corresponds to the crossing target type given. (This is to work around C++
+// allowing false == 0, true == 1 type implicit conversions and comparisons)
+func containsCenterMatches(containsCenter bool, target crossingTarget) bool {
+	return (!containsCenter && target == crossingTargetDontCross) ||
+		(containsCenter && target == crossingTargetCross)
 }
 
 // hasCrossingRelation reports whether given two iterators positioned such that
@@ -1626,7 +1626,8 @@ func containsCenterMatches(a *clippedShape, target crossingTarget) bool {
 // is an edge crossing, a wedge crossing, or a point P that matches both relations
 // crossing targets. This function advances both iterators past ai.cellID.
 func (l *loopCrosser) hasCrossingRelation(ai, bi *rangeIterator) bool {
-	aClipped := ai.it.IndexCell().shapes[0]
+	// ABSL_DCHECK(ai->id().contains(bi->id()));
+	aClipped := ai.clipped()
 	if aClipped.numEdges() != 0 {
 		// The current cell of A has at least one edge, so check for crossings.
 		if l.hasCrossing(ai, bi) {
@@ -1636,8 +1637,9 @@ func (l *loopCrosser) hasCrossingRelation(ai, bi *rangeIterator) bool {
 		return false
 	}
 
-	if containsCenterMatches(aClipped, l.aCrossingTarget) {
-		// The crossing target for A is not satisfied, so we skip over these cells of B.
+	if !containsCenterMatches(ai.containsCenter(), l.aCrossingTarget) {
+		// The crossing target for A is not satisfied, so we skip over
+		// these cells of B.
 		bi.seekBeyond(ai)
 		ai.next()
 		return false
@@ -1647,8 +1649,7 @@ func (l *loopCrosser) hasCrossingRelation(ai, bi *rangeIterator) bool {
 	// worth iterating through the cells of B to see whether any cell
 	// centers also satisfy the crossing target for B.
 	for bi.cellID() <= ai.rangeMax {
-		bClipped := bi.it.IndexCell().shapes[0]
-		if containsCenterMatches(bClipped, l.bCrossingTarget) {
+		if containsCenterMatches(bi.containsCenter(), l.bCrossingTarget) {
 			return true
 		}
 		bi.next()
@@ -1701,16 +1702,16 @@ func hasCrossingRelation(a, b *Loop, relation loopRelation) bool {
 					return true
 				}
 			} else {
-				// The A and B cells are the same. Since the two cells
-				// have the same center point P, check whether P satisfies
-				// the crossing targets.
-				aClipped := ai.it.IndexCell().shapes[0]
-				bClipped := bi.it.IndexCell().shapes[0]
-				if containsCenterMatches(aClipped, ab.aCrossingTarget) &&
-					containsCenterMatches(bClipped, ab.bCrossingTarget) {
+				// The A and B cells are the same. Since the two
+				// cells have the same center point P, check
+				// whether P satisfies the crossing targets.
+				if containsCenterMatches(ai.containsCenter(), ab.aCrossingTarget) &&
+					containsCenterMatches(bi.containsCenter(), ab.bCrossingTarget) {
 					return true
 				}
 				// Otherwise test all the edge crossings directly.
+				aClipped := ai.clipped()
+				bClipped := bi.clipped()
 				if aClipped.numEdges() > 0 && bClipped.numEdges() > 0 && ab.cellCrossesCell(aClipped, bClipped) {
 					return true
 				}
