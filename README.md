@@ -195,6 +195,7 @@ S2ConvexHull         | ✅
 S2CrossingEdge       | ✅
 S2HausdorffDistance  | ❌
 S2ShapeNesting       | ❌
+S2ValidationQuery    | ❌
 
 ### Supporting Types
 
@@ -203,32 +204,37 @@ C++ Type                         | Go
 S2BooleanOperation               | ❌
 S2BufferOperation                | ❌
 S2Builder                        | ❌
-S2BuilderClosedSetNormalizer     | ❌
-S2BuilderFindPolygonDegeneracies | ❌
 S2BuilderGraph                   | ❌
-S2BuilderLayers                  | ❌
-S2BuilderSnapFunctions           | ❌
-S2BuilderTesting                 | ❌
-S2Builderutil\*                  | ❌
+S2BuilderLayer                   | ❌
+S2BuilderUtil_\*                 | ❌
+S2CellIterator                   | ❌
+S2CellIteratorJoin               | ❌
+S2CellRangeIterator              | ❌
 S2Coder                          | ❌
+S2Earth                          | ❌
 S2EdgeClipping                   | ✅
 S2EdgeCrosser                    | ✅
 S2EdgeCrossings                  | ✅
 S2EdgeDistances                  | ✅
 S2EdgeTessellator                | ✅
+S2Fractal                        | ❌
 S2LoopMeasures                   | ❌
 S2Measures                       | ✅
 S2MemoryTracker                  | ❌
 S2Metrics                        | ❌
 S2PointUtil                      | 🟡
+S2PointCompression               | 🟡
 S2PolygonBuilder                 | ❌
 S2PolylineAlignment              | ❌
 S2PolylineMeasures               | ✅
 S2PolylineSimplifier             | ❌
 S2Predicates                     | ✅
 S2Projections                    | ❌
-S2rectBounder                    | ❌
+S2Random                         | ❌
+S2RectBounder                    | ❌
+S2RegionSharder                  | ❌
 S2RegionTermIndexer              | ❌
+S2ShapeIndexBufferedRegion       | ❌
 S2ShapeIndexMeasures             | ❌
 S2ShapeIndexUtil\*               | 🟡
 S2ShapeMeasures                  | ❌
@@ -239,7 +245,13 @@ S2TextFormat                     | ✅
 S2WedgeRelations                 | ✅
 S2WindingOperation               | ❌
 
+
 ### Encode/Decode
 
 Encoding and decoding of S2 types is fully implemented and interoperable with
 C++ and Java.
+
+
+## Disclaimer
+
+This is not an official Google product.
