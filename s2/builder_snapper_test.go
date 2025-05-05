@@ -36,10 +36,6 @@ func TestIdentitySnapper(t *testing.T) {
 		t.Errorf("identSnap.MinEdgeVertexSeparation() = %v, want %v", i.MinEdgeVertexSeparation(), 0.5*rad)
 	}
 
-	if i.MaxEdgeDeviation() != maxEdgeDeviationRatio {
-		t.Errorf("identSnap.SnapRadius() = %v, want %v", i.MaxEdgeDeviation(), maxEdgeDeviationRatio)
-	}
-
 	p := randomPoint()
 	if got := i.SnapPoint(p); !p.ApproxEqual(got) {
 		t.Errorf("identSnap.SnapPoint(%v) = %v, want %v", p, got, p)

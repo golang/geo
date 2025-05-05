@@ -27,32 +27,26 @@ import (
 //
 // A Snapper defines the following methods:
 //
-// 1. The SnapPoint method, which snaps a point P to a nearby point (the
+//  1. The SnapPoint method, which snaps a point P to a nearby point (the
+//     candidate snap site). Any point may be returned, including P
+//     itself (the identity snap function).
 //
-//	candidate snap site). Any point may be returned, including P
-//	itself (the identity snap function).
+//  2. SnapRadius, the maximum distance that vertices can move when
+//     snapped. The snapRadius must be at least as large as the maximum
+//     distance between P and SnapPoint(P) for any point P.
 //
-// 2. SnapRadius, the maximum distance that vertices can move when
+//     Note that the maximum distance that edge interiors can move when
+//     snapped is slightly larger than "snapRadius", and is reported by
+//     the Builder options maxEdgeDeviation (see there for details).
 //
-//	snapped. The snapRadius must be at least as large as the maximum
-//	distance between P and SnapPoint(P) for any point P.
+//  3. MinVertexSeparation, the guaranteed minimum distance between
+//     vertices in the output. This is generally a fraction of
+//     snapRadius where the fraction depends on the snap function.
 //
-// 3. MaxEdgeDeviation, the maximum distance that edges can move when
-//
-//	snapped. It is slightly larger than snapRadius because when a
-//	geodesic edge is snapped, the center of the edge moves further than
-//	its endpoints. This value is computed automatically by Builder.
-//
-// 4. MinVertexSeparation, the guaranteed minimum distance between
-//
-//	vertices in the output. This is generally a fraction of
-//	snapRadius where the fraction depends on the snap function.
-//
-// 5. A MinEdgeVertexSeparation, the guaranteed minimum distance
-//
-//	between edges and non-incident vertices in the output. This is
-//	generally a fraction of snapRadius where the fraction depends on
-//	the snap function.
+//  4. A MinEdgeVertexSeparation, the guaranteed minimum distance
+//     between edges and non-incident vertices in the output. This is
+//     generally a fraction of snapRadius where the fraction depends on
+//     the snap function.
 //
 // It is important to note that SnapPoint does not define the actual
 // mapping from input vertices to output vertices, since the points it
@@ -65,41 +59,36 @@ import (
 //
 // Builder makes the following guarantees (within a small error margin):
 //
-// 1. Every vertex is at a location returned by SnapPoint.
+//  1. Every vertex is at a location returned by SnapPoint.
 //
-// 2. Vertices are within snapRadius of the corresponding input vertex.
+//  2. Vertices are within snapRadius of the corresponding input vertex.
 //
-// 3. Edges are within maxEdgeDeviation of the corresponding input edge
+//  3. Edges are within maxEdgeDeviation of the corresponding input edge
+//     (a distance slightly larger than snapRadius).
 //
-//	(a distance slightly larger than snapRadius).
+//  4. Vertices are separated by at least minVertexSeparation
+//     (a fraction of snapRadius that depends on the snap function).
 //
-// 4. Vertices are separated by at least minVertexSeparation
+//  5. Edges and non-incident vertices are separated by at least
+//     minEdgeVertexSeparation (a fraction of snapRadius).
 //
-//	(a fraction of snapRadius that depends on the snap function).
+//  6. Vertex and edge locations do not change unless one of the conditions
+//     above is not already met (idempotency / stability).
 //
-// 5. Edges and non-incident vertices are separated by at least
-//
-//	minEdgeVertexSeparation (a fraction of snapRadius).
-//
-// 6. Vertex and edge locations do not change unless one of the conditions
-//
-//	above is not already met (idempotency / stability).
-//
-// 7. The topology of the input geometry is preserved (up to the creation
-//
-//	of degeneracies). This means that there exists a continuous
-//	deformation from the input to the output such that no vertex
-//	crosses an edge.
+//  7. The topology of the input geometry is preserved (up to the creation
+//     of degeneracies). This means that there exists a continuous
+//     deformation from the input to the output such that no vertex
+//     crosses an edge.
 type Snapper interface {
-	// SnapRadius reports the maximum distance that vertices can move when snapped.
-	// This requires that SnapRadius <= maxSnapRadius
+	// SnapRadius reports the maximum distance that vertices can move when
+	// snapped. The snap radius can be any value between 0 and maxSnapRadius.
+	//
+	// If the snap radius is zero, then vertices are snapped together only if
+	// they are identical. Edges will not be snapped to any vertices other
+	// than their endpoints, even if there are vertices whose distance to the
+	// edge is zero, unless split_crossing_edges() is true (see below).
 	SnapRadius() s1.Angle
-
-	// MaxEdgeDeviation returns the maximum distance that the center of an
-	// edge can move when snapped. This is slightly larger than SnapRadius
-	// because when a geodesic edge is snapped, the center of the edge moves
-	// further than its endpoints.
-	MaxEdgeDeviation() s1.Angle
+	// TODO(rsned): Add SetSnapRadius method to allow users to update value.
 
 	// MinVertexSeparation returns the guaranteed minimum distance between
 	// vertices in the output. This is generally some fraction of SnapRadius.
@@ -158,13 +147,10 @@ func (sf IdentitySnapper) SnapRadius() s1.Angle {
 	return sf.snapRadius
 }
 
-// MaxEdgeDeviation returns the maximum edge deviation this type supports.
-func (sf IdentitySnapper) MaxEdgeDeviation() s1.Angle {
-	return maxEdgeDeviationRatio * sf.snapRadius
-}
-
 // MinVertexSeparation returns the minimum vertex separation for this snap type.
 func (sf IdentitySnapper) MinVertexSeparation() s1.Angle {
+	// Since SnapFunction does not move the input point, output vertices are
+	// separated by the full snapRadius.
 	return sf.snapRadius
 }
 
@@ -172,6 +158,8 @@ func (sf IdentitySnapper) MinVertexSeparation() s1.Angle {
 // For the identity snap function, edges are separated from all non-incident
 // vertices by at least 0.5 * snapRadius.
 func (sf IdentitySnapper) MinEdgeVertexSeparation() s1.Angle {
+	// In the worst case configuration, the edge-vertex separation is half of the
+	// vertex separation.
 	return 0.5 * sf.snapRadius
 }
 
@@ -197,6 +185,8 @@ type CellIDSnapper struct {
 	snapRadius s1.Angle
 }
 
+// TODO(rsned): Add SetLevel method to allow changes to the type.
+
 // NewCellIDSnapper returns a snap function with the default level set.
 func NewCellIDSnapper() CellIDSnapper {
 	return CellIDSnapper{
@@ -215,12 +205,6 @@ func CellIDSnapperForLevel(level int) CellIDSnapper {
 
 // SnapRadius reports the maximum distance that vertices can move when snapped.
 // This requires that SnapRadius <= maxSnapRadius
-// Defines the snap radius to be used (see Builder). The snap radius
-// must be at least the minimum value for the current level, but larger
-// values can also be used (e.g., to simplify the geometry).
-//
-// This requires snapRadius >= MinSnapRadiusForLevel(level)
-// and snapRadius <= maxSnapRadius
 func (sf CellIDSnapper) SnapRadius() s1.Angle {
 	return sf.snapRadius
 }
@@ -247,31 +231,26 @@ func (sf CellIDSnapper) minSnapRadiusForLevel(level int) s1.Angle {
 // the minimum possible snap radius for the chosen level, do this:
 //
 //	sf := CellIDSnapperForLevel(f.levelForMaxSnapRadius(distance));
+//
+// TODO(rsned): pop this method out to standalone.
 func (sf CellIDSnapper) levelForMaxSnapRadius(snapRadius s1.Angle) int {
 	// When choosing a level, we need to account for the error bound of
 	// 4 * dblEpsilon that is added by MinSnapRadiusForLevel.
 	return MaxDiagMetric.MinLevel(2 * (snapRadius.Radians() - 4*dblEpsilon))
 }
 
-// MaxEdgeDeviation returns the maximum edge deviation this type supports.
-func (sf CellIDSnapper) MaxEdgeDeviation() s1.Angle {
-	return maxEdgeDeviationRatio * sf.snapRadius
-}
-
-// MinVertexSeparation returns the guaranteed minimum distance between
-// vertices in the output. This is generally some fraction of SnapRadius.
-// For CellID snapping, the minimum separation between vertices depends on
-// level and snapRadius. It can vary between 0.5 * snapRadius
-// and snapRadius.
+// MinVertexSeparation reports the minimum separation between vertices depending
+// on level and snapRadius. It can vary between 0.5 * snapRadius and snapRadius.
 func (sf CellIDSnapper) MinVertexSeparation() s1.Angle {
 	// We have three different bounds for the minimum vertex separation: one is
 	// a constant bound, one is proportional to snapRadius, and one is equal to
-	// snapRadius minus a constant.  These bounds give the best results for
-	// small, medium, and large snap radii respectively.  We return the maximum
+	// snapRadius minus a constant. These bounds give the best results for
+	// small, medium, and large snap radii respectively. We return the maximum
 	// of the three bounds.
 	//
 	// 1. Constant bound: Vertices are always separated by at least
-	//    MinEdgeMetric.Value(level), the minimum edge length for the chosen snap level.
+	//    MinEdgeMetric.Value(level), the minimum edge length for the chosen
+	//    snap level.
 	//
 	// 2. Proportional bound: It can be shown that in the plane, the worst-case
 	//    configuration has a vertex separation of 2 / sqrt(13) * snapRadius.
@@ -279,21 +258,21 @@ func (sf CellIDSnapper) MinVertexSeparation() s1.Angle {
 	//    is slightly smaller at cell level 2 (0.54849 vs. 0.55470).  We reduce
 	//    that value a bit more below to be conservative.
 	//
-	// 3. Best asymptotic bound: This bound bound is derived by observing we
+	// 3. Best asymptotic bound: This bound is derived by observing we
 	//    only select a new site when it is at least snapRadius away from all
 	//    existing sites, and the site can move by at most
 	//    0.5 * MaxDiagMetric.Value(level) when snapped.
 	minEdge := s1.Angle(MinEdgeMetric.Value(sf.level))
 	maxDiag := s1.Angle(MaxDiagMetric.Value(sf.level))
 	return maxAngle(minEdge,
-		maxAngle(s1.Angle(2/math.Sqrt(13))*sf.snapRadius, sf.snapRadius-0.5*maxDiag))
+		// per 2 above, a little less than 2 / sqrt(13)
+		maxAngle(0.548*sf.snapRadius,
+			sf.snapRadius-0.5*maxDiag))
 }
 
 // MinEdgeVertexSeparation returns the guaranteed minimum spacing between
-// edges and non-incident vertices in the output.
-// For CellID snapping, the minimum separation between edges and
-// non-incident vertices depends on level and snapRadius. It can
-// be as low as 0.219 * snapRadius, but is typically 0.5 * snapRadius
+// edges and non-incident vertices in the output depending on level and snapRadius..
+// It can be as low as 0.219 * snapRadius, but is typically 0.5 * snapRadius
 // or more.
 func (sf CellIDSnapper) MinEdgeVertexSeparation() s1.Angle {
 	// Similar to MinVertexSeparation, in this case we have four bounds: a
@@ -302,15 +281,16 @@ func (sf CellIDSnapper) MinEdgeVertexSeparation() s1.Angle {
 	// snapRadius, and a bound that is equal to snapRadius minus a constant.
 	//
 	// 1. Constant bounds:
-	//    (a) At the minimum snap radius for a given level, it can be shown that
-	//    vertices are separated from edges by at least 0.5 * MinDiagMetric.Value(level) in
-	//    the plane. The unit test verifies this, except that on the sphere the
-	//    worst case is slightly better: 0.5652980068 * MinDiagMetric.Value(level).
+	//    (a) At the minimum snap radius for a given level, it can be shown
+	//    that vertices are separated from edges by at least 0.5 *a
+	//    MinDiagMetric.Value(level) in the plane. The unit test verifies this,
+	//    except that on the sphere the worst case is slightly better:
+	//    0.5652980068 * MinDiagMetric.Value(level).
 	//
 	//    (b) Otherwise, for arbitrary snap radii the worst-case configuration
 	//    in the plane has an edge-vertex separation of sqrt(3/19) *
-	//    MinDiagMetric.Value(level), where sqrt(3/19) is about 0.3973597071. The unit
-	//    test verifies that the bound is slightly better on the sphere:
+	//    MinDiagMetric.Value(level), where sqrt(3/19) is about 0.3973597071.
+	//    The unit test verifies that the bound is slightly better on the sphere:
 	//    0.3973595687 * MinDiagMetric.Value(level).
 	//
 	// 2. Proportional bound: In the plane, the worst-case configuration has an
@@ -337,8 +317,8 @@ func (sf CellIDSnapper) MinEdgeVertexSeparation() s1.Angle {
 
 	// Otherwise, these bounds hold for any snapRadius.
 	vertexSep := sf.MinVertexSeparation()
-	return maxAngle(s1.Angle(math.Sqrt(3.0/19.0))*minDiag,
-		maxAngle(s1.Angle(2*math.Sqrt(3.0/247.0))*sf.snapRadius,
+	return maxAngle(0.397*minDiag, // sqrt(3/19) in the plane
+		maxAngle(0.219*sf.snapRadius, // 2*sqrt(3/247) in the plane
 			0.5*(vertexSep/sf.snapRadius)*vertexSep))
 }
 
@@ -359,6 +339,11 @@ const (
 // multiplied by a power of 10 and then rounded to the nearest integer. For
 // example, in E6 coordinates the point (23.12345651, -45.65432149) would
 // become (23123457, -45654321).
+//
+// The main argument of the Snapper is the exponent for the power of 10
+// that coordinates should be multiplied by before rounding.  For example,
+// NewIntLatLngSnapper(7) is a function that snaps to E7 coordinates.  The
+// exponent can range from 0 to 10.
 //
 // Each exponent has a corresponding minimum snap radius, which is simply the
 // maximum distance that a vertex can move when snapped. It is approximately
@@ -388,6 +373,8 @@ func NewIntLatLngSnapper(exponent int) IntLatLngSnapper {
 	return sf
 }
 
+// TODO(rsned): Add SetExponent() method.
+
 // SnapRadius reports the snap radius to be used. The snap radius
 // must be at least the minimum value for the current exponent, but larger
 // values can also be used (e.g., to simplify the geometry).
@@ -400,6 +387,8 @@ func (sf IntLatLngSnapper) SnapRadius() s1.Angle {
 
 // minSnapRadiusForExponent returns the minimum allowable snap radius for the given
 // exponent (approximately equal to 10**(-exponent) / sqrt(2)) degrees).
+//
+// TODO(rsned): Pop this method out so it can be used by other callers.
 func (sf IntLatLngSnapper) minSnapRadiusForExponent(exponent int) s1.Angle {
 	// snapRadius needs to be an upper bound on the true distance that a
 	// point can move when snapped, taking into account numerical errors.
@@ -426,18 +415,21 @@ func (sf IntLatLngSnapper) minSnapRadiusForExponent(exponent int) s1.Angle {
 	// (much larger than the errors above), which can change the position by
 	// up to (sqrt(2) * 0.5 * sf.to) radians.
 	power := math.Pow10(exponent)
-	return (s1.Degree*s1.Angle((1/math.Sqrt2)/power) + s1.Angle((9*math.Sqrt2+1.5)*dblEpsilon))
+	return (s1.Degree*s1.Angle((1/math.Sqrt2)/power) +
+		s1.Angle((9*math.Sqrt2+1.5)*dblEpsilon))
 }
 
 // exponentForMaxSnapRadius returns the minimum exponent such that vertices will
 // not move by more than snapRadius. This can be useful when choosing an appropriate
 // exponent for snapping. The return value is always a valid exponent (out of
 // range values are silently clamped).
+//
+// TODO(rsned): Pop this method out so it can be used by other callers.
 func (sf IntLatLngSnapper) exponentForMaxSnapRadius(snapRadius s1.Angle) int {
 	// When choosing an exponent, we need to account for the error bound of
 	// (9 * sqrt(2) + 1.5) * dblEpsilon added by minSnapRadiusForExponent.
 	snapRadius -= (9*math.Sqrt2 + 1.5) * dblEpsilon
-	snapRadius = s1.Angle(math.Max(float64(snapRadius), 1e-30))
+	snapRadius = maxAngle(snapRadius, 1e-30)
 	exponent := math.Log10((1 / math.Sqrt2) / snapRadius.Degrees())
 
 	// There can be small errors in the calculation above, so to ensure that
@@ -447,14 +439,8 @@ func (sf IntLatLngSnapper) exponentForMaxSnapRadius(snapRadius s1.Angle) int {
 		minInt(maxIntSnappingExponent, int(math.Ceil(exponent-2*dblEpsilon))))
 }
 
-// MaxEdgeDeviation returns the maximum edge deviation this type supports.
-func (sf IntLatLngSnapper) MaxEdgeDeviation() s1.Angle {
-	return maxEdgeDeviationRatio * sf.snapRadius
-}
-
-// MinVertexSeparation returns the guaranteed minimum distance between vertices
-// in the output. For IntLatLng snapping, the minimum separation between vertices
-// depends on exponent and snapRadius.
+// MinVertexSeparation reports the minimum separation between vertices depending on
+// exponent and snapRadius. It can vary between 0.471 * snapRadius and snapRadius.
 func (sf IntLatLngSnapper) MinVertexSeparation() s1.Angle {
 	// We have two bounds for the minimum vertex separation: one is proportional
 	// to snapRadius, and one is equal to snapRadius minus a constant.  These
@@ -471,19 +457,18 @@ func (sf IntLatLngSnapper) MinVertexSeparation() s1.Angle {
 	//    only select a new site when it is at least snapRadius away from all
 	//    existing sites, and snapping a vertex can move it by up to
 	//    ((1 / sqrt(2)) * sf.to) degrees.
-	return maxAngle((math.Sqrt2/3)*sf.snapRadius,
+	return maxAngle(0.471*sf.snapRadius, // sqrt(2)/3 in the plane
 		sf.snapRadius-s1.Degree*s1.Angle(1/math.Sqrt2)*sf.to)
 }
 
-// MinEdgeVertexSeparation returns the guaranteed minimum spacing between edges
-// and non-incident vertices in the output. For IntLatLng snapping, the minimum
-// separation between edges and non-incident vertices depends on level and
+// MinEdgeVertexSeparation reports the minimum separation between edges
+// and non-incident vertices in the output depending on the level and
 // snapRadius. It can be as low as 0.222 * snapRadius, but is typically
 // 0.39 * snapRadius or more.
 func (sf IntLatLngSnapper) MinEdgeVertexSeparation() s1.Angle {
 	// Similar to MinVertexSeparation, in this case we have three bounds:
 	// one is a constant bound, one is proportional to snapRadius, and one is
-	// equal to snapRadius minus a constant.
+	// approaches 0.5 * snapRadius asymptotically.
 	//
 	// 1. Constant bound: In the plane, the worst-case configuration has an
 	//    edge-vertex separation of ((1 / sqrt(13)) * sf.to) degrees.
@@ -504,12 +489,15 @@ func (sf IntLatLngSnapper) MinEdgeVertexSeparation() s1.Angle {
 	//    bound approaches 0.5 * snapRadius as the snap radius becomes large
 	//    relative to the grid spacing.
 	vertexSep := sf.MinVertexSeparation()
-	return maxAngle(s1.Angle(1/math.Sqrt(13))*s1.Degree*sf.to,
-		maxAngle((2.0/9.0)*sf.snapRadius, 0.5*(vertexSep/sf.snapRadius)*vertexSep))
+	return maxAngle(0.277*s1.Degree*sf.to, // 1/sqrt(13) in the plane
+		maxAngle(0.222*sf.snapRadius, // 2/9 in the plane
+			0.5*(vertexSep/sf.snapRadius)*vertexSep))
 }
 
 // SnapPoint returns a candidate snap site for the given point.
 func (sf IntLatLngSnapper) SnapPoint(point Point) Point {
+	// TODO(rsned): C++ DCHECK's on exponent being in valid range. What should we
+	// do when it's bad here.
 	input := LatLngFromPoint(point)
 	lat := s1.Angle(roundAngle(input.Lat * sf.from))
 	lng := s1.Angle(roundAngle(input.Lng * sf.from))
