@@ -14,6 +14,12 @@
 
 package s2
 
+import (
+	"math"
+
+	"github.com/golang/geo/s1"
+)
+
 const (
 	// maxEdgeDeviationRatio is set so that MaxEdgeDeviation will be large enough
 	// compared to snapRadius such that edge splitting is rare.
@@ -62,6 +68,29 @@ const (
 	edgeTypeDirected edgeType = iota
 	edgeTypeUndirected
 )
+
+// isFullPolygonPredicate is an interface for determining if Polygons are
+// full or not. For output layers that represent polygons, there is an ambiguity
+// inherent in spherical geometry that does not exist in planar geometry.
+// Namely, if a polygon has no edges, does it represent the empty polygon
+// (containing no points) or the full polygon (containing all points)? This
+// ambiguity also occurs for polygons that consist only of degeneracies, e.g.
+// a degenerate loop with only two edges could be either a degenerate shell in
+// the empty polygon or a degenerate hole in the full polygon.
+//
+// To resolve this ambiguity, an IsFullPolygonPredicate may be specified for
+// each output layer (see AddIsFullPolygonPredicate below). If the output
+// after snapping consists only of degenerate edges and/or sibling pairs
+// (including the case where there are no edges at all), then the layer
+// implementation calls the given predicate to determine whether the polygon
+// is empty or full except for those degeneracies. The predicate is given
+// an S2Builder::Graph containing the output edges, but note that in general
+// the predicate must also have knowledge of the input geometry in order to
+// determine the correct result.
+//
+// This predicate is only needed by layers that are assembled into polygons.
+// It is not used by other layer types.
+type isFullPolygonPredicate func(g *graph) (bool, error)
 
 // builder is a tool for assembling polygonal geometry from edges. Here are
 // some of the things it is designed for:
@@ -155,9 +184,108 @@ const (
 // TODO(rsned): Make the type public when Builder is ready.
 type builder struct {
 	opts *builderOptions
+
+	// The maximum distance (inclusive) that a vertex can move when snapped,
+	// equal to options.SnapFunction().SnapRadius()).
+	siteSnapRadiusCA s1.ChordAngle
+
+	// The maximum distance (inclusive) that an edge can move when snapping to a
+	// snap site. It can be slightly larger than the site snap radius when
+	// edges are being split at crossings.
+	edgeSnapRadiusCA s1.ChordAngle
+
+	// True if we need to check that snapping has not changed the input topology
+	// around any vertex (i.e. Voronoi site). Normally this is only necessary for
+	// forced vertices, but if the snap radius is very small (e.g., zero) and
+	// split_crossing_edges() is true then we need to do this for all vertices.
+	// In all other situations, any snapped edge that crosses a vertex will also
+	// be closer than min_edge_vertex_separation() to that vertex, which will
+	// cause us to add a separation site anyway.
+	checkAllSiteCrossings bool
+
+	maxEdgeDeviation       s1.Angle
+	edgeSiteQueryRadiusCA  s1.ChordAngle
+	minEdgeLengthToSplitCA s1.ChordAngle
+
+	minSiteSeparation            s1.Angle
+	minSiteSeparationCA          s1.ChordAngle
+	minEdgeSiteSeparationCA      s1.ChordAngle
+	minEdgeSiteSeparationCALimit s1.ChordAngle
+
+	maxAdjacentSiteSeparationCA s1.ChordAngle
+
+	// The squared sine of the edge snap radius. This is equivalent to the snap
+	// radius (squared) for distances measured through the interior of the
+	// sphere to the plane containing an edge. This value is used only when
+	// interpolating new points along edges (see GetSeparationSite).
+	edgeSnapRadiusSin2 float64
+
+	// True if snapping was requested. This is true if either snapRadius() is
+	// positive, or splitCrossingEdges() is true (which implicitly requests
+	// snapping to ensure that both crossing edges are snapped to the
+	// intersection point).
+	snappingRequested bool
+
+	// Initially false, and set to true when it is discovered that at least one
+	// input vertex or edge does not meet the output guarantees (e.g., that
+	// vertices are separated by at least snapFunction.minVertexSeparation).
+	snappingNeeded bool
 }
 
 // init initializes this instance with the given options.
 func (b *builder) init(opts *builderOptions) {
 	b.opts = opts
+
+	snapFunc := opts.snapFunction
+	sr := snapFunc.SnapRadius()
+
+	// Cap the snap radius to the limit.
+	if sr > maxSnapRadius {
+		sr = maxSnapRadius
+	}
+
+	// Convert the snap radius to an ChordAngle. This is the "true snap
+	// radius" used when evaluating exact predicates.
+	b.siteSnapRadiusCA = s1.ChordAngleFromAngle(sr)
+
+	// When intersectionTolerance is non-zero we need to use a larger snap
+	// radius for edges than for vertices to ensure that both edges are snapped
+	// to the edge intersection location.  This is because the computed
+	// intersection point is not exact; it may be up to intersectionTolerance
+	// away from its true position. The computed intersection point might then
+	// be snapped to some other vertex up to SnapRadius away.  So to ensure
+	// that both edges are snapped to a common vertex, we need to increase the
+	// snap radius for edges to at least the sum of these two values (calculated
+	// conservatively).
+	edgeSnapRadius := opts.edgeSnapRadius()
+	b.edgeSnapRadiusCA = roundUp(edgeSnapRadius)
+	b.snappingRequested = (edgeSnapRadius > 0)
+
+	// Compute the maximum distance that a vertex can be separated from an
+	// edge while still affecting how that edge is snapped.
+	b.maxEdgeDeviation = opts.maxEdgeDeviation()
+	b.edgeSiteQueryRadiusCA = s1.ChordAngleFromAngle(b.maxEdgeDeviation +
+		snapFunc.MinEdgeVertexSeparation())
+
+	// Compute the maximum edge length such that even if both endpoints move by
+	// the maximum distance allowed (i.e., edge_snap_radius), the center of the
+	// edge will still move by less than max_edge_deviation().  This saves us a
+	// lot of work since then we don't need to check the actual deviation.
+	if !b.snappingRequested {
+		b.minEdgeLengthToSplitCA = s1.InfChordAngle()
+	} else {
+		// This value varies between 30 and 50 degrees depending on
+		// the snap radius.
+		b.minEdgeLengthToSplitCA = s1.ChordAngleFromAngle(s1.Angle(2 *
+			math.Acos(math.Sin(edgeSnapRadius.Radians())/
+				math.Sin(b.maxEdgeDeviation.Radians()))))
+	}
+
+	// TODO(rsned): Continue adding to init
+}
+
+// roundUp rounds the given angle up by the max error and returns it as a chord angle.
+func roundUp(a s1.Angle) s1.ChordAngle {
+	ca := s1.ChordAngleFromAngle(a)
+	return ca.Expanded(ca.MaxAngleError())
 }
