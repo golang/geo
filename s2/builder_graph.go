@@ -42,10 +42,13 @@ type graphEdge struct {
 // TODO(rsned): Consider pulling out the methods that are helper functions for
 // Layer implementations (such as getDirectedLoops) into a builder_util_graph.go.
 type graph struct {
-	opts        *graphOptions
-	numVertices int
-	vertices    []Point
-	edges       []graphEdge
-
-	// TODO(rsned): Add remaining elements.
+	opts                   *graphOptions
+	numVertices            int
+	vertices               []Point
+	edges                  []graphEdge
+	inputEdgeIDSetIDs      []int32
+	inputEdgeIDSetLexicon  *idSetLexicon
+	labelSetIDs            []int32
+	labelSetLexicon        *idSetLexicon
+	isFullPolygonPredicate isFullPolygonPredicate
 }
