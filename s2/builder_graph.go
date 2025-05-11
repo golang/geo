@@ -13,14 +13,14 @@
 // limitations under the License.
 package s2
 
-// PolylineType Indicates whether polylines should be "paths" (which don't
+// polylineType Indicates whether polylines should be "paths" (which don't
 // allow duplicate vertices, except possibly the first and last vertex) or
 // "walks" (which allow duplicate vertices and edges).
-type PolylineType uint8
+type polylineType uint8
 
 const (
-	PolylineTypePath PolylineType = iota
-	PolylineTypeWalk
+	polylineTypePath polylineType = iota
+	polylineTypeWalk
 )
 
 // graphEdge is a tuple of edge IDs.
