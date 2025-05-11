@@ -152,7 +152,7 @@ type isFullPolygonPredicate func(g *graph) (bool, error)
 //     passes nearby a vertex then it will be rerouted through that vertex.
 //     Optionally, it can also detect nearly straight chains of short edges and
 //     replace them with a single long edge, while maintaining the same
-//     accuracy, separation, and topology guarantees ("simplify_edge_chains").
+//     accuracy, separation, and topology guarantees ("simplifyEdgeChains").
 //
 //   - It supports many different output types through the concept of "layers"
 //     (polylines, polygons, polygon meshes, etc). You can build multiple
@@ -168,11 +168,11 @@ type isFullPolygonPredicate func(g *graph) (bool, error)
 //
 //   - Because Builder only works with edges, it cannot distinguish between
 //     the empty and full polygons. If your application can generate both the
-//     empty and full polygons, you must implement logic outside of this class.
+//     empty and full polygons, you must implement logic outside of this type.
 //
 // Example showing how to snap a polygon to E7 coordinates:
 //
-//	builder := NewBuilder(BuilderOptions(IntLatLngSnapFunction(7)));
+//	builder := NewBuilder(newBuilderOptions(IntLatLngSnapFunction(7)));
 //	var output *Polygon
 //	builder.StartLayer(NewPolygonLayer(output))
 //	builder.AddPolygon(input);
@@ -197,9 +197,9 @@ type builder struct {
 	// True if we need to check that snapping has not changed the input topology
 	// around any vertex (i.e. Voronoi site). Normally this is only necessary for
 	// forced vertices, but if the snap radius is very small (e.g., zero) and
-	// split_crossing_edges() is true then we need to do this for all vertices.
+	// splitCrossingedges is true then we need to do this for all vertices.
 	// In all other situations, any snapped edge that crosses a vertex will also
-	// be closer than min_edge_vertex_separation() to that vertex, which will
+	// be closer than minEdgeVertexSeparation() to that vertex, which will
 	// cause us to add a separation site anyway.
 	checkAllSiteCrossings bool
 
@@ -230,6 +230,54 @@ type builder struct {
 	// input vertex or edge does not meet the output guarantees (e.g., that
 	// vertices are separated by at least snapFunction.minVertexSeparation).
 	snappingNeeded bool
+
+	// A flag indicating whether labelSet has been modified since the last
+	// time labelSetID was computed.
+	labelSetModified bool
+
+	inputVertices []Point
+	// inputEdges    []builderInputEdge
+
+	layers                       []*builderLayer
+	layerOptions                 []*graphOptions
+	layerBegins                  []int32
+	layerIsFullPolygonPredicates []isFullPolygonPredicate
+
+	// Each input edge has "label set id" (an int32) representing the set of
+	// labels attached to that edge. This vector is populated only if at least
+	// one label is used.
+	labelSetIDs     []int32
+	labelSetLexicon *idSetLexicon
+
+	// The current set of labels (represented as a stack).
+	labelSet []int32
+
+	// The labelSetID corresponding to the current label set, computed on demand
+	// (by adding it to labelSetLexicon()).
+	labelSetID int32
+
+	// The remaining fields are used for snapping and simplifying.
+
+	// The number of sites specified using forceVertex(). These sites are
+	// always at the beginning of the sites vector.
+	numForcedSites int32
+
+	// The set of snapped vertex locations ("sites").
+	sites []Point
+
+	// A map from each input edge to the set of sites "nearby" that edge,
+	// defined as the set of sites that are candidates for snapping and/or
+	// avoidance. Note that compactarray will inline up to two sites, which
+	// usually takes care of the vast majority of edges. Sites are kept sorted
+	// by increasing distance from the origin of the input edge.
+	//
+	// Once snapping is finished, this field is discarded unless edge chain
+	// simplification was requested, in which case instead the sites are
+	// filtered by removing the ones that each edge was snapped to, leaving only
+	// the "sites to avoid" (needed for simplification).
+	edgeSites [][]int32
+
+	// TODO(rsned): Add memoryTracker if it becomes available.
 }
 
 // init initializes this instance with the given options.
@@ -268,8 +316,8 @@ func (b *builder) init(opts *builderOptions) {
 		snapFunc.MinEdgeVertexSeparation())
 
 	// Compute the maximum edge length such that even if both endpoints move by
-	// the maximum distance allowed (i.e., edge_snap_radius), the center of the
-	// edge will still move by less than max_edge_deviation().  This saves us a
+	// the maximum distance allowed (i.e., edgeSnapRadius), the center of the
+	// edge will still move by less than maxEdgeDeviation. This saves us a
 	// lot of work since then we don't need to check the actual deviation.
 	if !b.snappingRequested {
 		b.minEdgeLengthToSplitCA = s1.InfChordAngle()
@@ -281,11 +329,86 @@ func (b *builder) init(opts *builderOptions) {
 				math.Sin(b.maxEdgeDeviation.Radians()))))
 	}
 
-	// TODO(rsned): Continue adding to init
+	// In rare cases we may need to explicitly check that the input topology is
+	// preserved, i.e. that edges do not cross vertices when snapped.  This is
+	// only necessary (1) for vertices added using forceVertex, and (2) when the
+	// snap radius is smaller than intersectionTolerance (which is typically
+	// either zero or intersectionError, about 9e-16 radians). This
+	// condition arises because when a geodesic edge is snapped, the edge center
+	// can move further than its endpoints. This can cause an edge to pass on the
+	// wrong side of an input vertex. (Note that this could not happen in a
+	// planar version of this algorithm.) Usually we don't need to consider this
+	// possibility explicitly, because if the snapped edge passes on the wrong
+	// side of a vertex then it is also closer than minEdgeVertexSeparation
+	// to that vertex, which will cause a separation site to be added.
+	//
+	// If the condition below is true then we need to check all sites (i.e.,
+	// snapped input vertices) for topology changes.  However this is almost never
+	// the case because
+	//
+	//            maxEdgeDeviation() == 1.1 * edgeSnapRadius
+	//      and   minEdgeVertexSeparation() >= 0.219 * SnapRadius
+	//
+	// for all currently implemented snap functions. The condition below is
+	// only true when intersectionTolerance() is non-zero (which causes
+	// edgeSnapRadius() to exceed SnapRadius() by intersectionError) and
+	// SnapRadius() is very small (at most intersectionError / 1.19).
+	b.checkAllSiteCrossings = (opts.maxEdgeDeviation() >
+		opts.edgeSnapRadius()+snapFunc.MinEdgeVertexSeparation())
+	if opts.intersectionTolerance <= 0 {
+		if b.checkAllSiteCrossings {
+		}
+	}
+
+	// To implement idempotency, we check whether the input geometry could
+	// possibly be the output of a previous Builder invocation. This involves
+	// testing whether any site/site or edge/site pairs are too close together.
+	// This is done using exact predicates, which require converting the minimum
+	// separation values to a ChordAngle.
+	b.minSiteSeparation = snapFunc.MinVertexSeparation()
+	b.minSiteSeparationCA = s1.ChordAngleFromAngle(b.minSiteSeparation)
+	b.minEdgeSiteSeparationCA = s1.ChordAngleFromAngle(snapFunc.MinEdgeVertexSeparation())
+
+	// This is an upper bound on the distance computed by ClosestPointQuery
+	// where the true distance might be less than minEdgeSiteSeparationCA.
+	b.minEdgeSiteSeparationCALimit = addPointToEdgeError(b.minEdgeSiteSeparationCA)
+
+	// Compute the maximum possible distance between two sites whose Voronoi
+	// regions touch. (The maximum radius of each Voronoi region is
+	// edgeSnapRadius.) Then increase this bound to account for errors.
+	b.maxAdjacentSiteSeparationCA = addPointToPointError(roundUp(2 * opts.edgeSnapRadius()))
+
+	// Finally, we also precompute sin^2(edgeSnapRadius), which is simply the
+	// squared distance between a vertex and an edge measured perpendicular to
+	// the plane containing the edge, and increase this value by the maximum
+	// error in the calculation to compare this distance against the bound.
+	d := math.Sin(opts.edgeSnapRadius().Radians())
+	b.edgeSnapRadiusSin2 = d * d
+	b.edgeSnapRadiusSin2 += ((9.5*d+2.5+2*sqrt3)*d + 9*dblEpsilon) * dblEpsilon
+
+	// Initialize the current label set.
+	b.labelSetID = emptySetID
+	b.labelSetModified = false
+
+	// If snapping was requested, we try to determine whether the input geometry
+	// already meets the output requirements. This is necessary for
+	// idempotency, and can also save work. If we discover any reason that the
+	// input geometry needs to be modified, snappingNeeded is set to true.
+	b.snappingNeeded = false
+
+	// TODO(rsned): Memory tracker init.
 }
 
 // roundUp rounds the given angle up by the max error and returns it as a chord angle.
 func roundUp(a s1.Angle) s1.ChordAngle {
 	ca := s1.ChordAngleFromAngle(a)
 	return ca.Expanded(ca.MaxAngleError())
+}
+
+func addPointToPointError(ca s1.ChordAngle) s1.ChordAngle {
+	return ca.Expanded(ca.MaxPointError())
+}
+
+func addPointToEdgeError(ca s1.ChordAngle) s1.ChordAngle {
+	return ca.Expanded(minUpdateDistanceMaxError(ca))
 }
