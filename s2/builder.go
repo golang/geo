@@ -259,9 +259,7 @@ func (b *builder) init(opts *builderOptions) {
 	sr := snapFunc.SnapRadius()
 
 	// Cap the snap radius to the limit.
-	if sr > maxSnapRadius {
-		sr = maxSnapRadius
-	}
+	sr = min(sr, maxSnapRadius)
 
 	// Convert the snap radius to an ChordAngle. This is the "true snap
 	// radius" used when evaluating exact predicates.

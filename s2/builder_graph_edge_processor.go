@@ -141,11 +141,8 @@ func (ep *edgeProcessor) mergeInputIDs(outBegin, outEnd int) int32 {
 	}
 
 	var tmpIDs []int32
-
 	for i := outBegin; i < outEnd; i++ {
-		for _, id := range ep.idSetLexicon.idSet(ep.inputIDs[ep.outEdges[i]]) {
-			tmpIDs = append(tmpIDs, id)
-		}
+		tmpIDs = append(tmpIDs, ep.idSetLexicon.idSet(ep.inputIDs[ep.outEdges[i]])...)
 	}
 	return int32(ep.idSetLexicon.add(tmpIDs...))
 }
