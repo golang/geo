@@ -11,7 +11,37 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package s2
+
+// edgeType indicates whether the input edges are undirected. Typically this is
+// specified for each output layer (e.g., PolygonBuilderLayer).
+//
+// Directed edges are preferred, since otherwise the output is ambiguous.
+// For example, output polygons may be the *inverse* of the intended result
+// (e.g., a polygon intended to represent the world's oceans may instead
+// represent the world's land masses). Directed edges are also somewhat
+// more efficient.
+//
+// However even with undirected edges, most Builder layer types try to
+// preserve the input edge direction whenever possible. Generally, edges
+// are reversed only when it would yield a simpler output. For example,
+// PolygonLayer assumes that polygons created from undirected edges should
+// cover at most half of the sphere. Similarly, PolylineVectorBuilderLayer
+// assembles edges into as few polylines as possible, even if this means
+// reversing some of the "undirected" input edges.
+//
+// For shapes with interiors, directed edges should be oriented so that the
+// interior is to the left of all edges. This means that for a polygon with
+// holes, the outer loops ("shells") should be directed counter-clockwise
+// while the inner loops ("holes") should be directed clockwise. Note that
+// AddPolygon() follows this convention automatically.
+type edgeType uint8
+
+const (
+	edgeTypeDirected edgeType = iota
+	edgeTypeUndirected
+)
 
 // degenerateEdges controls how degenerate edges (i.e., an edge from a vertex to
 // itself) are handled. Such edges may be present in the input, or they may be
@@ -66,8 +96,8 @@ const (
 // would be discarded leaving only one edge in each direction.
 //
 // Degenerate edges are considered not to have siblings. If such edges are
-// present, they are passed through unchanged by siblingPairs::DISCARD. For
-// siblingPairs::REQUIRE or siblingPairs::CREATE with undirected edges, the
+// present, they are passed through unchanged by siblingPairsDiscard. For
+// siblingPairsRequire or siblingPairsCreate with undirected edges, the
 // number of copies of each degenerate edge is reduced by a factor of two.
 // Any of the options that discard edges (DISCARD, DISCARDEXCESS, and
 // REQUIRE/CREATE in the case of undirected edges) have the side effect that
@@ -76,7 +106,7 @@ const (
 // the problem of having to decide which edges are discarded.) Note that
 // this merging takes place even when all copies of an edge are kept. For
 // example, consider the graph {AB1, AB2, AB3, BA4, CD5, CD6} (where XYn
-// denotes an edge from X to Y with label "n"). With siblingPairs::DISCARD,
+// denotes an edge from X to Y with label "n"). With siblingPairsDiscard,
 // we need to discard one of the copies of AB. But which one? Rather than
 // choosing arbitrarily, instead we merge the labels of all duplicate edges
 // (even ones where no sibling pairs were discarded), yielding {AB123,
@@ -167,8 +197,8 @@ type graphOptions struct {
 // defaultGraphOptions returns a graphOptions that specify that all edges should
 // be kept, since this produces the least surprising output and makes it easier
 // to diagnose the problem when an option is left unspecified.
-func defaultGraphOptions() graphOptions {
-	return graphOptions{
+func defaultGraphOptions() *graphOptions {
+	return &graphOptions{
 		edgeType:             edgeTypeDirected,
 		degenerateEdges:      degenerateEdgesKeep,
 		duplicateEdges:       duplicateEdgesKeep,

@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package s2
 
 // polylineType Indicates whether polylines should be "paths" (which don't
@@ -28,6 +29,11 @@ type graphEdge struct {
 	first, second int32
 }
 
+// reverse returns a new graphEdge with the vertices in reverse order.
+func (g graphEdge) reverse() graphEdge {
+	return graphEdge{first: g.second, second: g.first}
+}
+
 // A Graph represents a collection of snapped edges that is passed
 // to a Layer for assembly. (Example layers include polygons, polylines, and
 // polygon meshes.) The Graph object does not own any of its underlying data;
@@ -40,7 +46,7 @@ type graphEdge struct {
 // the outgoing edges from a particular vertex form a contiguous range.
 //
 // TODO(rsned): Consider pulling out the methods that are helper functions for
-// Layer implementations (such as getDirectedLoops) into a builder_util_graph.go.
+// Layer implementations (such as getDirectedLoops) into a builder_graph_util.go.
 type graph struct {
 	opts                   *graphOptions
 	numVertices            int

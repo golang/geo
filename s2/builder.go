@@ -40,35 +40,6 @@ const (
 	maxEdgeDeviationRatio = 1.1
 )
 
-// edgeType indicates whether the input edges are undirected. Typically this is
-// specified for each output layer (e.g., PolygonBuilderLayer).
-//
-// Directed edges are preferred, since otherwise the output is ambiguous.
-// For example, output polygons may be the *inverse* of the intended result
-// (e.g., a polygon intended to represent the world's oceans may instead
-// represent the world's land masses). Directed edges are also somewhat
-// more efficient.
-//
-// However even with undirected edges, most Builder layer types try to
-// preserve the input edge direction whenever possible. Generally, edges
-// are reversed only when it would yield a simpler output. For example,
-// PolygonLayer assumes that polygons created from undirected edges should
-// cover at most half of the sphere. Similarly, PolylineVectorBuilderLayer
-// assembles edges into as few polylines as possible, even if this means
-// reversing some of the "undirected" input edges.
-//
-// For shapes with interiors, directed edges should be oriented so that the
-// interior is to the left of all edges. This means that for a polygon with
-// holes, the outer loops ("shells") should be directed counter-clockwise
-// while the inner loops ("holes") should be directed clockwise. Note that
-// AddPolygon() follows this convention automatically.
-type edgeType uint8
-
-const (
-	edgeTypeDirected edgeType = iota
-	edgeTypeUndirected
-)
-
 // isFullPolygonPredicate is an interface for determining if Polygons are
 // full or not. For output layers that represent polygons, there is an ambiguity
 // inherent in spherical geometry that does not exist in planar geometry.
