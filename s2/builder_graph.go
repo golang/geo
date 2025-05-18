@@ -14,26 +14,6 @@
 
 package s2
 
-// polylineType Indicates whether polylines should be "paths" (which don't
-// allow duplicate vertices, except possibly the first and last vertex) or
-// "walks" (which allow duplicate vertices and edges).
-type polylineType uint8
-
-const (
-	polylineTypePath polylineType = iota
-	polylineTypeWalk
-)
-
-// graphEdge is a tuple of edge IDs.
-type graphEdge struct {
-	first, second int32
-}
-
-// reverse returns a new graphEdge with the vertices in reverse order.
-func (g graphEdge) reverse() graphEdge {
-	return graphEdge{first: g.second, second: g.first}
-}
-
 // A Graph represents a collection of snapped edges that is passed
 // to a Layer for assembly. (Example layers include polygons, polylines, and
 // polygon meshes.) The Graph object does not own any of its underlying data;
