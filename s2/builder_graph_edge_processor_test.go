@@ -645,19 +645,8 @@ func TestGraphEdgeProcessorMergeInputIDs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ep := &edgeProcessor{
-				edges:        test.edges,
-				inputIDs:     test.inputIDs,
-				idSetLexicon: newIDSetLexicon(),
-				outEdges:     make([]int32, len(test.edges)),
-			}
-
-			// Initialize outEdges with sequential indices
-			for i := range ep.outEdges {
-				ep.outEdges[i] = int32(i)
-			}
-
-			// Add the input IDs to the lexicon first
+			ep := newEdgeProcessor(defaultGraphOptions(), test.edges, test.inputIDs, newIDSetLexicon())
+			// Add the input IDs to the lexicon
 			for _, id := range test.inputIDs {
 				ep.idSetLexicon.add(id)
 			}
