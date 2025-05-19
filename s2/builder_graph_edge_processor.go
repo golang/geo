@@ -144,7 +144,7 @@ func (ep *edgeProcessor) mergeInputIDs(outBegin, outEnd int) int32 {
 	for i := outBegin; i < outEnd; i++ {
 		tmpIDs = append(tmpIDs, ep.idSetLexicon.idSet(ep.inputIDs[ep.outEdges[i]])...)
 	}
-	return int32(ep.idSetLexicon.add(tmpIDs...))
+	return ep.idSetLexicon.add(tmpIDs...)
 }
 
 // Run processes the edges according to the specified options.
@@ -261,13 +261,14 @@ func (ep *edgeProcessor) handleDegenerateEdge(edge graphEdge, outBegin, outEnd i
 
 // handleNormalEdge handles a non-degenerate edge.
 func (ep *edgeProcessor) handleNormalEdge(edge graphEdge, outBegin, outEnd int, nOut, nIn int) error {
-	if ep.options.siblingPairs == siblingPairsKeep {
+	switch ep.options.siblingPairs {
+	case siblingPairsKeep:
 		if nOut > 1 && ep.options.duplicateEdges == duplicateEdgesMerge {
 			ep.addEdge(edge, ep.mergeInputIDs(outBegin, outEnd))
 		} else {
 			ep.copyEdges(outBegin, outEnd)
 		}
-	} else if ep.options.siblingPairs == siblingPairsDiscard {
+	case siblingPairsDiscard:
 		if ep.options.edgeType == edgeTypeDirected {
 			// If nOut == nIn: balanced sibling pairs
 			// If nOut < nIn:  unbalanced siblings, in the form AB, BA, BA
@@ -288,7 +289,7 @@ func (ep *edgeProcessor) handleNormalEdge(edge graphEdge, outBegin, outEnd int, 
 			}
 			ep.addEdge(edge, ep.mergeInputIDs(outBegin, outEnd))
 		}
-	} else if ep.options.siblingPairs == siblingPairsDiscardExcess {
+	case siblingPairsDiscardExcess:
 		if ep.options.edgeType == edgeTypeDirected {
 			// See comments above. The only difference is that if there are
 			// balanced sibling pairs, we want to keep one such pair.
@@ -303,24 +304,20 @@ func (ep *edgeProcessor) handleNormalEdge(edge graphEdge, outBegin, outEnd int, 
 		} else {
 			ep.addEdges((nOut&1)+1, edge, ep.mergeInputIDs(outBegin, outEnd))
 		}
-	} else {
-		if ep.options.siblingPairs != siblingPairsRequire &&
-			ep.options.siblingPairs != siblingPairsCreate {
-			return errors.New("invalid sibling pairs option")
-		}
+	case siblingPairsCreate, siblingPairsRequire:
 		// In C++, this check also checked the state of the S2Error passed in
 		// to make sure no previous errors had occured before now.
 		if ep.options.siblingPairs == siblingPairsRequire &&
 			(ep.options.edgeType == edgeTypeDirected && nOut != nIn ||
 				ep.options.edgeType == edgeTypeUndirected && nOut&1 != 0) {
-			return errors.New("expected all input edges to have siblingsa but some were missing")
+			return errors.New("expected all input edges to have siblings but some were missing")
 		}
 
 		if ep.options.duplicateEdges == duplicateEdgesMerge {
 			ep.addEdge(edge, ep.mergeInputIDs(outBegin, outEnd))
 		} else if ep.options.edgeType == edgeTypeUndirected {
 			// Convert graph to use directed edges instead (see documentation of
-			// REQUIRE/CREATE for undirected edges).
+			// siblingPairsCreate/siblingPairsRequire for undirected edges).
 			ep.addEdges((nOut+1)/2, edge, ep.mergeInputIDs(outBegin, outEnd))
 		} else {
 			ep.copyEdges(outBegin, outEnd)
@@ -329,6 +326,8 @@ func (ep *edgeProcessor) handleNormalEdge(edge graphEdge, outBegin, outEnd int, 
 				ep.addEdges(nIn-nOut, edge, emptySetID)
 			}
 		}
+	default:
+		return errors.New("invalid sibling pairs option")
 	}
 	return nil
 }

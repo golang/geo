@@ -89,7 +89,6 @@ func TestGraphEdgeProcessorStableLessThan(t *testing.T) {
 }
 
 func TestGraphEdgeProcessorAddEdge(t *testing.T) {
-
 	tests := []struct {
 		name             string
 		edge             graphEdge
@@ -132,7 +131,6 @@ func TestGraphEdgeProcessorAddEdge(t *testing.T) {
 }
 
 func TestGraphEdgeProcessorAddEdges(t *testing.T) {
-
 	tests := []struct {
 		name             string
 		numEdges         int
@@ -196,17 +194,17 @@ func TestGraphEdgeProcessorAddEdges(t *testing.T) {
 
 func TestGraphEdgeProcessorHandleDegenerateEdge(t *testing.T) {
 	tests := []struct {
-		name           string
-		edge           graphEdge
-		options        *graphOptions
-		outBegin       int
-		outEnd         int
-		nOut           int
-		nIn            int
-		inBegin        int
-		in             int
-		wantErr        bool
-		wantErrMessage string
+		name      string
+		edge      graphEdge
+		options   *graphOptions
+		outBegin  int
+		outEnd    int
+		nOut      int
+		nIn       int
+		inBegin   int
+		in        int
+		wantErr   bool
+		wantEdges int
 	}{
 		{
 			name: "discard degenerate edges",
@@ -214,13 +212,117 @@ func TestGraphEdgeProcessorHandleDegenerateEdge(t *testing.T) {
 			options: &graphOptions{
 				degenerateEdges: degenerateEdgesDiscard,
 			},
-			outBegin: 0,
-			outEnd:   1,
-			nOut:     1,
-			nIn:      1,
-			inBegin:  0,
-			in:       1,
-			wantErr:  false,
+			outBegin:  0,
+			outEnd:    1,
+			nOut:      1,
+			nIn:       1,
+			inBegin:   0,
+			in:        1,
+			wantErr:   false,
+			wantEdges: 0,
+		},
+		{
+			name: "keep degenerate edges with merge",
+			edge: graphEdge{first: 1, second: 1},
+			options: &graphOptions{
+				degenerateEdges: degenerateEdgesKeep,
+				duplicateEdges:  duplicateEdgesMerge,
+				edgeType:        edgeTypeDirected,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       2,
+			inBegin:   0,
+			in:        2,
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "keep degenerate edges without merge",
+			edge: graphEdge{first: 1, second: 1},
+			options: &graphOptions{
+				degenerateEdges: degenerateEdgesKeep,
+				duplicateEdges:  duplicateEdgesKeep,
+				edgeType:        edgeTypeDirected,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       2,
+			inBegin:   0,
+			in:        2,
+			wantErr:   false,
+			wantEdges: 2,
+		},
+		{
+			name: "discard excess degenerate edges with incident edges",
+			edge: graphEdge{first: 1, second: 1},
+			options: &graphOptions{
+				degenerateEdges: degenerateEdgesDiscardExcess,
+				edgeType:        edgeTypeDirected,
+			},
+			outBegin:  1,
+			outEnd:    2,
+			nOut:      1,
+			nIn:       1,
+			inBegin:   1,
+			in:        2,
+			wantErr:   false,
+			wantEdges: 0,
+		},
+		{
+			name: "discard excess degenerate edges without incident edges",
+			edge: graphEdge{first: 1, second: 1},
+			options: &graphOptions{
+				degenerateEdges: degenerateEdgesDiscardExcess,
+				edgeType:        edgeTypeDirected,
+				duplicateEdges:  duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       2,
+			inBegin:   0,
+			in:        2,
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "undirected degenerate edges with require siblings",
+			edge: graphEdge{first: 1, second: 1},
+			options: &graphOptions{
+				degenerateEdges: degenerateEdgesKeep,
+				edgeType:        edgeTypeUndirected,
+				siblingPairs:    siblingPairsRequire,
+				duplicateEdges:  duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       2,
+			inBegin:   0,
+			in:        2,
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "undirected degenerate edges with create siblings",
+			edge: graphEdge{first: 1, second: 1},
+			options: &graphOptions{
+				degenerateEdges: degenerateEdgesKeep,
+				edgeType:        edgeTypeUndirected,
+				siblingPairs:    siblingPairsCreate,
+				duplicateEdges:  duplicateEdgesKeep,
+			},
+			outBegin:  0,
+			outEnd:    4,
+			nOut:      4,
+			nIn:       4,
+			inBegin:   0,
+			in:        4,
+			wantErr:   false,
+			wantEdges: 2,
 		},
 		{
 			name: "inconsistent degenerate edges",
@@ -228,34 +330,40 @@ func TestGraphEdgeProcessorHandleDegenerateEdge(t *testing.T) {
 			options: &graphOptions{
 				degenerateEdges: degenerateEdgesKeep,
 			},
-			outBegin:       0,
-			outEnd:         1,
-			nOut:           1,
-			nIn:            2, // Mismatched counts
-			inBegin:        0,
-			in:             2,
-			wantErr:        true,
-			wantErrMessage: "Inconsistent number of degenerate edges",
+			outBegin: 0,
+			outEnd:   1,
+			nOut:     1,
+			nIn:      2, // Mismatched counts
+			inBegin:  0,
+			in:       2,
+			wantErr:  true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ep := &edgeProcessor{
-				options:      test.options,
-				edges:        []graphEdge{test.edge},
-				inputIDs:     []int32{1},
-				idSetLexicon: newIDSetLexicon(),
-				newEdges:     make([]graphEdge, 0),
-				newInputIDs:  make([]int32, 0),
-				outEdges:     []int32{0}, // Initialize with index 0
-				inEdges:      []int32{0}, // Initialize with index 0
+			// Create edges and inputIDs arrays with the correct size
+			edges := make([]graphEdge, test.outEnd)
+			inputIDs := make([]int32, test.outEnd)
+			for i := range edges {
+				edges[i] = test.edge
+				inputIDs[i] = int32(i + 1)
 			}
+
+			ep := newEdgeProcessor(test.options, edges, inputIDs, newIDSetLexicon())
+			// Add the input IDs to the lexicon.
+			for _, id := range inputIDs {
+				ep.idSetLexicon.add(id)
+			}
+
 			gotErr := ep.handleDegenerateEdge(test.edge, test.outBegin, test.outEnd,
 				test.nOut, test.nIn, test.inBegin, test.in)
 			if (gotErr != nil) != test.wantErr {
 				t.Errorf("handleDegenerateEdge() error = %v, wantErr %v",
 					gotErr, test.wantErr)
+			}
+			if !test.wantErr && len(ep.newEdges) != test.wantEdges {
+				t.Errorf("handleDegenerateEdge() added %d edges, want %d", len(ep.newEdges), test.wantEdges)
 			}
 		})
 	}
@@ -263,28 +371,179 @@ func TestGraphEdgeProcessorHandleDegenerateEdge(t *testing.T) {
 
 func TestGraphEdgeProcessorHandleNormalEdge(t *testing.T) {
 	tests := []struct {
-		name           string
-		edge           graphEdge
-		options        *graphOptions
-		outBegin       int
-		outEnd         int
-		nOut           int
-		nIn            int
-		wantErr        bool
-		wantErrMessage string
+		name      string
+		edge      graphEdge
+		options   *graphOptions
+		outBegin  int
+		outEnd    int
+		nOut      int
+		nIn       int
+		wantErr   bool
+		wantEdges int
 	}{
 		{
-			name: "keep sibling pairs",
+			name: "keep sibling pairs with merge",
 			edge: graphEdge{first: 1, second: 2},
 			options: &graphOptions{
-				siblingPairs: siblingPairsKeep,
-				edgeType:     edgeTypeDirected,
+				siblingPairs:   siblingPairsKeep,
+				edgeType:       edgeTypeDirected,
+				duplicateEdges: duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       1,
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "keep sibling pairs without merge",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsKeep,
+				edgeType:       edgeTypeDirected,
+				duplicateEdges: duplicateEdgesKeep,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       1,
+			wantErr:   false,
+			wantEdges: 2,
+		},
+		{
+			name: "discard sibling pairs directed balanced",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsDiscard,
+				edgeType:       edgeTypeDirected,
+				duplicateEdges: duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       2,
+			wantErr:   false,
+			wantEdges: 0,
+		},
+		{
+			name: "discard sibling pairs directed unbalanced",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsDiscard,
+				edgeType:       edgeTypeDirected,
+				duplicateEdges: duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    3,
+			nOut:      3,
+			nIn:       1,
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "discard sibling pairs undirected even",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsDiscard,
+				edgeType:       edgeTypeUndirected,
+				duplicateEdges: duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       2,
+			wantErr:   false,
+			wantEdges: 0,
+		},
+		{
+			name: "discard sibling pairs undirected odd",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsDiscard,
+				edgeType:       edgeTypeUndirected,
+				duplicateEdges: duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    3,
+			nOut:      3,
+			nIn:       3,
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "discard excess sibling pairs directed balanced",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsDiscardExcess,
+				edgeType:       edgeTypeDirected,
+				duplicateEdges: duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       2,
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "discard excess sibling pairs directed unbalanced",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsDiscardExcess,
+				edgeType:       edgeTypeDirected,
+				duplicateEdges: duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    3,
+			nOut:      3,
+			nIn:       1,
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "require sibling pairs directed balanced",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsRequire,
+				edgeType:       edgeTypeDirected,
+				duplicateEdges: duplicateEdgesMerge,
+			},
+			outBegin:  0,
+			outEnd:    2,
+			nOut:      2,
+			nIn:       2,
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "require sibling pairs directed unbalanced",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsRequire,
+				edgeType:       edgeTypeDirected,
+				duplicateEdges: duplicateEdgesMerge,
 			},
 			outBegin: 0,
-			outEnd:   1,
-			nOut:     1,
+			outEnd:   2,
+			nOut:     2,
 			nIn:      1,
-			wantErr:  false,
+			wantErr:  true,
+		},
+		{
+			name: "create sibling pairs undirected",
+			edge: graphEdge{first: 1, second: 2},
+			options: &graphOptions{
+				siblingPairs:   siblingPairsCreate,
+				edgeType:       edgeTypeUndirected,
+				duplicateEdges: duplicateEdgesKeep,
+			},
+			outBegin:  0,
+			outEnd:    4,
+			nOut:      4,
+			nIn:       2,
+			wantErr:   false,
+			wantEdges: 2,
 		},
 		{
 			name: "invalid sibling pairs option",
@@ -293,31 +552,36 @@ func TestGraphEdgeProcessorHandleNormalEdge(t *testing.T) {
 				siblingPairs: siblingPairs(255), // Use max uint8 value as invalid
 				edgeType:     edgeTypeDirected,
 			},
-			outBegin:       0,
-			outEnd:         1,
-			nOut:           1,
-			nIn:            1,
-			wantErr:        true,
-			wantErrMessage: "Invalid sibling pairs option",
+			outBegin: 0,
+			outEnd:   1,
+			nOut:     1,
+			nIn:      1,
+			wantErr:  true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ep := &edgeProcessor{
-				options:      test.options,
-				edges:        []graphEdge{test.edge},
-				inputIDs:     []int32{1},
-				idSetLexicon: newIDSetLexicon(),
-				newEdges:     make([]graphEdge, 0),
-				newInputIDs:  make([]int32, 0),
-				outEdges:     []int32{0}, // Initialize with index 0
-				inEdges:      []int32{0}, // Initialize with index 0
+			// Create edges and inputIDs arrays with the correct size
+			edges := make([]graphEdge, test.outEnd)
+			inputIDs := make([]int32, test.outEnd)
+			for i := range edges {
+				edges[i] = test.edge
+				inputIDs[i] = int32(i + 1)
+			}
+
+			ep := newEdgeProcessor(test.options, edges, inputIDs, newIDSetLexicon())
+			// Add the input IDs to the lexicon.
+			for _, id := range inputIDs {
+				ep.idSetLexicon.add(id)
 			}
 
 			gotErr := ep.handleNormalEdge(test.edge, test.outBegin, test.outEnd, test.nOut, test.nIn)
 			if (gotErr != nil) != test.wantErr {
 				t.Errorf("handleNormalEdge() error = %v, wantErr %v", gotErr, test.wantErr)
+			}
+			if !test.wantErr && len(ep.newEdges) != test.wantEdges {
+				t.Errorf("handleNormalEdge() added %d edges, want %d", len(ep.newEdges), test.wantEdges)
 			}
 		})
 	}
@@ -416,37 +680,30 @@ func TestGraphEdgeProcessorMergeInputIDs(t *testing.T) {
 
 func TestGraphEdgeProcessorRun(t *testing.T) {
 	tests := []struct {
-		name     string
-		edges    []graphEdge
-		inputIDs []int32
-		options  *graphOptions
-		wantErr  bool
+		name      string
+		edges     []graphEdge
+		inputIDs  []int32
+		options   *graphOptions
+		wantErr   bool
+		wantEdges int
 	}{
 		{
-			name:     "empty graph",
-			edges:    []graphEdge{},
-			inputIDs: []int32{},
-			options: &graphOptions{
-				edgeType:        edgeTypeDirected,
-				duplicateEdges:  duplicateEdgesKeep,
-				degenerateEdges: degenerateEdgesKeep,
-				siblingPairs:    siblingPairsKeep,
-			},
-			wantErr: false,
+			name:      "empty graph",
+			edges:     []graphEdge{},
+			inputIDs:  []int32{},
+			options:   defaultGraphOptions(),
+			wantErr:   false,
+			wantEdges: 0,
 		},
 		{
 			name: "single edge",
 			edges: []graphEdge{
 				{first: 1, second: 2},
 			},
-			inputIDs: []int32{1},
-			options: &graphOptions{
-				edgeType:        edgeTypeDirected,
-				duplicateEdges:  duplicateEdgesKeep,
-				degenerateEdges: degenerateEdgesKeep,
-				siblingPairs:    siblingPairsKeep,
-			},
-			wantErr: false,
+			inputIDs:  []int32{1},
+			options:   defaultGraphOptions(),
+			wantErr:   false,
+			wantEdges: 1,
 		},
 		{
 			name: "degenerate edge with discard",
@@ -460,7 +717,105 @@ func TestGraphEdgeProcessorRun(t *testing.T) {
 				degenerateEdges: degenerateEdgesDiscard,
 				siblingPairs:    siblingPairsKeep,
 			},
-			wantErr: false,
+			wantErr:   false,
+			wantEdges: 0,
+		},
+		{
+			name: "duplicate edges with merge",
+			edges: []graphEdge{
+				{first: 1, second: 2},
+				{first: 1, second: 2},
+			},
+			inputIDs: []int32{1, 2},
+			options: &graphOptions{
+				edgeType:        edgeTypeDirected,
+				duplicateEdges:  duplicateEdgesMerge,
+				degenerateEdges: degenerateEdgesKeep,
+				siblingPairs:    siblingPairsKeep,
+			},
+			wantErr:   false,
+			wantEdges: 1,
+		},
+		{
+			name: "sibling pairs with discard",
+			edges: []graphEdge{
+				{first: 1, second: 2},
+				{first: 2, second: 1},
+			},
+			inputIDs: []int32{1, 2},
+			options: &graphOptions{
+				edgeType:        edgeTypeDirected,
+				duplicateEdges:  duplicateEdgesKeep,
+				degenerateEdges: degenerateEdgesKeep,
+				siblingPairs:    siblingPairsDiscard,
+			},
+			wantErr:   false,
+			wantEdges: 0,
+		},
+		{
+			name: "undirected edges with require siblings",
+			edges: []graphEdge{
+				{first: 1, second: 2},
+				{first: 2, second: 1},
+			},
+			inputIDs: []int32{1, 2},
+			options: &graphOptions{
+				edgeType:        edgeTypeUndirected,
+				duplicateEdges:  duplicateEdgesKeep,
+				degenerateEdges: degenerateEdgesKeep,
+				siblingPairs:    siblingPairsRequire,
+			},
+			wantErr:   true,
+			wantEdges: 0,
+		},
+		{
+			name: "undirected edges with create siblings",
+			edges: []graphEdge{
+				{first: 1, second: 2},
+				{first: 2, second: 1},
+			},
+			inputIDs: []int32{1, 2},
+			options: &graphOptions{
+				edgeType:        edgeTypeUndirected,
+				duplicateEdges:  duplicateEdgesKeep,
+				degenerateEdges: degenerateEdgesKeep,
+				siblingPairs:    siblingPairsCreate,
+			},
+			wantErr:   false,
+			wantEdges: 2,
+		},
+		{
+			name: "require siblings with missing sibling",
+			edges: []graphEdge{
+				{first: 1, second: 2},
+			},
+			inputIDs: []int32{1},
+			options: &graphOptions{
+				edgeType:        edgeTypeUndirected,
+				duplicateEdges:  duplicateEdgesKeep,
+				degenerateEdges: degenerateEdgesKeep,
+				siblingPairs:    siblingPairsRequire,
+			},
+			wantErr:   true,
+			wantEdges: 0,
+		},
+		{
+			name: "multiple edges with various options",
+			edges: []graphEdge{
+				{first: 1, second: 2},
+				{first: 2, second: 1},
+				{first: 1, second: 2},
+				{first: 3, second: 3},
+			},
+			inputIDs: []int32{1, 2, 3, 4},
+			options: &graphOptions{
+				edgeType:        edgeTypeDirected,
+				duplicateEdges:  duplicateEdgesMerge,
+				degenerateEdges: degenerateEdgesDiscard,
+				siblingPairs:    siblingPairsDiscardExcess,
+			},
+			wantErr:   false,
+			wantEdges: 1,
 		},
 	}
 
@@ -471,6 +826,9 @@ func TestGraphEdgeProcessorRun(t *testing.T) {
 			err := ep.Run()
 			if (err != nil) != test.wantErr {
 				t.Errorf("Run() error = %v, wantErr %v", err, test.wantErr)
+			}
+			if !test.wantErr && len(ep.edges) != test.wantEdges {
+				t.Errorf("Run() produced %d edges, want %d", len(ep.edges), test.wantEdges)
 			}
 		})
 	}

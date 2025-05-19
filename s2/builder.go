@@ -324,10 +324,10 @@ func (b *builder) init(opts *builderOptions) {
 	// SnapRadius() is very small (at most intersectionError / 1.19).
 	b.checkAllSiteCrossings = (opts.maxEdgeDeviation() >
 		opts.edgeSnapRadius()+snapFunc.MinEdgeVertexSeparation())
-	if opts.intersectionTolerance <= 0 {
-		if b.checkAllSiteCrossings {
-		}
-	}
+
+	// TODO(rsned): need to add check that b.checkAllSiteCrossings is false when tolerance is <= 0.
+	// if opts.intersectionTolerance <= 0 {
+	// }
 
 	// To implement idempotency, we check whether the input geometry could
 	// possibly be the output of a previous Builder invocation. This involves
