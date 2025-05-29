@@ -496,7 +496,8 @@ func (sf IntLatLngSnapper) MinEdgeVertexSeparation() s1.Angle {
 
 // SnapPoint returns a candidate snap site for the given point.
 func (sf IntLatLngSnapper) SnapPoint(point Point) Point {
-	// ABSL_DCHECK_GE(exponent_, 0);// Make sure snap function was initialized.
+	// TODO(rsned): C++ DCHECK's on exponent being in valid range. What should we
+	// do when it's bad here.
 	input := LatLngFromPoint(point)
 	lat := s1.Angle(roundAngle(input.Lat * sf.from))
 	lng := s1.Angle(roundAngle(input.Lng * sf.from))
