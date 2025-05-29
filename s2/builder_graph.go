@@ -14,6 +14,12 @@
 
 package s2
 
+import (
+	"cmp"
+	"errors"
+	"sort"
+)
+
 // A Graph represents a collection of snapped edges that is passed
 // to a Layer for assembly. (Example layers include polygons, polylines, and
 // polygon meshes.)
@@ -241,4 +247,340 @@ type graphOptions struct {
 	//
 	// Default is false.
 	disableVertexFiltering bool
+}
+
+// maxVertexID is the maximum possible vertex ID, used as a sentinel value.
+const maxVertexID = int32(^uint32(0) >> 1)
+
+// graphEdge is a tuple of edge IDs.
+type graphEdge struct {
+	first, second int32
+}
+
+// reverse returns a new graphEdge with the vertices in reverse order.
+func (g graphEdge) reverse() graphEdge {
+	return graphEdge{first: g.second, second: g.first}
+}
+
+// minGraphEdge returns the minimum of two edges in lexicographic order.
+func minGraphEdge(a, b graphEdge) graphEdge {
+	if a.first < b.first || (a.first == b.first && a.second <= b.second) {
+		return a
+	}
+	return b
+}
+
+// stableLessThan compares two graphEdges for stable sorting.
+// It uses the graphEdge IDs as a tiebreaker to ensure a stable sort.
+func stableLessThan(a, b graphEdge, aID, bID int32) bool {
+	if a.first != b.first {
+		return a.first < b.first
+	}
+	if a.second != b.second {
+		return a.second < b.second
+	}
+	return aID < bID
+}
+
+func stableGraphEdgeCmp(a, b graphEdge, aID, bID int32) int {
+	if a.first != b.first {
+		return cmp.Compare(a.first, b.first)
+	}
+
+	if a.second != b.second {
+		return cmp.Compare(a.second, b.second)
+	}
+	return cmp.Compare(aID, bID)
+
+}
+
+// graphEdgeProccessor processes edges in a Graph to handle duplicates, siblings,
+// and degenerate edges according to the specified GraphOptions.
+type graphEdgeProccessor struct {
+	options      *graphOptions
+	edges        []graphEdge
+	inputIDs     []int32
+	idSetLexicon *idSetLexicon
+	outEdges     []int32
+	inEdges      []int32
+	newEdges     []graphEdge
+	newInputIDs  []int32
+}
+
+// newgraphEdgeProccessor creates a new graphEdgeProccessor with the given options and data.
+func newGraphEdgeProcessor(opts *graphOptions, edges []graphEdge, inputIDs []int32,
+	idSetLexicon *idSetLexicon) *graphEdgeProccessor {
+	// opts should not be nil at this point, but just in case.
+	if opts == nil {
+		opts = &graphOptions{}
+	}
+	ep := &graphEdgeProccessor{
+		options:      opts,
+		edges:        edges,
+		inputIDs:     inputIDs,
+		idSetLexicon: idSetLexicon,
+		inEdges:      make([]int32, len(edges)),
+		outEdges:     make([]int32, len(edges)),
+	}
+	if ep.idSetLexicon == nil {
+		ep.idSetLexicon = newIDSetLexicon()
+	}
+
+	// Sort the outgoing and incoming edges in lexicographic order.
+	// We use a stable sort to ensure that each undirected edge becomes a sibling pair,
+	// even if there are multiple identical input edges.
+
+	// Fill the slice with a number sequence.
+	for i := range ep.outEdges {
+		ep.outEdges[i] = int32(i)
+	}
+	stableSortEdgeIDs(ep.outEdges, func(a, b int32) bool {
+		return stableLessThan(ep.edges[a], ep.edges[b], a, b)
+	})
+
+	// Fill the slice with a number sequence.
+	for i := range ep.inEdges {
+		ep.inEdges[i] = int32(i)
+	}
+	stableSortEdgeIDs(ep.inEdges, func(a, b int32) bool {
+		return stableLessThan(ep.edges[a].reverse(), ep.edges[b].reverse(), a, b)
+	})
+
+	ep.newEdges = make([]graphEdge, 0, len(edges))
+	ep.newInputIDs = make([]int32, 0, len(edges))
+
+	return ep
+}
+
+// stableSortEdgeIDs performs a stable sort on the given slice of EdgeIDs
+// using the provided less function.
+func stableSortEdgeIDs(edges []int32, less func(a, b int32) bool) {
+	sort.SliceStable(edges, func(i, j int) bool {
+		return less(edges[i], edges[j])
+	})
+}
+
+// addEdge adds a single edge with its input edge ID set to the new edges.
+func (ep *graphEdgeProccessor) addEdge(edge graphEdge, inputEdgeIDSetID int32) {
+	ep.newEdges = append(ep.newEdges, edge)
+	ep.newInputIDs = append(ep.newInputIDs, inputEdgeIDSetID)
+}
+
+// addEdges adds multiple copies of the same edge with the same input edge ID set.
+func (ep *graphEdgeProccessor) addEdges(numEdges int, edge graphEdge, inputEdgeIDSetID int32) {
+	for i := 0; i < numEdges; i++ {
+		ep.addEdge(edge, inputEdgeIDSetID)
+	}
+}
+
+// copyEdges copies a range of edges from the input edges to the new edges.
+func (ep *graphEdgeProccessor) copyEdges(outBegin, outEnd int) {
+	for i := outBegin; i < outEnd; i++ {
+		ep.addEdge(ep.edges[ep.outEdges[i]], ep.inputIDs[ep.outEdges[i]])
+	}
+}
+
+// mergeInputIDs merges the input edge ID sets for a range of edges.
+func (ep *graphEdgeProccessor) mergeInputIDs(outBegin, outEnd int) int32 {
+	if outEnd-outBegin == 1 {
+		return ep.inputIDs[ep.outEdges[outBegin]]
+	}
+
+	var tmpIDs []int32
+	for i := outBegin; i < outEnd; i++ {
+		tmpIDs = append(tmpIDs, ep.idSetLexicon.idSet(ep.inputIDs[ep.outEdges[i]])...)
+	}
+
+	return ep.idSetLexicon.add(tmpIDs...)
+}
+
+// Run processes the edges according to the specified options.
+func (ep *graphEdgeProccessor) Run() error {
+	numEdges := len(ep.edges)
+	if numEdges == 0 {
+		return nil
+	}
+
+	var err error
+
+	// Walk through the two sorted arrays performing a merge join. For each
+	// edge, gather all the duplicate copies of the edge in both directions
+	// (outgoing and incoming). Then decide what to do based on options and
+	// how many copies of the edge there are in each direction.
+	out, in := 0, 0
+	outEdge := ep.edges[ep.outEdges[out]]
+	inEdge := ep.edges[ep.inEdges[in]]
+	sentinel := graphEdge{first: maxVertexID, second: maxVertexID}
+
+	for {
+		edge := minGraphEdge(outEdge, inEdge.reverse())
+		if edge == sentinel {
+			break
+		}
+
+		outBegin := out
+		inBegin := in
+
+		for outEdge == edge {
+			out++
+			if out == numEdges {
+				outEdge = sentinel
+			} else {
+				outEdge = ep.edges[ep.outEdges[out]]
+			}
+		}
+		for inEdge.reverse() == edge {
+			in++
+			if in == numEdges {
+				inEdge = sentinel
+			} else {
+				inEdge = ep.edges[ep.inEdges[in]]
+			}
+		}
+		nOut := out - outBegin
+		nIn := in - inBegin
+
+		if edge.first == edge.second {
+			// This is a degenerate edge.
+			err = ep.handleDegenerateEdge(edge, outBegin, out, nOut, nIn, inBegin, in)
+		} else {
+			err = ep.handleNormalEdge(edge, outBegin, out, nOut, nIn)
+		}
+	}
+
+	// Replace the old edges with the new ones.
+	ep.edges = ep.newEdges
+	ep.inputIDs = ep.newInputIDs
+	return err
+}
+
+// handleDegenerateEdge handles a degenerate edge (an edge from a vertex to itself).
+func (ep *graphEdgeProccessor) handleDegenerateEdge(edge graphEdge, outBegin, outEnd int, nOut, nIn, inBegin, in int) error {
+	// This is a degenerate edge.
+	if nOut != nIn {
+		return errors.New("inconsistent number of degenerate edges")
+	}
+	if ep.options.degenerateEdges == degenerateEdgesDiscard {
+		return nil
+	}
+	if ep.options.degenerateEdges == degenerateEdgesDiscardExcess {
+		// Check if there are any non-degenerate incident edges.
+		if (outBegin > 0 && ep.edges[ep.outEdges[outBegin-1]].first == edge.first) ||
+			(outEnd < len(ep.edges) && ep.edges[ep.outEdges[outEnd]].first == edge.first) ||
+			(inBegin > 0 && ep.edges[ep.inEdges[inBegin-1]].second == edge.first) ||
+			(in < len(ep.edges) && ep.edges[ep.inEdges[in]].second == edge.first) {
+			return nil // There were some, so discard.
+		}
+	}
+
+	// degenerateEdgesDiscardExcess also merges degenerate edges.
+	merge := ep.options.duplicateEdges == duplicateEdgesMerge ||
+		ep.options.degenerateEdges == degenerateEdgesDiscardExcess
+
+	if ep.options.edgeType == edgeTypeUndirected &&
+		(ep.options.siblingPairs == siblingPairsRequire ||
+			ep.options.siblingPairs == siblingPairsCreate) {
+		// When we have undirected edges and are guaranteed to have siblings,
+		// we cut the number of edges in half (see Builder).
+		if nOut&1 != 0 {
+			return errors.New("odd number of undirected degenerate edges")
+		}
+		if merge {
+			ep.addEdges(1, edge, ep.mergeInputIDs(outBegin, outEnd))
+		} else {
+			ep.addEdges(nOut/2, edge, ep.mergeInputIDs(outBegin, outEnd))
+		}
+	} else if merge {
+		if ep.options.edgeType == edgeTypeUndirected {
+			ep.addEdges(2, edge, ep.mergeInputIDs(outBegin, outEnd))
+		} else {
+			ep.addEdges(1, edge, ep.mergeInputIDs(outBegin, outEnd))
+		}
+	} else if ep.options.siblingPairs == siblingPairsDiscard ||
+		ep.options.siblingPairs == siblingPairsDiscardExcess {
+		// Any SiblingPair option that discards edges causes the labels of all
+		// duplicate edges to be merged together (see Builder).
+		ep.addEdges(nOut, edge, ep.mergeInputIDs(outBegin, outEnd))
+	} else {
+		ep.copyEdges(outBegin, outEnd)
+	}
+	return nil
+}
+
+// handleNormalEdge handles a non-degenerate edge.
+func (ep *graphEdgeProccessor) handleNormalEdge(edge graphEdge, outBegin, outEnd int, nOut, nIn int) error {
+	var err error
+	switch ep.options.siblingPairs {
+	case siblingPairsKeep:
+		if nOut > 1 && ep.options.duplicateEdges == duplicateEdgesMerge {
+			ep.addEdge(edge, ep.mergeInputIDs(outBegin, outEnd))
+		} else {
+			ep.copyEdges(outBegin, outEnd)
+		}
+	case siblingPairsDiscard:
+		if ep.options.edgeType == edgeTypeDirected {
+			// If nOut == nIn: balanced sibling pairs
+			// If nOut < nIn:  unbalanced siblings, in the form AB, BA, BA
+			// If nOut > nIn:  unbalanced siblings, in the form AB, AB, BA
+			if nOut <= nIn {
+				return nil
+			}
+			// Any option that discards edges causes the labels of all duplicate
+			// edges to be merged together (see Builder).
+			if ep.options.duplicateEdges == duplicateEdgesMerge {
+				ep.addEdges(1, edge, ep.mergeInputIDs(outBegin, outEnd))
+			} else {
+				ep.addEdges(nOut-nIn, edge, ep.mergeInputIDs(outBegin, outEnd))
+			}
+		} else {
+			if nOut&1 == 0 {
+				return nil
+			}
+			ep.addEdge(edge, ep.mergeInputIDs(outBegin, outEnd))
+		}
+	case siblingPairsDiscardExcess:
+		if ep.options.edgeType == edgeTypeDirected {
+			// See comments above. The only difference is that if there are
+			// balanced sibling pairs, we want to keep one such pair.
+			if nOut < nIn {
+				return nil
+			}
+			if ep.options.duplicateEdges == duplicateEdgesMerge {
+				ep.addEdges(1, edge, ep.mergeInputIDs(outBegin, outEnd))
+			} else {
+				ep.addEdges(maxInt(1, nOut-nIn), edge, ep.mergeInputIDs(outBegin, outEnd))
+			}
+		} else {
+			if (nOut & 1) != 0 {
+				ep.addEdges(1, edge, ep.mergeInputIDs(outBegin, outEnd))
+			} else {
+				ep.addEdges(2, edge, ep.mergeInputIDs(outBegin, outEnd))
+			}
+		}
+	case siblingPairsCreate, siblingPairsRequire:
+		// In C++, this check also checked the state of the S2Error passed in
+		// to make sure no previous errors had occured before now.
+		if ep.options.siblingPairs == siblingPairsRequire &&
+			(ep.options.edgeType == edgeTypeDirected && nOut != nIn ||
+				ep.options.edgeType == edgeTypeUndirected && nOut&1 != 0) {
+			err = errors.New("expected all input edges to have siblings but some were missing")
+		}
+
+		if ep.options.duplicateEdges == duplicateEdgesMerge {
+			ep.addEdge(edge, ep.mergeInputIDs(outBegin, outEnd))
+		} else if ep.options.edgeType == edgeTypeUndirected {
+			// Convert graph to use directed edges instead (see documentation of
+			// siblingPairsCreate/siblingPairsRequire for undirected edges).
+			ep.addEdges((nOut+1)/2, edge, ep.mergeInputIDs(outBegin, outEnd))
+		} else {
+			ep.copyEdges(outBegin, outEnd)
+			if nIn > nOut {
+				// Automatically created edges have no input edge ids or labels.
+				ep.addEdges(nIn-nOut, edge, emptySetID)
+			}
+		}
+	default:
+		return errors.New("invalid sibling pairs option")
+	}
+	return err
 }
