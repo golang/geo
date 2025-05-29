@@ -20,49 +20,6 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-const (
-	// maxEdgeDeviationRatio is set so that MaxEdgeDeviation will be large enough
-	// compared to snapRadius such that edge splitting is rare.
-	//
-	// Using spherical trigonometry, if the endpoints of an edge of length L
-	// move by at most a distance R, the center of the edge moves by at most
-	// asin(sin(R) / cos(L / 2)). Thus the (MaxEdgeDeviation / SnapRadius)
-	// ratio increases with both the snap radius R and the edge length L.
-	//
-	// We arbitrarily limit the edge deviation to be at most 10% more than the
-	// snap radius. With the maximum allowed snap radius of 70 degrees, this
-	// means that edges up to 30.6 degrees long are never split. For smaller
-	// snap radii, edges up to 49 degrees long are never split. (Edges of any
-	// length are not split unless their endpoints move far enough so that the
-	// actual edge deviation exceeds the limit; in practice, splitting is rare
-	// even with long edges.) Note that it is always possible to split edges
-	// when MaxEdgeDeviation is exceeded.
-	maxEdgeDeviationRatio = 1.1
-)
-
-// isFullPolygonPredicate is an interface for determining if Polygons are
-// full or not. For output layers that represent polygons, there is an ambiguity
-// inherent in spherical geometry that does not exist in planar geometry.
-// Namely, if a polygon has no edges, does it represent the empty polygon
-// (containing no points) or the full polygon (containing all points)? This
-// ambiguity also occurs for polygons that consist only of degeneracies, e.g.
-// a degenerate loop with only two edges could be either a degenerate shell in
-// the empty polygon or a degenerate hole in the full polygon.
-//
-// To resolve this ambiguity, an IsFullPolygonPredicate may be specified for
-// each output layer (see AddIsFullPolygonPredicate below). If the output
-// after snapping consists only of degenerate edges and/or sibling pairs
-// (including the case where there are no edges at all), then the layer
-// implementation calls the given predicate to determine whether the polygon
-// is empty or full except for those degeneracies. The predicate is given
-// an S2Builder::Graph containing the output edges, but note that in general
-// the predicate must also have knowledge of the input geometry in order to
-// determine the correct result.
-//
-// This predicate is only needed by layers that are assembled into polygons.
-// It is not used by other layer types.
-type isFullPolygonPredicate func(g *graph) (bool, error)
-
 // builder is a tool for assembling polygonal geometry from edges. Here are
 // some of the things it is designed for:
 //
@@ -73,7 +30,7 @@ type isFullPolygonPredicate func(g *graph) (bool, error)
 //     or E7 lat/lng coordinates) while preserving the input topology and with
 //     guaranteed error bounds.
 //
-// 3. Simplifying geometry (e.g. for indexing, display, or storage).
+//  3. Simplifying geometry (e.g. for indexing, display, or storage).
 //
 //  4. Importing geometry from other formats, including repairing geometry
 //     that has errors.
@@ -81,7 +38,7 @@ type isFullPolygonPredicate func(g *graph) (bool, error)
 //  5. As a tool for implementing more complex operations such as polygon
 //     intersections and unions.
 //
-// The implementation is based on the framework of "snap rounding".  Unlike
+// The implementation is based on the framework of "snap rounding". Unlike
 // most snap rounding implementations, Builder defines edges as geodesics on
 // the sphere (straight lines) and uses the topology of the sphere (i.e.,
 // there are no "seams" at the poles or 180th meridian). The algorithm is
@@ -148,22 +105,22 @@ type isFullPolygonPredicate func(g *graph) (bool, error)
 //	builder.StartLayer(NewPolygonLayer(output))
 //	builder.AddPolygon(input);
 //	if err := builder.Build(); err != nil {
-//	  fmt.Printf("error building: %v\n"), err
-//	  ...
+//	    fmt.Printf("error building: %v\n"), err)
+//	    // ...
 //	}
 //
-// TODO(rsned): Make the type public when Builder is ready.
+// TODO(rsned): Make this type public when Builder is ready.
 type builder struct {
-	opts *builderOptions
+	opts builderOptions
 
 	// The maximum distance (inclusive) that a vertex can move when snapped,
 	// equal to options.SnapFunction().SnapRadius()).
-	siteSnapRadiusCA s1.ChordAngle
+	siteSnapRadiusChordAngle s1.ChordAngle
 
 	// The maximum distance (inclusive) that an edge can move when snapping to a
 	// snap site. It can be slightly larger than the site snap radius when
 	// edges are being split at crossings.
-	edgeSnapRadiusCA s1.ChordAngle
+	edgeSnapRadiusChordAngle s1.ChordAngle
 
 	// True if we need to check that snapping has not changed the input topology
 	// around any vertex (i.e. Voronoi site). Normally this is only necessary for
@@ -174,16 +131,16 @@ type builder struct {
 	// cause us to add a separation site anyway.
 	checkAllSiteCrossings bool
 
-	maxEdgeDeviation       s1.Angle
-	edgeSiteQueryRadiusCA  s1.ChordAngle
-	minEdgeLengthToSplitCA s1.ChordAngle
+	maxEdgeDeviation               s1.Angle
+	edgeSiteQueryRadiusChordAngle  s1.ChordAngle
+	minEdgeLengthToSplitChordAngle s1.ChordAngle
 
-	minSiteSeparation            s1.Angle
-	minSiteSeparationCA          s1.ChordAngle
-	minEdgeSiteSeparationCA      s1.ChordAngle
-	minEdgeSiteSeparationCALimit s1.ChordAngle
+	minSiteSeparation                    s1.Angle
+	minSiteSeparationChordAngle          s1.ChordAngle
+	minEdgeSiteSeparationChordAngle      s1.ChordAngle
+	minEdgeSiteSeparationChordAngleLimit s1.ChordAngle
 
-	maxAdjacentSiteSeparationCA s1.ChordAngle
+	maxAdjacentSiteSeparationChordAngle s1.ChordAngle
 
 	// The squared sine of the edge snap radius. This is equivalent to the snap
 	// radius (squared) for distances measured through the interior of the
@@ -199,7 +156,7 @@ type builder struct {
 
 	// Initially false, and set to true when it is discovered that at least one
 	// input vertex or edge does not meet the output guarantees (e.g., that
-	// vertices are separated by at least snapFunction.minVertexSeparation).
+	// vertices are separated by at least snapper.minVertexSeparation).
 	snappingNeeded bool
 
 	// A flag indicating whether labelSet has been modified since the last
@@ -252,18 +209,18 @@ type builder struct {
 }
 
 // init initializes this instance with the given options.
-func (b *builder) init(opts *builderOptions) {
+func (b *builder) init(opts builderOptions) {
 	b.opts = opts
 
-	snapFunc := opts.snapFunction
-	sr := snapFunc.SnapRadius()
+	snapper := opts.snapper
+	sr := snapper.SnapRadius()
 
 	// Cap the snap radius to the limit.
 	sr = min(sr, maxSnapRadius)
 
 	// Convert the snap radius to an ChordAngle. This is the "true snap
 	// radius" used when evaluating exact predicates.
-	b.siteSnapRadiusCA = s1.ChordAngleFromAngle(sr)
+	b.siteSnapRadiusChordAngle = s1.ChordAngleFromAngle(sr)
 
 	// When intersectionTolerance is non-zero we need to use a larger snap
 	// radius for edges than for vertices to ensure that both edges are snapped
@@ -275,25 +232,25 @@ func (b *builder) init(opts *builderOptions) {
 	// snap radius for edges to at least the sum of these two values (calculated
 	// conservatively).
 	edgeSnapRadius := opts.edgeSnapRadius()
-	b.edgeSnapRadiusCA = roundUp(edgeSnapRadius)
+	b.edgeSnapRadiusChordAngle = roundChordAngleUp(edgeSnapRadius)
 	b.snappingRequested = (edgeSnapRadius > 0)
 
 	// Compute the maximum distance that a vertex can be separated from an
 	// edge while still affecting how that edge is snapped.
 	b.maxEdgeDeviation = opts.maxEdgeDeviation()
-	b.edgeSiteQueryRadiusCA = s1.ChordAngleFromAngle(b.maxEdgeDeviation +
-		snapFunc.MinEdgeVertexSeparation())
+	b.edgeSiteQueryRadiusChordAngle = s1.ChordAngleFromAngle(b.maxEdgeDeviation +
+		snapper.MinEdgeVertexSeparation())
 
 	// Compute the maximum edge length such that even if both endpoints move by
 	// the maximum distance allowed (i.e., edgeSnapRadius), the center of the
 	// edge will still move by less than maxEdgeDeviation. This saves us a
 	// lot of work since then we don't need to check the actual deviation.
 	if !b.snappingRequested {
-		b.minEdgeLengthToSplitCA = s1.InfChordAngle()
+		b.minEdgeLengthToSplitChordAngle = s1.InfChordAngle()
 	} else {
 		// This value varies between 30 and 50 degrees depending on
 		// the snap radius.
-		b.minEdgeLengthToSplitCA = s1.ChordAngleFromAngle(s1.Angle(2 *
+		b.minEdgeLengthToSplitChordAngle = s1.ChordAngleFromAngle(s1.Angle(2 *
 			math.Acos(math.Sin(edgeSnapRadius.Radians())/
 				math.Sin(b.maxEdgeDeviation.Radians()))))
 	}
@@ -323,7 +280,7 @@ func (b *builder) init(opts *builderOptions) {
 	// edgeSnapRadius() to exceed SnapRadius() by intersectionError) and
 	// SnapRadius() is very small (at most intersectionError / 1.19).
 	b.checkAllSiteCrossings = (opts.maxEdgeDeviation() >
-		opts.edgeSnapRadius()+snapFunc.MinEdgeVertexSeparation())
+		opts.edgeSnapRadius()+snapper.MinEdgeVertexSeparation())
 
 	// TODO(rsned): need to add check that b.checkAllSiteCrossings is false when tolerance is <= 0.
 	// if opts.intersectionTolerance <= 0 {
@@ -334,18 +291,18 @@ func (b *builder) init(opts *builderOptions) {
 	// testing whether any site/site or edge/site pairs are too close together.
 	// This is done using exact predicates, which require converting the minimum
 	// separation values to a ChordAngle.
-	b.minSiteSeparation = snapFunc.MinVertexSeparation()
-	b.minSiteSeparationCA = s1.ChordAngleFromAngle(b.minSiteSeparation)
-	b.minEdgeSiteSeparationCA = s1.ChordAngleFromAngle(snapFunc.MinEdgeVertexSeparation())
+	b.minSiteSeparation = snapper.MinVertexSeparation()
+	b.minSiteSeparationChordAngle = s1.ChordAngleFromAngle(b.minSiteSeparation)
+	b.minEdgeSiteSeparationChordAngle = s1.ChordAngleFromAngle(snapper.MinEdgeVertexSeparation())
 
 	// This is an upper bound on the distance computed by ClosestPointQuery
-	// where the true distance might be less than minEdgeSiteSeparationCA.
-	b.minEdgeSiteSeparationCALimit = addPointToEdgeError(b.minEdgeSiteSeparationCA)
+	// where the true distance might be less than minEdgeSiteSeparationChordAngle.
+	b.minEdgeSiteSeparationChordAngleLimit = addPointToEdgeError(b.minEdgeSiteSeparationChordAngle)
 
 	// Compute the maximum possible distance between two sites whose Voronoi
 	// regions touch. (The maximum radius of each Voronoi region is
 	// edgeSnapRadius.) Then increase this bound to account for errors.
-	b.maxAdjacentSiteSeparationCA = addPointToPointError(roundUp(2 * opts.edgeSnapRadius()))
+	b.maxAdjacentSiteSeparationChordAngle = addPointToPointError(roundChordAngleUp(2 * opts.edgeSnapRadius()))
 
 	// Finally, we also precompute sin^2(edgeSnapRadius), which is simply the
 	// squared distance between a vertex and an edge measured perpendicular to
@@ -369,10 +326,15 @@ func (b *builder) init(opts *builderOptions) {
 }
 
 // roundUp rounds the given angle up by the max error and returns it as a chord angle.
-func roundUp(a s1.Angle) s1.ChordAngle {
+func roundChordAngleUp(a s1.Angle) s1.ChordAngle {
 	ca := s1.ChordAngleFromAngle(a)
 	return ca.Expanded(ca.MaxAngleError())
 }
+
+// roundAngleUp rounds the given angle up by the max error and returns it as an angle.
+//func roundAngleUp(a s1.Angle) s1.Angle {
+//	return a.Expanded(a.MaxAngleError())
+//}
 
 func addPointToPointError(ca s1.ChordAngle) s1.ChordAngle {
 	return ca.Expanded(ca.MaxPointError())
@@ -381,3 +343,284 @@ func addPointToPointError(ca s1.ChordAngle) s1.ChordAngle {
 func addPointToEdgeError(ca s1.ChordAngle) s1.ChordAngle {
 	return ca.Expanded(minUpdateDistanceMaxError(ca))
 }
+
+const (
+	// maxEdgeDeviationRatio is set so that MaxEdgeDeviation will be large enough
+	// compared to snapRadius such that edge splitting is rare.
+	//
+	// Using spherical trigonometry, if the endpoints of an edge of length L
+	// move by at most a distance R, the center of the edge moves by at most
+	// asin(sin(R) / cos(L / 2)). Thus the (MaxEdgeDeviation / SnapRadius)
+	// ratio increases with both the snap radius R and the edge length L.
+	//
+	// We arbitrarily limit the edge deviation to be at most 10% more than the
+	// snap radius. With the maximum allowed snap radius of 70 degrees, this
+	// means that edges up to 30.6 degrees long are never split. For smaller
+	// snap radii, edges up to 49 degrees long are never split. (Edges of any
+	// length are not split unless their endpoints move far enough so that the
+	// actual edge deviation exceeds the limit; in practice, splitting is rare
+	// even with long edges.) Note that it is always possible to split edges
+	// when MaxEdgeDeviation is exceeded.
+	maxEdgeDeviationRatio = 1.1
+)
+
+// isFullPolygonPredicate is an interface for determining if Polygons are
+// full or not. For output layers that represent polygons, there is an ambiguity
+// inherent in spherical geometry that does not exist in planar geometry.
+// Namely, if a polygon has no edges, does it represent the empty polygon
+// (containing no points) or the full polygon (containing all points)? This
+// ambiguity also occurs for polygons that consist only of degeneracies, e.g.
+// a degenerate loop with only two edges could be either a degenerate shell in
+// the empty polygon or a degenerate hole in the full polygon.
+//
+// To resolve this ambiguity, an IsFullPolygonPredicate may be specified for
+// each output layer (see AddIsFullPolygonPredicate below). If the output
+// after snapping consists only of degenerate edges and/or sibling pairs
+// (including the case where there are no edges at all), then the layer
+// implementation calls the given predicate to determine whether the polygon
+// is empty or full except for those degeneracies. The predicate is given
+// a Graph containing the output edges, but note that in general
+// the predicate must also have knowledge of the input geometry in order to
+// determine the correct result.
+//
+// This predicate is only needed by layers that are assembled into polygons.
+// It is not used by other layer types.
+type isFullPolygonPredicate func(g *graph) (bool, error)
+
+// polylineType indicates whether polylines should be "paths" (which don't
+// allow duplicate vertices, except possibly the first and last vertex) or
+// "walks" (which allow duplicate vertices and edges).
+type polylineType uint8
+
+const (
+	polylineTypePath polylineType = iota
+	polylineTypeWalk
+)
+
+// edgeType indicates whether the input edges are undirected. Typically this is
+// specified for each output layer (e.g., PolygonBuilderLayer).
+//
+// Directed edges are preferred, since otherwise the output is ambiguous.
+// For example, output polygons may be the *inverse* of the intended result
+// (e.g., a polygon intended to represent the world's oceans may instead
+// represent the world's land masses). Directed edges are also somewhat
+// more efficient.
+//
+// However even with undirected edges, most Builder layer types try to
+// preserve the input edge direction whenever possible. Generally, edges
+// are reversed only when it would yield a simpler output. For example,
+// PolygonLayer assumes that polygons created from undirected edges should
+// cover at most half of the sphere. Similarly, PolylineVectorBuilderLayer
+// assembles edges into as few polylines as possible, even if this means
+// reversing some of the "undirected" input edges.
+//
+// For shapes with interiors, directed edges should be oriented so that the
+// interior is to the left of all edges. This means that for a polygon with
+// holes, the outer loops ("shells") should be directed counter-clockwise
+// while the inner loops ("holes") should be directed clockwise. Note that
+// AddPolygon() follows this convention automatically.
+type edgeType uint8
+
+const (
+	edgeTypeDirected edgeType = iota
+	edgeTypeUndirected
+)
+
+// builderOptions holds the options for the Builder.
+type builderOptions struct {
+	// snapFunction holds the desired snap function.
+	//
+	// Note that if your input data includes vertices that were created using
+	// Intersection(), then you should use a "snapRadius" of
+	// at least intersectionMergeRadius, e.g. by calling
+	//
+	//  options.setSnapFunction(IdentitySnapFunction(intersectionMergeRadius));
+	//
+	// DEFAULT: IdentitySnapFunction(s1.Angle(0))
+	// [This does no snapping and preserves all input vertices exactly.]
+	snapper Snapper
+
+	// splitCrossingEdges determines how crossing edges are handled by Builder.
+	// If true, then detect all pairs of crossing edges and eliminate them by
+	// adding a new vertex at their intersection point. See also the
+	// AddIntersection() method which allows intersection points to be added
+	// selectively.
+	//
+	// When this option if true, intersectionTolerance is automatically set
+	// to a minimum of intersectionError (see intersectionTolerance
+	// for why this is necessary). Note that this means that edges can move
+	// by up to intersectionError even when the specified snap radius is
+	// zero. The exact distance that edges can move is always given by
+	// MaxEdgeDeviation().
+	//
+	// Undirected edges should always be used when the output is a polygon,
+	// since splitting a directed loop at a self-intersection converts it into
+	// two loops that don't define a consistent interior according to the
+	// "interior is on the left" rule. (On the other hand, it is fine to use
+	// directed edges when defining a polygon *mesh* because in that case the
+	// input consists of sibling edge pairs.)
+	//
+	// Self-intersections can also arise when importing data from a 2D
+	// projection. You can minimize this problem by subdividing the input
+	// edges so that the S2 edges (which are geodesics) stay close to the
+	// original projected edges (which are curves on the sphere). This can
+	// be done using EdgeTessellator, for example.
+	//
+	// DEFAULT: false
+	splitCrossingEdges bool
+
+	// intersectionTolerance specifies the maximum allowable distance between
+	// a vertex added by AddIntersection() and the edge(s) that it is intended
+	// to snap to. This method must be called before AddIntersection() can be
+	// used. It has the effect of increasing the snap radius for edges (but not
+	// vertices) by the given distance.
+	//
+	// The intersection tolerance should be set to the maximum error in the
+	// intersection calculation used. For example, if Intersection()
+	// is used then the error should be set to intersectionError. If
+	// PointOnLine is used then the error should be set to PointOnLineError.
+	// If Project is used then the error should be set to
+	// projectPerpendicularError. If more than one method is used then the
+	// intersection tolerance should be set to the maximum such error.
+	//
+	// The reason this option is necessary is that computed intersection
+	// points are not exact. For example, Intersection(a, b, c, d)
+	// returns a point up to intersectionError away from the true
+	// mathematical intersection of the edges AB and CD. Furthermore such
+	// intersection points are subject to further snapping in order to ensure
+	// that no pair of vertices is closer than the specified snap radius. For
+	// example, suppose the computed intersection point X of edges AB and CD
+	// is 1 nanonmeter away from both edges, and the snap radius is 1 meter.
+	// In that case X might snap to another vertex Y exactly 1 meter away,
+	// which would leave us with a vertex Y that could be up to 1.000000001
+	// meters from the edges AB and/or CD. This means that AB and/or CD might
+	// not snap to Y leaving us with two edges that still cross each other.
+	//
+	// However if the intersection tolerance is set to 1 nanometer then the
+	// snap radius for edges is increased to 1.000000001 meters ensuring that
+	// both edges snap to a common vertex even in this worst case. (Tthis
+	// technique does not work if the vertex snap radius is increased as well;
+	// it requires edges and vertices to be handled differently.)
+	//
+	// Note that this option allows edges to move by up to the given
+	// intersection tolerance even when the snap radius is zero. The exact
+	// distance that edges can move is always given by maxEdgeDeviation()
+	// defined above.
+	//
+	// When splitCrossingEdges is true, the intersection tolerance is
+	// automatically set to a minimum of intersectionError. A larger
+	// value can be specified by calling this method explicitly.
+	//
+	// DEFAULT: s1.Angle(0)
+	intersectionTolerance s1.Angle
+
+	// simplifyEdgeChains determines if the output geometry should be simplified
+	// by replacing nearly straight chains of short edges with a single long edge.
+	//
+	// The combined effect of snapping and simplifying will not change the
+	// input by more than the guaranteed tolerances (see the list documented
+	// with the SnapFunction class). For example, simplified edges are
+	// guaranteed to pass within snapRadius() of the *original* positions of
+	// all vertices that were removed from that edge. This is a much tighter
+	// guarantee than can be achieved by snapping and simplifying separately.
+	//
+	// However, note that this option does not guarantee idempotency. In
+	// other words, simplifying geometry that has already been simplified once
+	// may simplify it further. (This is unavoidable, since tolerances are
+	// measured with respect to the original geometry, which is no longer
+	// available when the geometry is simplified a second time.)
+	//
+	// When the output consists of multiple layers, simplification is
+	// guaranteed to be consistent: for example, edge chains are simplified in
+	// the same way across layers, and simplification preserves topological
+	// relationships between layers (e.g., no crossing edges will be created).
+	// Note that edge chains in different layers do not need to be identical
+	// (or even have the same number of vertices, etc) in order to be
+	// simplified together. All that is required is that they are close
+	// enough together so that the same simplified edge can meet all of their
+	// individual snapping guarantees.
+	//
+	// Note that edge chains are approximated as parametric curves rather than
+	// point sets. This means that if an edge chain backtracks on itself (for
+	// example, ABCDEFEDCDEFGH) then such backtracking will be preserved to
+	// within snapRadius() (for example, if the preceding point were all in a
+	// straight line then the edge chain would be simplified to ACFCFH, noting
+	// that C and F have degree > 2 and therefore can't be simplified away).
+	//
+	// Simplified edges are assigned all labels associated with the edges of
+	// the simplified chain.
+	//
+	// For this option to have any effect, a SnapFunction with a non-zero
+	// snapRadius() must be specified. Also note that vertices specified
+	// using ForceVertex are never simplified away.
+	//
+	// DEFAULT: false
+	simplifyEdgeChains bool
+
+	// idempotent determines if snapping occurs only when the input geometry
+	// does not already meet the Builder output guarantees (see the Snapper
+	// type description for details). This means that if all input vertices
+	// are at snapped locations, all vertex pairs are separated by at least
+	// MinVertexSeparation(), and all edge-vertex pairs are separated by at
+	// least MinEdgeVertexSeparation(), then no snapping is done.
+	//
+	// If false, then all vertex pairs and edge-vertex pairs closer than
+	// "SnapRadius" will be considered for snapping. This can be useful, for
+	// example, if you know that your geometry contains errors and you want to
+	// make sure that features closer together than "SnapRadius" are merged.
+	//
+	// This option is automatically turned off when simplifyEdgeChains is true
+	// since simplifying edge chains is never guaranteed to be idempotent.
+	//
+	// DEFAULT: true
+	idempotent bool
+}
+
+// defaultBuilderOptions returns a new instance with the proper defaults.
+func defaultBuilderOptions() *builderOptions {
+	return &builderOptions{
+		snapper:               NewIdentitySnapper(0),
+		splitCrossingEdges:    false,
+		intersectionTolerance: s1.Angle(0),
+		simplifyEdgeChains:    false,
+		idempotent:            true,
+	}
+}
+
+// edgeSnapRadius reports the maximum distance from snapped edge vertices to
+// the original edge. This is the same as SnapFunction().SnapRadius() except
+// when splitCrossingEdges is true (see below), in which case the edge snap
+// radius is increased by intersectionError.
+func (o builderOptions) edgeSnapRadius() s1.Angle {
+	return o.snapper.SnapRadius() + o.intersectionTolerance
+}
+
+// maxEdgeDeviation returns maximum distance that any point along an edge can
+// move when snapped. It is slightly larger than edgeSnapRadius() because when
+// a geodesic edge is snapped, the edge center moves further than its endpoints.
+// Builder ensures that this distance is at most 10% larger than
+// edgeSnapRadius().
+func (o builderOptions) maxEdgeDeviation() s1.Angle {
+	// We want maxEdgeDeviation to be large enough compared to SnapRadius()
+	// such that edge splitting is rare.
+	//
+	// Using spherical trigonometry, if the endpoints of an edge of length L
+	// move by at most a distance R, the center of the edge moves by at most
+	// asin(sin(R) / cos(L / 2)). Thus the (maxEdgeDeviation / SnapRadius)
+	// ratio increases with both the snap radius R and the edge length L.
+	//
+	// We arbitrarily limit the edge deviation to be at most 10% more than the
+	// snap radius. With the maximum allowed snap radius of 70 degrees, this
+	// means that edges up to 30.6 degrees long are never split. For smaller
+	// snap radii, edges up to 49 degrees long are never split. (Edges of any
+	// length are not split unless their endpoints move far enough so that the
+	// actual edge deviation exceeds the limit; in practice, splitting is rare
+	// even with long edges.)  Note that it is always possible to split edges
+	// when maxEdgeDeviation() is exceeded; see maybeAddExtraSites().
+	//
+	// TODO(rsned): What should we do when snapFunction.SnapRadius() > maxSnapRadius);
+	return maxEdgeDeviationRatio * o.edgeSnapRadius()
+}
+
+// TODO(rsned): Differences from C++
+// all of builders body.
