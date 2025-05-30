@@ -100,7 +100,7 @@ import (
 //
 // Example showing how to snap a polygon to E7 coordinates:
 //
-//	builder := NewBuilder(newBuilderOptions(IntLatLngSnapFunction(7)));
+//	builder := NewBuilder(NewBuilderOptions(IntLatLngSnapFunction(7)));
 //	var output *Polygon
 //	builder.StartLayer(NewPolygonLayer(output))
 //	builder.AddPolygon(input);
@@ -113,91 +113,133 @@ import (
 type builder struct {
 	opts builderOptions
 
-	// The maximum distance (inclusive) that a vertex can move when snapped,
-	// equal to options.SnapFunction().SnapRadius()).
+	// siteSnapRadiusChordAngle is the maximum distance (inclusive) that a
+	// vertex can move when snapped, equal to opts.snapper.SnapRadius().
 	siteSnapRadiusChordAngle s1.ChordAngle
 
-	// The maximum distance (inclusive) that an edge can move when snapping to a
-	// snap site. It can be slightly larger than the site snap radius when
-	// edges are being split at crossings.
+	// edgeSnapRadiusChordAngle is the maximum distance (inclusive) that an
+	// edge can move when snapping to a snap site. It can be slightly larger
+	// than the site snap radius when edges are being split at crossings.
 	edgeSnapRadiusChordAngle s1.ChordAngle
 
-	// True if we need to check that snapping has not changed the input topology
-	// around any vertex (i.e. Voronoi site). Normally this is only necessary for
-	// forced vertices, but if the snap radius is very small (e.g., zero) and
-	// splitCrossingedges is true then we need to do this for all vertices.
+	// checkAllSiteCrossings reports if we need to check that snapping has not
+	// changed the input topology around any vertex (i.e. Voronoi site).
+	// Normally this is only necessary for forced vertices, but if the snap
+	// radius is very small (e.g., zero) and opts.splitCrossingEdges is true
+	// then we need to do this for all vertices.
 	// In all other situations, any snapped edge that crosses a vertex will also
-	// be closer than minEdgeVertexSeparation() to that vertex, which will
+	// be closer than opts.minEdgeVertexSeparation() to that vertex, which will
 	// cause us to add a separation site anyway.
 	checkAllSiteCrossings bool
 
-	maxEdgeDeviation               s1.Angle
-	edgeSiteQueryRadiusChordAngle  s1.ChordAngle
+	// maxEdgeDeviation is the maximum distance that a vertex can be separated
+	// from an edge while still affecting how that edge is snapped.
+	maxEdgeDeviation s1.Angle
+
+	// edgeSiteQueryRadiusChordAngle is the distance from an edge in which candidates for
+	// snapping and/or avoidance are considered.
+	edgeSiteQueryRadiusChordAngle s1.ChordAngle
+
+	// minEdgeLengthToSplitChordAngle is the maximum edge length such that
+	// even if both endpoints move by the maximum distance allowed (i.e.
+	// edgeSnapRadius), the center of the edge will still move by less than
+	// maxEdgeDeviation.
 	minEdgeLengthToSplitChordAngle s1.ChordAngle
 
-	minSiteSeparation                    s1.Angle
-	minSiteSeparationChordAngle          s1.ChordAngle
-	minEdgeSiteSeparationChordAngle      s1.ChordAngle
+	// minSiteSeparation comes from the snapper.
+	minSiteSeparation s1.Angle
+
+	// minSiteSeparationChordAngle is the ChordAngle of the minSiteSeparation.
+	minSiteSeparationChordAngle s1.ChordAngle
+
+	// minEdgeSiteSeparationChordAngle is the minimum separation between edges
+	// and sites as a ChordAngle.
+	minEdgeSiteSeparationChordAngle s1.ChordAngle
+
+	// minEdgeSiteSeparationChordAngleLimit is the upper bound on the distance
+	// from ClosestEdgeQuery as a ChordAngle.
 	minEdgeSiteSeparationChordAngleLimit s1.ChordAngle
 
+	// maxAdjacentSiteSeparationChordAngle is the maximum possible distance
+	// between two sites whose Voronoi regions touch, increased to account
+	// for errors. (The maximum radius of each Voronoi region is
+	// edgeSnapRadius.)
 	maxAdjacentSiteSeparationChordAngle s1.ChordAngle
 
-	// The squared sine of the edge snap radius. This is equivalent to the snap
-	// radius (squared) for distances measured through the interior of the
-	// sphere to the plane containing an edge. This value is used only when
-	// interpolating new points along edges (see GetSeparationSite).
+	// edgeSnapRadiusSin2 is the squared sine of the edge snap radius.
+	// This is equivalent to the snap radius (squared) for distances
+	// measured through the interior of the sphere to the plane containing
+	// an edge. This value is used only when interpolating new points along
+	// edges (see getSeparationSite()).
 	edgeSnapRadiusSin2 float64
 
-	// True if snapping was requested. This is true if either snapRadius() is
-	// positive, or splitCrossingEdges() is true (which implicitly requests
-	// snapping to ensure that both crossing edges are snapped to the
-	// intersection point).
+	// snappingRequested reports if snapping was requested.
+	// This is true if either opts.snapper.SnapRadius() is positive, or
+	// opts.splitCrossingEdges is true (which implicitly requests snapping to
+	// ensure that both crossing edges are snapped to the intersection point).
 	snappingRequested bool
 
-	// Initially false, and set to true when it is discovered that at least one
-	// input vertex or edge does not meet the output guarantees (e.g., that
-	// vertices are separated by at least snapper.minVertexSeparation).
+	// snappingNeeded will be set to to true when it is discovered that at
+	// least one input vertex or edge does not meet the output guarantees
+	// (e.g., that vertices are separated by at least snapper.minVertexSeparation).
 	snappingNeeded bool
 
-	// A flag indicating whether labelSet has been modified since the last
-	// time labelSetID was computed.
+	//  labelSetModified indicates whether labelSet has been modified since the
+	//  last time labelSetId was computed.
 	labelSetModified bool
 
+	// inputVertices is a slice of input vertices.
 	inputVertices []Point
-	// inputEdges    []builderInputEdge
 
-	layers                       []*builderLayer
-	layerOptions                 []*graphOptions
-	layerBegins                  []int32
+	// inputEdges is a slice of all Edges for all Layers.
+	///// inputEdges []builderEdge
+
+	// layers is a slice of layers for this Builder.  The last layer is the
+	// current layer.  All edges are assigned to the current layer when the
+	// edge is added.
+	layers []*builderLayer
+
+	// layerOptions is a slice of graphOptions corresponding to the layers slice.
+	// TODO(rsned): pull this struct out or replace with a generic.
+	layerOptions []struct {
+		first, second int32
+	}
+
+	// layerBegins is a slice of int32s, each indicating the index into
+	// inputEdges corresponding to each layer.
+	layerBegins []int32
+
+	// layerIsFullPolygonPredicates is a slice of isFullPolygonPredicate,
+	// each indicating the predicate for the corresponding layer.
 	layerIsFullPolygonPredicates []isFullPolygonPredicate
 
-	// Each input edge has "label set id" (an int32) representing the set of
-	// labels attached to that edge. This vector is populated only if at least
+	// Each input edge has a labelSetID (an int32) representing the set of
+	// labels attached to that edge. This slice is populated only if at least
 	// one label is used.
-	labelSetIDs     []int32
+	labelSetIDs []int32
+	// labelSetLexicon stores labels assigned to each labelSet.
 	labelSetLexicon *idSetLexicon
 
-	// The current set of labels (represented as a stack).
+	// labelSet is the current set of labels (represented as a stack).
 	labelSet []int32
 
 	// The labelSetID corresponding to the current label set, computed on demand
-	// (by adding it to labelSetLexicon()).
+	// (by adding it to labelSetLexicon).
 	labelSetID int32
 
 	// The remaining fields are used for snapping and simplifying.
 
-	// The number of sites specified using forceVertex(). These sites are
-	// always at the beginning of the sites vector.
+	// numForcedSites is the number of sites specified using forceVertex().
+	// These sites are always at the beginning of the sites vector.
 	numForcedSites int32
 
-	// The set of snapped vertex locations ("sites").
+	// sites is the set of snapped vertex locations ("sites").
 	sites []Point
 
-	// A map from each input edge to the set of sites "nearby" that edge,
-	// defined as the set of sites that are candidates for snapping and/or
-	// avoidance. Note that compactarray will inline up to two sites, which
-	// usually takes care of the vast majority of edges. Sites are kept sorted
-	// by increasing distance from the origin of the input edge.
+	// edgeSites is a map from each input edge to the set of sites "nearby"
+	// that edge, defined as the set of sites that are candidates for snapping
+	// and/or avoidance. Sites are kept by increasing distance from the origin
+	// of the input edge.
 	//
 	// Once snapping is finished, this field is discarded unless edge chain
 	// simplification was requested, in which case instead the sites are
@@ -331,11 +373,6 @@ func roundChordAngleUp(a s1.Angle) s1.ChordAngle {
 	return ca.Expanded(ca.MaxAngleError())
 }
 
-// roundAngleUp rounds the given angle up by the max error and returns it as an angle.
-//func roundAngleUp(a s1.Angle) s1.Angle {
-//	return a.Expanded(a.MaxAngleError())
-//}
-
 func addPointToPointError(ca s1.ChordAngle) s1.ChordAngle {
 	return ca.Expanded(ca.MaxPointError())
 }
@@ -427,16 +464,18 @@ const (
 )
 
 // builderOptions holds the options for the Builder.
+//
+// TODO(rsned): Add public setters.
 type builderOptions struct {
-	// snapFunction holds the desired snap function.
+	// snapper holds the desired snap function.
 	//
 	// Note that if your input data includes vertices that were created using
 	// Intersection(), then you should use a "snapRadius" of
 	// at least intersectionMergeRadius, e.g. by calling
 	//
-	//  options.setSnapFunction(IdentitySnapFunction(intersectionMergeRadius));
+	//  options.setSnapper(IdentitySnapFunction(intersectionMergeRadius));
 	//
-	// DEFAULT: IdentitySnapFunction(s1.Angle(0))
+	// The default for this should be the IdentitySnapFunction(s1.Angle(0))
 	// [This does no snapping and preserves all input vertices exactly.]
 	snapper Snapper
 
@@ -466,7 +505,7 @@ type builderOptions struct {
 	// original projected edges (which are curves on the sphere). This can
 	// be done using EdgeTessellator, for example.
 	//
-	// DEFAULT: false
+	// The default for this is false.
 	splitCrossingEdges bool
 
 	// intersectionTolerance specifies the maximum allowable distance between
@@ -511,7 +550,7 @@ type builderOptions struct {
 	// automatically set to a minimum of intersectionError. A larger
 	// value can be specified by calling this method explicitly.
 	//
-	// DEFAULT: s1.Angle(0)
+	// The default tolerance should be 0.
 	intersectionTolerance s1.Angle
 
 	// simplifyEdgeChains determines if the output geometry should be simplified
@@ -554,7 +593,7 @@ type builderOptions struct {
 	// snapRadius() must be specified. Also note that vertices specified
 	// using ForceVertex are never simplified away.
 	//
-	// DEFAULT: false
+	// The default for this is false.
 	simplifyEdgeChains bool
 
 	// idempotent determines if snapping occurs only when the input geometry
@@ -565,25 +604,25 @@ type builderOptions struct {
 	// least MinEdgeVertexSeparation(), then no snapping is done.
 	//
 	// If false, then all vertex pairs and edge-vertex pairs closer than
-	// "SnapRadius" will be considered for snapping. This can be useful, for
+	// "edgeSnapRadius" will be considered for snapping. This can be useful, for
 	// example, if you know that your geometry contains errors and you want to
-	// make sure that features closer together than "SnapRadius" are merged.
+	// make sure that features closer together than "edgeSnapRadius" are merged.
 	//
 	// This option is automatically turned off when simplifyEdgeChains is true
 	// since simplifying edge chains is never guaranteed to be idempotent.
 	//
-	// DEFAULT: true
-	idempotent bool
+	// The default for this is false. (meaning it IS idempotent)
+	nonIdempotent bool
 }
 
 // defaultBuilderOptions returns a new instance with the proper defaults.
-func defaultBuilderOptions() *builderOptions {
-	return &builderOptions{
+func defaultBuilderOptions() builderOptions {
+	return builderOptions{
 		snapper:               NewIdentitySnapper(0),
 		splitCrossingEdges:    false,
 		intersectionTolerance: s1.Angle(0),
 		simplifyEdgeChains:    false,
-		idempotent:            true,
+		nonIdempotent:         false,
 	}
 }
 
@@ -623,4 +662,5 @@ func (o builderOptions) maxEdgeDeviation() s1.Angle {
 }
 
 // TODO(rsned): Differences from C++
-// all of builders body.
+// All of builder.
+// edgeChainSimplifier

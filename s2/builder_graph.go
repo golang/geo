@@ -32,14 +32,34 @@ import (
 // TODO(rsned): Consider pulling out the methods that are helper functions for
 // Layer implementations (such as getDirectedLoops) into a builder_graph_util.go.
 type graph struct {
-	opts                   *graphOptions
-	numVertices            int32
-	vertices               []Point
-	edges                  []graphEdge
-	inputEdgeIDSetIDs      []int32
-	inputEdgeIDSetLexicon  *idSetLexicon
-	labelSetIDs            []int32
-	labelSetLexicon        *idSetLexicon
+	// The options for this Graph.
+	opts *graphOptions
+	// The number of vertices in this Graph.
+	numVertices int32
+	// The vertices in this Graph. The index of a Vertex in this list is its VertexID.
+	vertices []Point
+	// The graphEdges in this Graph. The index of a graphEdge in this list is the EdgeID.
+	edges []graphEdge
+	// A slice mapping edge id to IdSet ids. The index is the edge ID, and
+	// the value is the inputEdgeIdSetID, i.e. the id of the IDSet in the
+	// inputEdgeIDSetLexicon. Each of those IDSets is the set of input
+	// edge ids that were mapped to the edge.
+	inputEdgeIDSetIDs []int32
+	// inputEdgeIDSetLexicon is a mapping from inputEdgeIDSetIDs to sets of
+	// input edge IDs.
+	inputEdgeIDSetLexicon *idSetLexicon
+	// labelSetIDs is a slice mapping input edge IDs to labelSet IDs. The keys
+	// are input edge IDs, and values are labelSet IDs, i.e. the IDs of
+	// IDSets in the labelSetLexicon. Each of those IDSets is the set of
+	// labels which were attached to the given input edge. This list may be
+	// empty to indicate that no labels are present.
+	labelSetIDs []int32
+	// labelSetLexicon is a mapping from ints which are labelSetIDs to a sets
+	// of labels, which are also ints. This lexicon will exist even if no
+	// labels are present.
+	labelSetLexicon *idSetLexicon
+	// isFullPolygonPredicate is used to determine if it is a full or empty
+	// polygon if the geometry in this graph has no edges.
 	isFullPolygonPredicate isFullPolygonPredicate
 }
 
@@ -66,7 +86,7 @@ func newGraph(opts *graphOptions,
 	return g
 }
 
-// processGraphEdges transform an unsorted collection of graphEdges according
+// processGraphEdges transforms an unsorted collection of graphEdges according
 // to the given set of GraphOptions. This includes actions such as discarding
 // degenerate edges; merging duplicate edges; and canonicalizing sibling
 // edge pairs in several possible ways (e.g. discarding or creating them).
@@ -83,13 +103,10 @@ func newGraph(opts *graphOptions,
 // Note that the options may be modified by this method: in particular, if
 // edgeType is edgeTypeUndirected and siblingPairs is siblingPairsCreate or
 // siblingPairsRequire, then half of the edges in each direction will be
-// discarded and edgeType will be changed to edgeTypeDirected the comments
+// discarded and edgeType will be changed to edgeTypeDirected (see the comments
 // on siblingPairs for more details).
 func processGraphEdges(opts *graphOptions, edges []graphEdge, inputIds []int32,
 	idSetLexicon *idSetLexicon) (newEdges []graphEdge, newInputIDs []int32, err error) {
-	// graphEdgeProcessor discards the edges and inputIDs slices passed in and
-	// replaces them with new slices, so we need to return whatever it ends
-	// up with.
 	ep := newGraphEdgeProcessor(opts, edges, inputIds, idSetLexicon)
 	err = ep.Run()
 
@@ -99,6 +116,9 @@ func processGraphEdges(opts *graphOptions, edges []graphEdge, inputIds []int32,
 		opts.siblingPairs == siblingPairsCreate {
 		opts.edgeType = edgeTypeDirected
 	}
+	// graphEdgeProcessor discards the edges and inputIDs slices passed in and
+	// replaces them with new slices, so we need to return whatever it ends
+	// up with.
 	return ep.edges, ep.inputIDs, err
 }
 
@@ -294,9 +314,9 @@ func stableGraphEdgeCmp(a, b graphEdge, aID, bID int32) int {
 
 }
 
-// graphEdgeProccessor processes edges in a Graph to handle duplicates, siblings,
+// graphEdgeProcessor processes edges in a Graph to handle duplicates, siblings,
 // and degenerate edges according to the specified GraphOptions.
-type graphEdgeProccessor struct {
+type graphEdgeProcessor struct {
 	options      *graphOptions
 	edges        []graphEdge
 	inputIDs     []int32
@@ -309,12 +329,12 @@ type graphEdgeProccessor struct {
 
 // newgraphEdgeProccessor creates a new graphEdgeProccessor with the given options and data.
 func newGraphEdgeProcessor(opts *graphOptions, edges []graphEdge, inputIDs []int32,
-	idSetLexicon *idSetLexicon) *graphEdgeProccessor {
+	idSetLexicon *idSetLexicon) *graphEdgeProcessor {
 	// opts should not be nil at this point, but just in case.
 	if opts == nil {
 		opts = &graphOptions{}
 	}
-	ep := &graphEdgeProccessor{
+	ep := &graphEdgeProcessor{
 		options:      opts,
 		edges:        edges,
 		inputIDs:     inputIDs,
@@ -361,27 +381,27 @@ func stableSortEdgeIDs(edges []int32, less func(a, b int32) bool) {
 }
 
 // addEdge adds a single edge with its input edge ID set to the new edges.
-func (ep *graphEdgeProccessor) addEdge(edge graphEdge, inputEdgeIDSetID int32) {
+func (ep *graphEdgeProcessor) addEdge(edge graphEdge, inputEdgeIDSetID int32) {
 	ep.newEdges = append(ep.newEdges, edge)
 	ep.newInputIDs = append(ep.newInputIDs, inputEdgeIDSetID)
 }
 
 // addEdges adds multiple copies of the same edge with the same input edge ID set.
-func (ep *graphEdgeProccessor) addEdges(numEdges int, edge graphEdge, inputEdgeIDSetID int32) {
+func (ep *graphEdgeProcessor) addEdges(numEdges int, edge graphEdge, inputEdgeIDSetID int32) {
 	for i := 0; i < numEdges; i++ {
 		ep.addEdge(edge, inputEdgeIDSetID)
 	}
 }
 
 // copyEdges copies a range of edges from the input edges to the new edges.
-func (ep *graphEdgeProccessor) copyEdges(outBegin, outEnd int) {
+func (ep *graphEdgeProcessor) copyEdges(outBegin, outEnd int) {
 	for i := outBegin; i < outEnd; i++ {
 		ep.addEdge(ep.edges[ep.outEdges[i]], ep.inputIDs[ep.outEdges[i]])
 	}
 }
 
 // mergeInputIDs merges the input edge ID sets for a range of edges.
-func (ep *graphEdgeProccessor) mergeInputIDs(outBegin, outEnd int) int32 {
+func (ep *graphEdgeProcessor) mergeInputIDs(outBegin, outEnd int) int32 {
 	if outEnd-outBegin == 1 {
 		return ep.inputIDs[ep.outEdges[outBegin]]
 	}
@@ -395,7 +415,7 @@ func (ep *graphEdgeProccessor) mergeInputIDs(outBegin, outEnd int) int32 {
 }
 
 // Run processes the edges according to the specified options.
-func (ep *graphEdgeProccessor) Run() error {
+func (ep *graphEdgeProcessor) Run() error {
 	numEdges := len(ep.edges)
 	if numEdges == 0 {
 		return nil
@@ -455,7 +475,7 @@ func (ep *graphEdgeProccessor) Run() error {
 }
 
 // handleDegenerateEdge handles a degenerate edge (an edge from a vertex to itself).
-func (ep *graphEdgeProccessor) handleDegenerateEdge(edge graphEdge, outBegin, outEnd int, nOut, nIn, inBegin, in int) error {
+func (ep *graphEdgeProcessor) handleDegenerateEdge(edge graphEdge, outBegin, outEnd int, nOut, nIn, inBegin, in int) error {
 	// This is a degenerate edge.
 	if nOut != nIn {
 		return errors.New("inconsistent number of degenerate edges")
@@ -508,7 +528,7 @@ func (ep *graphEdgeProccessor) handleDegenerateEdge(edge graphEdge, outBegin, ou
 }
 
 // handleNormalEdge handles a non-degenerate edge.
-func (ep *graphEdgeProccessor) handleNormalEdge(edge graphEdge, outBegin, outEnd int, nOut, nIn int) error {
+func (ep *graphEdgeProcessor) handleNormalEdge(edge graphEdge, outBegin, outEnd int, nOut, nIn int) error {
 	var err error
 	switch ep.options.siblingPairs {
 	case siblingPairsKeep:
@@ -584,3 +604,12 @@ func (ep *graphEdgeProccessor) handleNormalEdge(edge graphEdge, outBegin, outEnd
 	}
 	return err
 }
+
+// TODO(rsned): Differences from C++
+// polylineBuilder
+// vertexInMap, vertexOutMap, vertexInEdgeIds, vertexOutEdgeIds, vertexOutEdges
+// makeSubGraph
+// getPolylines
+// filterVertices
+// getDirected/UndirectedComponents
+// all of graphs helpers

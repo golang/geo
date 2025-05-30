@@ -98,7 +98,7 @@ func TestGraphEdgeProcessorAddEdge(t *testing.T) {
 		},
 	}
 
-	ep := &graphEdgeProccessor{
+	ep := &graphEdgeProcessor{
 		newEdges:    make([]graphEdge, 0),
 		newInputIDs: make([]int32, 0),
 	}
@@ -153,7 +153,7 @@ func TestGraphEdgeProcessorAddEdges(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ep := &graphEdgeProccessor{
+			ep := &graphEdgeProcessor{
 				newEdges:    make([]graphEdge, 0),
 				newInputIDs: make([]int32, 0),
 			}
@@ -1671,12 +1671,12 @@ func TestGraphProcessGraphEdges(t *testing.T) {
 				t.Errorf("err != nil = %v, wanted %v", err != nil, test.wantErr)
 			}
 			if len(gotEdges) != len(gotIDs) {
-				t.Errorf("Num edges (%d) != num IDs (%d)", len(edges), len(inputIDSetIDs))
+				t.Errorf("num edges (%d) != num IDs (%d)", len(edges), len(inputIDSetIDs))
 			}
 
 			for i, want := range test.want {
 				if i > len(gotEdges) {
-					t.Errorf("Not enough output edges")
+					t.Errorf("not enough output edges")
 				}
 				if want.edge != gotEdges[i] {
 					t.Errorf("got[%d] = %+v, want %+v", i, gotEdges[i], want.edge)
@@ -1688,7 +1688,7 @@ func TestGraphProcessGraphEdges(t *testing.T) {
 				}
 			}
 			if len(test.want) != len(gotEdges) {
-				t.Errorf("Too many output edges %d", len(gotEdges))
+				t.Errorf("too many output edges %d", len(gotEdges))
 			}
 
 			if test.wantChangedEdgeType {
