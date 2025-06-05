@@ -17,6 +17,7 @@ package s2
 import (
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 
 	"github.com/golang/geo/s1"
@@ -404,13 +405,7 @@ func (cu *CellUnion) Contains(o CellUnion) bool {
 
 // Intersects reports whether this CellUnion intersects any of the CellIDs of the given CellUnion.
 func (cu *CellUnion) Intersects(o CellUnion) bool {
-	for _, c := range *cu {
-		if o.IntersectsCellID(c) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(*cu, o.IntersectsCellID)
 }
 
 // lowerBound returns the index in this CellUnion to the first element whose value
