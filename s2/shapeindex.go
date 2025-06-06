@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -100,12 +101,7 @@ func (c *clippedShape) numEdges() int {
 func (c *clippedShape) containsEdge(id int) bool {
 	// Linear search is fast because the number of edges per shape is typically
 	// very small (less than 10).
-	for _, e := range c.edges {
-		if e == id {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.edges, id)
 }
 
 // ShapeIndexCell stores the index contents for a particular CellID.
