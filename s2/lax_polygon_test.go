@@ -15,10 +15,13 @@
 package s2
 
 import (
+	"math/rand"
 	"testing"
+
+	"github.com/golang/geo/s1"
 )
 
-func TestLaxPolygonShapeEmptyPolygon(t *testing.T) {
+func TestLaxPolygonEmptyPolygon(t *testing.T) {
 	shape := LaxPolygonFromPolygon((&Polygon{}))
 	if got, want := shape.numLoops, 0; got != want {
 		t.Errorf("shape.numLoops = %d, want %d", got, want)
@@ -46,7 +49,7 @@ func TestLaxPolygonShapeEmptyPolygon(t *testing.T) {
 	}
 }
 
-func TestLaxPolygonFull(t *testing.T) {
+func TestLaxPolygonFullPolygon(t *testing.T) {
 	shape := LaxPolygonFromPolygon(PolygonFromLoops([]*Loop{makeLoop("full")}))
 	if got, want := shape.numLoops, 1; got != want {
 		t.Errorf("shape.numLoops = %d, want %d", got, want)
@@ -124,7 +127,7 @@ func TestLaxPolygonSingleVertexPolygon(t *testing.T) {
 	}
 }
 
-func TestLaxPolygonShapeSingleLoopPolygon(t *testing.T) {
+func TestLaxPolygonSingleLoopPolygon(t *testing.T) {
 	vertices := parsePoints("0:0, 0:1, 1:1, 1:0")
 	lenVerts := len(vertices)
 	shape := LaxPolygonFromPolygon(PolygonFromLoops([]*Loop{LoopFromPoints(vertices)}))
@@ -183,7 +186,7 @@ func TestLaxPolygonShapeSingleLoopPolygon(t *testing.T) {
 	}
 }
 
-func TestLaxPolygonShapeMultiLoopPolygon(t *testing.T) {
+func TestLaxPolygonMultiLoopPolygon(t *testing.T) {
 	// Test to make sure that the loops are oriented so that the interior of the
 	// polygon is always on the left.
 	loops := [][]Point{
@@ -245,7 +248,120 @@ func TestLaxPolygonShapeMultiLoopPolygon(t *testing.T) {
 	}
 }
 
-func TestLaxPolygonShapeDegenerateLoops(t *testing.T) {
+// three ints is a tuple used in the many loop polygon test.
+type threeInts struct {
+	e, i, j int
+}
+
+func TestLaxPolygonManyLoopPolygon(t *testing.T) {
+	// Test a polygon with enough loops so that binary search is used to find
+	// the loop containing a given edge.
+
+	const startingLoops = 100
+
+	loops := make([][]Point, startingLoops)
+	for i := 0; i < startingLoops; i++ {
+		center := PointFromLatLng(LatLngFromDegrees(0, float64(i)))
+		loops[i] = RegularLoop(center, s1.Angle(0.1)*s1.Degree,
+			randomUniformInt(3)).vertices
+	}
+
+	shape := LaxPolygonFromPoints(loops)
+
+	numLoops := len(loops)
+
+	if shape.numLoops != numLoops {
+		t.Errorf("LaxPolygon num loops = %d, want %d", shape.numLoops, numLoops)
+	}
+	if shape.NumChains() != numLoops {
+		t.Errorf("LaxPolygon.NumChains() = %d, want %d", shape.NumChains(), numLoops)
+	}
+
+	numVertices := 0
+	for i := 0; i < numLoops; i++ {
+		loopLenI := len(loops[i])
+		if loopLenI != shape.numLoopVertices(i) {
+			t.Errorf("loop[%d] num vertices = %d, want %d", i, shape.numLoopVertices(i), loopLenI)
+		}
+		if numVertices != shape.Chain(i).Start {
+			t.Errorf("LaxPolygon.Chain(%d).Start = %d, want %d",
+				i, shape.Chain(i).Start, numVertices)
+		}
+		if loopLenI != shape.Chain(i).Length {
+			t.Errorf("LaxPolygon.Chain(%d).Length = %d, want %d",
+				i, shape.Chain(i).Length, loopLenI)
+		}
+		for j := 0; j < loopLenI; j++ {
+			if loops[i][j] != shape.loopVertex(i, j) {
+				t.Errorf("loopVertex(%d, %d) = %v != original vertex %v",
+					i, j, shape.loopVertex(i, j), loops[i][j])
+			}
+			e := numVertices + j
+			if shape.ChainPosition(e) != (ChainPosition{i, j}) {
+				t.Errorf("LaxPolygon.ChainPosition(%d) = %v,. want %v",
+					e, shape.ChainPosition(e), (ChainPosition{i, j}))
+			}
+			if loops[i][j] != shape.Edge(e).V0 {
+				t.Errorf("LaxPolygon.Edge(%d).V0 = %v, want %v",
+					e, shape.Edge(e).V0, loops[i][j])
+			}
+			idx := (j + 1) % loopLenI
+			if loops[i][idx] != shape.Edge(e).V1 {
+				t.Errorf("LaxPolygon.Edge(%d).V1 = %v, want %v",
+					e, shape.Edge(e).V1, loops[i][idx])
+			}
+		}
+		numVertices += loopLenI
+	}
+	if numVertices != shape.numVertices() {
+		t.Errorf("LaxPolygon.numVertices() = %d, want %d", shape.numVertices(), numVertices)
+	}
+	if numVertices != shape.NumEdges() {
+		t.Errorf("LaxPolygon.NumEdges() = %d, want %d", shape.NumEdges(), numVertices)
+	}
+
+	// Now test all the edges in a random order in order.
+	edges := []threeInts{}
+	for i, e := 0, 0; i < numLoops; i++ {
+		for j := 0; j < len(loops[i]); j++ {
+			edges = append(edges, (threeInts{e, i, j}))
+			e++
+		}
+	}
+
+	// C++ uses the Mersienne Twister to shuffle the elements. For now just
+	// use rand.Shuffle unless it proves problematic.
+	rand.Shuffle(numVertices, func(i, j int) {
+		edges[i], edges[j] = edges[j], edges[i]
+	})
+
+	for _, edge := range edges {
+		if shape.ChainPosition(edge.e) != (ChainPosition{edge.i, edge.j}) {
+			t.Errorf("addasdaa")
+		}
+		v0 := loops[edge.i][edge.j]
+		v1 := loops[edge.i][(edge.j+1)%len(loops[edge.i])]
+		if shape.Edge(edge.e) != (Edge{v0, v1}) {
+			t.Errorf("sfsdaa")
+		}
+	}
+}
+
+func TestLaxPolygonMultiLoopS2Polygon(t *testing.T) {
+	// Verify that the orientation of loops representing holes is reversed when
+	// converting from a Polygon to a LaxPolygonShape.
+	polygon := makePolygon("0:0, 0:3, 3:3; 1:1, 1:2, 2:2", true)
+	shape := LaxPolygonFromPolygon(polygon)
+	for i, loop := range polygon.Loops() {
+		for j := 0; j < loop.NumVertices(); j++ {
+			if loop.OrientedVertex(j) != shape.loopVertex(i, j) {
+				t.Errorf("LaxPolygon vertex %d in loop %d should equal the original loops oriented vertex but does not", j, i)
+			}
+		}
+	}
+}
+
+func TestLaxPolygonDegenerateLoops(t *testing.T) {
 	loops := [][]Point{
 		parsePoints("1:1, 1:2, 2:2, 1:2, 1:3, 1:2, 1:1"),
 		parsePoints("0:0, 0:3, 0:6, 0:9, 0:6, 0:3, 0:0"),
@@ -258,7 +374,7 @@ func TestLaxPolygonShapeDegenerateLoops(t *testing.T) {
 	}
 }
 
-func TestLaxPolygonShapeInvertedLoops(t *testing.T) {
+func TestLaxPolygonInvertedLoops(t *testing.T) {
 	loops := [][]Point{
 		parsePoints("1:2, 1:1, 2:2"),
 		parsePoints("3:4, 3:3, 4:4"),
@@ -271,10 +387,9 @@ func TestLaxPolygonShapeInvertedLoops(t *testing.T) {
 }
 
 // TODO(roberts): Remaining to port:
-// LaxPolygonManyLoopPolygon
-// LaxPolygonMultiLoopS2Polygon
 // LaxPolygonCompareToLoop once fractal testing is added.
 // LaxPolygonCoderWorks
 // LaxPolygonChainIteratorWorks
 // LaxPolygonChainVertexIteratorWorks
 //
+// Add testLaxPolygonEncoding to all the above tests as well.
