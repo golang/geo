@@ -12,29 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.9
-// +build go1.9
-
 package s2
 
-// This file is for the bit manipulation code post-Go 1.9.
+// This file is for bit manipulation code.  It will soon be deleted.
 
 import "math/bits"
 
 // findMSBSetNonZero64 returns the index (between 0 and 63) of the most
-// significant set bit. Passing zero to this function return zero.
+// significant set bit. Passing zero to this function returns -1.
 func findMSBSetNonZero64(x uint64) int {
-	if x == 0 {
-		return 0
-	}
-	return 63 - bits.LeadingZeros64(x)
+	return bits.Len64(x) - 1
 }
 
 // findLSBSetNonZero64 returns the index (between 0 and 63) of the least
-// significant set bit. Passing zero to this function return zero.
+// significant set bit. Passing zero to this function returns 64.
 func findLSBSetNonZero64(x uint64) int {
-	if x == 0 {
-		return 0
-	}
 	return bits.TrailingZeros64(x)
 }

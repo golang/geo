@@ -41,8 +41,8 @@ func TestFindMSBSetNonZero64(t *testing.T) {
 		t.Errorf("findMSBSetNonZero64(1) = %v, want 0", got)
 	}
 
-	if got := findMSBSetNonZero64(0); got != 0 {
-		t.Errorf("findMSBSetNonZero64(0) = %v, want 0", got)
+	if got := findMSBSetNonZero64(0); got != -1 {
+		t.Errorf("findMSBSetNonZero64(0) = %v, want -1", got)
 	}
 }
 
@@ -65,7 +65,7 @@ func TestFindLSBSetNonZero64(t *testing.T) {
 		testSome <<= 1
 	}
 
-	if got := findLSBSetNonZero64(0); got != 0 {
-		t.Errorf("findLSBSetNonZero64(0) = %v, want 0", got)
+	if got := findLSBSetNonZero64(0); got != 64 {
+		t.Errorf("findLSBSetNonZero64(0) = %v, want 64", got)
 	}
 }
