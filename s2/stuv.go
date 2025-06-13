@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"math/bits"
 
 	"github.com/golang/geo/r3"
 )
@@ -344,8 +345,8 @@ func xyzToFaceSiTi(p Point) (face int, si, ti uint32, level int) {
 	// center. The si,ti values of 0 and maxSiTi need to be handled specially
 	// because they do not correspond to cell centers at any valid level; they
 	// are mapped to level -1 by the code at the end.
-	level = MaxLevel - findLSBSetNonZero64(uint64(si|maxSiTi))
-	if level < 0 || level != MaxLevel-findLSBSetNonZero64(uint64(ti|maxSiTi)) {
+	level = MaxLevel - bits.TrailingZeros64(uint64(si|maxSiTi))
+	if level < 0 || level != MaxLevel-bits.TrailingZeros64(uint64(ti|maxSiTi)) {
 		return face, si, ti, -1
 	}
 
