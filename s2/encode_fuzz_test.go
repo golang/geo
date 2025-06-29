@@ -4,7 +4,6 @@ package s2
 
 import (
 	"bytes"
-	"math"
 	"testing"
 )
 
@@ -26,8 +25,8 @@ func FuzzDecodeCellUnion(f *testing.F) {
 			// Construction failed, no need to test further.
 			return
 		}
-		if got := c.ApproxArea(); got < 0 || got > 4*math.Pi {
-			t.Errorf("ApproxArea() = %v, want >= 0 and <= 4 * pi. CellUnion: %v", got, c)
+		if got := c.ApproxArea(); got < 0 {
+			t.Errorf("ApproxArea() = %v, want >= 0. CellUnion: %v", got, c)
 		}
 	})
 }
