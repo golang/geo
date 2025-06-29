@@ -553,7 +553,7 @@ func (cu *CellUnion) encode(e *encoder) {
 	}
 }
 
-// Decode decodes the CellUnion. The resulting CellUnion is not check for validity.
+// Decode decodes the CellUnion. The resulting CellUnion is not checked for validity.
 func (cu *CellUnion) Decode(r io.Reader) error {
 	d := &decoder{r: asByteReader(r)}
 	cu.decode(d)
@@ -569,8 +569,8 @@ func (cu *CellUnion) decode(d *decoder) {
 		d.err = fmt.Errorf("only version %d is supported", encodingVersion)
 		return
 	}
-	n := d.readInt64()
-	if d.err != nil || n < 0 {
+	n := d.readUint64()
+	if d.err != nil {
 		return
 	}
 	const maxCells = 1000000
