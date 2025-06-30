@@ -44,12 +44,18 @@ const (
 	Radius = 6371.01 * unit.Kilometer
 
 	// LowestAltitude is the altitude of the lowest known point on Earth,
-	// the Challenger Deep, below the surface of the spherical earth.
-	LowestAltitude = -10.898 * unit.Kilometer
+	// the Challenger Deep, below the surface of the spherical Earth. This value
+	// is the same as the C++ and Java implementations of S2Earth. The value may
+	// change as more precise measurements are made.
+
+	LowestAltitude = -10898 * unit.Meter
 
 	// HighestAltitude is the altitude of the highest known point on Earth,
-	// Mount Everest, above the surface of the spherical earth.
-	HighestAltitude = 8.846 * unit.Kilometer
+	// Mount Everest, above the surface of the spherical Earth. This value is the
+	// same as the C++ and Java implementations of S2Earth. The value may change
+	// as more precise measurements are made.
+
+	HighestAltitude = 8848 * unit.Meter
 )
 
 // AngleFromLength returns the angle from a given distance on the spherical
@@ -110,5 +116,4 @@ func InitialBearingFromLatLngs(a, b s2.LatLng) s1.Angle {
 func haversine(radians float64) float64 {
 	sinHalf := math.Sin(radians / 2)
 	return sinHalf * sinHalf
-
 }

@@ -96,6 +96,7 @@ func TestLengthFromLatLngs(t *testing.T) {
 		{-37, 25, -66, -155, 8562022.790666264 * unit.Meter},
 		{0, 165, 0, -80, 12787436.635410652 * unit.Meter},
 		{47, -127, -47, 53, 20015118.077688109 * unit.Meter},
+		{51.961951, -180.227156, 51.782383, 181.126878, 95.0783566198074 * unit.Kilometer},
 	}
 	for _, test := range tests {
 		ll1 := s2.LatLngFromDegrees(test.lat1, test.lng1)
@@ -106,13 +107,14 @@ func TestLengthFromLatLngs(t *testing.T) {
 	}
 }
 
-func TestAreaFromSteradians(t *testing.T) {
-	const earthArea = 6371.01 * 6371.01 * math.Pi * 4 * unit.SquareKilometer
-	tests := []struct {
+var (
+	earthArea        = unit.Area(Radius.Meters()*Radius.Meters()) * math.Pi * 4
+	steradiansToArea = []struct {
 		steradians float64
 		area       unit.Area
 	}{
 		{1, earthArea / 4 / math.Pi},
+		{4 * math.Pi, earthArea},
 		{s2.PolygonFromLoops([]*s2.Loop{s2.FullLoop()}).Area(), earthArea},
 		{s2.PolygonFromLoops([]*s2.Loop{s2.LoopFromPoints([]s2.Point{
 			s2.PointFromLatLng(s2.LatLngFromDegrees(-90, 0)),
@@ -126,7 +128,10 @@ func TestAreaFromSteradians(t *testing.T) {
 		{s2.AvgAreaMetric.Value(30), 73.73529927808979 * unit.SquareMillimeter}, // average area of level 30 cells
 		{s2.PolygonFromLoops([]*s2.Loop{s2.EmptyLoop()}).Area(), 0 * unit.SquareMeter},
 	}
-	for _, test := range tests {
+)
+
+func TestAreaFromSteradians(t *testing.T) {
+	for _, test := range steradiansToArea {
 		if got, want := AreaFromSteradians(test.steradians), test.area; !float64Eq(got.SquareMeters(), want.SquareMeters()) {
 			t.Errorf("AreaFromSteradians(%v) = %v, want %v", test.steradians, got, want)
 		}
@@ -134,26 +139,7 @@ func TestAreaFromSteradians(t *testing.T) {
 }
 
 func TestSteradiansFromArea(t *testing.T) {
-	const earthArea = 6371.01 * 6371.01 * math.Pi * 4 * unit.SquareKilometer
-	tests := []struct {
-		steradians float64
-		area       unit.Area
-	}{
-		{1, earthArea / 4 / math.Pi},
-		{s2.PolygonFromLoops([]*s2.Loop{s2.FullLoop()}).Area(), earthArea},
-		{s2.PolygonFromLoops([]*s2.Loop{s2.LoopFromPoints([]s2.Point{
-			s2.PointFromLatLng(s2.LatLngFromDegrees(-90, 0)),
-			s2.PointFromLatLng(s2.LatLngFromDegrees(0, 0)),
-			s2.PointFromLatLng(s2.LatLngFromDegrees(90, 0)),
-			s2.PointFromLatLng(s2.LatLngFromDegrees(0, -90)),
-		})}).Area(), earthArea / 4},
-		{s2.CellFromCellID(s2.CellIDFromFace(2)).ExactArea(), earthArea / 6},
-		{s2.AvgAreaMetric.Value(10), 81.07281893380302 * unit.SquareKilometer},  // average area of level 10 cells
-		{s2.AvgAreaMetric.Value(20), 77.31706517582228 * unit.SquareMeter},      // average area of level 20 cells
-		{s2.AvgAreaMetric.Value(30), 73.73529927808979 * unit.SquareMillimeter}, // average area of level 30 cells
-		{s2.PolygonFromLoops([]*s2.Loop{s2.EmptyLoop()}).Area(), 0 * unit.SquareMeter},
-	}
-	for _, test := range tests {
+	for _, test := range steradiansToArea {
 		if got, want := SteradiansFromArea(test.area), test.steradians; !float64Eq(got, want) {
 			t.Errorf("SteradiansFromArea(%v) = %v, want %v", test.area, got, want)
 		}
@@ -186,7 +172,37 @@ func TestInitialBearingFromLatLngs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			got := InitialBearingFromLatLngs(tc.a, tc.b)
 			if diff := (got - tc.want).Abs(); diff > 0.01 {
-				t.Errorf("InitialBearingsFromLatLngs(%s, %s): got %s, want %s, diff %s", tc.a, tc.b, got, tc.want, diff)
+				t.Errorf("InitialBearingFromLatLngs(%s, %s): got %s, want %s, diff %s", tc.a, tc.b, got, tc.want, diff)
+			}
+		})
+	}
+}
+
+func TestInitialBearingFromLatLngsUndefinedResultDoesNotCrash(t *testing.T) {
+	// InitialBearingFromLatLngs says if a == b, a == -b, or a is one of Earth's
+	// poles, the return value is undefined.  Make sure it returns a real value
+	// (but don't assert what it is) rather than panicking or NaN.
+	// Bearing from a pole is undefined because 0° is north, but the observer
+	// can't face north from the north pole, so the calculation depends on the
+	// latitude value at the pole, even though 90°N 123°E and 90°N 45°W represent
+	// the same point.  Bearing is undefined when a == b because the observer can
+	// point any direction and still be present.  Bearing is undefined when
+	// a == -b (two antipodal points) because there are two possible paths.
+	for _, tc := range []struct {
+		name string
+		a, b s2.LatLng
+	}{
+		{"North pole prime meridian to Null Island", s2.LatLngFromDegrees(90, 0), s2.LatLngFromDegrees(0, 0)},
+		{"North pole facing east to Guatemala", s2.LatLngFromDegrees(90, 90), s2.LatLngFromDegrees(15, -90)},
+		{"South pole facing west to McMurdo", s2.LatLngFromDegrees(-90, -90), s2.LatLngFromDegrees(-78, 166)},
+		{"South pole anti-prime meridian to Null Island", s2.LatLngFromDegrees(-90, -180), s2.LatLngFromDegrees(0, 0)},
+		{"Jakarta and antipode", s2.LatLngFromDegrees(-6.109, 106.668), s2.LatLngFromDegrees(6.109, -180+106.668)},
+		{"Alert and antipode", s2.LatLngFromDegrees(82.499, -62.350), s2.LatLngFromDegrees(-82.499, 180-62.350)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := InitialBearingFromLatLngs(tc.a, tc.b)
+			if math.IsNaN(got.Radians()) || math.IsInf(got.Radians(), 0) {
+				t.Errorf("InitialBearingFromLatLngs(%s, %s): got %s, want a real value", tc.a, tc.b, got)
 			}
 		})
 	}
