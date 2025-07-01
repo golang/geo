@@ -8,13 +8,13 @@ import (
 )
 
 func FuzzDecodeCellUnion(f *testing.F) {
-	cuCells := CellUnion([]CellID{
+	cu := CellUnion([]CellID{
 		CellID(0x33),
 		CellID(0x8e3748fab),
 		CellID(0x91230abcdef83427),
 	})
 	buf := new(bytes.Buffer)
-	if err := cuCells.Encode(buf); err != nil {
+	if err := cu.Encode(buf); err != nil {
 		f.Errorf("error encoding %v: ", err)
 	}
 	f.Add(buf.Bytes())
@@ -28,5 +28,6 @@ func FuzzDecodeCellUnion(f *testing.F) {
 		if got := c.ApproxArea(); got < 0 {
 			t.Errorf("ApproxArea() = %v, want >= 0. CellUnion: %v", got, c)
 		}
+		// TODO: Test more invariants that should hold for all CellUnion.
 	})
 }
