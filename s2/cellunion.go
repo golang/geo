@@ -539,6 +539,7 @@ func (cu *CellUnion) ExactArea() float64 {
 }
 
 // Encode encodes the CellUnion.
+// Note: The CellUnion is not required to be valid according to IsValid().
 func (cu *CellUnion) Encode(w io.Writer) error {
 	e := &encoder{w: w}
 	cu.encode(e)
@@ -553,7 +554,8 @@ func (cu *CellUnion) encode(e *encoder) {
 	}
 }
 
-// Decode decodes the CellUnion. The resulting CellUnion is not checked for validity.
+// Decode decodes the CellUnion.
+// Note: The returned CellUnion is not necessarily valid according to IsValid().
 func (cu *CellUnion) Decode(r io.Reader) error {
 	d := &decoder{r: asByteReader(r)}
 	cu.decode(d)
