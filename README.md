@@ -1,6 +1,6 @@
 # S2 geometry library in Go
 
-[![Go Build and Test](https://github.com/golang/geo/actions/workflows/go.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/go.yml) [![CodeQL](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql) [![golangci-lint](https://github.com/golang/geo/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/golangci-lint.yml) [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/golang/geo?label=OpenSSF%20Scorecard&style=flat)](https://scorecard.dev/viewer/?uri=github.com/golang/geo)
+[![Go Reference](https://pkg.go.dev/badge/github.com/golang/geo.svg)](https://pkg.go.dev/github.com/golang/geo) [![Go Build and Test](https://github.com/golang/geo/actions/workflows/go.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/go.yml) [![CodeQL](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql) [![golangci-lint](https://github.com/golang/geo/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/golangci-lint.yml) [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/golang/geo?label=OpenSSF%20Scorecard&style=flat)](https://scorecard.dev/viewer/?uri=github.com/golang/geo)
 
 S2 is a library for spherical geometry that aims to have the same robustness,
 flexibility, and performance as the best planar geometry libraries.
@@ -80,8 +80,6 @@ approximation for the Earth's surface, functions that are specifically related
 to geography are not part of the core library (e.g. easting/northing
 conversions, ellipsoid approximations, geodetic vs. geocentric coordinates,
 etc).
-
-See https://pkg.go.dev/github.com/golang/geo for specific package documentation.
 
 For an analogous library in C++, see https://github.com/google/s2geometry, in
 Java, see https://github.com/google/s2-geometry-library-java, and Python, see
