@@ -35,8 +35,8 @@ func (i incidentEdgeKey) Cmp(o incidentEdgeKey) int {
 	return i.vertex.Cmp(o.vertex.Vector)
 }
 
-// vertexEdge is a tuple of vertex and edgeID for processing incident edges.
-type vertexEdge struct {
+// incidentVertexEdge is a tuple of vertex and edgeID for processing incident edges.
+type incidentVertexEdge struct {
 	vertex Point
 	edgeID int32
 }
@@ -46,15 +46,15 @@ type vertexEdge struct {
 // but lookup is by shape id and vertex: there is no facility to get all
 // edges of all shapes at a vertex. Edge vertices must compare exactly equal
 // to be considered the same vertex, no tolerance is applied as this isn't
-// intended for e.g.: snapping shapes together, which Builder does better
+// intended for actions like snapping shapes together, which Builder does better
 // and more robustly.
 //
-// To use, instantiate and then add edges with one or more sequences of calls,
-// where each sequence begins with startShape(), followed by addEdge() calls to
-// add edges for that shape, and ends with finishShape(). Those sequences do
-// not need to visit shapes or edges in order. Then, call incidentEdges() to get
-// the resulting map from incidentEdgeKeys (which are shapeId, vertex pairs) to
-// a set of edgeIds of the shape that are incident to that vertex..
+// To use, instantiate and then add edges with one or more sequences of calls;
+// each sequence begins with startShape(), followed by repeated addEdge() calls
+// to add edges for that shape, and ends with finishShape(). Those sequences do
+// not need to visit shapes or edges in order. Then, read the edgeMap to get
+// the resulting map from incidentEdgeKeys (which are shapeID, vertex pairs) to
+// a set of edgeIDs of the shape that are incident to that vertex.
 //
 // This works on a block of edges at a time, meaning that to detect incident
 // edges on a particular vertex, we must have at least three edges incident
@@ -63,62 +63,66 @@ type vertexEdge struct {
 // shape's edges may be defined with multiple sequences of startShape(),
 // addEdge()... , finishShape() calls.
 //
-// The reason for this is simple: most edges don't have more than two incident
+// The reason for this is simple: most vertices don't have more than two incident
 // edges (the incoming and outgoing edge). If we had to maintain information
 // between calls, we'd end up with a map that contains every vertex, to no
 // benefit. Instead, when finishShape() is called, we discard vertices that
 // contain two or fewer incident edges.
 //
 // In principle this isn't a real limitation because generally we process a
-// ShapeIndex cell at a time, and, if a vertex has multiple edges, we'll see
+// ShapeIndex one cell at a time, and, if a vertex has multiple edges, we'll see
 // all the edges in the same cell as the vertex, and, in general, it's possible
 // to aggregate edges before calling.
 //
-// The tracker maintains incident edges until it's cleared. If you call it with
+// The tracker maintains incident edges until it's reset. If you call it with
 // each cell from an ShapeIndex, then at the end you will have all the
 // incident edge information for the whole index. If only a subset is needed,
-// call reset() when you're done.
+// call reset() when you're done edding edges.
 type incidentEdgeTracker struct {
 	currentShapeID int32
 
-	nursery []vertexEdge
+	// nursery is used to store points being processed for the map.
+	nursery []incidentVertexEdge
 
-	// We can and do encounter the same edges multiple times, so we need to
-	// deduplicate edges as they're inserted.
+	// edgeMap tracks edgeIDs for each incidentEdgeKey since we can, and do,
+	// encounter the same edges multiple times. This map gives us easy
+	// deduplication of edges as they're inserted.
 	edgeMap map[incidentEdgeKey]map[int32]bool
 }
 
-// newIncidentEdgeTracker returns a new tracker.
+// newIncidentEdgeTracker returns a new incidentEdgeTracker.
 func newIncidentEdgeTracker() *incidentEdgeTracker {
 	return &incidentEdgeTracker{
 		currentShapeID: -1,
-		nursery:        []vertexEdge{},
+		nursery:        []incidentVertexEdge{},
 		edgeMap:        make(map[incidentEdgeKey]map[int32]bool),
 	}
 }
 
-// startShape is used to start adding edges to the edge tracker. After calling,
-// any vertices with multiple (> 2) incident edges will appear in the
-// incident edge map.
+// startShape is used to start a new shape.
 func (t *incidentEdgeTracker) startShape(id int32) {
 	t.currentShapeID = id
 	t.nursery = t.nursery[:0]
 }
 
-// addEdge adds the given edges start to the nursery, and if not degenerate,
-// adds it second endpoint as well.
+// addEdge adds the given edge for the current shape to the nursery. If the
+// edge is not degenerate, add its second endpoint as well.
 func (t *incidentEdgeTracker) addEdge(edgeID int32, e Edge) {
 	if t.currentShapeID < 0 {
 		return
 	}
 
 	// Add non-degenerate edges to the nursery.
-	t.nursery = append(t.nursery, vertexEdge{vertex: e.V0, edgeID: edgeID})
+	t.nursery = append(t.nursery, incidentVertexEdge{vertex: e.V0, edgeID: edgeID})
 	if !e.IsDegenerate() {
-		t.nursery = append(t.nursery, vertexEdge{vertex: e.V1, edgeID: edgeID})
+		t.nursery = append(t.nursery, incidentVertexEdge{vertex: e.V1, edgeID: edgeID})
 	}
 }
 
+// finishShape is called once finished adding edges so they can be processed.
+//
+// After calling, only vertices with 2 or more incident edges will appear in
+// the edge map.
 func (t *incidentEdgeTracker) finishShape() {
 	// We want to keep any vertices with more than two incident edges. We could
 	// sort the array by vertex and remove any with fewer, but that would require
@@ -165,9 +169,13 @@ func (t *incidentEdgeTracker) finishShape() {
 			t.edgeMap[key][t.nursery[start].edgeID] = true
 		}
 	}
+
+	// We are finished with this shape, clear the nursery.
+	t.nursery = t.nursery[:0]
 }
 
 // reset removes all incident edges from the tracker.
 func (t *incidentEdgeTracker) reset() {
+	t.nursery = t.nursery[:0]
 	t.edgeMap = make(map[incidentEdgeKey]map[int32]bool)
 }
