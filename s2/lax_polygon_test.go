@@ -336,13 +336,13 @@ func TestLaxPolygonManyLoopPolygon(t *testing.T) {
 	})
 
 	for _, edge := range edges {
-		if shape.ChainPosition(edge.e) != (ChainPosition{edge.i, edge.j}) {
-			t.Errorf("addasdaa")
+		if got, want := shape.ChainPosition(edge.e), (ChainPosition{edge.i, edge.j}); got != want {
+			t.Errorf("shape.ChainPosition(%d) = %v, want %v", edge.e, got, want)
 		}
 		v0 := loops[edge.i][edge.j]
 		v1 := loops[edge.i][(edge.j+1)%len(loops[edge.i])]
-		if shape.Edge(edge.e) != (Edge{v0, v1}) {
-			t.Errorf("sfsdaa")
+		if got, want := shape.Edge(edge.e), (Edge{v0, v1}); got != want {
+			t.Errorf("Shape Edge(%d) = %v, want %v", edge.e, got, want)
 		}
 	}
 }
