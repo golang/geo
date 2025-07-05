@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"slices"
 
 	"github.com/golang/geo/s1"
 )
@@ -135,10 +136,8 @@ func (p *Polyline) IntersectsCell(cell Cell) bool {
 	// We only need to check whether the cell contains vertex 0 for correctness,
 	// but these tests are cheap compared to edge crossings so we might as well
 	// check all the vertices.
-	for _, v := range *p {
-		if cell.ContainsPoint(v) {
-			return true
-		}
+	if slices.ContainsFunc(*p, cell.ContainsPoint) {
+		return true
 	}
 
 	cellVertices := []Point{

@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/golang/geo/s1"
@@ -95,12 +96,7 @@ func TestConvexHullAntipodalPoints(t *testing.T) {
 }
 
 func loopHasVertex(l *Loop, p Point) bool {
-	for _, v := range l.vertices {
-		if v == p {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(l.vertices, p)
 }
 
 func TestConvexHullQueryEmptyLoop(t *testing.T) {
