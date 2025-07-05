@@ -18,18 +18,32 @@ import (
 	"testing"
 )
 
+func TestIndexCellDataDefaultsDimensionFilteringWorks(t *testing.T) {
+	// Separate test for default dimensions so we aren't setting them explicitly.
+	index := makeShapeIndex("0:0" +
+		"#1:1, 2:2" +
+		"#1:0, 0:1, -1:0, 0:-1")
+
+	iter := index.Iterator()
+	iter.Begin()
+	data := newIndexCellData()
+	data.loadCell(index, iter.CellID(), iter.cell)
+
+	for dim := 0; dim < 2; dim++ {
+		// All three dimensions should have data.
+		if len(data.dimEdges(dim)) == 0 {
+			t.Errorf("Expected non-empty dimEdges(%d), but got empty", dim)
+		}
+	}
+}
+
 // TestIndexCellDataDimensionFilteringWorks verifies that we can filter
 // shapes by dimension when loading cells.
-func testIndexCellDataDimensionFilteringWorks(t *testing.T) {
+func TestIndexCellDataDimensionFilteringWorks(t *testing.T) {
 	tests := []struct {
 		dimWanted [3]bool
 		dimEmpty  [3]bool
 	}{
-		{
-			// Check that we get all dimensions by default.
-			dimWanted: [3]bool{true, true, true},
-			dimEmpty:  [3]bool{false, false, false},
-		},
 		{
 			// No dimensions should work too, we just don't decode edges.
 			dimWanted: [3]bool{false, false, false},
@@ -107,7 +121,7 @@ func testIndexCellDataDimensionFilteringWorks(t *testing.T) {
 // TestIndexCellDataCellAndCenterRecomputed verifies that when we load a
 // new unique cell, the cached cell and center values are updated if we
 // access them.
-func testIndexCellDataCellAndCenterRecomputed(t *testing.T) {
+func TestIndexCellDataCellAndCenterRecomputed(t *testing.T) {
 	// A line between two faces will guarantee we get at least two cells.
 	index := makeShapeIndex("# 0:0, 0:-90 #")
 

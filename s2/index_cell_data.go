@@ -14,22 +14,17 @@
 
 package s2
 
-import (
-	"sync"
-	"sync/atomic"
-)
-
-// indexCellRegion represents a simple pair for defining an integer valued region.
-type indexCellRegion struct {
+// indexCellRange represents a simple pair for defining an integer valued range.
+type indexCellRange struct {
 	start int
 	size  int
 }
 
-// shapeRegion is a mapping from shape id to the region of the edges array
+// shapeRange is a mapping from shapeID to the range of the edges array
 // it's stored in.
-type shapeRegion struct {
-	id     int32
-	region indexCellRegion
+type shapeRange struct {
+	id        int32
+	cellRange indexCellRange
 }
 
 // edgeAndIDChain is an extension of Edge with fields for the edge id,
@@ -82,16 +77,16 @@ type edgeAndIDChain struct {
 // shapes _within a dimension_ are in the same order they are in the index
 // itself, and the edges _within a shape_ are similarly in the same order.
 type indexCellData struct {
+	// index is the ShapeIndex the currently loaded Cell belongs to.
 	index     *ShapeIndex
 	indexCell *ShapeIndexCell
 	cellID    CellID
 
 	// Computing the cell center and Cell can cost as much as looking up the
 	// edges themselves, so defer doing it until needed.
-	mu         sync.Mutex
-	s2CellSet  atomic.Bool
+	s2CellSet  bool
 	s2Cell     Cell
-	centerSet  atomic.Bool
+	centerSet  bool
 	cellCenter Point
 
 	// Dimensions that we wish to decode, the default is all of them.
@@ -100,11 +95,11 @@ type indexCellData struct {
 	// Storage space for edges of the current cell.
 	edges []edgeAndIDChain
 
-	// Mapping from shape id to the region of the edges array it's stored in.
-	shapeRegions []shapeRegion
+	// Mapping from shape id to the ranges of the edges array it's stored in.
+	shapeRanges []shapeRange
 
-	// Region for each dimension we might encounter.
-	dimRegions [3]indexCellRegion
+	// Range for each dimension we might encounter.
+	dimRanges [3]indexCellRange
 }
 
 // newIndexCellData creates a new indexCellData with the expected defaults.
@@ -129,7 +124,7 @@ func (d *indexCellData) reset() {
 	d.index = nil
 	d.indexCell = nil
 	d.edges = d.edges[:0]
-	d.shapeRegions = d.shapeRegions[:0]
+	d.shapeRanges = d.shapeRanges[:0]
 	d.dimWanted = [3]bool{true, true, true}
 }
 
@@ -144,13 +139,10 @@ func (d *indexCellData) setDimWanted(dim int, wanted bool) {
 // cell returns the S2 Cell for the current index cell, loading it if it
 // was not already set.
 func (d *indexCellData) cell() Cell {
-	if !d.s2CellSet.Load() {
-		d.mu.Lock()
-		if !d.s2CellSet.Load() {
-			d.s2Cell = CellFromCellID(d.cellID)
-			d.s2CellSet.Store(true)
-		}
-		d.mu.Unlock()
+	// TODO(rsned): Consider if we need to add mutex here for thread safety.
+	if !d.s2CellSet {
+		d.s2Cell = CellFromCellID(d.cellID)
+		d.s2CellSet = true
 	}
 	return d.s2Cell
 }
@@ -158,13 +150,10 @@ func (d *indexCellData) cell() Cell {
 // center returns the center point of the current index cell, loading it
 // if it was not already set.
 func (d *indexCellData) center() Point {
-	if !d.centerSet.Load() {
-		d.mu.Lock()
-		if !d.centerSet.Load() {
-			d.cellCenter = d.cellID.Point()
-			d.centerSet.Store(true)
-		}
-		d.mu.Unlock()
+	// TODO(rsned): Consider if we need to add mutex here for thread safety.
+	if !d.centerSet {
+		d.cellCenter = d.cellID.Point()
+		d.centerSet = true
 	}
 	return d.cellCenter
 }
@@ -177,7 +166,7 @@ func (d *indexCellData) center() Point {
 // loadCell, loading is not performed since we already have the data decoded.
 func (d *indexCellData) loadCell(index *ShapeIndex, id CellID, cell *ShapeIndexCell) {
 	// If this is still the same ShapeIndexCell as last time, then we are good.
-	if d.index == index && d.cellID == id {
+	if d.index == index && d.cellID == id && cell == d.indexCell {
 		return
 	}
 
@@ -187,17 +176,17 @@ func (d *indexCellData) loadCell(index *ShapeIndex, id CellID, cell *ShapeIndexC
 	d.indexCell = cell
 	d.cellID = id
 
-	// Reset atomic flags so we'll recompute cached values.
-	d.s2CellSet.Store(false)
-	d.centerSet.Store(false)
+	// Reset flags so we'll recompute cached values.
+	d.s2CellSet = false
+	d.centerSet = false
 
 	// Clear previous edges
 	d.edges = d.edges[:0]
-	d.shapeRegions = d.shapeRegions[:0]
+	d.shapeRanges = d.shapeRanges[:0]
 
-	// Reset per-dimension region information.
-	for i := range d.dimRegions {
-		d.dimRegions[i] = indexCellRegion{}
+	// Reset per-dimension range information.
+	for i := range d.dimRanges {
+		d.dimRanges[i] = indexCellRange{}
 	}
 
 	minDim := 0
@@ -239,7 +228,7 @@ func (d *indexCellData) loadCell(index *ShapeIndex, id CellID, cell *ShapeIndexC
 
 			// Materialize clipped shape edges into the edges
 			// slice. Track where we start so we can add
-			// information about the region for this shape.
+			// information about the range for this shape.
 			shapeStart := len(d.edges)
 			for _, edgeID := range clipped.edges {
 				// Looking up an edge requires looking up
@@ -258,17 +247,17 @@ func (d *indexCellData) loadCell(index *ShapeIndex, id CellID, cell *ShapeIndexC
 			}
 
 			// Note which block of edges belongs to the shape.
-			d.shapeRegions = append(d.shapeRegions, shapeRegion{
+			d.shapeRanges = append(d.shapeRanges, shapeRange{
 				id: shapeID,
-				region: indexCellRegion{
+				cellRange: indexCellRange{
 					start: shapeStart,
 					size:  len(d.edges) - shapeStart,
 				},
 			})
 		}
 
-		// Save region information for the current dimension.
-		d.dimRegions[dim] = indexCellRegion{
+		// Save range information for the current dimension.
+		d.dimRanges[dim] = indexCellRange{
 			start: dimStart,
 			size:  len(d.edges) - dimStart,
 		}
@@ -277,11 +266,11 @@ func (d *indexCellData) loadCell(index *ShapeIndex, id CellID, cell *ShapeIndexC
 
 // shapeEdges returns a slice of the edges in the current cell for a given shape.
 func (d *indexCellData) shapeEdges(shapeID int32) []edgeAndIDChain {
-	for _, sr := range d.shapeRegions {
+	for _, sr := range d.shapeRanges {
 		if sr.id == shapeID {
-			region := sr.region
-			if region.start < len(d.edges) {
-				return d.edges[region.start : region.start+region.size]
+			cellRange := sr.cellRange
+			if cellRange.start < len(d.edges) {
+				return d.edges[cellRange.start : cellRange.start+cellRange.size]
 			}
 			return nil
 		}
@@ -296,9 +285,9 @@ func (d *indexCellData) dimEdges(dim int) []edgeAndIDChain {
 		return nil
 	}
 
-	region := d.dimRegions[dim]
-	if region.start < len(d.edges) {
-		return d.edges[region.start : region.start+region.size]
+	dimRange := d.dimRanges[dim]
+	if dimRange.start < len(d.edges) {
+		return d.edges[dimRange.start : dimRange.start+dimRange.size]
 	}
 	return nil
 }
@@ -310,12 +299,12 @@ func (d *indexCellData) dimRangeEdges(dim0, dim1 int) []edgeAndIDChain {
 		return nil
 	}
 
-	start := d.dimRegions[dim0].start
+	start := d.dimRanges[dim0].start
 	size := 0
 
 	for dim := dim0; dim <= dim1; dim++ {
-		start = minInt(start, d.dimRegions[dim].start)
-		size += d.dimRegions[dim].size
+		start = minInt(start, d.dimRanges[dim].start)
+		size += d.dimRanges[dim].size
 	}
 
 	if start < len(d.edges) {
