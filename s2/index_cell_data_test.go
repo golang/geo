@@ -67,7 +67,7 @@ func testIndexCellDataDimensionFilteringWorks(t *testing.T) {
 		iter.Begin()
 		data := newIndexCellData()
 		for j := 0; j < 3; j++ {
-			data.dimWanted[j] = test.dimWanted[j]
+			data.setDimWanted(j, test.dimWanted[j])
 		}
 		data.loadCell(index, iter.CellID(), iter.cell)
 

@@ -17,6 +17,7 @@ package s2
 import (
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 
 	"github.com/golang/geo/s1"
@@ -404,13 +405,7 @@ func (cu *CellUnion) Contains(o CellUnion) bool {
 
 // Intersects reports whether this CellUnion intersects any of the CellIDs of the given CellUnion.
 func (cu *CellUnion) Intersects(o CellUnion) bool {
-	for _, c := range *cu {
-		if o.IntersectsCellID(c) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(*cu, o.IntersectsCellID)
 }
 
 // lowerBound returns the index in this CellUnion to the first element whose value
@@ -544,6 +539,7 @@ func (cu *CellUnion) ExactArea() float64 {
 }
 
 // Encode encodes the CellUnion.
+// Note: The CellUnion is not required to be valid according to IsValid().
 func (cu *CellUnion) Encode(w io.Writer) error {
 	e := &encoder{w: w}
 	cu.encode(e)
@@ -559,6 +555,7 @@ func (cu *CellUnion) encode(e *encoder) {
 }
 
 // Decode decodes the CellUnion.
+// Note: The returned CellUnion is not necessarily valid according to IsValid().
 func (cu *CellUnion) Decode(r io.Reader) error {
 	d := &decoder{r: asByteReader(r)}
 	cu.decode(d)
@@ -574,7 +571,7 @@ func (cu *CellUnion) decode(d *decoder) {
 		d.err = fmt.Errorf("only version %d is supported", encodingVersion)
 		return
 	}
-	n := d.readInt64()
+	n := d.readUint64()
 	if d.err != nil {
 		return
 	}

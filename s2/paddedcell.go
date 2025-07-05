@@ -15,6 +15,8 @@
 package s2
 
 import (
+	"math/bits"
+
 	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r2"
 )
@@ -243,7 +245,7 @@ func (p *PaddedCell) ShrinkToFit(rect r2.Rect) CellID {
 	// if both pairs of endpoints are equal we choose MaxLevel; if they differ
 	// only at bit 0, we choose (MaxLevel - 1), and so on.
 	levelMSB := uint64(((iXor | jXor) << 1) + 1)
-	level := MaxLevel - findMSBSetNonZero64(levelMSB)
+	level := MaxLevel - (bits.Len64(levelMSB) - 1)
 	if level <= p.level {
 		return p.id
 	}

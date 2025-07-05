@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"slices"
 )
 
 // Polygon represents a sequence of zero or more loops; recall that the
@@ -880,12 +881,7 @@ func (p *Polygon) Intersects(o *Polygon) bool {
 	}
 
 	if !p.hasHoles && !o.hasHoles {
-		for _, l := range o.loops {
-			if p.anyLoopIntersects(l) {
-				return true
-			}
-		}
-		return false
+		return slices.ContainsFunc(o.loops, p.anyLoopIntersects)
 	}
 
 	// Polygon A is disjoint from B if A excludes the entire boundary of B and B

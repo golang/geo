@@ -114,7 +114,7 @@ func newIndexCellData() *indexCellData {
 	}
 }
 
-// newindexCellDataFromCell creates a new indexCellData and loads the given
+// newIndexCellDataFromCell creates a new indexCellData and loads the given
 // cell data.
 func newIndexCellDataFromCell(index *ShapeIndex, id CellID, cell *ShapeIndexCell) *indexCellData {
 	d := newIndexCellData()
