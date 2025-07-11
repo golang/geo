@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"bytes"
 	"math"
 	"math/rand"
 	"reflect"
@@ -1064,4 +1065,40 @@ func BenchmarkCellUnionFromRange(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		CellUnionFromRange(x, y)
 	}
+}
+
+// go test -fuzz=FuzzDecodeCellUnion github.com/golang/geo/s2
+func FuzzDecodeCellUnion(f *testing.F) {
+	cu := CellUnion([]CellID{
+		CellID(0x33),
+		CellID(0x8e3748fab),
+		CellID(0x91230abcdef83427),
+	})
+	buf := new(bytes.Buffer)
+	if err := cu.Encode(buf); err != nil {
+		f.Errorf("error encoding %v: ", err)
+	}
+	f.Add(buf.Bytes())
+
+	f.Fuzz(func(t *testing.T, encoded []byte) {
+		var c CellUnion
+		if err := c.Decode(bytes.NewReader(encoded)); err != nil {
+			// Construction failed, no need to test further.
+			return
+		}
+		if got := c.ApproxArea(); got < 0 {
+			t.Errorf("ApproxArea() = %v, want >= 0. CellUnion: %v", got, c)
+		}
+		buf := new(bytes.Buffer)
+		if err := c.Encode(buf); err != nil {
+			// Re-encoding the cell union does not necessarily produce the same bytes, as there could be additional bytes following after n cells were read.
+			t.Errorf("encode() = %v. got %v, want %v. CellUnion: %v", err, buf.Bytes(), encoded, c)
+		}
+		if c.IsValid() {
+			c.Normalize()
+			if !c.IsNormalized() {
+				t.Errorf("IsNormalized() = false, want true. CellUnion: %v", c)
+			}
+		}
+	})
 }
