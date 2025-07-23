@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"bytes"
 	"math"
 	"math/rand"
 	"testing"
@@ -1205,3 +1206,26 @@ func TestPolygonInvert(t *testing.T) {
 //   TestNarrowGapRemoved
 //   TestCloselySpacedEdgeVerticesKept
 //   TestPolylineAssemblyBug
+
+// go test -fuzz=FuzzDecodePolygon github.com/golang/geo/s2
+func FuzzDecodePolygon(f *testing.F) {
+	for _, p := range []*Polygon{near0Polygon, near01Polygon, near30Polygon, near23Polygon, far01Polygon, far21Polygon, south0abPolygon} {
+		buf := new(bytes.Buffer)
+		if err := p.Encode(buf); err != nil {
+			f.Errorf("error encoding %v: ", err)
+		}
+		f.Add(buf.Bytes())
+	}
+
+	f.Fuzz(func(t *testing.T, encoded []byte) {
+		p := &Polygon{}
+		if err := p.Decode(bytes.NewReader(encoded)); err != nil {
+			// Construction failed, no need to test further.
+			return
+		}
+		if got := p.Area(); got < 0 {
+			t.Errorf("Area() = %v, want >= 0. Polygon: %v", got, p)
+		}
+		// TODO: Test more methods on Polygon.
+	})
+}
