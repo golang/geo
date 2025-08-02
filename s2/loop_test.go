@@ -1584,28 +1584,59 @@ func TestLoopTurningAngle(t *testing.T) {
 }
 
 func TestLoopAreaAndCentroid(t *testing.T) {
-	var p Point
+	tests := []struct {
+		name         string
+		loop         *Loop
+		wantArea     float64
+		wantCentroid Point
+	}{
+		{
+			name:         "EmptyLoop",
+			loop:         EmptyLoop(),
+			wantArea:     0.0,
+			wantCentroid: Point{},
+		},
+		{
+			name:         "FullLoop",
+			loop:         FullLoop(),
+			wantArea:     4 * math.Pi,
+			wantCentroid: Point{},
+		},
+		{
+			name:         "northHemi",
+			loop:         northHemi,
+			wantArea:     2 * math.Pi,
+			wantCentroid: Point{}, // Centroid of a hemisphere is (0,0,0)
+		},
+		{
+			name:         "eastHemi",
+			loop:         eastHemi,
+			wantArea:     2 * math.Pi,
+			wantCentroid: Point{}, // Centroid of a hemisphere is (0,0,0)
+		},
+		{
+			name:         "lineTriangle",
+			loop:         lineTriangle,
+			wantArea:     0,
+			wantCentroid: Point{},
+		},
+		{
+			name:         "twoPoints",
+			loop:         LoopFromPoints([]Point{PointFromLatLng(LatLngFromDegrees(0, 0)), PointFromLatLng(LatLngFromDegrees(0, 1))}),
+			wantArea:     0,
+			wantCentroid: Point{},
+		},
+	}
 
-	if got, want := EmptyLoop().Area(), 0.0; got != want {
-		t.Errorf("EmptyLoop.Area() = %v, want %v", got, want)
-	}
-	if got, want := FullLoop().Area(), 4*math.Pi; got != want {
-		t.Errorf("FullLoop.Area() = %v, want %v", got, want)
-	}
-	if got := EmptyLoop().Centroid(); !p.ApproxEqual(got) {
-		t.Errorf("EmptyLoop.Centroid() = %v, want %v", got, p)
-	}
-	if got := FullLoop().Centroid(); !p.ApproxEqual(got) {
-		t.Errorf("FullLoop.Centroid() = %v, want %v", got, p)
-	}
-
-	if got, want := northHemi.Area(), 2*math.Pi; !float64Eq(got, want) {
-		t.Errorf("northHemi.Area() = %v, want %v", got, want)
-	}
-
-	eastHemiArea := eastHemi.Area()
-	if eastHemiArea < 2*math.Pi-1e-12 || eastHemiArea > 2*math.Pi+1e-12 {
-		t.Errorf("eastHemi.Area() = %v, want between [%v, %v]", eastHemiArea, 2*math.Pi-1e-12, 2*math.Pi+1e-12)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.loop.Area(); !float64Near(got, test.wantArea, epsilon) {
+				t.Errorf("Area() = %v, want %v", got, test.wantArea)
+			}
+			if got := test.loop.Centroid(); !got.ApproxEqual(test.wantCentroid) {
+				t.Errorf("Centroid() = %v, want %v", got, test.wantCentroid)
+			}
+		})
 	}
 
 	// Construct spherical caps of random height, and approximate their boundary
