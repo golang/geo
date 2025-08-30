@@ -18,39 +18,32 @@ More details about S2 in general are available on the S2 Geometry Website
 
 The library provides the following:
 
-*   Representations of angles, intervals, latitude-longitude points, unit
+* Representations of angles, intervals, latitude-longitude points, unit
     vectors, and so on, and various operations on these types.
-
-*   Geometric shapes over the unit sphere, such as spherical caps ("discs"),
+* Geometric shapes over the unit sphere, such as spherical caps ("discs"),
     latitude-longitude rectangles, polylines, and polygons. These are
     collectively known as "regions".
-
-*   A hierarchical decomposition of the sphere into regions called "cells". The
+* A hierarchical decomposition of the sphere into regions called "cells". The
     hierarchy starts with the six faces of a projected cube and recursively
     subdivides them in a quadtree-like fashion.
-
-*   Robust constructive operations (e.g., union) and boolean predicates (e.g.,
+* Robust constructive operations (e.g., union) and boolean predicates (e.g.,
     containment) for arbitrary collections of points, polylines, and polygons.
-
-*   Fast in-memory indexing of collections of points, polylines, and polygons.
-
-*   Algorithms for measuring distances and finding nearby objects.
-
-*   Robust algorithms for snapping and simplifying geometry (with accuracy and
+* Fast in-memory indexing of collections of points, polylines, and polygons.
+* Algorithms for measuring distances and finding nearby objects.
+* Robust algorithms for snapping and simplifying geometry (with accuracy and
     topology guarantees).
-
-*   A collection of efficient yet exact mathematical predicates for testing
+* A collection of efficient yet exact mathematical predicates for testing
     relationships among geometric objects.
-
-*   Support for spatial indexing, including the ability to approximate regions
+* Support for spatial indexing, including the ability to approximate regions
     as collections of discrete "S2 cells". This feature makes it easy to build
     large distributed spatial indexes.
+* Translate angles and steradians into distances and areas using earth's radius
+    through the [`earth` package](geo/earth/earth.go).
 
 On the other hand, the following are outside the scope of S2:
 
-*   Planar geometry.
-
-*   Conversions to/from common GIS formats.
+* Planar geometry.
+* Conversions to/from common GIS formats.
 
 ### Robustness
 
@@ -81,11 +74,11 @@ to geography are not part of the core library (e.g. easting/northing
 conversions, ellipsoid approximations, geodetic vs. geocentric coordinates,
 etc).
 
-For an analogous library in C++, see https://github.com/google/s2geometry, in
-Java, see https://github.com/google/s2-geometry-library-java, and Python, see
-https://github.com/google/s2geometry/tree/master/src/python
+For an analogous library in C++, see <https://github.com/google/s2geometry>, in
+Java, see <https://github.com/google/s2-geometry-library-java>, and Python, see
+<https://github.com/google/s2geometry/tree/master/src/python>
 
-# Status of the Go Library
+## Status of the Go Library
 
 This library is principally a port of the
 [C++ S2 library](https://github.com/google/s2geometry), adapting to Go idioms
@@ -94,9 +87,9 @@ C++ library.
 
 Legend:
 
-*   ✅ - Feature Complete
-*   🟡 - Mostly Complete
-*   ❌ - Not available
+* ✅ - Feature Complete
+* 🟡 - Mostly Complete
+* ❌ - Not available
 
 ## [ℝ¹](https://pkg.go.dev/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
 
@@ -209,7 +202,7 @@ S2CellIterator                   | ❌
 S2CellIteratorJoin               | ❌
 S2CellRangeIterator              | ❌
 S2Coder                          | ❌
-S2Earth                          | ❌
+S2Earth                          | ✅
 S2EdgeClipping                   | ✅
 S2EdgeCrosser                    | ✅
 S2EdgeCrossings                  | ✅
@@ -243,12 +236,10 @@ S2TextFormat                     | ✅
 S2WedgeRelations                 | ✅
 S2WindingOperation               | ❌
 
-
 ### Encode/Decode
 
 Encoding and decoding of S2 types is fully implemented and interoperable with
 C++ and Java.
-
 
 ## Disclaimer
 
