@@ -38,7 +38,7 @@ The library provides the following:
     as collections of discrete "S2 cells". This feature makes it easy to build
     large distributed spatial indexes.
 * Translate angles and steradians into distances and areas using earth's radius
-    through the [`earth` package](geo/earth/earth.go).
+    through the [`earth`](earth/earth_example_test.go)  package.
 
 On the other hand, the following are outside the scope of S2:
 
