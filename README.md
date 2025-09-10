@@ -47,7 +47,7 @@ The library provides the following:
     large distributed spatial indexes.
 
 *   Translate angles and steradians into distances and areas using earth's radius
-    through the [`earth`](earth/earth_example_test.go) package.
+    through the [`earth`](https://pkg.go.dev/github.com/golang/geo/earth) package.
 
 On the other hand, the following are outside the scope of S2:
 
