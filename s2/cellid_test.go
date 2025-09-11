@@ -15,10 +15,10 @@
 package s2
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"testing"
-	"fmt"
 
 	"github.com/golang/geo/r2"
 	"github.com/golang/geo/s1"
