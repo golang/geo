@@ -287,7 +287,7 @@ func (ci CellID) AllNeighbors(level int) []CellID {
 
 	nbrSize := sizeIJ(level)
 
-	maxCellIDs := 4*(size/nbrSize+1)
+	maxCellIDs := 4 * (size/nbrSize + 1)
 	var neighbors = make([]CellID, 0, maxCellIDs)
 
 	// We compute the top-bottom, left-right, and diagonal neighbors in one
