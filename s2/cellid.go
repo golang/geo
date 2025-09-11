@@ -276,7 +276,7 @@ func (ci CellID) AllNeighbors(level int) []CellID {
 		return nil
 	}
 
-	var neighbors = make([]CellID, 0, (2<<(level-ci.Level()))+4)
+	var neighbors = make([]CellID, 0, (4<<(level-ci.Level()))+4)
 
 	face, i, j, _ := ci.faceIJOrientation()
 
