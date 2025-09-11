@@ -287,7 +287,7 @@ func (ci CellID) AllNeighbors(level int) []CellID {
 
 	nbrSize := sizeIJ(level)
 
-	var neighbors = make([]CellID, 0, (2<<(level-ci.Level()))+4)
+	var neighbors = make([]CellID, 0, (4<<(level-ci.Level()))+4)
 
 	// We compute the top-bottom, left-right, and diagonal neighbors in one
 	// pass. The loop test is at the end of the loop to avoid 32-bit overflow.
