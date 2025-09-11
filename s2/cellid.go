@@ -276,8 +276,6 @@ func (ci CellID) AllNeighbors(level int) []CellID {
 		return nil
 	}
 
-	var neighbors = make([]CellID, 0, 8)
-
 	face, i, j, _ := ci.faceIJOrientation()
 
 	// Find the coordinates of the lower left-hand leaf cell. We need to
@@ -288,6 +286,9 @@ func (ci CellID) AllNeighbors(level int) []CellID {
 	j &= -size
 
 	nbrSize := sizeIJ(level)
+
+	maxCellIDs := 4*(size/nbrSize+1)
+	var neighbors = make([]CellID, 0, maxCellIDs)
 
 	// We compute the top-bottom, left-right, and diagonal neighbors in one
 	// pass. The loop test is at the end of the loop to avoid 32-bit overflow.
