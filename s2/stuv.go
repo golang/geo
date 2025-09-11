@@ -46,7 +46,7 @@ import (
 //  (id)
 //    A CellID is a 64-bit encoding of a face and a Hilbert curve position
 //    on that face. The Hilbert curve position implicitly encodes both the
-//    position of a cell and its subdivision level (see s2cellid.go).
+//    position of a cell and its subdivision level (see cellid.go).
 //
 //  (face, i, j)
 //    Leaf-cell coordinates. "i" and "j" are integers in the range

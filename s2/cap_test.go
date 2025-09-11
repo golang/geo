@@ -281,7 +281,7 @@ func TestCapRadiusToHeight(t *testing.T) {
 		{4.0 * s1.Radian, fullHeight},
 	}
 	for _, test := range tests {
-		// float64Eq comes from s2latlng_test.go
+		// float64Eq comes from latlng_test.go
 		if got := radiusToHeight(test.got); !float64Eq(got, test.want) {
 			t.Errorf("radiusToHeight(%v) = %v; want %v", test.got, got, test.want)
 		}
