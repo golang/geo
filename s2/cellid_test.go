@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"testing"
@@ -1043,6 +1044,25 @@ func TestCellIDCenterFaceSiTi(t *testing.T) {
 		if want != ti&mask {
 			t.Errorf("Level Offset: %d. %b != %b", test.levelOffset, want, ti&mask)
 		}
+	}
+}
+
+func BenchmarkAllNeighbors(b *testing.B) {
+	level := 12
+	ll := LatLngFromDegrees(10.100001, 10.100002)
+	cellID := CellIDFromLatLng(ll).Parent(level)
+
+	cases := []int{level, level + 2, level + 4}
+
+	for _, n := range cases {
+		b.Run(fmt.Sprintf("level%d", n), func(b *testing.B) {
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				cellID.AllNeighbors(n)
+			}
+		})
 	}
 }
 
