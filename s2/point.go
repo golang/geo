@@ -160,12 +160,12 @@ func regularPointsForFrame(frame matrix3x3, radius s1.Angle, numVertices int) []
 	z := math.Cos(radius.Radians())
 	r := math.Sin(radius.Radians())
 	radianStep := 2 * math.Pi / float64(numVertices)
-	var vertices []Point
+	var vertices = make([]Point, numVertices)
 
-	for i := 0; i < numVertices; i++ {
+	for i := range vertices {
 		angle := float64(i) * radianStep
 		p := Point{r3.Vector{X: r * math.Cos(angle), Y: r * math.Sin(angle), Z: z}}
-		vertices = append(vertices, Point{fromFrame(frame, p).Normalize()})
+		vertices[i] = Point{fromFrame(frame, p).Normalize()}
 	}
 
 	return vertices
