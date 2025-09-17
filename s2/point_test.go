@@ -463,8 +463,8 @@ func BenchmarkPointRegularPoints(b *testing.B) {
 	center := PointFromLatLng(LatLngFromDegrees(80, 135))
 	radius := s1.Degree * 20
 
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		b.ReportAllocs()
 		regularPoints(center, radius, 8)
 	}
 }
