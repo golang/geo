@@ -194,7 +194,10 @@ func (p *Polyline) NumChains() int {
 
 // Chain returns the i-th edge Chain in the Shape.
 func (p *Polyline) Chain(chainID int) Chain {
-	return Chain{0, p.NumEdges()}
+	if p.NumEdges() == 1 {
+		return Chain{0, p.NumEdges()}
+	}
+	return Chain{chainID, p.NumEdges() - chainID}
 }
 
 // ChainEdge returns the j-th edge of the i-th edge Chain.
