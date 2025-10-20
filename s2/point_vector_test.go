@@ -67,7 +67,7 @@ func TestPointVectorBasics(t *testing.T) {
 	}
 
 	for i := 0; i < numPoints; i++ {
-		if got, want := shape.Chain(i).Start, i; got != want {
+		if got, want := shape.Chain(i).Start, i; i != got {
 			t.Errorf("shape.Chain(%d).Start = %d, want %d", i, got, want)
 		}
 		if got, want := shape.Chain(i).Length, 1; got != want {
