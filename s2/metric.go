@@ -122,10 +122,7 @@ func (m Metric) MinLevel(val float64) int {
 		return MaxLevel
 	}
 
-	level := -(math.Ilogb(val/m.Deriv) >> uint(m.Dim-1))
-	if level > MaxLevel {
-		level = MaxLevel
-	}
+	level := min(-(math.Ilogb(val/m.Deriv) >> uint(m.Dim-1)), MaxLevel)
 	if level < 0 {
 		level = 0
 	}
@@ -144,10 +141,7 @@ func (m Metric) MaxLevel(val float64) int {
 		return MaxLevel
 	}
 
-	level := math.Ilogb(m.Deriv/val) >> uint(m.Dim-1)
-	if level > MaxLevel {
-		level = MaxLevel
-	}
+	level := min(math.Ilogb(m.Deriv/val)>>uint(m.Dim-1), MaxLevel)
 	if level < 0 {
 		level = 0
 	}
