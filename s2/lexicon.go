@@ -18,7 +18,7 @@ import (
 	"encoding/binary"
 	"hash/adler32"
 	"math"
-	"sort"
+	"slices"
 )
 
 // TODO(roberts): If any of these are worth making public, change the
@@ -170,6 +170,6 @@ func uniqueInt32s(in []int32) []int32 {
 		m[i] = true
 		vals = append(vals, i)
 	}
-	sort.Slice(vals, func(i, j int) bool { return vals[i] < vals[j] })
+	slices.Sort(vals)
 	return vals
 }

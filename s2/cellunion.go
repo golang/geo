@@ -273,10 +273,7 @@ func (cu *CellUnion) Denormalize(minLevel, levelMod int) {
 	var denorm CellUnion
 	for _, id := range *cu {
 		level := id.Level()
-		newLevel := level
-		if newLevel < minLevel {
-			newLevel = minLevel
-		}
+		newLevel := max(level, minLevel)
 		if levelMod > 1 {
 			newLevel += (MaxLevel - (newLevel - minLevel)) % levelMod
 			if newLevel > MaxLevel {
