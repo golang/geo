@@ -484,8 +484,9 @@ func (c Cell) ContainsPoint(p Point) bool {
 	//
 	// is always true. To do this, we need to account for the error when
 	// converting from (u,v) coordinates to (s,t) coordinates. In the
-	// normal case the total error is at most dblEpsilon.
-	return c.uv.ExpandedByMargin(dblEpsilon).ContainsPoint(uv)
+	// normal case the total error is at most 1.125 * dblEpsilon.
+	// See https://github.com/google/s2geometry/issues/463.
+	return c.uv.ExpandedByMargin((1.125 + dblEpsilon) * dblEpsilon).ContainsPoint(uv)
 }
 
 // Encode encodes the Cell.

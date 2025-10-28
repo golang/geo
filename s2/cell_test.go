@@ -558,9 +558,6 @@ func TestCellContainsPoint(t *testing.T) {
 }
 
 func TestCellContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
-	// TODO: Is it still about 1% flaky with a random seed.
-	// TODO(rsned): https://github.com/golang/geo/issues/120
-
 	// Construct many points that are nearly on a Cell edge, and verify that
 	// CellFromCellID(cellIDFromPoint(p)).Contains(p) is always true.
 	for iter := 0; iter < 1000; iter++ {
@@ -571,8 +568,19 @@ func TestCellContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
 		v2 := samplePointFromCap(CapFromCenterAngle(cell.Vertex(i2), s1.Angle(epsilon)))
 		p := Interpolate(randomUniformFloat64(0, 1.0), v1, v2)
 		if !CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) {
-			t.Errorf("For p=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p)
+			t.Errorf("For p=%v, cell=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p, cell)
 		}
+	}
+}
+
+func TestCellContainsPointConsistentWithS2CellIDFromPointExample1(t *testing.T) {
+	// Failures can be generated for `TestCellContainsPointConsistentWithS2CellIDFromPoint` by
+	// increasing the number of iterations to 1M.  This is one such example.
+	// See https://github.com/google/s2geometry/issues/463.
+	p := PointFromCoords(0.38203141040035632, 0.030196609707941954, 0.9236558700239289)
+	cell := CellFromCellID(cellIDFromPoint(p))
+	if !cell.ContainsPoint(p) {
+		t.Errorf("For p=%v, cell=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p, cell)
 	}
 }
 
@@ -592,7 +600,7 @@ func TestCellContainsPointContainsAmbiguousPoint(t *testing.T) {
 	p := PointFromLatLng(LatLngFromDegrees(-2, 90))
 	cell := CellFromCellID(cellIDFromPoint(p).Parent(1))
 	if !cell.ContainsPoint(p) {
-		t.Errorf("For p=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p)
+		t.Errorf("For p=%v, cell=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p, cell)
 	}
 }
 
