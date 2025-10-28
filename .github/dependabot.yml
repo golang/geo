@@ -1,9 +1,20 @@
 version: 2
 updates:
+  # Handle everything *but* `codeql-action`.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "github/codeql-action"
+
+  # Handle `codeql-action` monthly, since it has many trivial updates.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    allow:
+      - dependency-name: "github/codeql-action"
 
   - package-ecosystem: gomod
     directory: /
