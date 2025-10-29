@@ -868,7 +868,7 @@ func intervalDistance(x LatLng, lat s1.Angle, iv s1.Interval) s1.Angle {
 		return s1.Angle(math.Abs(float64(x.Lat - lat)))
 	}
 
-	return minAngle(
+	return min(
 		x.Distance(LatLng{lat, s1.Angle(iv.Lo)}),
 		x.Distance(LatLng{lat, s1.Angle(iv.Hi)}))
 }
@@ -890,7 +890,7 @@ func bruteForceRectLatLngDistance(r Rect, ll LatLng) s1.Angle {
 		PointFromLatLng(LatLng{s1.Angle(r.Lat.Lo), s1.Angle(r.Lng.Hi)}),
 		PointFromLatLng(LatLng{s1.Angle(r.Lat.Hi), s1.Angle(r.Lng.Hi)}))
 
-	return minAngle(loLat, hiLat, loLng, hiLng)
+	return min(loLat, hiLat, loLng, hiLng)
 }
 
 func TestDistanceRectFromLatLng(t *testing.T) {
@@ -968,7 +968,7 @@ func verifyDirectedHausdorffDistance(t *testing.T, a, b Rect) {
 
 		for j := 0; j <= sampleSizeOnLat; j++ {
 			d := b.DistanceToLatLng(ll.Normalized())
-			maxDistance = maxAngle(maxDistance, d)
+			maxDistance = max(maxDistance, d)
 			ll.Lat += deltaOnLat
 		}
 		ll.Lng += deltaOnLng

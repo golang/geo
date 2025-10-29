@@ -66,7 +66,7 @@ func PointArea(a, b, c Point) float64 {
 	s := 0.5 * (sa + sb + sc)
 	if s >= 3e-4 {
 		// Consider whether Girard's formula might be more accurate.
-		dmin := s - maxAngle(sa, sb, sc)
+		dmin := s - max(sa, sb, sc)
 		if dmin < 1e-2*s*s*s*s*s {
 			// This triangle is skinny enough to use Girard's formula.
 			area := GirardArea(a, b, c)

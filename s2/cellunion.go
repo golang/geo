@@ -483,7 +483,7 @@ func (cu *CellUnion) ExpandAtLevel(level int) {
 func (cu *CellUnion) ExpandByRadius(minRadius s1.Angle, maxLevelDiff int) {
 	minLevel := MaxLevel
 	for _, cid := range *cu {
-		minLevel = minInt(minLevel, cid.Level())
+		minLevel = min(minLevel, cid.Level())
 	}
 
 	// Find the maximum level such that all cells are at least "minRadius" wide.
@@ -493,7 +493,7 @@ func (cu *CellUnion) ExpandByRadius(minRadius s1.Angle, maxLevelDiff int) {
 		// The easiest way to handle this is to expand twice.
 		cu.ExpandAtLevel(0)
 	}
-	cu.ExpandAtLevel(minInt(minLevel+maxLevelDiff, radiusLevel))
+	cu.ExpandAtLevel(min(minLevel+maxLevelDiff, radiusLevel))
 }
 
 // Equal reports whether the two CellUnions are equal.

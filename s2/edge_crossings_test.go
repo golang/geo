@@ -120,8 +120,8 @@ func TestEdgeutilIntersectionError(t *testing.T) {
 		if got, want := pointDist, intersectionError; got > want {
 			t.Errorf("%v.Distance(%v) = %v want <= %v", expected, actual, got, want)
 		}
-		maxEdgeDist = maxAngle(maxEdgeDist, maxAngle(distAB, distCD))
-		maxPointDist = maxAngle(maxPointDist, pointDist)
+		maxEdgeDist = max(maxEdgeDist, distAB, distCD)
+		maxPointDist = max(maxPointDist, pointDist)
 	}
 }
 

@@ -334,7 +334,7 @@ func (p Point) IsNormalizable() bool {
 	//
 	// The fastest way to ensure this is to test whether the largest component of
 	// the result has a magnitude of at least 2**-242.
-	return maxFloat64(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z)) >= math.Ldexp(1, -242)
+	return max(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z)) >= math.Ldexp(1, -242)
 }
 
 // EnsureNormalizable scales a vector as necessary to ensure that the result can
@@ -355,7 +355,7 @@ func (p Point) EnsureNormalizable() Point {
 		// Note that we must scale by a power of two to avoid rounding errors.
 		// The code below scales "p" such that the largest component is
 		// in the range [1, 2).
-		pMax := maxFloat64(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z))
+		pMax := max(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z))
 
 		// This avoids signed overflow for any value of Ilogb().
 		return Point{p.Mul(math.Ldexp(2, -1-math.Ilogb(pMax)))}

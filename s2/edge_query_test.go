@@ -448,7 +448,7 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 	numTargets := maxTargetsPerIndex
 	if opts.targetType == queryTypeIndex {
 		// Limit the total number of target edges to reduce the benchmark running times.
-		numTargets = minInt(numTargets, 500000/opts.numTargetEdges)
+		numTargets = min(numTargets, 500000/opts.numTargetEdges)
 	}
 
 	for i := 0; i < numTargets; i++ {

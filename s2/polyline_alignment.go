@@ -271,11 +271,11 @@ func (w *window) dilate(radius int) *window {
 
 	newStrides := make([]columnStride, w.rows)
 	for row := 0; row < w.rows; row++ {
-		prevRow := maxInt(0, row-radius)
-		nextRow := minInt(row+radius, w.rows-1)
+		prevRow := max(0, row-radius)
+		nextRow := min(row+radius, w.rows-1)
 		newStrides[row] = columnStride{
-			start: maxInt(0, w.strides[prevRow].start-radius),
-			end:   minInt(w.strides[nextRow].end+radius, w.cols),
+			start: max(0, w.strides[prevRow].start-radius),
+			end:   min(w.strides[nextRow].end+radius, w.cols),
 		}
 	}
 
@@ -458,7 +458,7 @@ func dynamicTimewarp(a, b *Polyline, w *window) *vertexAlignment {
 			uCost := costs.boundsCheckedTableCost(row-1, col-0, prev)
 			lCost := costs.boundsCheckedTableCost(row-0, col-1, curr)
 
-			costs[row][col] = minFloat64(dCost, uCost, lCost) +
+			costs[row][col] = min(dCost, uCost, lCost) +
 				(*a)[row].Sub((*b)[col].Vector).Norm()
 		}
 		prev = curr
@@ -473,7 +473,7 @@ func dynamicTimewarp(a, b *Polyline, w *window) *vertexAlignment {
 	// this incurs is larger than the cost to simply redo the comparisons.
 	// It's probably worth revisiting this assumption in the future.
 	// As it turns out, the following code ends up effectively free.
-	warpPath := make([]warpPair, 0, maxInt(rows, cols))
+	warpPath := make([]warpPair, 0, max(rows, cols))
 	row := rows - 1
 	col := cols - 1
 	curr = w.checkedColumnStride(row)

@@ -196,7 +196,7 @@ type EdgeTessellator struct {
 func NewEdgeTessellator(p Projection, tolerance s1.Angle) *EdgeTessellator {
 	return &EdgeTessellator{
 		projection:      p,
-		scaledTolerance: s1.ChordAngleFromAngle(maxAngle(tolerance, minTessellationTolerance)),
+		scaledTolerance: s1.ChordAngleFromAngle(max(tolerance, minTessellationTolerance)),
 	}
 }
 
@@ -287,5 +287,5 @@ func (e *EdgeTessellator) estimateMaxError(pa r2.Point, a Point, pb r2.Point, b 
 	mid2 := Interpolate(t2, a, b)
 	pmid1 := e.projection.Unproject(e.projection.Interpolate(t1, pa, pb))
 	pmid2 := e.projection.Unproject(e.projection.Interpolate(t2, pa, pb))
-	return maxChordAngle(ChordAngleBetweenPoints(mid1, pmid1), ChordAngleBetweenPoints(mid2, pmid2))
+	return max(ChordAngleBetweenPoints(mid1, pmid1), ChordAngleBetweenPoints(mid2, pmid2))
 }
