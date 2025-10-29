@@ -14,7 +14,11 @@
 
 package s2
 
-import "github.com/golang/geo/s1"
+import (
+	"cmp"
+
+	"github.com/golang/geo/s1"
+)
 
 // roundAngle returns the value rounded to nearest as an int32.
 // This does not match C++ exactly for the case of x.5.
@@ -25,7 +29,7 @@ func roundAngle(val s1.Angle) int32 {
 	return int32(val + 0.5)
 }
 
-// clampInt returns the number closest to x within the range lo..hi.
-func clampInt(x, lo, hi int) int {
+// clamp restricts a value to be within the range [lo, hi].
+func clamp[T cmp.Ordered](x, lo, hi T) T {
 	return min(max(x, lo), hi)
 }

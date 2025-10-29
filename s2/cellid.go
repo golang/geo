@@ -601,8 +601,8 @@ func cellIDFromFaceIJWrap(f, i, j int) CellID {
 	// Convert i and j to the coordinates of a leaf cell just beyond the
 	// boundary of this face.  This prevents 32-bit overflow in the case
 	// of finding the neighbors of a face cell.
-	i = clampInt(i, -1, MaxSize)
-	j = clampInt(j, -1, MaxSize)
+	i = clamp(i, -1, MaxSize)
+	j = clamp(j, -1, MaxSize)
 
 	// We want to wrap these coordinates onto the appropriate adjacent face.
 	// The easiest way to do this is to convert the (i,j) coordinates to (x,y,z)
