@@ -623,7 +623,7 @@ func (c Cell) distanceInternal(targetXYZ Point, toInterior bool) s1.ChordAngle {
 		// arbitrary quadrilaterals after they are projected onto the sphere.
 		// Therefore the simplest approach is just to find the minimum distance to
 		// any of the four edges.
-		return minChordAngle(edgeDistance(-dir00, c.uv.X.Lo),
+		return min(edgeDistance(-dir00, c.uv.X.Lo),
 			edgeDistance(dir01, c.uv.X.Hi),
 			edgeDistance(-dir10, c.uv.Y.Lo),
 			edgeDistance(dir11, c.uv.Y.Hi))
@@ -634,7 +634,7 @@ func (c Cell) distanceInternal(targetXYZ Point, toInterior bool) s1.ChordAngle {
 	// tests above, because (1) the edges don't meet at right angles and (2)
 	// there are points on the far side of the sphere that are both above *and*
 	// below the cell, etc.
-	return minChordAngle(c.vertexChordDist2(target, false, false),
+	return min(c.vertexChordDist2(target, false, false),
 		c.vertexChordDist2(target, true, false),
 		c.vertexChordDist2(target, false, true),
 		c.vertexChordDist2(target, true, true))
@@ -652,7 +652,7 @@ func (c Cell) MaxDistance(target Point) s1.ChordAngle {
 	// First check the 4 cell vertices.  If all are within the hemisphere
 	// centered around target, the max distance will be to one of these vertices.
 	targetUVW := faceXYZtoUVW(int(c.face), target)
-	maxDist := maxChordAngle(c.vertexChordDist2(targetUVW, false, false),
+	maxDist := max(c.vertexChordDist2(targetUVW, false, false),
 		c.vertexChordDist2(targetUVW, true, false),
 		c.vertexChordDist2(targetUVW, false, true),
 		c.vertexChordDist2(targetUVW, true, true))
@@ -686,7 +686,7 @@ func (c Cell) DistanceToEdge(a, b Point) s1.ChordAngle {
 
 	// First, check the minimum distance to the edge endpoints A and B.
 	// (This also detects whether either endpoint is inside the cell.)
-	minDist := minChordAngle(c.Distance(a), c.Distance(b))
+	minDist := min(c.Distance(a), c.Distance(b))
 	if minDist == 0 {
 		return minDist
 	}
@@ -718,7 +718,7 @@ func (c Cell) MaxDistanceToEdge(a, b Point) s1.ChordAngle {
 	// If the maximum distance from both endpoints to the cell is less than π/2
 	// then the maximum distance from the edge to the cell is the maximum of the
 	// two endpoint distances.
-	maxDist := maxChordAngle(c.MaxDistance(a), c.MaxDistance(b))
+	maxDist := max(c.MaxDistance(a), c.MaxDistance(b))
 	if maxDist <= s1.RightChordAngle {
 		return maxDist
 	}

@@ -264,10 +264,10 @@ func (sf CellIDSnapper) MinVertexSeparation() s1.Angle {
 	//    0.5 * MaxDiagMetric.Value(level) when snapped.
 	minEdge := s1.Angle(MinEdgeMetric.Value(sf.level))
 	maxDiag := s1.Angle(MaxDiagMetric.Value(sf.level))
-	return maxAngle(minEdge,
+	return max(minEdge,
 		// per 2 above, a little less than 2 / sqrt(13)
-		maxAngle(0.548*sf.snapRadius,
-			sf.snapRadius-0.5*maxDiag))
+		0.548*sf.snapRadius,
+		sf.snapRadius-0.5*maxDiag)
 }
 
 // MinEdgeVertexSeparation returns the guaranteed minimum spacing between
@@ -317,9 +317,9 @@ func (sf CellIDSnapper) MinEdgeVertexSeparation() s1.Angle {
 
 	// Otherwise, these bounds hold for any snapRadius.
 	vertexSep := sf.MinVertexSeparation()
-	return maxAngle(0.397*minDiag, // sqrt(3/19) in the plane
-		maxAngle(0.219*sf.snapRadius, // 2*sqrt(3/247) in the plane
-			0.5*(vertexSep/sf.snapRadius)*vertexSep))
+	return max(0.397*minDiag, // sqrt(3/19) in the plane
+		0.219*sf.snapRadius, // 2*sqrt(3/247) in the plane
+		0.5*(vertexSep/sf.snapRadius)*vertexSep)
 }
 
 // SnapPoint returns a candidate snap site for the given point.
@@ -429,14 +429,14 @@ func (sf IntLatLngSnapper) exponentForMaxSnapRadius(snapRadius s1.Angle) int {
 	// When choosing an exponent, we need to account for the error bound of
 	// (9 * sqrt(2) + 1.5) * dblEpsilon added by minSnapRadiusForExponent.
 	snapRadius -= (9*math.Sqrt2 + 1.5) * dblEpsilon
-	snapRadius = maxAngle(snapRadius, 1e-30)
+	snapRadius = max(snapRadius, 1e-30)
 	exponent := math.Log10((1 / math.Sqrt2) / snapRadius.Degrees())
 
 	// There can be small errors in the calculation above, so to ensure that
 	// this function is the inverse of minSnapRadiusForExponent we subtract a
 	// small error tolerance.
-	return maxInt(minIntSnappingExponent,
-		minInt(maxIntSnappingExponent, int(math.Ceil(exponent-2*dblEpsilon))))
+	return max(minIntSnappingExponent,
+		min(maxIntSnappingExponent, int(math.Ceil(exponent-2*dblEpsilon))))
 }
 
 // MinVertexSeparation reports the minimum separation between vertices depending on
@@ -457,7 +457,7 @@ func (sf IntLatLngSnapper) MinVertexSeparation() s1.Angle {
 	//    only select a new site when it is at least snapRadius away from all
 	//    existing sites, and snapping a vertex can move it by up to
 	//    ((1 / sqrt(2)) * sf.to) degrees.
-	return maxAngle(0.471*sf.snapRadius, // sqrt(2)/3 in the plane
+	return max(0.471*sf.snapRadius, // sqrt(2)/3 in the plane
 		sf.snapRadius-s1.Degree*s1.Angle(1/math.Sqrt2)*sf.to)
 }
 
@@ -489,9 +489,9 @@ func (sf IntLatLngSnapper) MinEdgeVertexSeparation() s1.Angle {
 	//    bound approaches 0.5 * snapRadius as the snap radius becomes large
 	//    relative to the grid spacing.
 	vertexSep := sf.MinVertexSeparation()
-	return maxAngle(0.277*s1.Degree*sf.to, // 1/sqrt(13) in the plane
-		maxAngle(0.222*sf.snapRadius, // 2/9 in the plane
-			0.5*(vertexSep/sf.snapRadius)*vertexSep))
+	return max(0.277*s1.Degree*sf.to, // 1/sqrt(13) in the plane
+		0.222*sf.snapRadius, // 2/9 in the plane
+		0.5*(vertexSep/sf.snapRadius)*vertexSep)
 }
 
 // SnapPoint returns a candidate snap site for the given point.

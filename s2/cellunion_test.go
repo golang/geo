@@ -934,9 +934,9 @@ func TestCellUnionExpand(t *testing.T) {
 		// that figures out an appropriate cell level to use for the expansion.
 		minLevel := MaxLevel
 		for _, cid := range covering {
-			minLevel = minInt(minLevel, cid.Level())
+			minLevel = min(minLevel, cid.Level())
 		}
-		expandLevel := minInt(minLevel+maxLevelDiff, MinWidthMetric.MaxLevel(radius))
+		expandLevel := min(minLevel+maxLevelDiff, MinWidthMetric.MaxLevel(radius))
 
 		// Generate a covering for the expanded cap, and measure the new maximum
 		// distance from the cap center to any point in the covering.

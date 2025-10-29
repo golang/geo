@@ -40,10 +40,10 @@ func LaxPolylineFromPolyline(p Polyline) *LaxPolyline {
 	return LaxPolylineFromPoints(p)
 }
 
-func (l *LaxPolyline) NumEdges() int                     { return maxInt(0, len(l.vertices)-1) }
+func (l *LaxPolyline) NumEdges() int                     { return max(0, len(l.vertices)-1) }
 func (l *LaxPolyline) Edge(e int) Edge                   { return Edge{l.vertices[e], l.vertices[e+1]} }
 func (l *LaxPolyline) ReferencePoint() ReferencePoint    { return OriginReferencePoint(false) }
-func (l *LaxPolyline) NumChains() int                    { return minInt(1, l.NumEdges()) }
+func (l *LaxPolyline) NumChains() int                    { return min(1, l.NumEdges()) }
 func (l *LaxPolyline) Chain(i int) Chain                 { return Chain{0, l.NumEdges()} }
 func (l *LaxPolyline) ChainEdge(i, j int) Edge           { return Edge{l.vertices[j], l.vertices[j+1]} }
 func (l *LaxPolyline) ChainPosition(e int) ChainPosition { return ChainPosition{0, e} }

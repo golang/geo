@@ -345,7 +345,7 @@ func bruteForceCost(table costTable, i, j int) float64 {
 	} else if j == 0 {
 		return bruteForceCost(table, i-1, j) + table[i][j]
 	} else {
-		return minFloat64(bruteForceCost(table, i-1, j-1),
+		return min(bruteForceCost(table, i-1, j-1),
 			bruteForceCost(table, i-1, j),
 			bruteForceCost(table, i, j-1)) +
 			table[i][j]

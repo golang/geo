@@ -297,7 +297,7 @@ func TestCellIDAllNeighbors(t *testing.T) {
 
 		// testAllNeighbors computes approximately 2**(2*(diff+1)) cell ids,
 		// so it's not reasonable to use large values of diff.
-		maxDiff := minInt(6, MaxLevel-id.Level()-1)
+		maxDiff := min(6, MaxLevel-id.Level()-1)
 		level := id.Level() + randomUniformInt(maxDiff)
 
 		// We compute AllNeighbors, and then add in all the children of id

@@ -194,7 +194,7 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 	if expectedAngles.IsInverted() {
 		expectedAngles = s1.Interval{Lo: expectedAngles.Hi, Hi: expectedAngles.Lo}
 	}
-	maxAngles := expectedAngles.Expanded(faceClipErrorRadians)
+	maxs := expectedAngles.Expanded(faceClipErrorRadians)
 	var actualAngles s1.Interval
 
 	for face := 0; face < 6; face++ {
@@ -236,8 +236,8 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 		if faceAngles.IsInverted() {
 			faceAngles = s1.Interval{Lo: faceAngles.Hi, Hi: faceAngles.Lo}
 		}
-		if !maxAngles.ContainsInterval(faceAngles) {
-			t.Errorf("%s %v.ContainsInterval(%v) = false, but should have contained this interval", desc, maxAngles, faceAngles)
+		if !maxs.ContainsInterval(faceAngles) {
+			t.Errorf("%s %v.ContainsInterval(%v) = false, but should have contained this interval", desc, maxs, faceAngles)
 		}
 		actualAngles = actualAngles.Union(faceAngles)
 	}
