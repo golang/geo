@@ -62,7 +62,7 @@ func (c *CrossingEdgeQuery) Crossings(a, b Point, shape Shape, crossType Crossin
 	out := 0
 	n := len(edges)
 
-	for in := 0; in < n; in++ {
+	for in := range n {
 		b := shape.Edge(edges[in])
 		sign := crosser.CrossingSign(b.V0, b.V1)
 		if crossType == CrossingTypeAll && (sign == MaybeCross || sign == Cross) || crossType != CrossingTypeAll && sign == Cross {
@@ -97,7 +97,7 @@ func (c *CrossingEdgeQuery) CrossingsEdgeMap(a, b Point, crossType CrossingType)
 	for shape, edges := range edgeMap {
 		out := 0
 		n := len(edges)
-		for in := 0; in < n; in++ {
+		for in := range n {
 			edge := shape.Edge(edges[in])
 			sign := crosser.CrossingSign(edge.V0, edge.V1)
 			if (crossType == CrossingTypeAll && (sign == MaybeCross || sign == Cross)) || (crossType != CrossingTypeAll && sign == Cross) {
@@ -128,7 +128,7 @@ func (c *CrossingEdgeQuery) candidates(a, b Point, shape Shape) []int {
 	maxEdges := shape.NumEdges()
 	if maxEdges <= maxBruteForceEdges {
 		edges = make([]int, maxEdges)
-		for i := 0; i < maxEdges; i++ {
+		for i := range maxEdges {
 			edges[i] = i
 		}
 		return edges

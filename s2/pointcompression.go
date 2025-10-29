@@ -97,7 +97,7 @@ func encodeFirstPointFixedLength(e *encoder, pi, qi uint32, level int, piCoder, 
 
 	// Write as little endian.
 	bytesRequired := (level + 7) / 8 * 2
-	for i := 0; i < bytesRequired; i++ {
+	for range bytesRequired {
 		e.writeUint8(uint8(interleaved))
 		interleaved >>= 8
 	}
@@ -243,7 +243,7 @@ func decodePointsCompressed(d *decoder, level int, target []Point) {
 		d.err = fmt.Errorf("numOffCenter = %d, should be at most len(target) = %d", numOffCenter, len(target))
 		return
 	}
-	for i := 0; i < numOffCenter; i++ {
+	for range numOffCenter {
 		idx := int(d.readUvarint())
 		if d.err != nil {
 			return
@@ -261,7 +261,7 @@ func decodePointsCompressed(d *decoder, level int, target []Point) {
 func decodeFirstPointFixedLength(d *decoder, level int, piCoder, qiCoder *nthDerivativeCoder) (pi, qi uint32) {
 	bytesToRead := (level + 7) / 8 * 2
 	var interleaved uint64
-	for i := 0; i < bytesToRead; i++ {
+	for i := range bytesToRead {
 		rr := d.readUint8()
 		interleaved |= (uint64(rr) << uint(i*8))
 	}

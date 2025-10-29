@@ -108,7 +108,7 @@ func TestPolylineLengthAndCentroid(t *testing.T) {
 	// because of the way the centroid is computed, it does not matter how
 	// we split the great circle into segments.
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		// Choose a coordinate frame for the great circle.
 		f := randomFrame()
 
@@ -141,7 +141,7 @@ func TestPolylineIntersectsCell(t *testing.T) {
 		Point{r3.Vector{X: 1, Y: -0.8, Z: 1.1}.Normalize()},
 	}
 
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		cell := CellFromCellID(CellIDFromFace(face))
 		if got, want := pline.IntersectsCell(cell), face&1 == 0; got != want {
 			t.Errorf("%v.IntersectsCell(%v) = %v, want %v", pline, cell, got, want)

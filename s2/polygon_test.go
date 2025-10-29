@@ -300,7 +300,7 @@ func reverseLoopVertices(l *Loop) {
 // shuffleLoops randomizes the slice of loops using Fisher-Yates shuffling.
 func shuffleLoops(loops []*Loop) {
 	n := len(loops)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		// choose index uniformly in [i, n-1]
 		r := i + rand.Intn(n-i)
 		loops[r], loops[i] = loops[i], loops[r]
@@ -338,7 +338,7 @@ func generatePolygonConcentricTestLoops(numLoops, minVertices int) []*Loop {
 	var loops []*Loop
 	center := randomPoint()
 	numVertices := minVertices + randomUniformInt(10)
-	for i := 0; i < numLoops; i++ {
+	for i := range numLoops {
 		radius := s1.Angle(80*math.Pow(0.1, float64(i))) * s1.Degree
 		loops = append(loops, RegularLoop(center, radius, numVertices))
 	}
@@ -373,7 +373,7 @@ func TestPolygonUninitializedIsValid(t *testing.T) {
 func TestPolygonIsValidLoopNestingInvalid(t *testing.T) {
 	const iters = 1000
 
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		loops := generatePolygonConcentricTestLoops(2+randomUniformInt(4), 3)
 		// Randomly invert all the loops in order to generate cases where the
 		// outer loop encompasses almost the entire sphere. This tests different

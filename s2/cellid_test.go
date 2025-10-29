@@ -25,7 +25,7 @@ import (
 )
 
 func TestCellIDFromFace(t *testing.T) {
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		fpl := CellIDFromFacePosLevel(face, 0, 0)
 		f := CellIDFromFace(face)
 		if fpl != f {
@@ -289,7 +289,7 @@ func dedupCellIDs(ids []CellID) []CellID {
 func TestCellIDAllNeighbors(t *testing.T) {
 	// Check that AllNeighbors produces results that are consistent
 	// with VertexNeighbors for a bunch of random cells.
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		id := randomCellID()
 		if id.IsLeaf() {
 			id = id.immediateParent()
@@ -883,13 +883,13 @@ func projectToBoundary(u, v float64, rect r2.Rect) r2.Point {
 
 func TestCellIDExpandedByDistanceUV(t *testing.T) {
 	const maxDistDegrees = 10
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		id := randomCellID()
 		distance := s1.Degree * s1.Angle(randomUniformFloat64(-maxDistDegrees, maxDistDegrees))
 
 		bound := id.boundUV()
 		expanded := expandedByDistanceUV(bound, distance)
-		for iter := 0; iter < 10; iter++ {
+		for range 10 {
 			// Choose a point on the boundary of the rectangle.
 			face := randomUniformInt(6)
 			centerU, centerV := sampleBoundary(bound)
@@ -932,7 +932,7 @@ func TestCellIDExpandedByDistanceUV(t *testing.T) {
 
 func TestCellIDMaxTile(t *testing.T) {
 	// This method is also tested more thoroughly in s2cellunion_test.
-	for iter := 0; iter < 1000; iter++ {
+	for range 1000 {
 		id := randomCellIDForLevel(10)
 
 		// Check that limit is returned for tiles at or beyond limit.

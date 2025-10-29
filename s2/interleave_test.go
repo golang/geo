@@ -26,7 +26,7 @@ func TestInterleaveUint32(t *testing.T) {
 
 func referenceBitInterleave(x, y uint32) uint64 {
 	var ret uint64
-	for i := uint(0); i < 32; i++ {
+	for i := range uint(32) {
 		ret |= uint64((x>>i)&1) << (i * 2)
 		ret |= uint64((y>>i)&1) << (i*2 + 1)
 	}
@@ -35,7 +35,7 @@ func referenceBitInterleave(x, y uint32) uint64 {
 
 func TestInterleaveUint32AgainstReference(t *testing.T) {
 	// TODO(nsch): Add the remaining parts of the tests later. (the various other primes and bit AND-ings.)
-	for i := 0; i < 100000; i++ {
+	for i := range 100000 {
 		wantEven := uint32(i) * 14233781
 		wantOdd := uint32(i) * 18400439
 

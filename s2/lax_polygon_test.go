@@ -150,7 +150,7 @@ func TestLaxPolygonShapeSingleLoopPolygon(t *testing.T) {
 	if got, want := shape.Chain(0).Length, lenVerts; got != want {
 		t.Errorf("shape.Chain(0).Length = %d, want %d", got, want)
 	}
-	for i := 0; i < lenVerts; i++ {
+	for i := range lenVerts {
 		if got, want := shape.loopVertex(0, i), vertices[i]; got != want {
 			t.Errorf("shape.loopVertex(%d) = %v, want %v", i, got, want)
 		}

@@ -53,7 +53,7 @@ func TestCentroidsPlanarCentroid(t *testing.T) {
 func TestCentroidsTrueCentroid(t *testing.T) {
 	// Test TrueCentroid with very small triangles. This test assumes that
 	// the triangle is small enough so that it is nearly planar.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		f := randomFrame()
 		p := f.col(0)
 		x := f.col(1)
@@ -112,7 +112,7 @@ func TestCentroidsEdgeTrueCentroidGreatCircles(t *testing.T) {
 	//
 	// Note that this is a direct test of the properties that the centroid
 	// should have, rather than a test that it matches a particular formula.
-	for iter := 0; iter < 100; iter++ {
+	for range 100 {
 		f := randomFrameAtPoint(randomPoint())
 		x := f.col(0)
 		y := f.col(1)

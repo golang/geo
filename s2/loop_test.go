@@ -443,7 +443,7 @@ func TestLoopContainsPoint(t *testing.T) {
 		},
 	} {
 		l := tc.l
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			if !l.ContainsPoint(tc.in) {
 				t.Errorf("%s loop should contain %v at rotation %d", tc.name, tc.in, i)
 			}
@@ -456,7 +456,7 @@ func TestLoopContainsPoint(t *testing.T) {
 
 	// This code checks each cell vertex is contained by exactly one of
 	// the adjacent cells.
-	for level := 0; level < 3; level++ {
+	for level := range 3 {
 		// set of unique points across all loops at this level.
 		points := make(map[Point]bool)
 		var loops []*Loop
@@ -464,7 +464,7 @@ func TestLoopContainsPoint(t *testing.T) {
 			var vertices []Point
 			cell := CellFromCellID(id)
 			points[cell.Center()] = true
-			for k := 0; k < 4; k++ {
+			for k := range 4 {
 				vertices = append(vertices, cell.Vertex(k))
 				points[cell.Vertex(k)] = true
 			}
@@ -732,7 +732,7 @@ func TestLoopContainsMatchesCrossingSign(t *testing.T) {
 	}
 
 	points := make([]Point, 4)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		// Note extra normalization. Center() is already normalized.
 		// The test results will no longer be inconsistent if the extra
 		// Normalize() is removed.
@@ -1560,7 +1560,7 @@ func TestLoopTurningAngle(t *testing.T) {
 	// Set the center point of the spiral.
 	vertices[armPoints] = PointFromCoords(0, 0, 1)
 
-	for i := 0; i < armPoints; i++ {
+	for i := range armPoints {
 		angle := (2 * math.Pi / 3) * float64(i)
 		x := math.Cos(angle)
 		y := math.Sin(angle)
@@ -1642,7 +1642,7 @@ func TestLoopAreaAndCentroid(t *testing.T) {
 	// Construct spherical caps of random height, and approximate their boundary
 	// with closely spaces vertices. Then check that the area and centroid are
 	// correct.
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		// Choose a coordinate frame for the spherical cap.
 		f := randomFrame()
 		x := f.col(0)
@@ -1863,7 +1863,7 @@ func BenchmarkLoopContainsPoint(b *testing.B) {
 			func(b *testing.B) {
 				b.StopTimer()
 				loops := make([]*Loop, numLoopSamples)
-				for i := 0; i < numLoopSamples; i++ {
+				for i := range numLoopSamples {
 					loops[i] = RegularLoop(randomPoint(), kmToAngle(10.0), vertices)
 				}
 
@@ -1871,7 +1871,7 @@ func BenchmarkLoopContainsPoint(b *testing.B) {
 
 				for i, loop := range loops {
 					queries[i] = make([]Point, numQueriesPerLoop)
-					for j := 0; j < numQueriesPerLoop; j++ {
+					for j := range numQueriesPerLoop {
 						queries[i][j] = samplePointFromRect(loop.RectBound())
 					}
 				}

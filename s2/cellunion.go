@@ -501,7 +501,7 @@ func (cu CellUnion) Equal(o CellUnion) bool {
 	if len(cu) != len(o) {
 		return false
 	}
-	for i := 0; i < len(cu); i++ {
+	for i := range cu {
 		if cu[i] != o[i] {
 			return false
 		}

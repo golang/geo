@@ -190,7 +190,7 @@ func randomCellID(r ...*rand.Rand) CellID {
 // randomCellUnion returns a CellUnion of the given size of randomly selected cells.
 func randomCellUnion(n int, r ...*rand.Rand) CellUnion {
 	var cu CellUnion
-	for i := 0; i < n; i++ {
+	for range n {
 		cu = append(cu, randomCellID(r...))
 	}
 	return cu
@@ -200,7 +200,7 @@ func randomCellUnion(n int, r ...*rand.Rand) CellUnion {
 // number of concentric loops and vertices per loop.
 func concentricLoopsPolygon(center Point, numLoops, verticesPerLoop int) *Polygon {
 	var loops []*Loop
-	for li := 0; li < numLoops; li++ {
+	for li := range numLoops {
 		radius := s1.Angle(0.005 * float64(li+1) / float64(numLoops))
 		loops = append(loops, RegularLoop(center, radius, verticesPerLoop))
 	}

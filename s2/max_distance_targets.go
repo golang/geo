@@ -261,7 +261,7 @@ func (m *MaxDistanceToShapeIndexTarget) visitContainingShapes(index *ShapeIndex,
 		numChains := shape.NumChains()
 		// Shapes that don't have any edges require a special case (below).
 		testedPoint := false
-		for c := 0; c < numChains; c++ {
+		for c := range numChains {
 			chain := shape.Chain(c)
 			if chain.Length == 0 {
 				continue

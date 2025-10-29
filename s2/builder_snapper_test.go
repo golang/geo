@@ -64,7 +64,7 @@ func TestCellIDSnapperLevelToFromSnapRadius(t *testing.T) {
 }
 
 func TestCellIDSnapperSnapPoint(t *testing.T) {
-	for iter := 0; iter < 1; iter++ {
+	for range 1 {
 		for level := 0; level <= MaxLevel; level++ {
 			// This checks that points are snapped to the correct level, since
 			// CellID centers at different levels are always different.
