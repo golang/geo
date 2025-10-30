@@ -435,8 +435,8 @@ func (sf IntLatLngSnapper) exponentForMaxSnapRadius(snapRadius s1.Angle) int {
 	// There can be small errors in the calculation above, so to ensure that
 	// this function is the inverse of minSnapRadiusForExponent we subtract a
 	// small error tolerance.
-	return max(minIntSnappingExponent,
-		min(maxIntSnappingExponent, int(math.Ceil(exponent-2*dblEpsilon))))
+	return clampInt(int(math.Ceil(exponent-2*dblEpsilon)),
+		minIntSnappingExponent, maxIntSnappingExponent)
 }
 
 // MinVertexSeparation reports the minimum separation between vertices depending on
