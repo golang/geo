@@ -45,7 +45,7 @@ func TestPointVectorBasics(t *testing.T) {
 	const numPoints = 100
 	var p PointVector = make([]Point, numPoints)
 
-	for i := 0; i < numPoints; i++ {
+	for i := range numPoints {
 		p[i] = randomPoint()
 	}
 
@@ -66,7 +66,7 @@ func TestPointVectorBasics(t *testing.T) {
 		t.Errorf("shape.IsFull() = true, want false")
 	}
 
-	for i := 0; i < numPoints; i++ {
+	for i := range numPoints {
 		if got, want := shape.Chain(i).Start, i; got != want {
 			t.Errorf("shape.Chain(%d).Start = %d, want %d", i, got, want)
 		}

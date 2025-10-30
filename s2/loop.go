@@ -1509,7 +1509,7 @@ func (l *loopCrosser) startEdge(aj int) {
 func (l *loopCrosser) edgeCrossesCell(bClipped *clippedShape) bool {
 	// Test the current edge of A against all edges of bClipped
 	bNumEdges := bClipped.numEdges()
-	for j := 0; j < bNumEdges; j++ {
+	for j := range bNumEdges {
 		bj := bClipped.edges[j]
 		if bj != l.bjPrev+1 {
 			l.crosser.RestartAt(l.b.Vertex(bj))

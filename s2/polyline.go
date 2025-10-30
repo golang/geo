@@ -147,7 +147,7 @@ func (p *Polyline) IntersectsCell(cell Cell) bool {
 		cell.Vertex(3),
 	}
 
-	for j := 0; j < 4; j++ {
+	for j := range 4 {
 		crosser := NewChainEdgeCrosser(cellVertices[j], cellVertices[(j+1)&3], (*p)[0])
 		for i := 1; i < len(*p); i++ {
 			if crosser.ChainCrossingSign((*p)[i]) != DoNotCross {

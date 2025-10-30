@@ -203,7 +203,7 @@ func fractalLoopShapeIndexGenerator(c Cap, numEdges int, index *ShapeIndex) {
 // fills the given Cap.
 func pointCloudShapeIndexGenerator(c Cap, numPoints int, index *ShapeIndex) {
 	var points PointVector
-	for i := 0; i < numPoints; i++ {
+	for range numPoints {
 		points = append(points, samplePointFromCap(c))
 	}
 	index.Add(&points)

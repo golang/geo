@@ -223,7 +223,7 @@ func (c Cell) Children() ([4]Cell, bool) {
 
 	// Create four children with the appropriate bounds.
 	cid := c.id.ChildBegin()
-	for pos := 0; pos < 4; pos++ {
+	for pos := range 4 {
 		children[pos] = Cell{
 			face:        c.face,
 			level:       c.level + 1,
@@ -446,7 +446,7 @@ func (c Cell) CapBound() Cap {
 	// to GetCenter() and faster to compute.  Neither one of these vectors yields the
 	// bounding cap with minimal surface area, but they are both pretty close.
 	cap := CapFromPoint(Point{faceUVToXYZ(int(c.face), c.uv.Center().X, c.uv.Center().Y).Normalize()})
-	for k := 0; k < 4; k++ {
+	for k := range 4 {
 		cap = cap.AddPoint(c.Vertex(k))
 	}
 	return cap
@@ -693,7 +693,7 @@ func (c Cell) DistanceToEdge(a, b Point) s1.ChordAngle {
 
 	// Otherwise, check whether the edge crosses the cell boundary.
 	crosser := NewChainEdgeCrosser(a, b, c.Vertex(3))
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if crosser.ChainCrossingSign(c.Vertex(i)) != DoNotCross {
 			return 0
 		}
@@ -706,7 +706,7 @@ func (c Cell) DistanceToEdge(a, b Point) s1.ChordAngle {
 	// Note that we don't need to check the distance from the interior of AB to
 	// the interior of a cell edge, because the only way that this distance can
 	// be minimal is if the two edges cross (already checked above).
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		minDist, _ = UpdateMinDistance(c.Vertex(i), a, b, minDist)
 	}
 	return minDist
@@ -744,13 +744,13 @@ func (c Cell) DistanceToCell(target Cell) s1.ChordAngle {
 	// the set of possible closest vertex/edge pairs using the faces and (u,v)
 	// ranges of both cells.
 	var va, vb [4]Point
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		va[i] = c.Vertex(i)
 		vb[i] = target.Vertex(i)
 	}
 	minDist := s1.InfChordAngle()
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
+	for i := range 4 {
+		for j := range 4 {
 			minDist, _ = UpdateMinDistance(va[i], vb[j], vb[(j+1)&3], minDist)
 			minDist, _ = UpdateMinDistance(vb[i], va[j], va[(j+1)&3], minDist)
 		}
@@ -777,13 +777,13 @@ func (c Cell) MaxDistanceToCell(target Cell) s1.ChordAngle {
 	// always attained between a pair of vertices, and this could be made much
 	// faster by testing each vertex pair once rather than the current 4 times.
 	var va, vb [4]Point
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		va[i] = c.Vertex(i)
 		vb[i] = target.Vertex(i)
 	}
 	maxDist := s1.NegativeChordAngle
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
+	for i := range 4 {
+		for j := range 4 {
 			maxDist, _ = UpdateMaxDistance(va[i], vb[j], vb[(j+1)&3], maxDist)
 			maxDist, _ = UpdateMaxDistance(vb[i], va[j], va[(j+1)&3], maxDist)
 		}

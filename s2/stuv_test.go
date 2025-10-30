@@ -32,8 +32,8 @@ func invertBits(ij int) int {
 }
 
 func TestSTUVTraversalOrder(t *testing.T) {
-	for r := 0; r < 4; r++ {
-		for i := 0; i < 4; i++ {
+	for r := range 4 {
+		for i := range 4 {
 			// Check consistency with respect to swapping axes.
 			if got, want := ijToPos[r][i], ijToPos[r^swapMask][swapAxes(i)]; got != want {
 				t.Errorf("(ijToPos[%d][%d] = %d) != ijToPos[%d^swapMask][swapAxes(%d)] = %d",
@@ -95,7 +95,7 @@ func TestSTUVConversions(t *testing.T) {
 
 func TestUVNorms(t *testing.T) {
 	step := 1 / 1024.0
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		for x := -1.0; x <= 1; x += step {
 			if !float64Eq(float64(faceUVToXYZ(face, x, -1).Cross(faceUVToXYZ(face, x, 1)).Angle(uNorm(face, x))), 0.0) {
 				t.Errorf("UNorm not orthogonal to the face(%d)", face)
@@ -110,7 +110,7 @@ func TestUVNorms(t *testing.T) {
 func TestFaceUVToXYZ(t *testing.T) {
 	// Check that each face appears exactly once.
 	var sum r3.Vector
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		center := faceUVToXYZ(face, 0, 0)
 		if !center.ApproxEqual(unitNorm(face).Vector) {
 			t.Errorf("faceUVToXYZ(%d, 0, 0) != unitNorm(%d), should be equal", face, face)
@@ -200,7 +200,7 @@ func TestFaceXYZtoUVW(t *testing.T) {
 		negZ   = Point{r3.Vector{X: 0, Y: 0, Z: -1}}
 	)
 
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		if got := faceXYZtoUVW(face, origin); got != origin {
 			t.Errorf("faceXYZtoUVW(%d, %v) = %v, want %v", face, origin, got, origin)
 		}
@@ -232,7 +232,7 @@ func TestFaceXYZtoUVW(t *testing.T) {
 }
 
 func TestUVWAxis(t *testing.T) {
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		// Check that the axes are consistent with faceUVtoXYZ.
 		if faceUVToXYZ(face, 1, 0).Sub(faceUVToXYZ(face, 0, 0)) != uAxis(face).Vector {
 			t.Errorf("face 1,0 - face 0,0 should equal uAxis")
@@ -264,14 +264,14 @@ func TestUVWAxis(t *testing.T) {
 
 func TestSiTiSTRoundtrip(t *testing.T) {
 	// test int -> float -> int direction.
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		si := uint32(randomUniformInt(maxSiTi))
 		if got := stToSiTi(siTiToST(si)); got != si {
 			t.Errorf("stToSiTi(siTiToST(%v)) = %v, want %v", si, got, si)
 		}
 	}
 	// test float -> int -> float direction.
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		st := randomUniformFloat64(0, 1.0)
 		// this uses near not exact because there is some loss in precision
 		// when scaling down to the nearest 1/MaxLevel and back.
@@ -283,8 +283,8 @@ func TestSiTiSTRoundtrip(t *testing.T) {
 
 func TestUVWFace(t *testing.T) {
 	// Check that uvwFace is consistent with uvwAxis.
-	for f := 0; f < 6; f++ {
-		for axis := 0; axis < 3; axis++ {
+	for f := range 6 {
+		for axis := range 3 {
 			if got, want := face(uvwAxis(f, axis).Mul(-1)), uvwFace(f, axis, 0); got != want {
 				t.Errorf("face(%v) in positive direction = %v, want %v", uvwAxis(f, axis).Mul(-1), got, want)
 			}
@@ -296,8 +296,8 @@ func TestUVWFace(t *testing.T) {
 }
 
 func TestXYZToFaceSiTi(t *testing.T) {
-	for level := 0; level < MaxLevel; level++ {
-		for i := 0; i < 1000; i++ {
+	for level := range MaxLevel {
+		for range 1000 {
 			ci := randomCellIDForLevel(level)
 			f, si, ti, gotLevel := xyzToFaceSiTi(ci.Point())
 			if gotLevel != level {
@@ -369,8 +369,8 @@ func TestXYZToFaceSiTi(t *testing.T) {
 }
 
 func TestXYZFaceSiTiRoundtrip(t *testing.T) {
-	for level := 0; level < MaxLevel; level++ {
-		for i := 0; i < 1000; i++ {
+	for level := range MaxLevel {
+		for range 1000 {
 			ci := randomCellIDForLevel(level)
 			f, si, ti, _ := xyzToFaceSiTi(ci.Point())
 			op := faceSiTiToXYZ(f, si, ti)

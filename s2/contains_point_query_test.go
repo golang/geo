@@ -142,13 +142,13 @@ func TestContainsPointQueryContainingShapes(t *testing.T) {
 	centerCap := CapFromCenterAngle(randomPoint(), maxLoopRadius)
 	index := NewShapeIndex()
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		index.Add(RegularLoop(samplePointFromCap(centerCap), s1.Angle(randomFloat64())*maxLoopRadius, numVerticesPerLoop))
 	}
 
 	query := NewContainsPointQuery(index, VertexModelSemiOpen)
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		p := samplePointFromCap(centerCap)
 		var want []Shape
 

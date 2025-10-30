@@ -303,7 +303,7 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 
 	if id == 0 {
 		// Initial call: decide whether to add cell(s) from each face.
-		for face := 0; face < 6; face++ {
+		for face := range 6 {
 			addCells(CellIDFromFace(face), false, input, expected, t)
 		}
 		return
@@ -389,7 +389,7 @@ func TestCellUnionNormalizePseudoRandom(t *testing.T) {
 	outSum := 0
 	iters := 2000
 
-	for i := 0; i < iters; i++ {
+	for range iters {
 		input := []CellID{}
 		expected := []CellID{}
 		addCells(CellID(0), false, &input, &expected, t)
@@ -723,7 +723,7 @@ func TestCellUnionLeafCellsCovered(t *testing.T) {
 }
 
 func TestCellUnionFromRange(t *testing.T) {
-	for iter := 0; iter < 2000; iter++ {
+	for range 2000 {
 		min := randomCellIDForLevel(MaxLevel)
 		max := randomCellIDForLevel(MaxLevel)
 		if min > max {
@@ -778,7 +778,7 @@ func TestCellUnionFromRange(t *testing.T) {
 
 func TestCellUnionFromUnionDiffIntersection(t *testing.T) {
 	const iters = 2000
-	for i := 0; i < iters; i++ {
+	for range iters {
 		input := []CellID{}
 		expected := []CellID{}
 		addCells(CellID(0), false, &input, &expected, t)
@@ -880,7 +880,7 @@ func cellUnionDistanceFromAxis(cu CellUnion, axis Point) float64 {
 	var maxDist float64
 	for _, cid := range cu {
 		cell := CellFromCellID(cid)
-		for j := 0; j < 4; j++ {
+		for j := range 4 {
 			a := cell.Vertex(j)
 			b := cell.Vertex((j + 1) & 3)
 			var dist float64
@@ -908,7 +908,7 @@ func TestCellUnionExpand(t *testing.T) {
 	// the coverings by a random radius, and then make sure that the new
 	// covering covers the expanded cap.  It also makes sure that the
 	// new covering is not too much larger than expected.
-	for i := 0; i < 5000; i++ {
+	for range 5000 {
 		rndCap := randomCap(AvgAreaMetric.Value(MaxLevel), 4*math.Pi)
 
 		// Expand the cap area by a random factor whose log is uniformly
@@ -959,7 +959,7 @@ func TestCellUnionExpand(t *testing.T) {
 // invalid value is used as the ID, then all faces are checked.
 func checkCellUnionCovering(t *testing.T, r Region, covering CellUnion, checkTight bool, id CellID) {
 	if !id.IsValid() {
-		for face := 0; face < 6; face++ {
+		for face := range 6 {
 			checkCellUnionCovering(t, r, covering, checkTight, CellIDFromFace(face))
 		}
 		return

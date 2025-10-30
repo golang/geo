@@ -47,7 +47,7 @@ func makeSnappedPoints(nvertices int, level int) []Point {
 
 func TestPointsCompression(t *testing.T) {
 	loop100Mixed15 := makeSnappedPoints(100, MaxLevel)
-	for i := 0; i < 15; i++ {
+	for i := range 15 {
 		loop100Mixed15[3*i] = CellFromPoint(loop100Mixed15[3*i]).ID().Parent(4).Point()
 	}
 

@@ -183,7 +183,7 @@ func TestRectVertex(t *testing.T) {
 	}
 }
 func TestRectVertexCCWOrder(t *testing.T) {
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		lat := math.Pi / 4 * float64(i-2)
 		lng := math.Pi/2*float64(i-2) + 0.2
 		r := Rect{
@@ -194,7 +194,7 @@ func TestRectVertexCCWOrder(t *testing.T) {
 			},
 		}
 
-		for k := 0; k < 4; k++ {
+		for k := range 4 {
 			if !Sign(PointFromLatLng(r.Vertex((k-1)&3)), PointFromLatLng(r.Vertex(k)), PointFromLatLng(r.Vertex((k+1)&3))) {
 				t.Errorf("%v.Vertex(%v), vertices were not in CCW order", r, k)
 			}
@@ -932,7 +932,7 @@ func TestDistanceRectFromLatLng(t *testing.T) {
 func TestDistanceRectFromLatLngRandomPairs(t *testing.T) {
 	latlng := func() LatLng { return LatLngFromPoint(randomPoint()) }
 
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		r := RectFromLatLng(latlng()).AddPoint(latlng())
 		ll := latlng()
 		got := r.DistanceToLatLng(ll)
@@ -986,7 +986,7 @@ func verifyDirectedHausdorffDistance(t *testing.T, a, b Rect) {
 func TestRectDirectedHausdorffDistanceRandomPairs(t *testing.T) {
 	// Test random pairs.
 	rnd := func() LatLng { return LatLngFromPoint(randomPoint()) }
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		a := RectFromLatLng(rnd()).AddPoint(rnd())
 		b := RectFromLatLng(rnd()).AddPoint(rnd())
 		// a and b are *minimum* bounding rectangles of two random points, in
@@ -1166,7 +1166,7 @@ func testRectCentroidSplitting(t *testing.T, r Rect, leftSplits int) {
 
 func TestRectCentroidFullRange(t *testing.T) {
 	// Rectangles that cover the full longitude range.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		lat1 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
 		lat2 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
 		r := Rect{r1.Interval{Lo: lat1, Hi: lat2}, s1.FullInterval()}
@@ -1180,7 +1180,7 @@ func TestRectCentroidFullRange(t *testing.T) {
 	}
 
 	// Rectangles that cover the full latitude range.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		lat1 := randomUniformFloat64(-math.Pi, math.Pi)
 		lat2 := randomUniformFloat64(-math.Pi, math.Pi)
 		r := Rect{r1.Interval{Lo: -math.Pi / 2, Hi: math.Pi / 2}, s1.Interval{Lo: lat1, Hi: lat2}}

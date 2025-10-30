@@ -453,7 +453,7 @@ func TestCapAddCap(t *testing.T) {
 
 func TestCapContainsCell(t *testing.T) {
 	faceRadius := math.Atan(math.Sqrt2)
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		// The cell consisting of the entire face.
 		rootCell := CellFromCellID(CellIDFromFace(face))
 
@@ -480,7 +480,7 @@ func TestCapContainsCell(t *testing.T) {
 			}
 		}
 
-		for capFace := 0; capFace < 6; capFace++ {
+		for capFace := range 6 {
 			// A cap that barely contains all of capFace.
 			center := unitNorm(capFace)
 			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+epsilon))
@@ -514,7 +514,7 @@ func TestCapContainsCell(t *testing.T) {
 
 func TestCapIntersectsCell(t *testing.T) {
 	faceRadius := math.Atan(math.Sqrt2)
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		// The cell consisting of the entire face.
 		rootCell := CellFromCellID(CellIDFromFace(face))
 
@@ -542,7 +542,7 @@ func TestCapIntersectsCell(t *testing.T) {
 		}
 
 		antiFace := (face + 3) % 6
-		for capFace := 0; capFace < 6; capFace++ {
+		for capFace := range 6 {
 			// A cap that barely contains all of capFace.
 			center := unitNorm(capFace)
 			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+epsilon))
@@ -593,7 +593,7 @@ func TestCapCentroid(t *testing.T) {
 	}
 
 	// Random caps.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		center := randomPoint()
 		height := randomUniformFloat64(0.0, 2.0)
 		c := CapFromCenterHeight(center, height)
