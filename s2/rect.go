@@ -247,7 +247,7 @@ func (r Rect) CapBound() Cap {
 	// maximum cap size is achieved at one of the rectangle vertices.  For
 	// rectangles that are larger than 180 degrees, we punt and always return a
 	// bounding cap centered at one of the two poles.
-	if math.Remainder(r.Lng.Hi-r.Lng.Lo, 2*math.Pi) >= 0 && r.Lng.Hi-r.Lng.Lo < 2*math.Pi {
+	if math.Remainder(r.Lng.Hi-r.Lng.Lo, 2*math.Pi) >= 0 && r.Lng.Hi-r.Lng.Lo <= math.Pi {
 		midCap := CapFromPoint(PointFromLatLng(r.Center())).AddPoint(PointFromLatLng(r.Lo())).AddPoint(PointFromLatLng(r.Hi()))
 		if midCap.Height() < poleCap.Height() {
 			return midCap
