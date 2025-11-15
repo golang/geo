@@ -342,7 +342,7 @@ func TestLaxPolygonManyLoopPolygon(t *testing.T) {
 		v0 := loops[edge.i][edge.j]
 		v1 := loops[edge.i][(edge.j+1)%len(loops[edge.i])]
 		if got, want := shape.Edge(edge.e), (Edge{v0, v1}); got != want {
-			t.Errorf("Shape Edge(%d) = %v, want %v", edge.e, got, want)
+			t.Errorf("shape.Edge(%d) = %v, want %v", edge.e, got, want)
 		}
 	}
 }
