@@ -332,7 +332,7 @@ func TestCellIndexRandomCellUnions(t *testing.T) {
 	// because the cell level is chosen uniformly, there is a very high
 	// likelihood that the cell unions will overlap.
 	index := &CellIndex{}
-	for i := int32(0); i < 100; i++ {
+	for i := range int32(100) {
 		index.AddCellUnion(randomCellUnion(10), i)
 	}
 	cellIndexQuadraticValidate(t, "Random Cell Unions", index, nil)

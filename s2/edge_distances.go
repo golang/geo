@@ -60,7 +60,7 @@ func UpdateMinDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, boo
 // than maxDist, and if so, returns the updated value and true.
 // Otherwise it returns false. The case A == B is handled correctly.
 func UpdateMaxDistance(x, a, b Point, maxDist s1.ChordAngle) (s1.ChordAngle, bool) {
-	dist := maxChordAngle(ChordAngleBetweenPoints(x, a), ChordAngleBetweenPoints(x, b))
+	dist := max(ChordAngleBetweenPoints(x, a), ChordAngleBetweenPoints(x, b))
 	if dist > s1.RightChordAngle {
 		dist, _ = updateMinDistance(Point{x.Mul(-1)}, a, b, dist, true)
 		dist = s1.StraightChordAngle - dist

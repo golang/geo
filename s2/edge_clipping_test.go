@@ -143,7 +143,7 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 	aTan := Point{norm.Cross(a.Vector)}
 	bTan := Point{b.Cross(norm.Vector)}
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		// Vertices may not protrude outside the biunit square.
 		if !biunit.ContainsPoint(segments[i].a) {
 			t.Errorf("biunit.ContainsPoint(%v) = false, want true", segments[i].a)
@@ -194,10 +194,10 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 	if expectedAngles.IsInverted() {
 		expectedAngles = s1.Interval{Lo: expectedAngles.Hi, Hi: expectedAngles.Lo}
 	}
-	maxAngles := expectedAngles.Expanded(faceClipErrorRadians)
+	maxs := expectedAngles.Expanded(faceClipErrorRadians)
 	var actualAngles s1.Interval
 
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		aUV, bUV, intersects := ClipToPaddedFace(a, b, face, padding)
 		if !intersects {
 			continue
@@ -236,8 +236,8 @@ func testClipToPaddedFace(t *testing.T, a, b Point) {
 		if faceAngles.IsInverted() {
 			faceAngles = s1.Interval{Lo: faceAngles.Hi, Hi: faceAngles.Lo}
 		}
-		if !maxAngles.ContainsInterval(faceAngles) {
-			t.Errorf("%s %v.ContainsInterval(%v) = false, but should have contained this interval", desc, maxAngles, faceAngles)
+		if !maxs.ContainsInterval(faceAngles) {
+			t.Errorf("%s %v.ContainsInterval(%v) = false, but should have contained this interval", desc, maxs, faceAngles)
 		}
 		actualAngles = actualAngles.Union(faceAngles)
 	}
@@ -268,7 +268,7 @@ func TestEdgeClippingClipToPaddedFace(t *testing.T) {
 	// that nearly follow one of the 12 cube edges.
 	biunit := r2.Rect{X: r1.Interval{Lo: -1, Hi: 1}, Y: r1.Interval{Lo: -1, Hi: 1}}
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		// Choose two adjacent cube corners P and Q.
 		face := randomUniformInt(6)
 		i := randomUniformInt(4)
@@ -395,7 +395,7 @@ func TestEdgeClippingClipEdge(t *testing.T) {
 	}
 
 	for _, r := range testRects {
-		for i := 0; i < 1000; i++ {
+		for range 1000 {
 			a := chooseRectEndpoint(r)
 			b := chooseRectEndpoint(r)
 

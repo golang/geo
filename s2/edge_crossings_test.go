@@ -41,7 +41,7 @@ func TestEdgeutilIntersectionError(t *testing.T) {
 	// exact intersection point and also to the edges.
 
 	var maxPointDist, maxEdgeDist s1.Angle
-	for iter := 0; iter < 5000; iter++ {
+	for range 5000 {
 		// We construct two edges AB and CD that intersect near "p".  The angle
 		// between AB and CD (expressed as a slope) is chosen randomly between
 		// 1e-15 and 1e15 such that its logarithm is uniformly distributed.
@@ -120,8 +120,8 @@ func TestEdgeutilIntersectionError(t *testing.T) {
 		if got, want := pointDist, intersectionError; got > want {
 			t.Errorf("%v.Distance(%v) = %v want <= %v", expected, actual, got, want)
 		}
-		maxEdgeDist = maxAngle(maxEdgeDist, maxAngle(distAB, distCD))
-		maxPointDist = maxAngle(maxPointDist, pointDist)
+		maxEdgeDist = max(maxEdgeDist, distAB, distCD)
+		maxPointDist = max(maxPointDist, pointDist)
 	}
 }
 

@@ -132,7 +132,7 @@ func TestConvexHullQueryNonConvexPoints(t *testing.T) {
 	// sphere by repeatedly linearly interpolating between the points. (The
 	// four points of a tetrahedron would also work, but this is easier.)
 	query := NewConvexHullQuery()
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		query.AddPoint(CellIDFromFace(face).Point())
 	}
 	result := query.ConvexHull()
@@ -193,14 +193,14 @@ func TestConvexHullQueryPointsInsideHull(t *testing.T) {
 	// inside that loop and build the convex hull again. The result should
 	// always be the same.
 	const iters = 1000
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		// Choose points from within a cap of random size, up to but not including
 		// an entire hemisphere.
 		c := randomCap(1e-15, 1.999*math.Pi)
 		numPoints1 := randomUniformInt(100) + 3
 
 		query := NewConvexHullQuery()
-		for i := 0; i < numPoints1; i++ {
+		for range numPoints1 {
 			query.AddPoint(samplePointFromCap(c))
 		}
 		hull := query.ConvexHull()
@@ -223,7 +223,7 @@ func TestConvexHullQueryPointsInsideHull(t *testing.T) {
 
 		// Otherwise, add more points inside the convex hull.
 		const numPoints2 = 1000
-		for i := 0; i < numPoints2; i++ {
+		for range numPoints2 {
 			p := samplePointFromCap(c)
 			if hull.ContainsPoint(p) {
 				query.AddPoint(p)

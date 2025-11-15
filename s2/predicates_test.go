@@ -306,7 +306,7 @@ func TestPredicatesStableSignFailureRate(t *testing.T) {
 	// by counting up the times it returns Indeterminate.
 	failureCount := 0
 	m := math.Tan(spacing / earthRadiusKm)
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		f := randomFrame()
 		a := f.col(0)
 		x := f.col(1)
@@ -919,7 +919,7 @@ func TestPredicatesCompareDistancesConsistency(t *testing.T) {
 		t.Errorf("CompareDistances with 2 equidistant points didn't use symbolic compare, got %q want %q", got, want)
 	}
 
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		x := choosePointNearPlaneOrAxes()
 		dir := choosePointNearPlaneOrAxes()
 		r := s1.Angle(math.Pi / 2 * math.Pow(1e-30, randomFloat64()))
@@ -960,7 +960,7 @@ func TestPredicatesCompareDistanceConsistency(t *testing.T) {
 	// comments in the CompareDistances consistency test.
 	const iters = 1000
 
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		x := choosePointNearPlaneOrAxes()
 		dir := choosePointNearPlaneOrAxes()
 		r := s1.Angle(math.Pi / 2 * math.Pow(1e-30, randomFloat64()))

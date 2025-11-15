@@ -160,12 +160,12 @@ func regularPointsForFrame(frame matrix3x3, radius s1.Angle, numVertices int) []
 	z := math.Cos(radius.Radians())
 	r := math.Sin(radius.Radians())
 	radianStep := 2 * math.Pi / float64(numVertices)
-	var vertices []Point
+	var vertices = make([]Point, numVertices)
 
-	for i := 0; i < numVertices; i++ {
+	for i := range vertices {
 		angle := float64(i) * radianStep
 		p := Point{r3.Vector{X: r * math.Cos(angle), Y: r * math.Sin(angle), Z: z}}
-		vertices = append(vertices, Point{fromFrame(frame, p).Normalize()})
+		vertices[i] = Point{fromFrame(frame, p).Normalize()}
 	}
 
 	return vertices
@@ -334,7 +334,7 @@ func (p Point) IsNormalizable() bool {
 	//
 	// The fastest way to ensure this is to test whether the largest component of
 	// the result has a magnitude of at least 2**-242.
-	return maxFloat64(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z)) >= math.Ldexp(1, -242)
+	return max(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z)) >= math.Ldexp(1, -242)
 }
 
 // EnsureNormalizable scales a vector as necessary to ensure that the result can
@@ -355,7 +355,7 @@ func (p Point) EnsureNormalizable() Point {
 		// Note that we must scale by a power of two to avoid rounding errors.
 		// The code below scales "p" such that the largest component is
 		// in the range [1, 2).
-		pMax := maxFloat64(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z))
+		pMax := max(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z))
 
 		// This avoids signed overflow for any value of Ilogb().
 		return Point{p.Mul(math.Ldexp(2, -1-math.Ilogb(pMax)))}

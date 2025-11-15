@@ -26,7 +26,7 @@ func TestCovererRandomCells(t *testing.T) {
 	rc := &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 1, MaxCells: 1}
 
 	// Test random cell ids at all levels.
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		id := randomCellID()
 		covering := rc.Covering(Region(CellFromCellID(id)))
 		if len(covering) != 1 {
@@ -85,7 +85,7 @@ func checkCovering(t *testing.T, rc *RegionCoverer, r Region, covering CellUnion
 // do not intersect the given region. ("id" is only used internally.)
 func checkCoveringTight(t *testing.T, r Region, cover CellUnion, checkTight bool, id CellID) {
 	if !id.IsValid() {
-		for f := 0; f < 6; f++ {
+		for f := range 6 {
 			checkCoveringTight(t, r, cover, checkTight, CellIDFromFace(f))
 		}
 		return
@@ -115,7 +115,7 @@ func checkCoveringTight(t *testing.T, r Region, cover CellUnion, checkTight bool
 
 func TestCovererRandomCaps(t *testing.T) {
 	rc := &RegionCoverer{MinLevel: 0, MaxLevel: 30, LevelMod: 1, MaxCells: 1}
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		rc.MinLevel = int(rand.Int31n(MaxLevel + 1))
 		rc.MaxLevel = int(rand.Int31n(MaxLevel + 1))
 		for rc.MinLevel > rc.MaxLevel {
@@ -174,7 +174,7 @@ func TestRegionCovererInteriorCovering(t *testing.T) {
 	if len(interior) != 3 {
 		t.Fatalf("len(coverer.InteriorCovering(%v)) = %v, want 3", diff, len(interior))
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if got, want := interior[i].Level(), level+1; got != want {
 			t.Errorf("interior[%d].Level() = %v, want %v", i, got, want)
 		}
@@ -183,7 +183,7 @@ func TestRegionCovererInteriorCovering(t *testing.T) {
 
 func TestRegionCovererSimpleRegionCovering(t *testing.T) {
 	const MaxLevel = MaxLevel
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		level := randomUniformInt(MaxLevel + 1)
 		maxArea := math.Min(4*math.Pi, 1000.0*AvgAreaMetric.Value(level))
 		c := randomCap(0.1*AvgAreaMetric.Value(MaxLevel), maxArea)
@@ -309,7 +309,7 @@ func BenchmarkRegionCovererCoveringCap(b *testing.B) {
 	},
 		func(n int) []Region {
 			regions := make([]Region, numCoveringBMRegions)
-			for i := 0; i < numCoveringBMRegions; i++ {
+			for i := range numCoveringBMRegions {
 				regions[i] = randomCap(0.1*AvgAreaMetric.Value(MaxLevel), 4*math.Pi)
 			}
 			return regions
@@ -322,7 +322,7 @@ func BenchmarkRegionCovererCoveringCell(b *testing.B) {
 	},
 		func(n int) []Region {
 			regions := make([]Region, numCoveringBMRegions)
-			for i := 0; i < numCoveringBMRegions; i++ {
+			for i := range numCoveringBMRegions {
 				regions[i] = CellFromCellID(randomCellIDForLevel(MaxLevel - randomUniformInt(n)))
 			}
 			return regions
@@ -336,7 +336,7 @@ func BenchmarkRegionCovererCoveringLoop(b *testing.B) {
 		func(n int) []Region {
 			size := int(math.Pow(2.0, float64(n)))
 			regions := make([]Region, numCoveringBMRegions)
-			for i := 0; i < numCoveringBMRegions; i++ {
+			for i := range numCoveringBMRegions {
 				regions[i] = RegularLoop(randomPoint(), kmToAngle(10.0), size)
 			}
 			return regions
@@ -350,7 +350,7 @@ func BenchmarkRegionCovererCoveringCellUnion(b *testing.B) {
 		func(n int) []Region {
 			size := int(math.Pow(2.0, float64(n)))
 			regions := make([]Region, numCoveringBMRegions)
-			for i := 0; i < numCoveringBMRegions; i++ {
+			for i := range numCoveringBMRegions {
 				cu := randomCellUnion(size)
 				regions[i] = &cu
 			}

@@ -773,7 +773,7 @@ func (p *Polygon) Chain(chainID int) Chain {
 		return Chain{p.cumulativeEdges[chainID], len(p.Loop(chainID).vertices)}
 	}
 	e := 0
-	for j := 0; j < chainID; j++ {
+	for j := range chainID {
 		e += len(p.Loop(j).vertices)
 	}
 

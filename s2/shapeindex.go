@@ -772,7 +772,7 @@ func (s *ShapeIndex) Remove(shape Shape) {
 		edges:                 make([]Edge, numEdges),
 	}
 
-	for e := 0; e < numEdges; e++ {
+	for e := range numEdges {
 		removed.edges[e] = shape.Edge(e)
 	}
 
@@ -850,7 +850,7 @@ func (s *ShapeIndex) applyUpdatesInternal() {
 		s.addShapeInternal(id, allEdges, t)
 	}
 
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		s.updateFaceEdges(face, allEdges[face], t)
 	}
 
@@ -879,7 +879,7 @@ func (s *ShapeIndex) addShapeInternal(shapeID int32, allEdges [][]faceEdge, t *t
 	}
 
 	numEdges := shape.NumEdges()
-	for e := 0; e < numEdges; e++ {
+	for e := range numEdges {
 		edge := shape.Edge(e)
 
 		faceEdge.edgeID = e
@@ -909,7 +909,7 @@ func (s *ShapeIndex) addFaceEdge(fe faceEdge, allEdges [][]faceEdge) {
 	}
 
 	// Otherwise, we simply clip the edge to all six faces.
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		if aClip, bClip, intersects := ClipToPaddedFace(fe.edge.V0, fe.edge.V1, face, cellPadding); intersects {
 			fe.a = aClip
 			fe.b = bClip
@@ -933,7 +933,7 @@ func (s *ShapeIndex) updateFaceEdges(face int, faceEdges []faceEdge, t *tracker)
 	// pointers in order to propagate an edge to the correct child.
 	clippedEdges := make([]*clippedEdge, numEdges)
 	bound := r2.EmptyRect()
-	for e := 0; e < numEdges; e++ {
+	for e := range numEdges {
 		clipped := &clippedEdge{
 			faceEdge: &faceEdges[e],
 		}
@@ -1125,7 +1125,7 @@ func (s *ShapeIndex) updateEdges(pcell *PaddedCell, edges []*clippedEdge, t *tra
 		// Now recursively update the edges in each child. We call the children in
 		// increasing order of CellID so that when the index is first constructed,
 		// all insertions into cellMap are at the end (which is much faster).
-		for pos := 0; pos < 4; pos++ {
+		for pos := range 4 {
 			i, j := pcell.ChildIJ(pos)
 			if len(childEdges[i][j]) > 0 || len(t.shapeIDs) > 0 {
 				s.updateEdges(PaddedCellFromParentIJ(pcell, i, j), childEdges[i][j],
@@ -1208,7 +1208,7 @@ func (s *ShapeIndex) makeIndexCell(p *PaddedCell, edges []*clippedEdge, t *track
 	// as we go along. Both sets of shape ids are already sorted.
 	eNext := 0
 	cNextIdx := 0
-	for i := 0; i < numShapes; i++ {
+	for i := range numShapes {
 		var clipped *clippedShape
 		// advance to next value base + i
 		eshapeID := int32(s.Len())
@@ -1437,7 +1437,7 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 				trackerMoved = true
 			}
 		}
-		for i := 0; i < numClipped; i++ {
+		for i := range numClipped {
 			edgeID := clipped.edges[i]
 			edge.edgeID = edgeID
 			edge.edge = shape.Edge(edgeID)

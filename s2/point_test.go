@@ -100,7 +100,7 @@ func TestPointDistance(t *testing.T) {
 }
 
 func TestChordAngleBetweenPoints(t *testing.T) {
-	for iter := 0; iter < 100; iter++ {
+	for range 100 {
 		m := randomFrame()
 		x := m.col(0)
 		y := m.col(1)
@@ -232,7 +232,7 @@ func TestPointRegularPoints(t *testing.T) {
 
 	// Make sure the angle between each point is correct.
 	wantAngle := math.Pi / 2
-	for i := 0; i < len(pts); i++ {
+	for i := range pts {
 		// Mod the index by 4 to wrap the values at each end.
 		v0, v1, v2 := pts[(4+i+1)%4], pts[(4+i)%4], pts[(4+i-1)%4]
 		if got := float64(v0.Sub(v1.Vector).Angle(v2.Sub(v1.Vector))); !float64Eq(got, wantAngle) {
@@ -242,7 +242,7 @@ func TestPointRegularPoints(t *testing.T) {
 
 	// Make sure that all edges of the polygon have the same length.
 	wantLength := 27.990890717782829
-	for i := 0; i < len(lls); i++ {
+	for i := range lls {
 		ll1, ll2 := lls[i], lls[(i+1)%4]
 		if got := ll1.Distance(ll2).Degrees(); !float64Near(got, wantLength, epsilon) {
 			t.Errorf("%v.Distance(%v) = %v, want %v", ll1, ll2, got, wantLength)
@@ -296,7 +296,7 @@ func TestPointRegion(t *testing.T) {
 }
 
 func TestPointRotate(t *testing.T) {
-	for iter := 0; iter < 1000; iter++ {
+	for range 1000 {
 		axis := randomPoint()
 		target := randomPoint()
 		// Choose a distance whose logarithm is uniformly distributed.
@@ -456,5 +456,15 @@ func TestPointEnsureNormalizable(t *testing.T) {
 			t.Errorf("%+v.EnsureNormalizable() = %+v, want %+v",
 				test.have, got, test.want)
 		}
+	}
+}
+
+func BenchmarkPointRegularPoints(b *testing.B) {
+	center := PointFromLatLng(LatLngFromDegrees(80, 135))
+	radius := s1.Degree * 20
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		regularPoints(center, radius, 8)
 	}
 }

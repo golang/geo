@@ -46,6 +46,9 @@ The library provides the following:
     as collections of discrete "S2 cells". This feature makes it easy to build
     large distributed spatial indexes.
 
+*   Translate angles and steradians into distances and areas using earth's radius
+    through the [`earth`](https://pkg.go.dev/github.com/golang/geo/earth) package.
+
 On the other hand, the following are outside the scope of S2:
 
 *   Planar geometry.
@@ -209,7 +212,7 @@ S2CellIterator                   | ❌
 S2CellIteratorJoin               | ❌
 S2CellRangeIterator              | ❌
 S2Coder                          | ❌
-S2Earth                          | ❌
+S2Earth                          | ✅
 S2EdgeClipping                   | ✅
 S2EdgeCrosser                    | ✅
 S2EdgeCrossings                  | ✅

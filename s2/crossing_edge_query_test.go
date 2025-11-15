@@ -56,7 +56,7 @@ func generatePerturbedSubEdges(a, b Point, count int) []Edge {
 	b = Point{b.Normalize()}
 
 	length0 := a.Distance(b)
-	for i := 0; i < count; i++ {
+	for range count {
 		length := length0 * s1.Angle(math.Pow(1e-15, randomFloat64()))
 		offset := (length0 - length) * s1.Angle(randomFloat64())
 		edges = append(edges, Edge{
@@ -71,7 +71,7 @@ func generatePerturbedSubEdges(a, b Point, count int) []Edge {
 // whose length is randomly chosen up to maxLength.
 func generateCapEdges(centerCap Cap, maxLength s1.Angle, count int) []Edge {
 	var edges []Edge
-	for i := 0; i < count; i++ {
+	for range count {
 		center := samplePointFromCap(centerCap)
 		edgeCap := CapFromCenterAngle(center, 0.5*maxLength)
 		p1 := samplePointFromCap(edgeCap)
@@ -231,7 +231,7 @@ func TestCrossingEdgeQueryCrossingCandidatesPerturbedCubeEdges(t *testing.T) {
 	// This test is sufficient to demonstrate that padding the cell boundaries
 	// is necessary for correctness. (It will fails if ShapeIndexes CellPadding is
 	// set to zero.)
-	for iter := 0; iter < 10; iter++ {
+	for range 10 {
 		face := randomUniformInt(6)
 		scale := math.Pow(1e-15, randomFloat64())
 		u := scale*2*float64(randomUniformInt(2)) - 1
@@ -250,7 +250,7 @@ func TestCrossingEdgeQueryCrossingCandidatesPerturbedCubeEdges(t *testing.T) {
 // edges are special because one coordinate is zero, and they lie on the
 // boundaries between the immediate child cells of the cube face.
 func TestCrossingEdgeQueryCandidatesPerturbedCubeFaceAxes(t *testing.T) {
-	for iter := 0; iter < 5; iter++ {
+	for range 5 {
 		face := randomUniformInt(6)
 		scale := math.Pow(1e-15, randomFloat64())
 		axis := uvwAxis(face, randomUniformInt(2))
@@ -269,7 +269,7 @@ func TestCrossingEdgeQueryCandidatesCapEdgesNearCubeVertex(t *testing.T) {
 }
 
 func TestCrossingEdgeQueryCandidatesDegenerateEdgeOnCellVertexIsItsOwnCandidate(t *testing.T) {
-	for iter := 0; iter < 100; iter++ {
+	for range 100 {
 		cell := CellFromCellID(randomCellID())
 		edges := []Edge{{cell.Vertex(0), cell.Vertex(0)}}
 		testCrossingEdgeQueryAllCrossings(t, edges)

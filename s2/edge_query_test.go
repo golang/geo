@@ -203,7 +203,7 @@ func fractalLoopShapeIndexGenerator(c Cap, numEdges int, index *ShapeIndex) {
 // fills the given Cap.
 func pointCloudShapeIndexGenerator(c Cap, numPoints int, index *ShapeIndex) {
 	var points PointVector
-	for i := 0; i < numPoints; i++ {
+	for range numPoints {
 		points = append(points, samplePointFromCap(c))
 	}
 	index.Add(&points)
@@ -448,7 +448,7 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 	numTargets := maxTargetsPerIndex
 	if opts.targetType == queryTypeIndex {
 		// Limit the total number of target edges to reduce the benchmark running times.
-		numTargets = minInt(numTargets, 500000/opts.numTargetEdges)
+		numTargets = min(numTargets, 500000/opts.numTargetEdges)
 	}
 
 	for i := 0; i < numTargets; i++ {
