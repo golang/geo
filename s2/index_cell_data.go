@@ -20,9 +20,9 @@ type indexCellRange struct {
 	size  int
 }
 
-// shapeRange is a mapping from shapeID to the range of the edges array
+// indexShapeRange is a mapping from shapeID to the range of the edges array
 // it's stored in.
-type shapeRange struct {
+type indexShapeRange struct {
 	id        int32
 	cellRange indexCellRange
 }
@@ -96,7 +96,7 @@ type indexCellData struct {
 	edges []edgeAndIDChain
 
 	// Mapping from shape id to the ranges of the edges array it's stored in.
-	shapeRanges []shapeRange
+	shapeRanges []indexShapeRange
 
 	// Range for each dimension we might encounter.
 	dimRanges [3]indexCellRange
@@ -247,7 +247,7 @@ func (d *indexCellData) loadCell(index *ShapeIndex, id CellID, cell *ShapeIndexC
 			}
 
 			// Note which block of edges belongs to the shape.
-			d.shapeRanges = append(d.shapeRanges, shapeRange{
+			d.shapeRanges = append(d.shapeRanges, indexShapeRange{
 				id: shapeID,
 				cellRange: indexCellRange{
 					start: shapeStart,
@@ -303,7 +303,7 @@ func (d *indexCellData) dimRangeEdges(dim0, dim1 int) []edgeAndIDChain {
 	size := 0
 
 	for dim := dim0; dim <= dim1; dim++ {
-		start = minInt(start, d.dimRanges[dim].start)
+		start = min(start, d.dimRanges[dim].start)
 		size += d.dimRanges[dim].size
 	}
 
