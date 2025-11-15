@@ -473,10 +473,10 @@ func TestEdgeDistancesInterpolateAntipodal(t *testing.T) {
 func TestEdgeDistancesRepeatedInterpolation(t *testing.T) {
 	// Check that points do not drift away from unit length when repeated
 	// interpolations are done.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		a := randomPoint()
 		b := randomPoint()
-		for j := 0; j < 1000; j++ {
+		for range 1000 {
 			a = Interpolate(0.01, a, b)
 		}
 		if !a.IsUnit() {

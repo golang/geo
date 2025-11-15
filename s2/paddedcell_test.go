@@ -24,7 +24,7 @@ import (
 
 func TestPaddedCellMethods(t *testing.T) {
 	// Test the PaddedCell methods that have approximate Cell equivalents.
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		cid := randomCellID()
 		padding := math.Pow(1e-15, randomFloat64())
 		cell := CellFromCellID(cid)
@@ -62,7 +62,7 @@ func TestPaddedCellMethods(t *testing.T) {
 			t.Errorf("%v.Children() failed but should not have", cell)
 			continue
 		}
-		for pos := 0; pos < 4; pos++ {
+		for pos := range 4 {
 			i, j := pCell.ChildIJ(pos)
 
 			cellChild := children[pos]
@@ -96,7 +96,7 @@ func TestPaddedCellMethods(t *testing.T) {
 }
 
 func TestPaddedCellEntryExitVertices(t *testing.T) {
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		id := randomCellID()
 		unpadded := PaddedCellFromCellID(id, 0)
 		padded := PaddedCellFromCellID(id, 0.5)
@@ -132,7 +132,7 @@ func TestPaddedCellEntryExitVertices(t *testing.T) {
 }
 
 func TestPaddedCellShrinkToFit(t *testing.T) {
-	for iter := 0; iter < 1000; iter++ {
+	for range 1000 {
 		// Start with the desired result and work backwards.
 		result := randomCellID()
 		resultUV := result.boundUV()

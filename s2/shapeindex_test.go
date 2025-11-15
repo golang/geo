@@ -258,7 +258,7 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 		skipped := CellUnionFromRange(minCellID, ci.RangeMin())
 
 		it2 := NewShapeIndexIterator(index, IteratorEnd)
-		for i := 0; i < len(skipped); i++ {
+		for i := range skipped {
 			if it2.LocatePoint(skipped[i].Point()) {
 				t.Errorf("iterator should not have been able to find the cell %v which was not in the index", skipped[i].Point())
 			}
@@ -335,7 +335,7 @@ func testIteratorMethods(t *testing.T, index *ShapeIndex) {
 		}
 
 		if !ci.IsLeaf() {
-			for i := 0; i < 4; i++ {
+			for i := range 4 {
 				it2.Begin()
 				if got, want := it2.LocateCellID(ci.Children()[i]), Indexed; got != want {
 					t.Errorf("it2.LocateCellID(%v.Children[%d]) = %v, want %v", ci, i, got, want)
@@ -379,7 +379,7 @@ func TestShapeIndexManyIdenticalEdges(t *testing.T) {
 	b := PointFromCoords(-0.99, -0.99, 1)
 
 	index := NewShapeIndex()
-	for i := int32(0); i < numEdges; i++ {
+	for i := range int32(numEdges) {
 		if got := index.Add(edgeVectorShapeFromPoints(a, b)); got != i {
 			t.Errorf("element %d id = %v, want %v", i, got, i)
 		}
@@ -432,7 +432,7 @@ func TestShapeIndexManyTinyEdges(t *testing.T) {
 	a := cellIDFromPoint(PointFromCoords(1, 0, 0)).Point()
 	b := Point{a.Add(r3.Vector{X: 0, Y: 1e-12, Z: 0}).Normalize()}
 	shape := &edgeVectorShape{}
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		shape.Add(a, b)
 	}
 
@@ -553,9 +553,9 @@ func TestShapeIndexNumEdgesUpTo(t *testing.T) {
 
 func BenchmarkShapeIndexIteratorLocatePoint(b *testing.B) {
 	index := NewShapeIndex()
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		var points []Point
-		for j := 0; j < 100; j++ {
+		for range 100 {
 			points = append(points, randomPoint())
 		}
 		polyline := Polyline(points)

@@ -247,7 +247,7 @@ func (r Rect) CapBound() Cap {
 	// maximum cap size is achieved at one of the rectangle vertices.  For
 	// rectangles that are larger than 180 degrees, we punt and always return a
 	// bounding cap centered at one of the two poles.
-	if math.Remainder(r.Lng.Hi-r.Lng.Lo, 2*math.Pi) >= 0 && r.Lng.Hi-r.Lng.Lo < 2*math.Pi {
+	if math.Remainder(r.Lng.Hi-r.Lng.Lo, 2*math.Pi) >= 0 && r.Lng.Hi-r.Lng.Lo <= math.Pi {
 		midCap := CapFromPoint(PointFromLatLng(r.Center())).AddPoint(PointFromLatLng(r.Lo())).AddPoint(PointFromLatLng(r.Hi()))
 		if midCap.Height() < poleCap.Height() {
 			return midCap
@@ -468,7 +468,7 @@ func (r *Rect) decode(d *decoder) {
 // The latlng must be valid.
 func (r Rect) DistanceToLatLng(ll LatLng) s1.Angle {
 	if r.Lng.Contains(float64(ll.Lng)) {
-		return maxAngle(0, ll.Lat-s1.Angle(r.Lat.Hi), s1.Angle(r.Lat.Lo)-ll.Lat)
+		return max(0, ll.Lat-s1.Angle(r.Lat.Hi), s1.Angle(r.Lat.Lo)-ll.Lat)
 	}
 
 	i := s1.IntervalFromEndpoints(r.Lng.Hi, r.Lng.ComplementCenter())
@@ -505,7 +505,7 @@ func (r Rect) DirectedHausdorffDistance(other Rect) s1.Angle {
 //
 //	H(A, B) = max{h(A, B), h(B, A)}.
 func (r Rect) HausdorffDistance(other Rect) s1.Angle {
-	return maxAngle(r.DirectedHausdorffDistance(other),
+	return max(r.DirectedHausdorffDistance(other),
 		other.DirectedHausdorffDistance(r))
 }
 
@@ -567,14 +567,14 @@ func directedHausdorffDistance(lngDiff s1.Angle, a, b r1.Interval) s1.Angle {
 	// Cases A1 and B1.
 	aLo := PointFromLatLng(LatLng{s1.Angle(a.Lo), 0})
 	aHi := PointFromLatLng(LatLng{s1.Angle(a.Hi), 0})
-	maxDistance := maxAngle(
+	maxDistance := max(
 		DistanceFromSegment(aLo, bLo, bHi),
 		DistanceFromSegment(aHi, bLo, bHi))
 
 	if lngDiff <= math.Pi/2 {
 		// Case A2.
 		if a.Contains(0) && b.Contains(0) {
-			maxDistance = maxAngle(maxDistance, lngDiff)
+			maxDistance = max(maxDistance, lngDiff)
 		}
 		return maxDistance
 	}
@@ -583,20 +583,20 @@ func directedHausdorffDistance(lngDiff s1.Angle, a, b r1.Interval) s1.Angle {
 	p := bisectorIntersection(b, bLng)
 	pLat := LatLngFromPoint(p).Lat
 	if a.Contains(float64(pLat)) {
-		maxDistance = maxAngle(maxDistance, p.Angle(bLo.Vector))
+		maxDistance = max(maxDistance, p.Angle(bLo.Vector))
 	}
 
 	// Case B3.
 	if pLat > s1.Angle(a.Lo) {
 		intDist, ok := interiorMaxDistance(r1.Interval{Lo: a.Lo, Hi: math.Min(float64(pLat), a.Hi)}, bLo)
 		if ok {
-			maxDistance = maxAngle(maxDistance, intDist)
+			maxDistance = max(maxDistance, intDist)
 		}
 	}
 	if pLat < s1.Angle(a.Hi) {
 		intDist, ok := interiorMaxDistance(r1.Interval{Lo: math.Max(float64(pLat), a.Lo), Hi: a.Hi}, bHi)
 		if ok {
-			maxDistance = maxAngle(maxDistance, intDist)
+			maxDistance = max(maxDistance, intDist)
 		}
 	}
 

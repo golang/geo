@@ -145,7 +145,7 @@ func TestDegreesVsRadians(t *testing.T) {
 		}
 	}
 
-	for k := uint64(0); k < 30; k++ {
+	for k := range uint64(30) {
 		m := 1 << k
 		n := float64(m)
 		for _, test := range []struct{ deg, rad float64 }{

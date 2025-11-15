@@ -245,7 +245,7 @@ func (w *window) upsample(newRows, newCols int) *window {
 	colScale := float64(newCols) / float64(w.cols)
 	newStrides := make([]columnStride, newRows)
 	var fromStride columnStride
-	for row := 0; row < newRows; row++ {
+	for row := range newRows {
 		fromStride = w.strides[int((float64(row)+0.5)/rowScale)]
 		newStrides[row] = columnStride{
 			start: int(colScale*float64(fromStride.start) + 0.5),
@@ -271,11 +271,11 @@ func (w *window) dilate(radius int) *window {
 
 	newStrides := make([]columnStride, w.rows)
 	for row := 0; row < w.rows; row++ {
-		prevRow := maxInt(0, row-radius)
-		nextRow := minInt(row+radius, w.rows-1)
+		prevRow := max(0, row-radius)
+		nextRow := min(row+radius, w.rows-1)
 		newStrides[row] = columnStride{
-			start: maxInt(0, w.strides[prevRow].start-radius),
-			end:   minInt(w.strides[nextRow].end+radius, w.cols),
+			start: max(0, w.strides[prevRow].start-radius),
+			end:   min(w.strides[nextRow].end+radius, w.cols),
 		}
 	}
 
@@ -341,7 +341,7 @@ type costTable [][]float64
 
 func newCostTable(rows, cols int) costTable {
 	c := make([][]float64, rows)
-	for i := 0; i < rows; i++ {
+	for i := range rows {
 		c[i] = make([]float64, cols)
 	}
 	return c
@@ -386,12 +386,12 @@ func ExactVertexAlignmentCost(a, b *Polyline) float64 {
 	aN := len(*a)
 	bN := len(*b)
 	cost := make([]float64, bN)
-	for i := 0; i < bN; i++ {
+	for i := range bN {
 		cost[i] = math.MaxFloat64
 	}
 	leftDiagMinCost := 0.0
-	for row := 0; row < aN; row++ {
-		for col := 0; col < bN; col++ {
+	for row := range aN {
+		for col := range bN {
 			upCost := cost[col]
 			cost[col] = math.Min(leftDiagMinCost, upCost) +
 				(*a)[row].Sub((*b)[col].Vector).Norm()
@@ -409,7 +409,7 @@ func ExactVertexAlignment(a, b *Polyline) *vertexAlignment {
 	aN := len(*a)
 	bN := len(*b)
 	strides := make([]columnStride, aN)
-	for i := 0; i < aN; i++ {
+	for i := range aN {
 		strides[i] = columnStride{start: 0, end: bN}
 	}
 	w := windowFromStrides(strides)
@@ -447,7 +447,7 @@ func dynamicTimewarp(a, b *Polyline, w *window) *vertexAlignment {
 	var curr columnStride
 	prev := allColumnStride()
 
-	for row := 0; row < rows; row++ {
+	for row := range rows {
 		curr = w.columnStride(row)
 		for col := curr.start; col < curr.end; col++ {
 			// The total cost up to (row,col) is the minimum of the cost up, down,
@@ -458,7 +458,7 @@ func dynamicTimewarp(a, b *Polyline, w *window) *vertexAlignment {
 			uCost := costs.boundsCheckedTableCost(row-1, col-0, prev)
 			lCost := costs.boundsCheckedTableCost(row-0, col-1, curr)
 
-			costs[row][col] = minFloat64(dCost, uCost, lCost) +
+			costs[row][col] = min(dCost, uCost, lCost) +
 				(*a)[row].Sub((*b)[col].Vector).Norm()
 		}
 		prev = curr
@@ -473,7 +473,7 @@ func dynamicTimewarp(a, b *Polyline, w *window) *vertexAlignment {
 	// this incurs is larger than the cost to simply redo the comparisons.
 	// It's probably worth revisiting this assumption in the future.
 	// As it turns out, the following code ends up effectively free.
-	warpPath := make([]warpPair, 0, maxInt(rows, cols))
+	warpPath := make([]warpPair, 0, max(rows, cols))
 	row := rows - 1
 	col := cols - 1
 	curr = w.checkedColumnStride(row)

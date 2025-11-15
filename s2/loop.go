@@ -1005,6 +1005,10 @@ func (l *Loop) ContainsNested(other *Loop) bool {
 //
 // Any changes to this method may need corresponding changes to surfaceIntegralPoint as well.
 func (l *Loop) surfaceIntegralFloat64(f func(a, b, c Point) float64) float64 {
+	if len(l.vertices) < 3 {
+		// If the loop has less than 3 vertices, there's no interior.
+		return 0
+	}
 	// We sum f over a collection T of oriented triangles, possibly
 	// overlapping. Let the sign of a triangle be +1 if it is CCW and -1
 	// otherwise, and let the sign of a point x be the sum of the signs of the
@@ -1092,6 +1096,10 @@ func (l *Loop) surfaceIntegralFloat64(f func(a, b, c Point) float64) float64 {
 func (l *Loop) surfaceIntegralPoint(f func(a, b, c Point) Point) Point {
 	const maxLength = math.Pi - 1e-5
 	var sum r3.Vector
+	if len(l.vertices) < 3 {
+		// If the loop has less than 3 vertices, there's no interior.
+		return Point{sum}
+	}
 
 	origin := l.Vertex(0)
 	for i := 1; i+1 < len(l.vertices); i++ {
@@ -1501,7 +1509,7 @@ func (l *loopCrosser) startEdge(aj int) {
 func (l *loopCrosser) edgeCrossesCell(bClipped *clippedShape) bool {
 	// Test the current edge of A against all edges of bClipped
 	bNumEdges := bClipped.numEdges()
-	for j := 0; j < bNumEdges; j++ {
+	for j := range bNumEdges {
 		bj := bClipped.edges[j]
 		if bj != l.bjPrev+1 {
 			l.crosser.RestartAt(l.b.Vertex(bj))

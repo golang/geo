@@ -147,7 +147,7 @@ func (p *Polyline) IntersectsCell(cell Cell) bool {
 		cell.Vertex(3),
 	}
 
-	for j := 0; j < 4; j++ {
+	for j := range 4 {
 		crosser := NewChainEdgeCrosser(cellVertices[j], cellVertices[(j+1)&3], (*p)[0])
 		for i := 1; i < len(*p); i++ {
 			if crosser.ChainCrossingSign((*p)[i]) != DoNotCross {
@@ -189,7 +189,7 @@ func (p *Polyline) ReferencePoint() ReferencePoint {
 
 // NumChains reports the number of contiguous edge chains in this Polyline.
 func (p *Polyline) NumChains() int {
-	return minInt(1, p.NumEdges())
+	return min(1, p.NumEdges())
 }
 
 // Chain returns the i-th edge Chain in the Shape.
@@ -577,7 +577,7 @@ func (p *Polyline) Uninterpolate(point Point, nextVertex int) float64 {
 	}
 	// The ratio can be greater than 1.0 due to rounding errors or because the
 	// point is not exactly on the polyline.
-	return minFloat64(1.0, float64(lengthToPoint/sum))
+	return min(1.0, float64(lengthToPoint/sum))
 }
 
 // TODO(roberts): Differences from C++.

@@ -183,7 +183,7 @@ func TestRectVertex(t *testing.T) {
 	}
 }
 func TestRectVertexCCWOrder(t *testing.T) {
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		lat := math.Pi / 4 * float64(i-2)
 		lng := math.Pi/2*float64(i-2) + 0.2
 		r := Rect{
@@ -194,7 +194,7 @@ func TestRectVertexCCWOrder(t *testing.T) {
 			},
 		}
 
-		for k := 0; k < 4; k++ {
+		for k := range 4 {
 			if !Sign(PointFromLatLng(r.Vertex((k-1)&3)), PointFromLatLng(r.Vertex(k)), PointFromLatLng(r.Vertex((k+1)&3))) {
 				t.Errorf("%v.Vertex(%v), vertices were not in CCW order", r, k)
 			}
@@ -394,6 +394,16 @@ func TestRectCapBound(t *testing.T) {
 		{ // Longitude span > 180 degrees.
 			rectFromDegrees(-30, -150, -10, 50),
 			CapFromCenterAngle(Point{r3.Vector{X: 0, Y: 0, Z: -1}}, s1.Angle(80)*s1.Degree),
+		},
+		{
+			// Longitude span > 180 degrees and latitude span > 90 degrees. This results
+			// in a polar cap that is larger than the "midpoint cap" (centered at the
+			// center of the rect and containing the vertices), but is nonetheless the
+			// correct result. The "midpoint cap" must not be returned since it doesn't
+			// contain the entire rect due the rect being wider than 180 degrees.
+			// In this example, (-34, 49) is in the rect but not the midpoint cap.
+			rectFromDegrees(-60, -150, 70, 50),
+			CapFromCenterAngle(Point{r3.Vector{X: 0, Y: 0, Z: 1}}, s1.Angle(150)*s1.Degree),
 		},
 	}
 	for _, test := range tests {
@@ -868,7 +878,7 @@ func intervalDistance(x LatLng, lat s1.Angle, iv s1.Interval) s1.Angle {
 		return s1.Angle(math.Abs(float64(x.Lat - lat)))
 	}
 
-	return minAngle(
+	return min(
 		x.Distance(LatLng{lat, s1.Angle(iv.Lo)}),
 		x.Distance(LatLng{lat, s1.Angle(iv.Hi)}))
 }
@@ -890,7 +900,7 @@ func bruteForceRectLatLngDistance(r Rect, ll LatLng) s1.Angle {
 		PointFromLatLng(LatLng{s1.Angle(r.Lat.Lo), s1.Angle(r.Lng.Hi)}),
 		PointFromLatLng(LatLng{s1.Angle(r.Lat.Hi), s1.Angle(r.Lng.Hi)}))
 
-	return minAngle(loLat, hiLat, loLng, hiLng)
+	return min(loLat, hiLat, loLng, hiLng)
 }
 
 func TestDistanceRectFromLatLng(t *testing.T) {
@@ -932,7 +942,7 @@ func TestDistanceRectFromLatLng(t *testing.T) {
 func TestDistanceRectFromLatLngRandomPairs(t *testing.T) {
 	latlng := func() LatLng { return LatLngFromPoint(randomPoint()) }
 
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		r := RectFromLatLng(latlng()).AddPoint(latlng())
 		ll := latlng()
 		got := r.DistanceToLatLng(ll)
@@ -968,7 +978,7 @@ func verifyDirectedHausdorffDistance(t *testing.T, a, b Rect) {
 
 		for j := 0; j <= sampleSizeOnLat; j++ {
 			d := b.DistanceToLatLng(ll.Normalized())
-			maxDistance = maxAngle(maxDistance, d)
+			maxDistance = max(maxDistance, d)
 			ll.Lat += deltaOnLat
 		}
 		ll.Lng += deltaOnLng
@@ -986,7 +996,7 @@ func verifyDirectedHausdorffDistance(t *testing.T, a, b Rect) {
 func TestRectDirectedHausdorffDistanceRandomPairs(t *testing.T) {
 	// Test random pairs.
 	rnd := func() LatLng { return LatLngFromPoint(randomPoint()) }
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		a := RectFromLatLng(rnd()).AddPoint(rnd())
 		b := RectFromLatLng(rnd()).AddPoint(rnd())
 		// a and b are *minimum* bounding rectangles of two random points, in
@@ -1166,7 +1176,7 @@ func testRectCentroidSplitting(t *testing.T, r Rect, leftSplits int) {
 
 func TestRectCentroidFullRange(t *testing.T) {
 	// Rectangles that cover the full longitude range.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		lat1 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
 		lat2 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
 		r := Rect{r1.Interval{Lo: lat1, Hi: lat2}, s1.FullInterval()}
@@ -1180,7 +1190,7 @@ func TestRectCentroidFullRange(t *testing.T) {
 	}
 
 	// Rectangles that cover the full latitude range.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		lat1 := randomUniformFloat64(-math.Pi, math.Pi)
 		lat2 := randomUniformFloat64(-math.Pi, math.Pi)
 		r := Rect{r1.Interval{Lo: -math.Pi / 2, Hi: math.Pi / 2}, s1.Interval{Lo: lat1, Hi: lat2}}

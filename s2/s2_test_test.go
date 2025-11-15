@@ -219,7 +219,7 @@ func TestChordAngleMaxPointError(t *testing.T) {
 	// Check that the error bound returned by s1.MaxPointError() is
 	// large enough.
 	const iters = 100000
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		x := randomPoint()
 		y := randomPoint()
 		if oneIn(10) {

@@ -273,10 +273,7 @@ func (cu *CellUnion) Denormalize(minLevel, levelMod int) {
 	var denorm CellUnion
 	for _, id := range *cu {
 		level := id.Level()
-		newLevel := level
-		if newLevel < minLevel {
-			newLevel = minLevel
-		}
+		newLevel := max(level, minLevel)
 		if levelMod > 1 {
 			newLevel += (MaxLevel - (newLevel - minLevel)) % levelMod
 			if newLevel > MaxLevel {
@@ -486,7 +483,7 @@ func (cu *CellUnion) ExpandAtLevel(level int) {
 func (cu *CellUnion) ExpandByRadius(minRadius s1.Angle, maxLevelDiff int) {
 	minLevel := MaxLevel
 	for _, cid := range *cu {
-		minLevel = minInt(minLevel, cid.Level())
+		minLevel = min(minLevel, cid.Level())
 	}
 
 	// Find the maximum level such that all cells are at least "minRadius" wide.
@@ -496,7 +493,7 @@ func (cu *CellUnion) ExpandByRadius(minRadius s1.Angle, maxLevelDiff int) {
 		// The easiest way to handle this is to expand twice.
 		cu.ExpandAtLevel(0)
 	}
-	cu.ExpandAtLevel(minInt(minLevel+maxLevelDiff, radiusLevel))
+	cu.ExpandAtLevel(min(minLevel+maxLevelDiff, radiusLevel))
 }
 
 // Equal reports whether the two CellUnions are equal.
@@ -504,7 +501,7 @@ func (cu CellUnion) Equal(o CellUnion) bool {
 	if len(cu) != len(o) {
 		return false
 	}
-	for i := 0; i < len(cu); i++ {
+	for i := range cu {
 		if cu[i] != o[i] {
 			return false
 		}

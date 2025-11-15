@@ -24,7 +24,7 @@ func TestPolylineMeasuresGreatCircles(t *testing.T) {
 	// Then make sure that the length and centroid are correct.  Note that
 	// because of the way the centroid is computed, it does not matter how
 	// we split the great circle into segments.
-	for iter := 0; iter < 100; iter++ {
+	for range 100 {
 		// Choose a coordinate frame for the great circle.
 		f := randomFrame()
 		x := f.row(0)
