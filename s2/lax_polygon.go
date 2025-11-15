@@ -71,24 +71,6 @@ type LaxPolygon struct {
 	loopStarts []int
 }
 
-// LaxPolygonFromLoops creates a LaxPolygon from the given set of Loops.
-//
-// A collection of Loops is similar, but not the same as a Polygon, so
-// from this creation method, we do not need to track Loop orientation
-// as hole or shell like Polygon does.
-func LaxPolygonFromLoops(loops []Loop) *LaxPolygon {
-	spans := make([][]Point, len(loops))
-	for i, loop := range loops {
-		if loop.IsFull() {
-			spans[i] = []Point{} // Empty span.
-		} else {
-			spans[i] = make([]Point, len(loop.vertices))
-			copy(spans[i], loop.vertices)
-		}
-	}
-	return LaxPolygonFromPoints(spans)
-}
-
 // LaxPolygonFromPolygon creates a LaxPolygon from the given Polygon.
 func LaxPolygonFromPolygon(p *Polygon) *LaxPolygon {
 	spans := make([][]Point, len(p.loops))
