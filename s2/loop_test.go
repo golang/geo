@@ -22,6 +22,7 @@ import (
 	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
+	"github.com/google/go-units/unit"
 )
 
 var (
@@ -1864,7 +1865,8 @@ func BenchmarkLoopContainsPoint(b *testing.B) {
 				b.StopTimer()
 				loops := make([]*Loop, numLoopSamples)
 				for i := range numLoopSamples {
-					loops[i] = RegularLoop(randomPoint(), kmToAngle(10.0), vertices)
+					radius := s1.EarthAngleFromLength(10 * unit.Kilometer)
+					loops[i] = RegularLoop(randomPoint(), radius, vertices)
 				}
 
 				queries := make([][]Point, numLoopSamples)

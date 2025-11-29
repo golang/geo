@@ -22,25 +22,6 @@ import (
 	"github.com/golang/geo/s1"
 )
 
-func TestKmToAngle(t *testing.T) {
-	tests := []struct {
-		have float64
-		want s1.Angle
-	}{
-		{0.0, 0.0},
-		{1.0, 0.00015696098420815537 * s1.Radian},
-		{earthRadiusKm, 1.0 * s1.Radian},
-		{-1.0, -0.00015696098420815537 * s1.Radian},
-		{-10000.0, -1.5696098420815536300 * s1.Radian},
-		{1e9, 156960.984208155363007 * s1.Radian},
-	}
-	for _, test := range tests {
-		if got := kmToAngle(test.have); !float64Eq(float64(got), float64(test.want)) {
-			t.Errorf("kmToAngle(%f) = %0.20f, want %0.20f", test.have, got, test.want)
-		}
-	}
-}
-
 func numVerticesAtLevel(level int) int {
 	// Sanity / overflow check
 	if level < 0 || level > 14 {

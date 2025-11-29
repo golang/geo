@@ -18,6 +18,9 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
+
+	"github.com/golang/geo/s1"
+	"github.com/google/go-units/unit"
 )
 
 func TestFacesIterator(t *testing.T) {
@@ -35,7 +38,8 @@ func TestFacesIterator(t *testing.T) {
 func makeSnappedPoints(nvertices int, level int) []Point {
 	const radiusKM = 0.1
 	center := PointFromCoords(1, 1, 1)
-	pts := regularPoints(center, kmToAngle(radiusKM), nvertices)
+	radius := s1.EarthAngleFromLength(radiusKM * unit.Kilometer)
+	pts := regularPoints(center, radius, nvertices)
 	for i, pt := range pts {
 		id := CellFromPoint(pt).ID()
 		if level < id.Level() {

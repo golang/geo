@@ -22,7 +22,6 @@ import (
 	"math/rand"
 	"os"
 
-	"github.com/golang/geo/earth"
 	"github.com/golang/geo/r1"
 	"github.com/golang/geo/r2"
 	"github.com/golang/geo/s1"
@@ -73,13 +72,6 @@ func float64Eq(x, y float64) bool { return float64Near(x, y, epsilon) }
 // float64Near reports whether the two values are within the given epsilon.
 func float64Near(x, y, ε float64) bool {
 	return math.Abs(x-y) <= ε
-}
-
-var earthRadiusKm = earth.Radius.Kilometers()
-
-// kmToAngle converts a distance on the Earth's surface to an angle.
-func kmToAngle(km float64) s1.Angle {
-	return s1.Angle(km / earthRadiusKm)
 }
 
 // randomBits returns a 64-bit random unsigned integer whose lowest "num" are random, and

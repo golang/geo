@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
+	"github.com/google/go-units/unit"
 )
 
 func TestPredicatesEpsilonForDigits(t *testing.T) {
@@ -305,7 +306,7 @@ func TestPredicatesStableSignFailureRate(t *testing.T) {
 	// that are as collinear as possible and spaced the given distance apart
 	// by counting up the times it returns Indeterminate.
 	failureCount := 0
-	m := math.Tan(spacing / earthRadiusKm)
+	m := math.Tan(s1.EarthAngleFromLength(unit.Length(spacing) * unit.Kilometer).Radians())
 	for range iters {
 		f := randomFrame()
 		a := f.col(0)

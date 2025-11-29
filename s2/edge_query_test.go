@@ -16,13 +16,13 @@ package s2
 
 import (
 	"flag"
-
 	"fmt"
 	"math/rand"
 	"reflect"
 	"testing"
 
 	"github.com/golang/geo/s1"
+	"github.com/google/go-units/unit"
 )
 
 var (
@@ -223,7 +223,7 @@ const edgeQueryTestNumEdges = 100
 const edgeQueryTestNumQueries = 200
 
 // The approximate radius of Cap from which query edges are chosen.
-var testCapRadius = kmToAngle(10)
+var testCapRadius = s1.EarthAngleFromLength(10 * unit.Kilometer)
 
 /*
 // testEdgeQueryWithGenerator is used to perform high volume random testing on EdqeQuery
@@ -340,7 +340,7 @@ func benchmarkEdgeQueryFindClosest(b *testing.B, bmOpts *edgeQueryBenchmarkOptio
 	index := NewShapeIndex()
 	opts := NewClosestEdgeQueryOptions().MaxResults(1).IncludeInteriors(bmOpts.includeInteriors)
 
-	radius := kmToAngle(bmOpts.radiusKm.Radians())
+	radius := s1.EarthAngleFromLength(unit.Length(bmOpts.radiusKm.Radians()) * unit.Kilometer)
 	if bmOpts.maxDistanceFraction > 0 {
 		opts.DistanceLimit(s1.ChordAngleFromAngle(s1.Angle(bmOpts.maxDistanceFraction) * radius))
 	}
@@ -539,5 +539,5 @@ func fractionToRadius(fraction, radiusKm float64) s1.Angle {
 	if fraction < 0 {
 		fraction = -randomFloat64() * fraction
 	}
-	return s1.Angle(fraction) * kmToAngle(radiusKm)
+	return s1.EarthAngleFromLength(unit.Length(fraction*radiusKm) * unit.Kilometer)
 }

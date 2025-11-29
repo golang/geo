@@ -20,6 +20,9 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+
+	"github.com/golang/geo/s1"
+	"github.com/google/go-units/unit"
 )
 
 func TestCovererRandomCells(t *testing.T) {
@@ -337,7 +340,8 @@ func BenchmarkRegionCovererCoveringLoop(b *testing.B) {
 			size := int(math.Pow(2.0, float64(n)))
 			regions := make([]Region, numCoveringBMRegions)
 			for i := range numCoveringBMRegions {
-				regions[i] = RegularLoop(randomPoint(), kmToAngle(10.0), size)
+				radius := s1.EarthAngleFromLength(10 * unit.Kilometer)
+				regions[i] = RegularLoop(randomPoint(), radius, size)
 			}
 			return regions
 		})
