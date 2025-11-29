@@ -340,7 +340,7 @@ func benchmarkEdgeQueryFindClosest(b *testing.B, bmOpts *edgeQueryBenchmarkOptio
 	index := NewShapeIndex()
 	opts := NewClosestEdgeQueryOptions().MaxResults(1).IncludeInteriors(bmOpts.includeInteriors)
 
-	radius := s1.EarthAngleFromLength(unit.Length(bmOpts.radiusKm.Radians()) * unit.Kilometer)
+	radius := s1.EarthAngleFromLength(unit.Length(bmOpts.radiusKm) * unit.Kilometer)
 	if bmOpts.maxDistanceFraction > 0 {
 		opts.DistanceLimit(s1.ChordAngleFromAngle(s1.Angle(bmOpts.maxDistanceFraction) * radius))
 	}
@@ -389,7 +389,7 @@ type edgeQueryBenchmarkOptions struct {
 	targetType               queryTargetType
 	numTargetEdges           int
 	chooseTargetFromIndex    bool
-	radiusKm                 s1.Angle
+	radiusKm                 float64
 	maxDistanceFraction      float64
 	maxErrorFraction         float64
 	targetRadiusFraction     float64
@@ -436,7 +436,10 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 	// Replace with r := rand.New(rand.NewSource(opts.randomSeed)) and pass through.
 	r := rand.New(rand.NewSource(opts.randomSeed))
 	opts.randomSeed++
-	indexCap := CapFromCenterAngle(randomPoint(r), opts.radiusKm)
+	indexCap := CapFromCenterAngle(
+		randomPoint(r),
+		s1.EarthAngleFromLength(unit.Length(opts.radiusKm)*unit.Kilometer),
+	)
 
 	query.Reset()
 	queryIndex.Reset()
@@ -452,10 +455,11 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 	}
 
 	for i := 0; i < numTargets; i++ {
-		targetDist := fractionToRadius(opts.centerSeparationFraction, opts.radiusKm.Radians())
+		targetDist := fractionToRadius(opts.centerSeparationFraction, opts.radiusKm)
 		targetCap := CapFromCenterAngle(
 			sampleBoundaryFromCap(CapFromCenterAngle(indexCap.Center(), targetDist)),
-			fractionToRadius(opts.targetRadiusFraction, opts.radiusKm.Radians()))
+			fractionToRadius(opts.targetRadiusFraction, opts.radiusKm),
+		)
 
 		switch opts.targetType {
 		case queryTypePoint:
