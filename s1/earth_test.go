@@ -57,6 +57,11 @@ func TestEarthAngleFromLength(t *testing.T) {
 			t.Errorf("EarthAngleFromLength(%v) = %v, want %v", test.length, got, want)
 		}
 	}
+
+	// Verify the fundamental identity: earth.Radius maps to exactly 1 radian.
+	if got := EarthAngleFromLength(earth.Radius); got != 1*Radian {
+		t.Errorf("EarthAngleFromLength(earth.Radius) = %v, want %v", got, 1*Radian)
+	}
 }
 
 func TestEarthLengthFromAngle(t *testing.T) {
@@ -66,6 +71,11 @@ func TestEarthLengthFromAngle(t *testing.T) {
 		if !earthFloat64Eq(got.Meters(), want.Meters()) {
 			t.Errorf("EarthLengthFromAngle(%v) = %v, want %v", test.angle, got, want)
 		}
+	}
+
+	// Verify the fundamental identity: 1 radian maps to exactly earth.Radius.
+	if got := EarthLengthFromAngle(1 * Radian); got != earth.Radius {
+		t.Errorf("EarthLengthFromAngle(1*Radian) = %v, want %v", got, earth.Radius)
 	}
 }
 
