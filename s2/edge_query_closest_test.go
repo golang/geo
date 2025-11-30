@@ -20,6 +20,7 @@ import (
 
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
+	"github.com/google/go-units/unit"
 )
 
 func TestClosestEdgeQueryNoEdges(t *testing.T) {
@@ -238,7 +239,7 @@ func BenchmarkEdgeQueryFindEdges(b *testing.B) {
 				targetType:               queryTypePoint,
 				numTargetEdges:           0,
 				chooseTargetFromIndex:    false,
-				radiusKm:                 1000,
+				radius:                   1000 * unit.Kilometer,
 				maxDistanceFraction:      -1,
 				maxErrorFraction:         -1,
 				targetRadiusFraction:     0.0,
@@ -254,7 +255,7 @@ func BenchmarkEdgeQueryFindEdges(b *testing.B) {
 				targetType:               queryTypePoint,
 				numTargetEdges:           0,
 				chooseTargetFromIndex:    false,
-				radiusKm:                 1000,
+				radius:                   1000 * unit.Kilometer,
 				maxDistanceFraction:      -1,
 				maxErrorFraction:         -1,
 				targetRadiusFraction:     0.0,
@@ -271,7 +272,7 @@ func BenchmarkEdgeQueryFindEdges(b *testing.B) {
 				targetType:               queryTypePoint,
 				numTargetEdges:           0,
 				chooseTargetFromIndex:    false,
-				radiusKm:                 1000,
+				radius:                   1000 * unit.Kilometer,
 				maxDistanceFraction:      -1,
 				maxErrorFraction:         0.1,
 				targetRadiusFraction:     0.0,
@@ -288,7 +289,7 @@ func BenchmarkEdgeQueryFindEdges(b *testing.B) {
 				targetType:               queryTypePoint,
 				numTargetEdges:           0,
 				chooseTargetFromIndex:    false,
-				radiusKm:                 1000,
+				radius:                   1000 * unit.Kilometer,
 				maxDistanceFraction:      -1,
 				maxErrorFraction:         0.01,
 				targetRadiusFraction:     0.0,
@@ -302,7 +303,7 @@ func BenchmarkEdgeQueryFindEdges(b *testing.B) {
 				targetType:               queryTypeEdge,
 				numTargetEdges:           0,
 				chooseTargetFromIndex:    false,
-				radiusKm:                 1000,
+				radius:                   1000 * unit.Kilometer,
 				maxDistanceFraction:      -1,
 				maxErrorFraction:         -1,
 				targetRadiusFraction:     -1.0,
@@ -316,7 +317,7 @@ func BenchmarkEdgeQueryFindEdges(b *testing.B) {
 				targetType:               queryTypeCell,
 				numTargetEdges:           0,
 				chooseTargetFromIndex:    false,
-				radiusKm:                 1000,
+				radius:                   1000 * unit.Kilometer,
 				maxDistanceFraction:      -1,
 				maxErrorFraction:         -1,
 				targetRadiusFraction:     -1.0,

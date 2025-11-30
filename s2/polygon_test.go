@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/golang/geo/s1"
+	"github.com/google/go-units/unit"
 )
 
 const (
@@ -1144,7 +1145,7 @@ func TestPolygonInvert(t *testing.T) {
 	origin := PointFromLatLng(LatLngFromDegrees(0, 0))
 	pt := PointFromLatLng(LatLngFromDegrees(30, 30))
 	p := PolygonFromLoops([]*Loop{
-		RegularLoop(origin, 1000/earthRadiusKm, 100),
+		RegularLoop(origin, s1.EarthAngleFromLength(1000*unit.Kilometer), 100),
 	})
 
 	if p.ContainsPoint(pt) {

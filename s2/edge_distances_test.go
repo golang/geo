@@ -20,6 +20,7 @@ import (
 
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
+	"github.com/google/go-units/unit"
 )
 
 func TestEdgeDistancesCheckDistance(t *testing.T) {
@@ -867,7 +868,7 @@ func TestEdgeDistancesEdgePairMaxDistance(t *testing.T) {
 func TestEdgeDistancesPointToLeft(t *testing.T) {
 	a := PointFromLatLng(LatLngFromDegrees(0, 0))
 	b := PointFromLatLng(LatLngFromDegrees(0, 5)) // east
-	dist := kmToAngle(10 / 1000.0)
+	dist := s1.EarthAngleFromLength(10 * unit.Meter)
 
 	c := PointToLeft(a, b, dist)
 	if got := a.Distance(c).Radians(); !float64Near(got, dist.Radians(), epsilon) {
@@ -882,7 +883,7 @@ func TestEdgeDistancesPointToLeft(t *testing.T) {
 func TestEdgeDistancesPointToRight(t *testing.T) {
 	a := PointFromLatLng(LatLngFromDegrees(0, 0))
 	b := PointFromLatLng(LatLngFromDegrees(0, 5)) // east
-	dist := kmToAngle(10 / 1000.0)
+	dist := s1.EarthAngleFromLength(10 * unit.Meter)
 
 	c := PointToRight(a, b, dist)
 	if got := a.Distance(c).Radians(); !float64Near(got, dist.Radians(), epsilon) {

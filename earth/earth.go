@@ -13,16 +13,13 @@
 // limitations under the License.
 
 /*
-Package earth implements functions for working with the planet Earth modeled as
-a sphere.
+Package earth provides constants for working with the planet Earth modeled as
+a sphere. Functions that operate on angles are in s1 (e.g., s1.EarthAngleFromLength),
+and functions that operate on s2 geometry types are in s2 (e.g., s2.EarthLengthFromLatLngs).
 */
 package earth
 
 import (
-	"math"
-
-	"github.com/golang/geo/s1"
-	"github.com/golang/geo/s2"
 	"github.com/google/go-units/unit"
 )
 
@@ -57,63 +54,3 @@ const (
 
 	HighestAltitude = 8848 * unit.Meter
 )
-
-// AngleFromLength returns the angle from a given distance on the spherical
-// earth's surface.
-func AngleFromLength(d unit.Length) s1.Angle {
-	return s1.Angle(float64(d/Radius)) * s1.Radian
-}
-
-// LengthFromAngle returns the distance on the spherical earth's surface from
-// a given angle.
-func LengthFromAngle(a s1.Angle) unit.Length {
-	return unit.Length(a.Radians()) * Radius
-}
-
-// LengthFromPoints returns the distance between two points on the spherical
-// earth's surface.
-func LengthFromPoints(a, b s2.Point) unit.Length {
-	return LengthFromAngle(a.Distance(b))
-}
-
-// LengthFromLatLngs returns the distance on the spherical earth's surface
-// between two LatLngs.
-func LengthFromLatLngs(a, b s2.LatLng) unit.Length {
-	return LengthFromAngle(a.Distance(b))
-}
-
-// AreaFromSteradians returns the area on the spherical Earth's surface covered
-// by s steradians, as returned by Area() methods on s2 geometry types.
-func AreaFromSteradians(s float64) unit.Area {
-	return unit.Area(s * Radius.Meters() * Radius.Meters())
-}
-
-// SteradiansFromArea returns the number of steradians covered by an area on the
-// spherical Earth's surface.  The value will be between 0 and 4 * math.Pi if a
-// does not exceed the area of the Earth.
-func SteradiansFromArea(a unit.Area) float64 {
-	return a.SquareMeters() / (Radius.Meters() * Radius.Meters())
-}
-
-// InitialBearingFromLatLngs computes the initial bearing from a to b.
-//
-// This is the bearing an observer at point a has when facing point b. A bearing
-// of 0 degrees is north, and it increases clockwise (90 degrees is east, etc).
-//
-// If a == b, a == -b, or a is one of the Earth's poles, the return value is
-// undefined.
-func InitialBearingFromLatLngs(a, b s2.LatLng) s1.Angle {
-	lat1 := a.Lat.Radians()
-	cosLat2 := math.Cos(b.Lat.Radians())
-	latDiff := b.Lat.Radians() - a.Lat.Radians()
-	lngDiff := b.Lng.Radians() - a.Lng.Radians()
-
-	x := math.Sin(latDiff) + math.Sin(lat1)*cosLat2*2*haversine(lngDiff)
-	y := math.Sin(lngDiff) * cosLat2
-	return s1.Angle(math.Atan2(y, x)) * s1.Radian
-}
-
-func haversine(radians float64) float64 {
-	sinHalf := math.Sin(radians / 2)
-	return sinHalf * sinHalf
-}

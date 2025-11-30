@@ -74,14 +74,6 @@ func float64Near(x, y, ε float64) bool {
 	return math.Abs(x-y) <= ε
 }
 
-// The Earth's mean radius in kilometers (according to NASA).
-const earthRadiusKm = 6371.01
-
-// kmToAngle converts a distance on the Earth's surface to an angle.
-func kmToAngle(km float64) s1.Angle {
-	return s1.Angle(km / earthRadiusKm)
-}
-
 // randomBits returns a 64-bit random unsigned integer whose lowest "num" are random, and
 // whose other bits are zero.
 //

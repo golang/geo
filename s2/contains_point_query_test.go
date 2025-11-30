@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/golang/geo/s1"
+	"github.com/google/go-units/unit"
 )
 
 func TestContainsPointQueryVertexModelOpen(t *testing.T) {
@@ -138,7 +139,7 @@ func TestContainsPointQueryVertexModelClosed(t *testing.T) {
 
 func TestContainsPointQueryContainingShapes(t *testing.T) {
 	const numVerticesPerLoop = 10
-	maxLoopRadius := kmToAngle(10)
+	maxLoopRadius := s1.EarthAngleFromLength(10 * unit.Kilometer)
 	centerCap := CapFromCenterAngle(randomPoint(), maxLoopRadius)
 	index := NewShapeIndex()
 

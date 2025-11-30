@@ -18,6 +18,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/golang/geo/earth"
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
@@ -45,7 +46,7 @@ func TestOriginPoint(t *testing.T) {
 	}
 
 	// Check that the origin is not too close to either pole.
-	if dist := math.Acos(OriginPoint().Z) * earthRadiusKm; dist <= 50 {
+	if dist := math.Acos(OriginPoint().Z) * earth.Radius.Kilometers(); dist <= 50 {
 		t.Errorf("Origin point is to close to the North Pole. Got %v, want >= 50km", dist)
 	}
 }
