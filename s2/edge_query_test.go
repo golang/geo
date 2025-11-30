@@ -455,10 +455,10 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 	}
 
 	for i := 0; i < numTargets; i++ {
-		targetDist := fractionToRadius(opts.centerSeparationFraction, opts.radius)
+		targetDist := fractionToAngle(opts.centerSeparationFraction, opts.radius)
 		targetCap := CapFromCenterAngle(
 			sampleBoundaryFromCap(CapFromCenterAngle(indexCap.Center(), targetDist)),
-			fractionToRadius(opts.targetRadiusFraction, opts.radius),
+			fractionToAngle(opts.targetRadiusFraction, opts.radius),
 		)
 
 		switch opts.targetType {
@@ -539,7 +539,7 @@ func sampleCellFromIndex(index *ShapeIndex) CellID {
 	return iter.CellID()
 }
 
-func fractionToRadius(fraction float64, radius unit.Length) s1.Angle {
+func fractionToAngle(fraction float64, radius unit.Length) s1.Angle {
 	if fraction < 0 {
 		fraction = -randomFloat64() * fraction
 	}
