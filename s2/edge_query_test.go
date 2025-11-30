@@ -340,12 +340,12 @@ func benchmarkEdgeQueryFindClosest(b *testing.B, bmOpts *edgeQueryBenchmarkOptio
 	index := NewShapeIndex()
 	opts := NewClosestEdgeQueryOptions().MaxResults(1).IncludeInteriors(bmOpts.includeInteriors)
 
-	radius := s1.EarthAngleFromLength(bmOpts.radius)
+	angle := s1.EarthAngleFromLength(bmOpts.radius)
 	if bmOpts.maxDistanceFraction > 0 {
-		opts.DistanceLimit(s1.ChordAngleFromAngle(s1.Angle(bmOpts.maxDistanceFraction) * radius))
+		opts.DistanceLimit(s1.ChordAngleFromAngle(s1.Angle(bmOpts.maxDistanceFraction) * angle))
 	}
 	if bmOpts.maxErrorFraction > 0 {
-		opts.MaxError(s1.ChordAngleFromAngle(s1.Angle(bmOpts.maxErrorFraction) * radius))
+		opts.MaxError(s1.ChordAngleFromAngle(s1.Angle(bmOpts.maxErrorFraction) * angle))
 	}
 
 	opts.UseBruteForce(*benchmarkBruteForce)
