@@ -33,9 +33,9 @@ func TestFacesIterator(t *testing.T) {
 }
 
 func makeSnappedPoints(nvertices int, level int) []Point {
-	const radiusKM = 0.1
+	radius := testRadiusSmall
 	center := PointFromCoords(1, 1, 1)
-	pts := regularPoints(center, kmToAngle(radiusKM), nvertices)
+	pts := regularPoints(center, radius, nvertices)
 	for i, pt := range pts {
 		id := CellFromPoint(pt).ID()
 		if level < id.Level() {

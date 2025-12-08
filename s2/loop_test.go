@@ -1864,7 +1864,7 @@ func BenchmarkLoopContainsPoint(b *testing.B) {
 				b.StopTimer()
 				loops := make([]*Loop, numLoopSamples)
 				for i := range numLoopSamples {
-					loops[i] = RegularLoop(randomPoint(), kmToAngle(10.0), vertices)
+					loops[i] = RegularLoop(randomPoint(), testRadiusMedium, vertices)
 				}
 
 				queries := make([][]Point, numLoopSamples)

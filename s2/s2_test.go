@@ -74,13 +74,19 @@ func float64Near(x, y, ε float64) bool {
 	return math.Abs(x-y) <= ε
 }
 
-// The Earth's mean radius in kilometers (according to NASA).
-const earthRadiusKm = 6371.01
+const (
+	// testRadiusSmall is approximately 1km on a unit sphere scaled to Earth size.
+	// Used for tests needing very small distances (e.g., point offset tests).
+	testRadiusSmall = 9e-5 * s1.Degree // ~10 meters
 
-// kmToAngle converts a distance on the Earth's surface to an angle.
-func kmToAngle(km float64) s1.Angle {
-	return s1.Angle(km / earthRadiusKm)
-}
+	// testRadiusMedium is approximately 10km on a unit sphere scaled to Earth size.
+	// Used for most geometry tests (containment, edge queries, etc.).
+	testRadiusMedium = 0.09 * s1.Degree // ~10 km
+
+	// testRadiusLarge is approximately 1000km on a unit sphere scaled to Earth size.
+	// Used for tests needing larger regions (polygon inversion, etc.).
+	testRadiusLarge = 9 * s1.Degree // ~1000 km
+)
 
 // randomBits returns a 64-bit random unsigned integer whose lowest "num" are random, and
 // whose other bits are zero.

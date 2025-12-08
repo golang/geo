@@ -337,7 +337,7 @@ func BenchmarkRegionCovererCoveringLoop(b *testing.B) {
 			size := int(math.Pow(2.0, float64(n)))
 			regions := make([]Region, numCoveringBMRegions)
 			for i := range numCoveringBMRegions {
-				regions[i] = RegularLoop(randomPoint(), kmToAngle(10.0), size)
+				regions[i] = RegularLoop(randomPoint(), testRadiusMedium, size)
 			}
 			return regions
 		})

@@ -1144,7 +1144,7 @@ func TestPolygonInvert(t *testing.T) {
 	origin := PointFromLatLng(LatLngFromDegrees(0, 0))
 	pt := PointFromLatLng(LatLngFromDegrees(30, 30))
 	p := PolygonFromLoops([]*Loop{
-		RegularLoop(origin, 1000/earthRadiusKm, 100),
+		RegularLoop(origin, testRadiusLarge, 100),
 	})
 
 	if p.ContainsPoint(pt) {
