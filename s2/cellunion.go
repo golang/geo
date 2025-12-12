@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"cmp"
 	"fmt"
 	"io"
 	"slices"
@@ -290,6 +291,152 @@ func (cu *CellUnion) Denormalize(minLevel, levelMod int) {
 		}
 	}
 	*cu = denorm
+}
+
+// Discontiguous splits this CellUnion into its discontiguous (non-touching)
+// components. Each returned CellUnion represents a connected region where cells
+// share edges. The input CellUnion should be normalized. Results are sorted by
+// the first CellID in each component for deterministic output.
+func (cu CellUnion) Discontiguous() []CellUnion {
+	if len(cu) == 0 {
+		return nil
+	}
+
+	n := len(cu)
+	lookup := make(map[CellID]int, n)
+	minLevel := MaxLevel
+	for i, id := range cu {
+		lookup[id] = i
+		if id.Level() < minLevel {
+			minLevel = id.Level()
+		}
+	}
+
+	parent := make([]int, n)
+	rank := make([]int, n)
+	for i := range parent {
+		parent[i] = i
+	}
+
+	for i, id := range cu {
+		for _, neighbor := range id.EdgeNeighbors() {
+			var found bool
+			var j int
+
+			if v, ok := lookup[neighbor]; ok {
+				j, found = v, true
+			}
+
+			if !found {
+				// Check ancestors (neighbor might be contained by a cell in union).
+				for level := neighbor.Level() - 1; level >= minLevel; level-- {
+					if v, ok := lookup[neighbor.Parent(level)]; ok {
+						j, found = v, true
+						break
+					}
+				}
+			}
+
+			if !found {
+				// Check descendants using search. Since CellUnion is normalized/sorted,
+				// cells in neighbor's range are contiguous.
+				rangeMin := neighbor.RangeMin()
+				lo := sort.Search(n, func(k int) bool {
+					return cu[k] >= rangeMin
+				})
+
+				rangeMax := neighbor.RangeMax()
+				for idx := lo; idx < n && cu[idx] <= rangeMax; idx++ {
+					descendant := cu[idx]
+					for _, neighbor := range descendant.EdgeNeighbors() {
+						if id.Contains(neighbor) {
+							j, found = idx, true
+							break
+						}
+
+						for level := neighbor.Level() - 1; level >= id.Level(); level-- {
+							if neighbor.Parent(level) == id {
+								j, found = idx, true
+								break
+							}
+						}
+
+						if found {
+							break
+						}
+					}
+					if found {
+						break
+					}
+				}
+			}
+
+			if !found {
+				continue
+			}
+
+			rootA, rootB := i, j
+			for parent[rootA] != rootA {
+				rootA = parent[rootA]
+			}
+			for parent[rootB] != rootB {
+				rootB = parent[rootB]
+			}
+			if rootA == rootB {
+				continue
+			}
+
+			// Merge smaller tree under larger to keep depth balanced.
+			if rank[rootA] < rank[rootB] {
+				rootA, rootB = rootB, rootA
+			}
+			parent[rootB] = rootA
+			if rank[rootA] == rank[rootB] {
+				rank[rootA]++
+			}
+
+			// Path compression: point traversed nodes directly to final root.
+			for x := i; x != rootA; {
+				next := parent[x]
+				parent[x] = rootA
+				x = next
+			}
+			for x := j; x != rootA; {
+				next := parent[x]
+				parent[x] = rootA
+				x = next
+			}
+		}
+	}
+
+	groups := make(map[int][]CellID)
+	for i, id := range cu {
+		root := i
+		for parent[root] != root {
+			root = parent[root]
+		}
+
+		// Path compression: point traversed nodes directly to root.
+		for x := i; x != root; {
+			next := parent[x]
+			parent[x] = root
+			x = next
+		}
+
+		groups[root] = append(groups[root], id)
+	}
+
+	result := make([]CellUnion, 0, len(groups))
+	for _, cells := range groups {
+		result = append(result, CellUnion(cells))
+	}
+
+	// Sort by first CellID in each component for deterministic output.
+	slices.SortFunc(result, func(a, b CellUnion) int {
+		return cmp.Compare(a[0], b[0])
+	})
+
+	return result
 }
 
 // RectBound returns a Rect that bounds this entity.

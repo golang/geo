@@ -1059,6 +1059,284 @@ func TestCellUnionEmpty(t *testing.T) {
 	}
 }
 
+func TestCellUnionDiscontiguous(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    CellUnion
+		expected int
+	}{
+		{
+			name:     "empty",
+			input:    CellUnion{},
+			expected: 0,
+		},
+		{
+			name:     "single cell",
+			input:    CellUnion{CellIDFromFace(0).ChildBeginAtLevel(10)},
+			expected: 1,
+		},
+		{
+			name: "two adjacent cells",
+			input: func() CellUnion {
+				cell := CellIDFromFace(0).ChildBeginAtLevel(10)
+				neighbors := cell.EdgeNeighbors()
+				cu := CellUnion{cell, neighbors[0]}
+				cu.Normalize()
+				return cu
+			}(),
+			expected: 1,
+		},
+		{
+			name: "two separate cells on different faces",
+			input: CellUnion{
+				CellIDFromFace(0).ChildBeginAtLevel(10),
+				CellIDFromFace(3).ChildBeginAtLevel(10),
+			},
+			expected: 2,
+		},
+		{
+			name: "three cells in two clusters",
+			input: func() CellUnion {
+				cellA := CellIDFromFace(0).ChildBeginAtLevel(10)
+				neighborsA := cellA.EdgeNeighbors()
+				cellB := CellIDFromFace(3).ChildBeginAtLevel(10)
+				cu := CellUnion{cellA, neighborsA[0], cellB}
+				cu.Normalize()
+				return cu
+			}(),
+			expected: 2,
+		},
+		{
+			name: "chain of four adjacent cells",
+			input: func() CellUnion {
+				cell := CellIDFromFace(0).ChildBeginAtLevel(10)
+				neighbors := cell.EdgeNeighbors()
+				neighborB := neighbors[0].EdgeNeighbors()
+				neighborC := neighborB[0].EdgeNeighbors()
+				cu := CellUnion{cell, neighbors[0], neighborB[0], neighborC[0]}
+				cu.Normalize()
+				return cu
+			}(),
+			expected: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.input.Discontiguous()
+			if len(result) != tt.expected {
+				t.Errorf(
+					"Discontiguous() returned %d clusters, want %d",
+					len(result),
+					tt.expected,
+				)
+			}
+
+			totalCells := 0
+			for _, cluster := range result {
+				totalCells += len(cluster)
+			}
+			if totalCells != len(tt.input) {
+				t.Errorf(
+					"Discontiguous() returned %d total cells, want %d",
+					totalCells,
+					len(tt.input),
+				)
+			}
+		})
+	}
+
+	t.Run("mixed levels", func(t *testing.T) {
+		// Test adjacency detection between cells at different levels.
+		largeCell := CellIDFromFace(0).ChildBeginAtLevel(5)
+		adjacentLarge := largeCell.EdgeNeighbors()[0]
+		smallCell := adjacentLarge.ChildBeginAtLevel(10)
+
+		cu := CellUnion{largeCell, smallCell}
+		cu.Normalize()
+
+		result := cu.Discontiguous()
+		if len(result) != 1 {
+			t.Errorf("got %d clusters, want 1 (mixed-level adjacency)", len(result))
+		}
+	})
+
+	t.Run("verify membership", func(t *testing.T) {
+		// Verify that specific cells end up in the correct clusters.
+		cellA := CellIDFromFace(0).ChildBeginAtLevel(10)
+		neighborA := cellA.EdgeNeighbors()[0]
+		cellB := CellIDFromFace(3).ChildBeginAtLevel(10)
+		neighborB := cellB.EdgeNeighbors()[0]
+
+		cu := CellUnion{cellA, neighborA, cellB, neighborB}
+		cu.Normalize()
+
+		result := cu.Discontiguous()
+		if len(result) != 2 {
+			t.Fatalf("got %d clusters, want 2", len(result))
+		}
+
+		clusterOf := make(map[CellID]int)
+		for i, cluster := range result {
+			for _, id := range cluster {
+				clusterOf[id] = i
+			}
+		}
+
+		if clusterOf[cellA] != clusterOf[neighborA] {
+			t.Errorf("cellA and neighborA in different clusters")
+		}
+		if clusterOf[cellB] != clusterOf[neighborB] {
+			t.Errorf("cellB and neighborB in different clusters")
+		}
+		if clusterOf[cellA] == clusterOf[cellB] {
+			t.Errorf("cellA and cellB in same cluster, want different")
+		}
+	})
+
+	t.Run("corner adjacent", func(t *testing.T) {
+		// Corner-adjacent cells share only a vertex, not an edge.
+		cell := CellIDFromFace(0).ChildBeginAtLevel(10)
+		cornerNeighbors := cell.VertexNeighbors(cell.Level())
+
+		edgeNeighbors := cell.EdgeNeighbors()
+		edgeSet := make(map[CellID]bool)
+		for _, en := range edgeNeighbors {
+			edgeSet[en] = true
+		}
+
+		var cornerOnly CellID
+		found := false
+		for _, cn := range cornerNeighbors {
+			if cn != cell && !edgeSet[cn] {
+				cornerOnly = cn
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatal("could not find a corner-only neighbor")
+		}
+
+		cu := CellUnion{cell, cornerOnly}
+		cu.Normalize()
+
+		result := cu.Discontiguous()
+		if len(result) != 2 {
+			t.Errorf("got %d clusters, want 2 (corner-adjacent should be separate)", len(result))
+		}
+	})
+
+	t.Run("multi-face contiguous", func(t *testing.T) {
+		// Test a contiguous region spanning multiple S2 cube faces.
+		cell := CellIDFromFace(0).ChildBeginAtLevel(2)
+		neighbors := cell.AllNeighbors(2)
+
+		cu := CellUnion{cell}
+		cu = append(cu, neighbors...)
+		cu.Normalize()
+
+		faces := make(map[int]bool)
+		for _, id := range cu {
+			faces[id.Face()] = true
+		}
+		if len(faces) < 2 {
+			t.Fatalf("test setup error: only %d face(s)", len(faces))
+		}
+
+		result := cu.Discontiguous()
+		if len(result) != 1 {
+			t.Errorf("got %d clusters, want 1 (multi-face contiguous)", len(result))
+		}
+		if len(result) == 1 && len(result[0]) != len(cu) {
+			t.Errorf("cluster has %d cells, want %d", len(result[0]), len(cu))
+		}
+	})
+
+	t.Run("cell inside hole", func(t *testing.T) {
+		// Create a ring with a cell inside the hole.
+		// The cell inside the hole should be detected as a separate component.
+		center := CellIDFromFace(0).ChildBeginAtLevel(5)
+		ring := center.AllNeighbors(5)
+
+		// The center cell is NOT in the ring - it's the "hole".
+		// Add a cell inside the hole area.
+		// IMPORTANT: Use the geometric center of the cell to get a cell truly
+		// in the interior, NOT ChildBeginAtLevel which returns a corner cell
+		// whose edge neighbors may have parents in the ring.
+		innerCell := CellIDFromLatLng(center.LatLng()).Parent(9)
+
+		cu := CellUnion(ring)
+		cu = append(cu, innerCell)
+		cu.Normalize()
+
+		result := cu.Discontiguous()
+		if len(result) != 2 {
+			t.Errorf(
+				"got %d clusters, want 2 (ring + inner cell should be separate)",
+				len(result),
+			)
+		}
+	})
+
+	t.Run("nested rings with cells inside innermost hole", func(t *testing.T) {
+		// Create two nested rings with a cell in the innermost hole.
+		// Use level 2 for outer ring and level 7 for inner ring to ensure
+		// the inner ring is completely inside the hole and doesn't touch
+		// the outer ring through ancestors.
+		// Should detect 3 components: outer ring, inner ring, inner cell.
+		outerCenter := CellIDFromFace(0).ChildBeginAtLevel(2)
+		outerRing := outerCenter.AllNeighbors(2)
+
+		// Use the geometric center of the outer center to get a truly interior
+		// cell for the inner ring center at a much finer level.
+		innerCenter := CellIDFromLatLng(outerCenter.LatLng()).Parent(7)
+		innerRing := innerCenter.AllNeighbors(7)
+
+		// Use the geometric center for the innermost cell.
+		innermostCell := CellIDFromLatLng(innerCenter.LatLng()).Parent(11)
+
+		cu := CellUnion(outerRing)
+		cu = append(cu, innerRing...)
+		cu = append(cu, innermostCell)
+		cu.Normalize()
+
+		result := cu.Discontiguous()
+		if len(result) != 3 {
+			t.Errorf(
+				"got %d clusters, want 3 (outer ring + inner ring + innermost cell)",
+				len(result),
+			)
+		}
+	})
+
+	t.Run("multiple separate cells inside hole", func(t *testing.T) {
+		// Create a ring with multiple disconnected cells inside the hole.
+		// Each inner cell should be its own component.
+		center := CellIDFromFace(0).ChildBeginAtLevel(4)
+		ring := center.AllNeighbors(4)
+
+		// Add two separate cells inside the hole that are far from each other.
+		// Use the geometric centers of opposite quadrants of the center cell.
+		quadrantA := center.Children()[0]
+		quadrantB := center.Children()[3]
+		innerCellA := CellIDFromLatLng(quadrantA.LatLng()).Parent(10)
+		innerCellB := CellIDFromLatLng(quadrantB.LatLng()).Parent(10)
+
+		cu := CellUnion(ring)
+		cu = append(cu, innerCellA, innerCellB)
+		cu.Normalize()
+
+		result := cu.Discontiguous()
+		if len(result) != 3 {
+			t.Errorf(
+				"got %d clusters, want 3 (ring + 2 separate inner cells)",
+				len(result),
+			)
+		}
+	})
+}
+
 func BenchmarkCellUnionFromRange(b *testing.B) {
 	x := CellIDFromFace(0).ChildBeginAtLevel(MaxLevel)
 	y := CellIDFromFace(5).ChildEndAtLevel(MaxLevel)
