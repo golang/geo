@@ -19,6 +19,7 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/golang/geo/r1"
@@ -652,6 +653,52 @@ func TestCellUnionRectBound(t *testing.T) {
 	for _, test := range tests {
 		if got := test.cu.RectBound(); !rectsApproxEqual(got, test.want, epsilon, epsilon) {
 			t.Errorf("%v.RectBound() = %v, want %v", test.cu, got, test.want)
+		}
+	}
+}
+
+func TestCellUnionCentroidCellID(t *testing.T) {
+	center := CellIDFromFace(0).ChildBeginAtLevel(10)
+	neighbors := center.AllNeighbors(11)
+
+	tests := []struct {
+		name string
+		cu   CellUnion
+		want CellID
+	}{
+		{
+			name: "empty",
+			cu:   CellUnion{},
+			want: 0,
+		},
+		{
+			name: "single cell",
+			cu:   CellUnion{center},
+			want: center,
+		},
+		{
+			name: "two adjacent cells",
+			cu:   CellUnion{center, neighbors[0]},
+		},
+		{
+			name: "three by three grid returns center",
+			cu:   append(neighbors, center),
+			want: center,
+		},
+	}
+
+	for _, test := range tests {
+		got := test.cu.CentroidCellID()
+		if test.want != 0 && got != test.want {
+			t.Errorf("%s: CentroidCellID() = %v, want %v", test.name, got, test.want)
+		}
+		if test.want == 0 && len(test.cu) > 0 {
+			// For non-empty unions without specific expected value,
+			// just verify the result is one of the input cells
+			found := slices.Contains(test.cu, got)
+			if !found {
+				t.Errorf("%s: CentroidCellID() = %v, not in input cells", test.name, got)
+			}
 		}
 	}
 }
