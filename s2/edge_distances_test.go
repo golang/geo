@@ -867,7 +867,7 @@ func TestEdgeDistancesEdgePairMaxDistance(t *testing.T) {
 func TestEdgeDistancesPointToLeft(t *testing.T) {
 	a := PointFromLatLng(LatLngFromDegrees(0, 0))
 	b := PointFromLatLng(LatLngFromDegrees(0, 5)) // east
-	dist := kmToAngle(10 / 1000.0)
+	dist := testRadiusSmall
 
 	c := PointToLeft(a, b, dist)
 	if got := a.Distance(c).Radians(); !float64Near(got, dist.Radians(), epsilon) {
@@ -882,7 +882,7 @@ func TestEdgeDistancesPointToLeft(t *testing.T) {
 func TestEdgeDistancesPointToRight(t *testing.T) {
 	a := PointFromLatLng(LatLngFromDegrees(0, 0))
 	b := PointFromLatLng(LatLngFromDegrees(0, 5)) // east
-	dist := kmToAngle(10 / 1000.0)
+	dist := testRadiusSmall
 
 	c := PointToRight(a, b, dist)
 	if got := a.Distance(c).Radians(); !float64Near(got, dist.Radians(), epsilon) {

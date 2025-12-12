@@ -45,8 +45,11 @@ func TestOriginPoint(t *testing.T) {
 	}
 
 	// Check that the origin is not too close to either pole.
-	if dist := math.Acos(OriginPoint().Z) * earthRadiusKm; dist <= 50 {
-		t.Errorf("Origin point is to close to the North Pole. Got %v, want >= 50km", dist)
+	// The threshold of 0.45 degrees (~50km on Earth-scale sphere) ensures the origin
+	// is far enough from poles for numerical stability in tests.
+	minAngleFromPole := 0.45 * s1.Degree
+	if angle := s1.Angle(math.Acos(OriginPoint().Z)); angle <= minAngleFromPole {
+		t.Errorf("Origin point is too close to the North Pole. Got %v, want > %v", angle, minAngleFromPole)
 	}
 }
 

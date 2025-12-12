@@ -138,7 +138,7 @@ func TestContainsPointQueryVertexModelClosed(t *testing.T) {
 
 func TestContainsPointQueryContainingShapes(t *testing.T) {
 	const numVerticesPerLoop = 10
-	maxLoopRadius := kmToAngle(10)
+	maxLoopRadius := testRadiusMedium
 	centerCap := CapFromCenterAngle(randomPoint(), maxLoopRadius)
 	index := NewShapeIndex()
 
