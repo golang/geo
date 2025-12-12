@@ -184,6 +184,176 @@ func PolygonFromOrientedLoops(loops []*Loop) *Polygon {
 	return p
 }
 
+// PolygonOfCellUnionBorder creates a Polygon representing the border of the
+// given CellUnion. The CellUnion should represent a single connected region
+// (use CellUnion.Discontiguous() to split into connected components first).
+// The CellUnion must be normalized.
+//
+// This function extracts the boundary edges of the CellUnion (edges not shared
+// between adjacent cells) and stitches them into closed loops to form the
+// polygon boundary.
+//
+// Note: The C++ library implements InitToCellUnionBorder using S2Builder,
+// which handles edge snapping for numerical precision. This Go implementation
+// uses edge-stitching since S2Builder is not yet ported.
+func PolygonOfCellUnionBorder(cu CellUnion) (*Polygon, error) {
+	if len(cu) == 0 {
+		return PolygonFromOrientedLoops(nil), nil
+	}
+
+	level := 0
+	for _, cellID := range cu {
+		if l := cellID.Level(); l > level {
+			level = l
+		}
+	}
+
+	// Build a map of directed edges for border detection. Each cell contributes
+	// its 4 edges in counterclockwise order. Internal edges appear as both (A,B)
+	// and (B,A) from adjacent cells and cancel out; border edges appear only
+	// once. For mixed-level cells, edges are expanded for matching granularity.
+	directedEdges := make(map[Edge][]Edge)
+	for _, cellID := range cu {
+		for edgeIdx := range 4 {
+			cells := []CellID{cellID}
+			edges := []int{edgeIdx}
+			for i := 0; i < len(cells); i++ {
+				cell := CellFromCellID(cells[i])
+				vertexA := cell.Vertex(edges[i])
+				vertexB := cell.Vertex((edges[i] + 1) % 4)
+
+				if cells[i].Level() == level {
+					edge := Edge{V0: vertexA, V1: vertexB}
+					key := edge
+					if edge.V0.Vector.Cmp(edge.V1.Vector) > 0 {
+						key = edge.Reversed()
+					}
+					directedEdges[key] = append(directedEdges[key], edge)
+					continue
+				}
+
+				for _, child := range cells[i].Children() {
+					childCell := CellFromCellID(child)
+
+					// Find the child edge on the parent edge. Each child has at most
+					// one edge on any given parent edge.
+					for j := range 4 {
+						a := childCell.Vertex(j)
+						b := childCell.Vertex((j + 1) % 4)
+						if Project(a, vertexA, vertexB).ApproxEqual(a) &&
+							Project(b, vertexA, vertexB).ApproxEqual(b) {
+							cells = append(cells, child)
+							edges = append(edges, j)
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Edges appearing exactly once are border edges.
+	borderEdges := make(map[Point][]Point)
+	totalBorderEdges := 0
+	for _, directed := range directedEdges {
+		if len(directed) == 1 {
+			borderEdges[directed[0].V0] = append(borderEdges[directed[0].V0], directed[0].V1)
+			totalBorderEdges++
+		}
+	}
+
+	if len(borderEdges) == 0 {
+		return FullPolygon(), nil
+	}
+
+	var loops []*Loop
+	used := make(map[Edge]struct{})
+	for origin := range borderEdges {
+		for _, destination := range borderEdges[origin] {
+			edgeFirst := Edge{V0: origin, V1: destination}
+			if _, ok := used[edgeFirst]; ok {
+				continue
+			}
+			used[edgeFirst] = struct{}{}
+			vertex := destination
+			vertices := []Point{origin}
+
+			// A loop cannot have more edges than total border edges.
+			for range totalBorderEdges {
+				if vertex == origin {
+					break
+				}
+
+				vertices = append(vertices, vertex)
+
+				var vertexNext Point
+				found := false
+				for _, candidate := range borderEdges[vertex] {
+					edge := Edge{V0: vertex, V1: candidate}
+					if _, ok := used[edge]; !ok {
+						found = true
+						used[edge] = struct{}{}
+						vertexNext = candidate
+						break
+					}
+				}
+
+				if !found {
+					return nil, fmt.Errorf(
+						"broken edge chain at vertex %v: no unused outgoing edge",
+						vertex,
+					)
+				}
+
+				vertex = vertexNext
+			}
+
+			if vertex != origin {
+				return nil, fmt.Errorf(
+					"loop did not close: started at %v, ended at %v",
+					origin,
+					vertex,
+				)
+			}
+
+			if len(vertices) < 3 {
+				return nil, fmt.Errorf(
+					"degenerate loop with %d vertices at %v",
+					len(vertices),
+					origin,
+				)
+			}
+			loops = append(loops, LoopFromPoints(vertices))
+		}
+	}
+
+	if len(loops) == 0 {
+		return &Polygon{}, nil
+	}
+
+	for _, loop := range loops {
+		if loop.TurningAngle() < 0 {
+			loop.Invert()
+		}
+	}
+
+	contained := false
+	sampleCenter := CellFromCellID(cu[0]).Center()
+	for _, loop := range loops {
+		if loop.ContainsPoint(sampleCenter) {
+			contained = true
+			break
+		}
+	}
+	if !contained {
+		loops = append([]*Loop{FullLoop()}, loops...)
+	}
+
+	p := &Polygon{loops: loops}
+	p.initNested()
+	return p, nil
+}
+
 // Invert inverts the polygon (replaces it by its complement).
 func (p *Polygon) Invert() {
 	// Inverting any one loop will invert the polygon.  The best loop to invert
@@ -1217,7 +1387,6 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 // ApproxSubtractFromPolyline
 // DestructiveUnion
 // DestructiveApproxUnion
-// InitToCellUnionBorder
 // IsNormalized
 // Equal/BoundaryEqual/BoundaryApproxEqual/BoundaryNear Polygons
 // BreakEdgesAndAddToBuilder
