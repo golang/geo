@@ -1157,6 +1157,324 @@ func TestPolygonInvert(t *testing.T) {
 	}
 }
 
+func TestPolygonOfCellUnionBorder(t *testing.T) {
+	t.Run("empty cell union", func(t *testing.T) {
+		p, err := PolygonOfCellUnionBorder(CellUnion{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !p.IsEmpty() {
+			t.Errorf("expected empty polygon, got %d loops", p.NumLoops())
+		}
+	})
+
+	t.Run("single cell", func(t *testing.T) {
+		cellID := CellIDFromFace(0).ChildBeginAtLevel(5)
+		cells := CellUnion{cellID}
+
+		p, err := PolygonOfCellUnionBorder(cells)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if p.NumLoops() != 1 {
+			t.Errorf("expected 1 loop, got %d", p.NumLoops())
+		}
+		if p.Loop(0).NumVertices() != 4 {
+			t.Errorf("expected 4 vertices, got %d", p.Loop(0).NumVertices())
+		}
+		if !p.ContainsPoint(CellFromCellID(cellID).Center()) {
+			t.Error("polygon should contain cell center")
+		}
+	})
+
+	t.Run("two adjacent cells", func(t *testing.T) {
+		cell := CellIDFromFace(0).ChildBeginAtLevel(5)
+		neighbor := cell.EdgeNeighbors()[0]
+		cells := CellUnion{cell, neighbor}
+		cells.Normalize()
+
+		p, err := PolygonOfCellUnionBorder(cells)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if p.NumLoops() != 1 {
+			t.Errorf("expected 1 loop, got %d", p.NumLoops())
+		}
+		// Two adjacent cells share one edge, so 4+4-2 = 6 vertices
+		if p.Loop(0).NumVertices() != 6 {
+			t.Errorf("expected 6 vertices, got %d", p.Loop(0).NumVertices())
+		}
+	})
+
+	t.Run("merged siblings (4 cells = square)", func(t *testing.T) {
+		parent := CellIDFromFace(1).ChildBeginAtLevel(8)
+		children := parent.Children()
+		cells := CellUnion{children[0], children[1], children[2], children[3]}
+		cells.Normalize()
+
+		p, err := PolygonOfCellUnionBorder(cells)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if p.NumLoops() != 1 {
+			t.Fatalf("NumLoops() = %d, want 1", p.NumLoops())
+		}
+		// 4 sibling cells form a square with 4 vertices (internal edges cancel)
+		if p.Loop(0).NumVertices() != 4 {
+			t.Errorf("expected 4 vertices for 2x2 cell block, got %d", p.Loop(0).NumVertices())
+		}
+	})
+
+	t.Run("full sphere", func(t *testing.T) {
+		cells := make(CellUnion, NumFaces)
+		for face := 0; face < NumFaces; face++ {
+			cells[face] = CellIDFromFace(face)
+		}
+		cells.Normalize()
+
+		p, err := PolygonOfCellUnionBorder(cells)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !p.IsFull() {
+			t.Error("expected full polygon for complete sphere coverage")
+		}
+	})
+}
+
+func TestPolygonOfCellUnionBorder_Hole(t *testing.T) {
+	// Create a shape with a hole: a ring of cells surrounding an empty center.
+	center := CellIDFromFace(0).ChildBeginAtLevel(5)
+	neighbors := center.AllNeighbors(5)
+
+	// Use only the neighbors, not the center - creates a ring with a hole.
+	cells := CellUnion(neighbors)
+	cells.Normalize()
+
+	p, err := PolygonOfCellUnionBorder(cells)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if p.NumLoops() != 2 {
+		t.Fatalf("NumLoops() = %d, want 2 (outer + hole)", p.NumLoops())
+	}
+
+	// The hole center should NOT be contained by the polygon.
+	centerPoint := CellFromCellID(center).Center()
+	if p.ContainsPoint(centerPoint) {
+		t.Error("polygon contains the hole center, should not")
+	}
+
+	// Each neighbor cell center should be contained by the polygon.
+	for _, neighborID := range neighbors {
+		neighborCenter := CellFromCellID(neighborID).Center()
+		if !p.ContainsPoint(neighborCenter) {
+			t.Errorf("polygon does not contain neighbor %v", neighborID)
+		}
+	}
+}
+
+func TestPolygonOfCellUnionBorder_FullSphereWithHole(t *testing.T) {
+	// Full sphere = 24 cells at level 1 (6 faces * 4 children)
+	var cells CellUnion
+	for face := 0; face < NumFaces; face++ {
+		for _, child := range CellIDFromFace(face).Children() {
+			cells = append(cells, child)
+		}
+	}
+
+	// Remove one cell to create a hole
+	hole := cells[0]
+	cells = cells[1:]
+	cells.Normalize()
+
+	p, err := PolygonOfCellUnionBorder(cells)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if p.NumLoops() != 2 {
+		t.Fatalf("NumLoops() = %d, want 2", p.NumLoops())
+	}
+
+	// The hole center should NOT be contained
+	holeCenter := CellFromCellID(hole).Center()
+	if p.ContainsPoint(holeCenter) {
+		t.Error("polygon contains the hole center, should not")
+	}
+
+	// A cell in the union should be contained
+	testCell := cells[(len(cells) / 2)]
+	testCenter := CellFromCellID(testCell).Center()
+	if !p.ContainsPoint(testCenter) {
+		t.Error("polygon does not contain a cell that should be in the union")
+	}
+
+	// Area should be close to full sphere minus one cell
+	expectedArea := FullPolygon().Area() - CellFromCellID(hole).ExactArea()
+	if math.Abs(p.Area()-expectedArea) > 0.001 {
+		t.Errorf("Area() = %.6f, want %.6f", p.Area(), expectedArea)
+	}
+}
+
+func TestPolygonOfCellUnionBorder_MixedLevels(t *testing.T) {
+	// Test that cells at different levels properly merge without internal
+	// boundary artifacts. This creates a region where a large cell (level 3)
+	// is adjacent to smaller cells (level 5).
+
+	// Start with a level 3 cell
+	largeCell := CellIDFromFace(0).ChildBeginAtLevel(3)
+
+	// Get an adjacent cell at level 3, then break it into level 5 children,
+	// but OMIT ONE to prevent Normalize() from merging them back.
+	adjacentLarge := largeCell.Next()
+	var smallCells CellUnion
+	for i, child := range adjacentLarge.Children() {
+		for j, grandchild := range child.Children() {
+			// Skip one grandchild to prevent normalization merging
+			if i == 0 && j == 0 {
+				continue
+			}
+			smallCells = append(smallCells, grandchild)
+		}
+	}
+
+	// Combine the large cell with the small cells
+	cells := CellUnion{largeCell}
+	cells = append(cells, smallCells...)
+	cells.Normalize()
+
+	// Verify we actually have mixed levels
+	minLevel, maxLevel := 30, 0
+	for _, cell := range cells {
+		level := cell.Level()
+		if level < minLevel {
+			minLevel = level
+		}
+		if level > maxLevel {
+			maxLevel = level
+		}
+	}
+	if minLevel == maxLevel {
+		t.Fatalf(
+			"test setup error: all cells at level %d, expected mixed levels",
+			minLevel,
+		)
+	}
+
+	p, err := PolygonOfCellUnionBorder(cells)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if p.NumLoops() < 1 {
+		t.Fatal("expected at least 1 loop")
+	}
+
+	// All cell centers should be contained
+	for _, cellID := range cells {
+		center := CellFromCellID(cellID).Center()
+		if !p.ContainsPoint(center) {
+			t.Errorf("polygon does not contain cell %v center", cellID)
+		}
+	}
+}
+
+func TestPolygonOfCellUnionBorder_CrossFaceBoundary(t *testing.T) {
+	// Test that adjacent cells crossing a face boundary form a single polygon.
+	// Face 0 and Face 5 share an edge, so cells at their shared boundary
+	// should produce a merged polygon with 6 vertices (two squares sharing an edge).
+	cellA := CellIDFromFace(0).ChildBeginAtLevel(2)
+	cellB := CellIDFromFace(5).ChildEndAtLevel(2).Prev()
+
+	cells := CellUnion{cellA, cellB}
+	cells.Normalize()
+
+	p, err := PolygonOfCellUnionBorder(cells)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if p.NumLoops() != 1 {
+		t.Fatalf("NumLoops() = %d, want 1", p.NumLoops())
+	}
+
+	// Two adjacent cells share one edge, so 4+4-2 = 6 vertices
+	if p.Loop(0).NumVertices() != 6 {
+		t.Errorf("NumVertices() = %d, want 6", p.Loop(0).NumVertices())
+	}
+}
+
+func TestPolygonOfCellUnionBorder_LTJunction(t *testing.T) {
+	// Test L-junction: 3 cells where two coarse cells meet one fine cell.
+	// Cell A (level 3), Cell B (level 3) adjacent to A, Cell C (level 9) also
+	// adjacent to A on a different edge. Internal edges should not leak.
+	cellA := CellIDFromFace(0).ChildBeginAtLevel(3)
+	cellB := cellA.EdgeNeighbors()[0]
+	cellC := cellA.EdgeNeighbors()[1]
+	for cellC.Level() < 9 {
+		cellC = cellC.ChildBegin()
+	}
+
+	cells := CellUnion{cellA, cellB, cellC}
+	cells.Normalize()
+
+	p, err := PolygonOfCellUnionBorder(cells)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if p.NumLoops() > 2 {
+		t.Errorf("NumLoops() = %d, want <= 2", p.NumLoops())
+	}
+
+	for _, cellID := range cells {
+		center := CellFromCellID(cellID).Center()
+		if !p.ContainsPoint(center) {
+			t.Errorf("polygon does not contain cell %v center", cellID)
+		}
+	}
+}
+
+func TestPolygonOfCellUnionBorder_ManyLevelTransitions(t *testing.T) {
+	// Test cells at multiple levels (11-15) adjacent to each other, simulating
+	// real-world coastline data. The bug produced many spurious loops due to
+	// edge level mismatches.
+	var cells CellUnion
+
+	seed := CellIDFromFace(0).ChildBeginAtLevel(11)
+	cells = append(cells, seed)
+	for _, n := range seed.AllNeighbors(11) {
+		cells = append(cells, n)
+	}
+
+	// Add finer cells to create level transitions
+	fineArea := seed.EdgeNeighbors()[0]
+	for fineArea.Level() < 15 {
+		fineArea = fineArea.ChildBegin()
+	}
+	cells = append(cells, fineArea)
+	for _, n := range fineArea.AllNeighbors(15) {
+		cells = append(cells, n)
+	}
+
+	cells.Normalize()
+
+	p, err := PolygonOfCellUnionBorder(cells)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if p.NumLoops() > 15 {
+		t.Errorf("NumLoops() = %d, want <= 15", p.NumLoops())
+	}
+}
+
 // TODO(roberts): Remaining Tests
 // TestInit
 // TestMultipleInit
@@ -1176,7 +1494,6 @@ func TestPolygonInvert(t *testing.T) {
 // TestBug1 - Bug14
 // TestPolylineIntersection
 // TestSplitting
-// TestInitToCellUnionBorder
 // TestUnionWithAmbgiuousCrossings
 // TestInitToSloppySupportsEmptyPolygons
 // TestInitToSnappedDoesNotRotateVertices
