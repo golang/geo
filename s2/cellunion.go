@@ -15,7 +15,6 @@
 package s2
 
 import (
-	"cmp"
 	"fmt"
 	"io"
 	"slices"
@@ -349,12 +348,18 @@ func (cu CellUnion) CentroidCellID() CellID {
 	}
 
 	target := Point{Vector: sum.Mul(1.0 / float64(len(cu))).Normalize()}
-	return slices.MinFunc(cu, func(a, b CellID) int {
-		return cmp.Compare(
-			CellFromCellID(a).Center().Distance(target),
-			CellFromCellID(b).Center().Distance(target),
-		)
-	})
+
+	closest := cu[0]
+	distanceMin := CellFromCellID(closest).Center().Distance(target)
+	for _, cellID := range cu[1:] {
+		distance := CellFromCellID(cellID).Center().Distance(target)
+		if distance < distanceMin {
+			distanceMin = distance
+			closest = cellID
+		}
+	}
+
+	return closest
 }
 
 // ContainsCell reports whether this cell union contains the given cell.
