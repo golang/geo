@@ -185,9 +185,8 @@ func PolygonFromOrientedLoops(loops []*Loop) *Polygon {
 }
 
 // PolygonOfCellUnionBorder creates a Polygon representing the border of the
-// given CellUnion. The CellUnion should represent a single connected region
-// (use CellUnion.Discontiguous() to split into connected components first).
-// The CellUnion must be normalized.
+// given CellUnion. The CellUnion must be normalized, and should represent a
+// single connected region without discontiguous cells.
 //
 // This function extracts the boundary edges of the CellUnion (edges not shared
 // between adjacent cells) and stitches them into closed loops to form the
