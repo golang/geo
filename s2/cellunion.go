@@ -20,6 +20,7 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
 
@@ -332,6 +333,33 @@ func (cu *CellUnion) CapBound() Cap {
 	}
 
 	return c
+}
+
+// CentroidCellID returns the CellID closest to the centroid of all cell centers.
+// Returns 0 (an invalid CellID) if the CellUnion is empty.
+func (cu CellUnion) CentroidCellID() CellID {
+	if len(cu) == 0 {
+		return 0
+	}
+
+	var sum r3.Vector
+	for _, cellID := range cu {
+		sum = sum.Add(CellFromCellID(cellID).Center().Vector)
+	}
+
+	target := Point{Vector: sum.Mul(1.0 / float64(len(cu))).Normalize()}
+
+	closest := cu[0]
+	distanceMin := CellFromCellID(closest).Center().Distance(target)
+	for _, cellID := range cu[1:] {
+		distance := CellFromCellID(cellID).Center().Distance(target)
+		if distance < distanceMin {
+			distanceMin = distance
+			closest = cellID
+		}
+	}
+
+	return closest
 }
 
 // ContainsCell reports whether this cell union contains the given cell.
