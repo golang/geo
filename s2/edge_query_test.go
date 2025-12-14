@@ -545,12 +545,6 @@ func fractionToRadius(fraction, radiusKm float64) s1.Angle {
 func TestEdgeQueryOptimized(t *testing.T) {
 	index := NewShapeIndex()
 
-	// Create polygons on different S2 faces by using points at different
-	// longitudes. Face assignment is roughly:
-	//   Face 0: ~-45° to +45° longitude (Africa/Europe)
-	//   Face 1: ~+45° to +135° longitude (Asia)
-	//   Face 2: ~+135° to -135° longitude (Pacific, crossing dateline)
-	//   Face 3: ~-135° to -45° longitude (North/South America)
 	locations := []struct {
 		name string
 		lat  float64
@@ -558,8 +552,8 @@ func TestEdgeQueryOptimized(t *testing.T) {
 	}{
 		{"Face0", 20, 20},   // Africa - face 0
 		{"Face1", 40, 90},   // Central Asia - face 1
-		{"Face2", 0, 170},   // Pacific - face 2
-		{"Face3", 40, -100}, // North America - face 3
+		{"Face3", 0, 170},   // Pacific - face 3
+		{"Face4", 40, -100}, // North America - face 4
 	}
 
 	shapeIDToName := make(map[int32]string)
