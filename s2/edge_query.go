@@ -697,7 +697,7 @@ func (e *EdgeQuery) initCovering() {
 	if next.CellID() != last.CellID() {
 		// The index has at least two cells. Choose a level such that the entire
 		// index can be spanned with at most 6 cells (if the index spans multiple
-		// faces) or 4 cells (it the index spans a single face).
+		// faces) or 4 cells (if the index spans a single face).
 		level, ok := next.CellID().CommonAncestorLevel(last.CellID())
 		if !ok {
 			level = 0
@@ -721,7 +721,6 @@ func (e *EdgeQuery) initCovering() {
 			cellLast.Prev()
 			e.addInitialRange(cellFirst, cellLast)
 		}
-
 	}
 	e.addInitialRange(next, last)
 }
