@@ -177,6 +177,103 @@ func TestEdgeQuerySortAndUnique(t *testing.T) {
 	}
 }
 
+func TestEdgeQueryOptimized(t *testing.T) {
+	tests := []struct {
+		name string
+		locs []struct{ latitude, longitude float64 }
+	}{
+		{
+			// 0 intermediate faces: first and last handled directly
+			"faces 0,4",
+			[]struct{ latitude, longitude float64 }{{20, 20}, {40, -100}},
+		},
+
+		{
+			"faces 0,4 (3+1 shapes)",
+			[]struct{ latitude, longitude float64 }{{20, 20}, {25, 25}, {15, 15}, {40, -100}},
+		},
+
+		{
+			// 1 intermediate face with 1 shape each: addInitialRange covers adequately
+			"faces 0,1,4",
+			[]struct{ latitude, longitude float64 }{{20, 20}, {40, 90}, {40, -100}},
+		},
+
+		{
+			// 1 intermediate face but multiple shapes on first face: first top-level cell
+			// doesn't cover all shapes, and addInitialRange misses earlier ones
+			"faces 0,1,4 (3+1+1 shapes)",
+			[]struct{ latitude, longitude float64 }{{20, 20}, {25, 25}, {15, 15}, {40, 90}, {40, -100}},
+		},
+
+		{
+			// 2 intermediate faces: covering too coarse without fix
+			"faces 0,1,3,4",
+			[]struct{ latitude, longitude float64 }{{20, 20}, {40, 90}, {0, 170}, {40, -100}},
+		},
+
+		{
+			// All 6 faces: extreme case with 4 intermediate faces
+			"all 6 faces",
+			[]struct{ latitude, longitude float64 }{
+				{20, 20}, {40, 90}, {90, 0}, {0, 170}, {40, -100}, {-90, 0},
+			},
+		},
+
+		{
+			// Non-zero starting face with 1 intermediate: confirms pattern holds
+			"faces 1,3,4",
+			[]struct{ latitude, longitude float64 }{{40, 90}, {0, 170}, {40, -100}},
+		},
+
+		{
+			// Non-zero starting face with 2 intermediate faces
+			"faces 1,2,3,4",
+			[]struct{ latitude, longitude float64 }{{40, 90}, {90, 0}, {0, 170}, {40, -100}},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			index := NewShapeIndex()
+			for _, location := range test.locs {
+				center := PointFromLatLng(LatLngFromDegrees(location.latitude, location.longitude))
+				loop := RegularLoop(center, s1.Degree, 8)
+				index.Add(PolygonFromLoops([]*Loop{loop}))
+			}
+
+			queryPoint := PointFromLatLng(LatLngFromDegrees(0, 10))
+
+			optimized := NewClosestEdgeQueryOptions().IncludeInteriors(true)
+			resultA := NewClosestEdgeQuery(index, optimized).FindEdges(
+				NewMinDistanceToPointTarget(queryPoint),
+			)
+
+			bruteForce := NewClosestEdgeQueryOptions().IncludeInteriors(true).UseBruteForce(true)
+			resultB := NewClosestEdgeQuery(index, bruteForce).FindEdges(
+				NewMinDistanceToPointTarget(queryPoint),
+			)
+
+			shapesA, shapesB := make(map[int32]bool), make(map[int32]bool)
+			for _, r := range resultA {
+				shapesA[r.ShapeID()] = true
+			}
+			for _, r := range resultB {
+				shapesB[r.ShapeID()] = true
+			}
+
+			if len(shapesA) != len(shapesB) {
+				t.Errorf(
+					"%s: optimized found %d shapes, brute force found %d",
+					test.name,
+					len(shapesA),
+					len(shapesB),
+				)
+			}
+		})
+	}
+}
+
 // For various tests and benchmarks on the edge query code, there are a number of
 // ShapeIndex generators that can be used.
 type shapeIndexGeneratorFunc func(c Cap, numEdges int, index *ShapeIndex)
