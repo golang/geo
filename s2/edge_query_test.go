@@ -559,10 +559,11 @@ func TestEdgeQueryOptimized(t *testing.T) {
 	shapeIDToName := make(map[int32]string)
 	for _, loc := range locations {
 		center := PointFromLatLng(LatLngFromDegrees(loc.lat, loc.lng))
-		cap := CapFromCenterAngle(center, s1.Degree)
-		loop := RegularLoop(center, cap.Radius(), 8)
-		polygon := PolygonFromLoops([]*Loop{loop})
-		shapeID := index.Add(polygon)
+		shapeID := index.Add(PolygonFromLoops([]*Loop{RegularLoop(
+			center,
+			CapFromCenterAngle(center, s1.Degree).Radius(),
+			8,
+		)}))
 		shapeIDToName[shapeID] = loc.name
 	}
 
