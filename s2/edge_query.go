@@ -720,7 +720,6 @@ func (e *EdgeQuery) initCovering() {
 			cellLast := next.clone()
 			cellLast.Prev()
 			e.addInitialRange(cellFirst, cellLast)
-			break
 		}
 
 	}

@@ -541,3 +541,87 @@ func fractionToRadius(fraction, radiusKm float64) s1.Angle {
 	}
 	return s1.Angle(fraction) * kmToAngle(radiusKm)
 }
+
+func TestEdgeQueryOptimized(t *testing.T) {
+	index := NewShapeIndex()
+
+	// Create polygons on different S2 faces by using points at different
+	// longitudes. Face assignment is roughly:
+	//   Face 0: ~-45° to +45° longitude (Africa/Europe)
+	//   Face 1: ~+45° to +135° longitude (Asia)
+	//   Face 2: ~+135° to -135° longitude (Pacific, crossing dateline)
+	//   Face 3: ~-135° to -45° longitude (North/South America)
+	locations := []struct {
+		name string
+		lat  float64
+		lng  float64
+	}{
+		{"Face0", 20, 20},   // Africa - face 0
+		{"Face1", 40, 90},   // Central Asia - face 1
+		{"Face2", 0, 170},   // Pacific - face 2
+		{"Face3", 40, -100}, // North America - face 3
+	}
+
+	shapeIDToName := make(map[int32]string)
+	for _, loc := range locations {
+		center := PointFromLatLng(LatLngFromDegrees(loc.lat, loc.lng))
+		cap := CapFromCenterAngle(center, s1.Degree)
+		loop := RegularLoop(center, cap.Radius(), 8)
+		polygon := PolygonFromLoops([]*Loop{loop})
+		shapeID := index.Add(polygon)
+		shapeIDToName[shapeID] = loc.name
+	}
+
+	queryPoint := PointFromLatLng(LatLngFromDegrees(0, 10))
+
+	// Run with optimized algorithm (the default)
+	optsOptimized := NewClosestEdgeQueryOptions()
+	optsOptimized = optsOptimized.IncludeInteriors(true)
+	resultsOptimized := NewClosestEdgeQuery(index, optsOptimized).FindEdges(
+		NewMinDistanceToPointTarget(queryPoint),
+	)
+
+	seenOptimized := make(map[int32]bool)
+	for _, r := range resultsOptimized {
+		seenOptimized[r.ShapeID()] = true
+	}
+
+	// Run with brute force for comparison
+	optsBruteForce := NewClosestEdgeQueryOptions()
+	optsBruteForce = optsBruteForce.IncludeInteriors(true)
+	optsBruteForce = optsBruteForce.UseBruteForce(true)
+	resultsBruteForce := NewClosestEdgeQuery(index, optsBruteForce).FindEdges(
+		NewMinDistanceToPointTarget(queryPoint),
+	)
+
+	seenBruteForce := make(map[int32]bool)
+	for _, r := range resultsBruteForce {
+		seenBruteForce[r.ShapeID()] = true
+	}
+
+	// Check if any shapes are missing from the optimized results
+	t.Logf("Optimized found %d shapes, brute force found %d shapes",
+		len(seenOptimized), len(seenBruteForce))
+
+	var missing []string
+	for id, name := range shapeIDToName {
+		if !seenOptimized[id] && seenBruteForce[id] {
+			missing = append(missing, name)
+		}
+	}
+
+	if len(missing) > 0 {
+		t.Errorf(
+			"Optimized algorithm missed shapes that brute force found: %v",
+			missing,
+		)
+	}
+
+	if len(seenOptimized) != len(seenBruteForce) {
+		t.Errorf(
+			"Optimized found %d shapes, brute force found %d shapes; should be equal",
+			len(seenOptimized),
+			len(seenBruteForce),
+		)
+	}
+}
