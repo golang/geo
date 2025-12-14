@@ -689,56 +689,67 @@ func (e *EdgeQuery) initCovering() {
 	// this will save work on every subsequent query.
 	e.indexCovering = make([]CellID, 0, 6)
 
-	// TODO(roberts): Use a single iterator below and save position
-	// information using pair {CellID, ShapeIndexCell}.
-	next := NewShapeIndexIterator(e.index, IteratorBegin)
-	last := NewShapeIndexIterator(e.index, IteratorEnd)
-	last.Prev()
-	if next.CellID() != last.CellID() {
-		// The index has at least two cells. Choose a level such that the entire
-		// index can be spanned with at most 6 cells (if the index spans multiple
-		// faces) or 4 cells (if the index spans a single face).
-		level, ok := next.CellID().CommonAncestorLevel(last.CellID())
-		if !ok {
-			level = 0
-		} else {
-			level++
-		}
+	iter := NewShapeIndexIterator(e.index, IteratorBegin)
 
-		// Visit each potential top-level cell except the last (handled below).
-		lastID := last.CellID().Parent(level)
-		for id := next.CellID().Parent(level); id != lastID; id = id.Next() {
-			// Skip any top-level cells that don't contain any index cells.
-			if id.RangeMax() < next.CellID() {
-				continue
-			}
-
-			// Find the range of index cells contained by this top-level cell and
-			// then shrink the cell if necessary so that it just covers them.
-			cellFirst := next.clone()
-			next.seek(id.RangeMax().Next())
-			cellLast := next.clone()
-			cellLast.Prev()
-			e.addInitialRange(cellFirst, cellLast)
-		}
+	type indexPosition struct {
+		id   CellID
+		cell *ShapeIndexCell
 	}
-	e.addInitialRange(next, last)
-}
 
-// addInitialRange adds an entry to the indexCovering and indexCells that covers the given
-// inclusive range of cells.
-//
-// This requires that first and last cells have a common ancestor.
-func (e *EdgeQuery) addInitialRange(first, last *ShapeIndexIterator) {
-	if first.CellID() == last.CellID() {
-		// The range consists of a single index cell.
-		e.indexCovering = append(e.indexCovering, first.CellID())
-		e.indexCells = append(e.indexCells, first.IndexCell())
+	first := indexPosition{iter.CellID(), iter.IndexCell()}
+	iter.End()
+	iter.Prev()
+	last := indexPosition{iter.CellID(), iter.IndexCell()}
+
+	if first.id == last.id {
+		e.indexCovering = append(e.indexCovering, first.id)
+		e.indexCells = append(e.indexCells, first.cell)
+		return
+	}
+
+	// The index has at least two cells. Choose a level such that the entire
+	// index can be spanned with at most 6 cells (if the index spans multiple
+	// faces) or 4 cells (if the index spans a single face).
+	level, ok := first.id.CommonAncestorLevel(last.id)
+	if !ok {
+		level = 0
 	} else {
-		// Add the lowest common ancestor of the given range.
-		level, _ := first.CellID().CommonAncestorLevel(last.CellID())
-		e.indexCovering = append(e.indexCovering, first.CellID().Parent(level))
-		e.indexCells = append(e.indexCells, nil)
+		level++
+	}
+
+	// Visit each top-level cell.
+	iter.Begin()
+	lastTopLevel := last.id.Parent(level)
+	for id := first.id.Parent(level); ; id = id.Next() {
+		// Skip any top-level cells that don't contain any index cells.
+		if id.RangeMax() < iter.CellID() {
+			if id == lastTopLevel {
+				break
+			}
+			continue
+		}
+
+		// Find the range of index cells contained by this top-level cell and
+		// then shrink the cell if necessary so that it just covers them.
+		cellFirst := indexPosition{iter.CellID(), iter.IndexCell()}
+		iter.seek(id.RangeMax().Next())
+		iter.Prev()
+		cellLast := indexPosition{iter.CellID(), iter.IndexCell()}
+
+		if cellFirst.id == cellLast.id {
+			e.indexCovering = append(e.indexCovering, cellFirst.id)
+			e.indexCells = append(e.indexCells, cellFirst.cell)
+		} else {
+			ancestorLevel, _ := cellFirst.id.CommonAncestorLevel(cellLast.id)
+			e.indexCovering = append(e.indexCovering, cellFirst.id.Parent(ancestorLevel))
+			e.indexCells = append(e.indexCells, nil)
+		}
+
+		if id == lastTopLevel {
+			break
+		}
+
+		iter.Next()
 	}
 }
 
