@@ -194,20 +194,19 @@ func TestEdgeQueryOptimized(t *testing.T) {
 		},
 
 		{
-			// 1 intermediate face with 1 shape each: addInitialRange covers adequately
+			// 1 intermediate face with 1 shape each
 			"faces 0,1,4",
 			[]struct{ latitude, longitude float64 }{{20, 20}, {40, 90}, {40, -100}},
 		},
 
 		{
-			// 1 intermediate face but multiple shapes on first face: first top-level cell
-			// doesn't cover all shapes, and addInitialRange misses earlier ones
+			// 1 intermediate face but multiple shapes on first face
 			"faces 0,1,4 (3+1+1 shapes)",
 			[]struct{ latitude, longitude float64 }{{20, 20}, {25, 25}, {15, 15}, {40, 90}, {40, -100}},
 		},
 
 		{
-			// 2 intermediate faces: covering too coarse without fix
+			// 2 intermediate faces
 			"faces 0,1,3,4",
 			[]struct{ latitude, longitude float64 }{{20, 20}, {40, 90}, {0, 170}, {40, -100}},
 		},
@@ -221,7 +220,7 @@ func TestEdgeQueryOptimized(t *testing.T) {
 		},
 
 		{
-			// Non-zero starting face with 1 intermediate: confirms pattern holds
+			// Non-zero starting face with 1 intermediate
 			"faces 1,3,4",
 			[]struct{ latitude, longitude float64 }{{40, 90}, {0, 170}, {40, -100}},
 		},
@@ -245,29 +244,29 @@ func TestEdgeQueryOptimized(t *testing.T) {
 			queryPoint := PointFromLatLng(LatLngFromDegrees(0, 10))
 
 			optimized := NewClosestEdgeQueryOptions().IncludeInteriors(true)
-			resultA := NewClosestEdgeQuery(index, optimized).FindEdges(
+			got := NewClosestEdgeQuery(index, optimized).FindEdges(
 				NewMinDistanceToPointTarget(queryPoint),
 			)
 
 			bruteForce := NewClosestEdgeQueryOptions().IncludeInteriors(true).UseBruteForce(true)
-			resultB := NewClosestEdgeQuery(index, bruteForce).FindEdges(
+			want := NewClosestEdgeQuery(index, bruteForce).FindEdges(
 				NewMinDistanceToPointTarget(queryPoint),
 			)
 
-			shapesA, shapesB := make(map[int32]bool), make(map[int32]bool)
-			for _, r := range resultA {
-				shapesA[r.ShapeID()] = true
+			shapesGot, shapesWant := make(map[int32]bool), make(map[int32]bool)
+			for _, r := range got {
+				shapesGot[r.ShapeID()] = true
 			}
-			for _, r := range resultB {
-				shapesB[r.ShapeID()] = true
+			for _, r := range want {
+				shapesWant[r.ShapeID()] = true
 			}
 
-			if len(shapesA) != len(shapesB) {
+			if len(shapesGot) != len(shapesWant) {
 				t.Errorf(
 					"%s: optimized found %d shapes, brute force found %d",
 					test.name,
-					len(shapesA),
-					len(shapesB),
+					len(shapesGot),
+					len(shapesWant),
 				)
 			}
 		})
