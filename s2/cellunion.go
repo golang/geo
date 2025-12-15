@@ -348,20 +348,9 @@ func (cu CellUnion) Discontiguous() []CellUnion {
 				rangeMax := neighbor.RangeMax()
 				for idx := lo; idx < n && cu[idx] <= rangeMax; idx++ {
 					descendant := cu[idx]
-					for _, neighbor := range descendant.EdgeNeighbors() {
-						if id.Contains(neighbor) {
+					for _, edgeNeighbor := range descendant.EdgeNeighbors() {
+						if id.Intersects(edgeNeighbor) {
 							j, found = idx, true
-							break
-						}
-
-						for level := neighbor.Level() - 1; level >= id.Level(); level-- {
-							if neighbor.Parent(level) == id {
-								j, found = idx, true
-								break
-							}
-						}
-
-						if found {
 							break
 						}
 					}
