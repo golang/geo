@@ -177,44 +177,48 @@ func TestEdgeQuerySortAndUnique(t *testing.T) {
 	}
 }
 
-func TestEdgeQueryOptimized(t *testing.T) {
+func TestEdgeQueryMultiFace(t *testing.T) {
+	// Avoid LatLngFromDegrees repetition.
+	type loc struct {
+		lat, lng float64
+	}
 	tests := []struct {
 		name string
-		locs []struct{ latitude, longitude float64 }
+		locs []loc
 	}{
 		{
 			// 0 intermediate faces: first and last handled directly
 			"faces 0,4",
-			[]struct{ latitude, longitude float64 }{{20, 20}, {40, -100}},
+			[]loc{{20, 20}, {40, -100}},
 		},
 
 		{
 			"faces 0,4 (3+1 shapes)",
-			[]struct{ latitude, longitude float64 }{{20, 20}, {25, 25}, {15, 15}, {40, -100}},
+			[]loc{{20, 20}, {25, 25}, {15, 15}, {40, -100}},
 		},
 
 		{
 			// 1 intermediate face with 1 shape each
 			"faces 0,1,4",
-			[]struct{ latitude, longitude float64 }{{20, 20}, {40, 90}, {40, -100}},
+			[]loc{{20, 20}, {40, 90}, {40, -100}},
 		},
 
 		{
 			// 1 intermediate face but multiple shapes on first face
 			"faces 0,1,4 (3+1+1 shapes)",
-			[]struct{ latitude, longitude float64 }{{20, 20}, {25, 25}, {15, 15}, {40, 90}, {40, -100}},
+			[]loc{{20, 20}, {25, 25}, {15, 15}, {40, 90}, {40, -100}},
 		},
 
 		{
 			// 2 intermediate faces
 			"faces 0,1,3,4",
-			[]struct{ latitude, longitude float64 }{{20, 20}, {40, 90}, {0, 170}, {40, -100}},
+			[]loc{{20, 20}, {40, 90}, {0, 170}, {40, -100}},
 		},
 
 		{
 			// All 6 faces: extreme case with 4 intermediate faces
 			"all 6 faces",
-			[]struct{ latitude, longitude float64 }{
+			[]loc{
 				{20, 20}, {40, 90}, {90, 0}, {0, 170}, {40, -100}, {-90, 0},
 			},
 		},
@@ -222,52 +226,53 @@ func TestEdgeQueryOptimized(t *testing.T) {
 		{
 			// Non-zero starting face with 1 intermediate
 			"faces 1,3,4",
-			[]struct{ latitude, longitude float64 }{{40, 90}, {0, 170}, {40, -100}},
+			[]loc{{40, 90}, {0, 170}, {40, -100}},
 		},
 
 		{
 			// Non-zero starting face with 2 intermediate faces
 			"faces 1,2,3,4",
-			[]struct{ latitude, longitude float64 }{{40, 90}, {90, 0}, {0, 170}, {40, -100}},
+			[]loc{{40, 90}, {90, 0}, {0, 170}, {40, -100}},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			index := NewShapeIndex()
-			for _, location := range test.locs {
-				center := PointFromLatLng(LatLngFromDegrees(location.latitude, location.longitude))
+			for _, loc := range test.locs {
+				center := PointFromLatLng(LatLngFromDegrees(loc.lat, loc.lng))
 				loop := RegularLoop(center, s1.Degree, 8)
 				index.Add(PolygonFromLoops([]*Loop{loop}))
 			}
 
 			queryPoint := PointFromLatLng(LatLngFromDegrees(0, 10))
-
-			optimized := NewClosestEdgeQueryOptions().IncludeInteriors(true)
-			got := NewClosestEdgeQuery(index, optimized).FindEdges(
+			opts := NewClosestEdgeQueryOptions()
+			edges := NewClosestEdgeQuery(index, opts).FindEdges(
 				NewMinDistanceToPointTarget(queryPoint),
 			)
 
-			bruteForce := NewClosestEdgeQueryOptions().IncludeInteriors(true).UseBruteForce(true)
-			want := NewClosestEdgeQuery(index, bruteForce).FindEdges(
-				NewMinDistanceToPointTarget(queryPoint),
-			)
-
-			shapesGot, shapesWant := make(map[int32]bool), make(map[int32]bool)
-			for _, r := range got {
-				shapesGot[r.ShapeID()] = true
-			}
-			for _, r := range want {
-				shapesWant[r.ShapeID()] = true
+			ids := make(map[int32]bool)
+			for _, r := range edges {
+				ids[r.ShapeID()] = true
 			}
 
-			if len(shapesGot) != len(shapesWant) {
+			// We should always find all points.
+			if len(ids) != len(test.locs) {
 				t.Errorf(
-					"%s: optimized found %d shapes, brute force found %d",
+					"%s: got %d shapes, wanted %d",
 					test.name,
-					len(shapesGot),
-					len(shapesWant),
+					len(ids),
+					len(test.locs),
 				)
+				for i := range int32(len(test.locs)) {
+					if !ids[i] {
+						t.Errorf("missing %d", i)
+					}
+					delete(ids, i)
+				}
+				for i := range ids {
+					t.Errorf("extra %d", i)
+				}
 			}
 		})
 	}
