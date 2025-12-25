@@ -1059,6 +1059,202 @@ func TestCellUnionEmpty(t *testing.T) {
 	}
 }
 
+func TestCellUnionFromDifference(t *testing.T) {
+	faceA := CellIDFromFace(0)
+	childrenA := faceA.Children()
+
+	faceB := CellIDFromFace(1)
+	childrenB := faceB.Children()
+	grandchildrenB := childrenB[0].Children()
+
+	tests := []struct {
+		name string
+		x    CellUnion
+		y    CellUnion
+		want CellUnion
+	}{
+		{
+			name: "x minus empty is x",
+			x:    CellUnion{childrenA[0], childrenA[1]},
+			y:    CellUnion{},
+			want: CellUnion{childrenA[0], childrenA[1]},
+		},
+		{
+			name: "empty minus y is empty",
+			x:    CellUnion{},
+			y:    CellUnion{childrenA[0], childrenA[1]},
+			want: CellUnion{},
+		},
+		{
+			name: "disjoint sets returns x unchanged",
+			x:    CellUnion{childrenA[0], childrenA[1]},
+			y:    CellUnion{childrenA[2], childrenA[3]},
+			want: CellUnion{childrenA[0], childrenA[1]},
+		},
+		{
+			name: "x minus itself is empty",
+			x:    CellUnion{childrenA[0], childrenA[1]},
+			y:    CellUnion{childrenA[0], childrenA[1]},
+			want: CellUnion{},
+		},
+		{
+			name: "remove one cell from union",
+			x:    CellUnion{childrenA[0], childrenA[1], childrenA[2]},
+			y:    CellUnion{childrenA[1]},
+			want: CellUnion{childrenA[0], childrenA[2]},
+		},
+		{
+			name: "x minus superset is empty",
+			x:    CellUnion{childrenA[0]},
+			y:    CellUnion{faceA},
+			want: CellUnion{},
+		},
+		{
+			name: "parent minus one child expands to siblings",
+			x:    CellUnion{faceA},
+			y:    CellUnion{childrenA[0]},
+			want: CellUnion{childrenA[1], childrenA[2], childrenA[3]},
+		},
+		{
+			name: "parent minus two children",
+			x:    CellUnion{faceA},
+			y:    CellUnion{childrenA[0], childrenA[2]},
+			want: CellUnion{childrenA[1], childrenA[3]},
+		},
+		{
+			name: "coarse x minus fine y",
+			x:    CellUnion{faceB},
+			y:    CellUnion{grandchildrenB[0]},
+			want: CellUnion{
+				grandchildrenB[1],
+				grandchildrenB[2],
+				grandchildrenB[3],
+				childrenB[1],
+				childrenB[2],
+				childrenB[3],
+			},
+		},
+		{
+			name: "fine x minus coarse y",
+			x:    CellUnion{grandchildrenB[0], grandchildrenB[1]},
+			y:    CellUnion{childrenB[0]},
+			want: CellUnion{},
+		},
+		{
+			name: "mixed levels",
+			x:    CellUnion{childrenB[0], childrenB[1]},
+			y:    CellUnion{grandchildrenB[0], childrenB[2]},
+			want: CellUnion{
+				grandchildrenB[1],
+				grandchildrenB[2],
+				grandchildrenB[3],
+				childrenB[1],
+			},
+		},
+		{
+			name: "deep hierarchy forces multi-level recursion",
+			x:    CellUnion{childrenB[0]},
+			y: CellUnion{
+				grandchildrenB[0].Children()[0].Children()[0],
+			},
+			want: func() CellUnion {
+				// Remove one level-4 cell from a level-1 cell.
+				// Result: 3 siblings at each level from 4 up to 2, plus 3 level-1 siblings.
+				level4Cell := grandchildrenB[0].Children()[0].Children()[0]
+				level3Cell := level4Cell.Parent(3)
+				level2Cell := grandchildrenB[0]
+
+				level4Siblings := level3Cell.Children()
+				level3Siblings := level2Cell.Children()
+				level2Siblings := childrenB[0].Children()
+
+				var result CellUnion
+				for _, c := range level4Siblings {
+					if c != level4Cell {
+						result = append(result, c)
+					}
+				}
+				for _, c := range level3Siblings {
+					if c != level3Cell {
+						result = append(result, c)
+					}
+				}
+				for _, c := range level2Siblings {
+					if c != level2Cell {
+						result = append(result, c)
+					}
+				}
+				return result
+			}(),
+		},
+		{
+			name: "large unions across faces",
+			x: CellUnion{
+				CellIDFromFace(0).Children()[0],
+				CellIDFromFace(1).Children()[1],
+				CellIDFromFace(2).Children()[2],
+				CellIDFromFace(3).Children()[3],
+			},
+			y: CellUnion{
+				CellIDFromFace(1).Children()[1],
+				CellIDFromFace(3).Children()[3],
+			},
+			want: CellUnion{
+				CellIDFromFace(0).Children()[0],
+				CellIDFromFace(2).Children()[2],
+			},
+		},
+		{
+			name: "y overlaps only part of x cells",
+			x:    CellUnion{childrenA[0], childrenA[1], childrenA[2], childrenA[3]},
+			y: CellUnion{
+				childrenA[1].Children()[0],
+				childrenA[2].Children()[1],
+			},
+			want: CellUnion{
+				childrenA[0],
+				childrenA[1].Children()[1],
+				childrenA[1].Children()[2],
+				childrenA[1].Children()[3],
+				childrenA[2].Children()[0],
+				childrenA[2].Children()[2],
+				childrenA[2].Children()[3],
+				childrenA[3],
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.x.Normalize()
+			tt.y.Normalize()
+
+			got := CellUnionFromDifference(tt.x, tt.y)
+
+			tt.want.Normalize()
+			if !got.Equal(tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+
+			if !got.IsValid() {
+				t.Errorf("result is not valid")
+			}
+			if !tt.x.Contains(got) {
+				t.Errorf("result not contained in x")
+			}
+			if got.Intersects(tt.y) {
+				t.Errorf("result intersects y")
+			}
+
+			intersection := CellUnionFromIntersection(tt.x, tt.y)
+			reunion := CellUnionFromUnion(got, intersection)
+			if !reunion.Equal(tt.x) {
+				t.Errorf("(x-y) ∪ (x∩y) = %v, want %v", reunion, tt.x)
+			}
+		})
+	}
+}
+
 func BenchmarkCellUnionFromRange(b *testing.B) {
 	x := CellIDFromFace(0).ChildBeginAtLevel(MaxLevel)
 	y := CellIDFromFace(5).ChildEndAtLevel(MaxLevel)
