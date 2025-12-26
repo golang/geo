@@ -305,7 +305,10 @@ func TestPredicatesStableSignFailureRate(t *testing.T) {
 	// that are as collinear as possible and spaced the given distance apart
 	// by counting up the times it returns Indeterminate.
 	failureCount := 0
-	m := math.Tan(spacing / earthRadiusKm)
+	// The spacing factor determines how far apart the near-collinear test points are.
+	// Original used 1km spacing on Earth-scale sphere (~0.009 degrees).
+	spacingAngle := 0.009 * s1.Degree
+	m := math.Tan(spacingAngle.Radians() * spacing)
 	for range iters {
 		f := randomFrame()
 		a := f.col(0)
