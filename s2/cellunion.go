@@ -130,15 +130,48 @@ func CellUnionFromIntersectionWithCellID(x CellUnion, id CellID) CellUnion {
 	return cu
 }
 
+// cellUnionDifferenceInternal adds (xid - y) to the CellUnion. It subdivides
+// xid when there is partial overlap, narrowing y before recursing.
+func (cu *CellUnion) cellUnionDifferenceInternal(xid CellID, y CellUnion) {
+	var lo, hi int
+	if len(y) > 0 {
+		idMin := xid.RangeMin()
+
+		// Find first cell that could overlap.
+		lo = sort.Search(len(y), func(i int) bool {
+			return y[i].RangeMax() >= idMin
+		})
+
+		idMax := xid.RangeMax()
+
+		// Find first cell past our range.
+		hi = lo + sort.Search(len(y)-lo, func(i int) bool {
+			return y[(lo+i)].RangeMin() > idMax
+		})
+	}
+
+	if lo >= hi {
+		*cu = append(*cu, xid)
+		return
+	}
+
+	y = y[lo:hi]
+
+	if y.ContainsCellID(xid) {
+		return
+	}
+
+	for _, child := range xid.Children() {
+		cu.cellUnionDifferenceInternal(child, y)
+	}
+}
+
 // CellUnionFromDifference creates a CellUnion from the difference (x - y)
 // of the given CellUnions.
 func CellUnionFromDifference(x, y CellUnion) CellUnion {
-	// TODO(roberts): This is approximately O(N*log(N)), but could probably
-	// use similar techniques as CellUnionFromIntersectionWithCellID to be more efficient.
-
 	var cu CellUnion
 	for _, xid := range x {
-		cu.cellUnionDifferenceInternal(xid, &y)
+		cu.cellUnionDifferenceInternal(xid, y)
 	}
 
 	// The output is generated in sorted order, and there should not be any
@@ -416,22 +449,6 @@ func (cu *CellUnion) lowerBound(begin, end int, id CellID) int {
 	}
 
 	return end
-}
-
-// cellUnionDifferenceInternal adds the difference between the CellID and the union to
-// the result CellUnion. If they intersect but the difference is non-empty, it divides
-// and conquers.
-func (cu *CellUnion) cellUnionDifferenceInternal(id CellID, other *CellUnion) {
-	if !other.IntersectsCellID(id) {
-		(*cu) = append((*cu), id)
-		return
-	}
-
-	if !other.ContainsCellID(id) {
-		for _, child := range id.Children() {
-			cu.cellUnionDifferenceInternal(child, other)
-		}
-	}
 }
 
 // ExpandAtLevel expands this CellUnion by adding a rim of cells at expandLevel
