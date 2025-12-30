@@ -529,6 +529,8 @@ func (c *CellIndex) Build() {
 	}
 }
 
+// IntersectingLabels is a convenience function that returns
+// the labels of all indexed cells that intersect the given CellUnion "target".
 func (c *CellIndex) IntersectingLabels(target CellUnion) []int32 {
 	var labels labels
 	c.VisitIntersectingCells(target, func(cellID CellID, label int32) bool {
@@ -563,6 +565,10 @@ func (c *CellIndex) VisitIntersectingCells(target CellUnion, visitor cellVisitor
 			}
 		}
 
+		// Check whether the next target cell is also contained by the leaf cell
+		// range that we just processed.  If so, we can skip over all such cells
+		// using binary search. This speeds up benchmarks by between 2x and 10x
+		// when the average number of intersecting cells is small (< 1).
 		pos++
 		if pos != len(target) && target[pos].RangeMax() < rangeIter.StartID() {
 			pos = target.lowerBound(pos+1, len(target), rangeIter.StartID())
