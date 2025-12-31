@@ -89,6 +89,10 @@ func (c *CellIndexIterator) Label() int32 {
 	return c.nodes[c.pos].label
 }
 
+func (c *CellIndexIterator) Begin() {
+	c.pos = 0
+}
+
 func (c *CellIndexIterator) Done() bool {
 	return c.pos == len(c.nodes)
 }

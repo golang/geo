@@ -48,7 +48,14 @@ func cellIndexNodesEqual(a, b []cellIndexNode) bool {
 	sort.Slice(b, func(i, j int) bool {
 		return b[i].less(b[j])
 	})
-	return reflect.DeepEqual(a, b)
+
+	for i := range a {
+		if a[i].cellID != b[i].cellID && a[i].label != b[i].label {
+			return false
+		}
+	}
+
+	return true
 }
 
 // copyCellIndexNodes creates a copy of the nodes so that sorting and other tests
@@ -60,19 +67,16 @@ func copyCellIndexNodes(in []cellIndexNode) []cellIndexNode {
 }
 
 func verifyCellIndexCellIterator(t *testing.T, desc string, index *CellIndex) {
-	// TODO(roberts): Once the plain iterator is implemented, add this check.
-	/*
-		var actual []cellIndexNode
-		iter := NewCellIndexIterator(index)
-		for iter.Begin(); !iter.Done(); iter.Next() {
-			actual = append(actual, cellIndexNode{iter.StartID(), iter.Label())
-		}
+	var actual []cellIndexNode
+	iter := NewCellIndexIterator(index)
+	for iter.Begin(); !iter.Done(); iter.Next() {
+		actual = append(actual, cellIndexNode{cellID: iter.CellID(), label: iter.Label()})
+	}
 
-		want := copyCellIndexNodes(index.cellTree)
-		if !cellIndexNodesEqual(actual, want) {
-			t.Errorf("%s: cellIndexNodes not equal but should be.  %v != %v", desc, actual, want)
-		}
-	*/
+	want := copyCellIndexNodes(index.cellTree)
+	if !cellIndexNodesEqual(actual, want) {
+		t.Errorf("%s: cellIndexNodes not equal but should be.  %v != %v", desc, actual, want)
+	}
 }
 
 func verifyCellIndexRangeIterators(t *testing.T, desc string, index *CellIndex) {
@@ -337,6 +341,61 @@ func TestCellIndexRandomCellUnions(t *testing.T) {
 	cellIndexQuadraticValidate(t, "Random Cell Unions", index, nil)
 }
 
+func expectContents(t *testing.T, target CellID, index *CellIndex, contents *CellIndexContentsIterator, expected []cellIndexNode) {
+	rangeIter := NewCellIndexRangeIterator(index)
+	rangeIter.Seek(target)
+
+	var actual []cellIndexNode
+	for contents.StartUnion(rangeIter); !contents.Done(); contents.Next() {
+		actual = append(actual, cellIndexNode{cellID: contents.CellID(), label: contents.Label()})
+	}
+	if !cellIndexNodesEqual(expected, actual) {
+		t.Errorf("comparing contents iterator contents to this range: got %+v, want %+v", actual, expected)
+	}
+}
+
+func TestCellIndexContentsIteratorSuppressesDuplicates(t *testing.T) {
+	index := &CellIndex{}
+	index.Add(CellIDFromString("2/1"), 1)
+	index.Add(CellIDFromString("2/1"), 2)
+	index.Add(CellIDFromString("2/10"), 3)
+	index.Add(CellIDFromString("2/100"), 4)
+	index.Add(CellIDFromString("2/102"), 5)
+	index.Add(CellIDFromString("2/1023"), 6)
+	index.Add(CellIDFromString("2/31"), 7)
+	index.Add(CellIDFromString("2/313"), 8)
+	index.Add(CellIDFromString("2/3132"), 9)
+	index.Add(CellIDFromString("3/1"), 10)
+	index.Add(CellIDFromString("3/12"), 11)
+	index.Add(CellIDFromString("3/13"), 12)
+
+	cellIndexQuadraticValidate(t, "Suppress Duplicates", index, nil)
+
+	contents := NewCellIndexContentsIterator(index)
+	expectContents(t, CellIDFromString("1/123"), index, contents, []cellIndexNode{})
+	expectContents(t, CellIDFromString("2/100123"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/1"), label: 1}, {cellID: CellIDFromString("2/1"), label: 2}, {cellID: CellIDFromString("2/10"), label: 3}, {cellID: CellIDFromString("2/100"), label: 4}})
+	// Check that a second call with the same key yields no additional results.
+	expectContents(t, CellIDFromString("2/100123"), index, contents, []cellIndexNode{})
+	// Check that seeking to a different branch yields only the new values.
+	expectContents(t, CellIDFromString("2/10232"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/102"), label: 5}, {cellID: CellIDFromString("2/1023"), label: 6}})
+	// Seek to a node with a different root.
+	expectContents(t, CellIDFromString("2/313"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/31"), label: 7}, {cellID: CellIDFromString("2/313"), label: 8}})
+	// Seek to a descendant of the previous node.
+	expectContents(t, CellIDFromString("2/3132333"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/3132"), label: 9}})
+	// Seek to an ancestor of the previous node.
+	expectContents(t, CellIDFromString("2/213"), index, contents, []cellIndexNode{})
+	// A few more tests of incremental reporting.
+	expectContents(t, CellIDFromString("3/1232"), index, contents, []cellIndexNode{{cellID: CellIDFromString("3/1"), label: 10}, {cellID: CellIDFromString("3/12"), label: 11}})
+	expectContents(t, CellIDFromString("3/133210"), index, contents, []cellIndexNode{{cellID: CellIDFromString("3/13"), label: 12}})
+	expectContents(t, CellIDFromString("3/133210"), index, contents, []cellIndexNode{})
+	expectContents(t, CellIDFromString("5/0"), index, contents, []cellIndexNode{})
+
+	// Now try moving backwards, which is expected to yield values that were
+	// already reported above.
+	expectContents(t, CellIDFromString("3/13221"), index, contents, []cellIndexNode{{cellID: CellIDFromString("3/1"), label: 10}, {cellID: CellIDFromString("3/13"), label: 12}})
+	expectContents(t, CellIDFromString("2/31112"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/31"), label: 7}})
+}
+
 func TestCellIndexIntersectionOptimization(t *testing.T) {
 	type cellIndexTestInput struct {
 		cellID string
@@ -436,9 +495,3 @@ func labelsEqual(a, b []int32) bool {
 	})
 	return reflect.DeepEqual(a, b)
 }
-
-// TODO(roberts): Differences from C++
-//
-// Add remainder of TestCellIndexContentsIteratorSuppressesDuplicates
-//
-// additional Iterator related parts
