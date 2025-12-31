@@ -34,7 +34,7 @@ type cellIndexNode struct {
 // newCellIndexNode returns a node with the appropriate default values.
 func newCellIndexNode() cellIndexNode {
 	return cellIndexNode{
-		cellID: 0,
+		cellID: CellID(0),
 		label:  cellIndexDoneContents,
 		parent: -1,
 	}
@@ -49,15 +49,56 @@ type rangeNode struct {
 	contents int32  // Contents of this node (an index within the cell tree).
 }
 
+type labels []int32
+
+func (l *labels) Normalize() {
+	encountered := make(map[int32]struct{})
+
+	for i := range *l {
+		encountered[(*l)[i]] = struct{}{}
+	}
+
+	*l = (*l)[:0]
+	for key := range encountered {
+		*l = append(*l, key)
+	}
+}
+
+type cellVisitor func(cellID CellID, label int32) bool
+
 // CellIndexIterator is an iterator that visits the entire set of indexed
 // (CellID, label) pairs in an unspecified order.
 type CellIndexIterator struct {
-	// TODO(roberts): Implement
+	nodes []cellIndexNode
+	pos   int
 }
 
 // NewCellIndexIterator creates an iterator for the given CellIndex.
 func NewCellIndexIterator(index *CellIndex) *CellIndexIterator {
-	return &CellIndexIterator{}
+	return &CellIndexIterator{
+		nodes: index.cellTree,
+		pos:   0,
+	}
+}
+
+func (c *CellIndexIterator) CellID() CellID {
+	return c.nodes[c.pos].cellID
+}
+
+func (c *CellIndexIterator) Label() int32 {
+	return c.nodes[c.pos].label
+}
+
+func (c *CellIndexIterator) Begin() {
+	c.pos = 0
+}
+
+func (c *CellIndexIterator) Done() bool {
+	return c.pos == len(c.nodes)
+}
+
+func (c *CellIndexIterator) Next() {
+	c.pos++
 }
 
 // CellIndexRangeIterator is an iterator that seeks and iterates over a set of
@@ -199,7 +240,6 @@ func (c *CellIndexRangeIterator) Seek(target CellID) {
 
 	// Nonempty needs to find the next non-empty entry.
 	for c.nonEmpty && c.IsEmpty() && !c.Done() {
-		// c.Next()
 		c.pos++
 	}
 }
@@ -243,7 +283,7 @@ type CellIndexContentsIterator struct {
 func NewCellIndexContentsIterator(index *CellIndex) *CellIndexContentsIterator {
 	it := &CellIndexContentsIterator{
 		cellTree:       index.cellTree,
-		prevStartID:    0,
+		prevStartID:    CellID(0),
 		nodeCutoff:     -1,
 		nextNodeCutoff: -1,
 		node:           cellIndexNode{label: cellIndexDoneContents},
@@ -253,7 +293,7 @@ func NewCellIndexContentsIterator(index *CellIndex) *CellIndexContentsIterator {
 
 // Clear clears all state with respect to which range(s) have been visited.
 func (c *CellIndexContentsIterator) Clear() {
-	c.prevStartID = 0
+	c.prevStartID = CellID(0)
 	c.nodeCutoff = -1
 	c.nextNodeCutoff = -1
 	c.node.label = cellIndexDoneContents
@@ -479,7 +519,8 @@ func (c *CellIndex) Build() {
 				c.cellTree = append(c.cellTree, cellIndexNode{
 					cellID: deltas[i].cellID,
 					label:  deltas[i].label,
-					parent: contents})
+					parent: contents,
+				})
 				contents = int32(len(c.cellTree) - 1)
 			} else if deltas[i].cellID == SentinelCellID {
 				contents = c.cellTree[contents].parent
@@ -489,7 +530,54 @@ func (c *CellIndex) Build() {
 	}
 }
 
-// TODO(roberts): Differences from C++
-// IntersectingLabels
-// VisitIntersectingCells
-// CellIndexIterator
+// IntersectingLabels is a convenience function that returns
+// the labels of all indexed cells that intersect the given CellUnion "target".
+func (c *CellIndex) IntersectingLabels(target CellUnion) []int32 {
+	var labels labels
+	c.VisitIntersectingCells(target, func(cellID CellID, label int32) bool {
+		labels = append(labels, label)
+		return true
+	})
+
+	labels.Normalize()
+	return labels
+}
+
+func (c *CellIndex) VisitIntersectingCells(target CellUnion, visitor cellVisitor) bool {
+	if len(target) == 0 {
+		return true
+	}
+
+	pos := 0
+	contents := NewCellIndexContentsIterator(c)
+	rangeIter := NewCellIndexRangeIterator(c)
+	rangeIter.Begin()
+
+	for ok := true; ok; ok = pos != len(target) {
+		if rangeIter.LimitID() <= target[pos].RangeMin() {
+			rangeIter.Seek(target[pos].RangeMin())
+		}
+
+		for ; rangeIter.StartID() <= target[pos].RangeMax(); rangeIter.Next() {
+			for contents.StartUnion(rangeIter); !contents.Done(); contents.Next() {
+				if !visitor(contents.CellID(), contents.Label()) {
+					return false
+				}
+			}
+		}
+
+		// Check whether the next target cell is also contained by the leaf cell
+		// range that we just processed.  If so, we can skip over all such cells
+		// using binary search. This speeds up benchmarks by between 2x and 10x
+		// when the average number of intersecting cells is small (< 1).
+		pos++
+		if pos != len(target) && target[pos].RangeMax() < rangeIter.StartID() {
+			pos = target.lowerBound(pos+1, len(target), rangeIter.StartID())
+			if target[pos-1].RangeMax() >= rangeIter.StartID() {
+				pos--
+			}
+		}
+	}
+
+	return true
+}
