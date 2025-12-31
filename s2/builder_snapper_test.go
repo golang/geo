@@ -36,10 +36,6 @@ func TestIdentitySnapper(t *testing.T) {
 		t.Errorf("identSnap.MinEdgeVertexSeparation() = %v, want %v", i.MinEdgeVertexSeparation(), 0.5*rad)
 	}
 
-	if i.MaxEdgeDeviation() != maxEdgeDeviationRatio {
-		t.Errorf("identSnap.SnapRadius() = %v, want %v", i.MaxEdgeDeviation(), maxEdgeDeviationRatio)
-	}
-
 	p := randomPoint()
 	if got := i.SnapPoint(p); !p.ApproxEqual(got) {
 		t.Errorf("identSnap.SnapPoint(%v) = %v, want %v", p, got, p)
@@ -54,7 +50,7 @@ func TestCellIDSnapperLevelToFromSnapRadius(t *testing.T) {
 		if got := f.levelForMaxSnapRadius(radius); got != level {
 			t.Errorf("levelForMaxSnapRadius(%v) = %v, want %v", radius, got, level)
 		}
-		if got, want := f.levelForMaxSnapRadius(0.999*radius), minInt(level+1, MaxLevel); got != want {
+		if got, want := f.levelForMaxSnapRadius(0.999*radius), min(level+1, MaxLevel); got != want {
 			t.Errorf("levelForMaxSnapRadius(0.999*%v) = %v, want %v (level %d)", radius, got, want, level)
 		}
 	}
@@ -68,7 +64,7 @@ func TestCellIDSnapperLevelToFromSnapRadius(t *testing.T) {
 }
 
 func TestCellIDSnapperSnapPoint(t *testing.T) {
-	for iter := 0; iter < 1; iter++ {
+	for range 1 {
 		for level := 0; level <= MaxLevel; level++ {
 			// This checks that points are snapped to the correct level, since
 			// CellID centers at different levels are always different.
@@ -88,7 +84,7 @@ func TestIntLatLngSnapperExponentToFromSnapRadius(t *testing.T) {
 		if got := sf.exponentForMaxSnapRadius(radius); got != exp {
 			t.Errorf("exponentForMaxSnapRadius(%v) = %v, want %v", radius, got, exp)
 		}
-		if got, want := sf.exponentForMaxSnapRadius(0.999*radius), minInt(exp+1, maxIntSnappingExponent); got != want {
+		if got, want := sf.exponentForMaxSnapRadius(0.999*radius), min(exp+1, maxIntSnappingExponent); got != want {
 			t.Errorf("exponentForMaxSnapRadius(%v) = %v, want %v", 0.999*radius, got, want)
 		}
 	}

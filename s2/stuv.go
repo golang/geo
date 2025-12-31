@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"math/bits"
 
 	"github.com/golang/geo/r3"
 )
@@ -45,7 +46,7 @@ import (
 //  (id)
 //    A CellID is a 64-bit encoding of a face and a Hilbert curve position
 //    on that face. The Hilbert curve position implicitly encodes both the
-//    position of a cell and its subdivision level (see s2cellid.go).
+//    position of a cell and its subdivision level (see cellid.go).
 //
 //  (face, i, j)
 //    Leaf-cell coordinates. "i" and "j" are integers in the range
@@ -90,7 +91,7 @@ import (
 //  (x, y, z)
 //    Direction vector (Point). Direction vectors are not necessarily unit
 //    length, and are often chosen to be points on the biunit cube
-//    [-1,+1]x[-1,+1]x[-1,+1]. They can be be normalized to obtain the
+//    [-1,+1]x[-1,+1]x[-1,+1]. They can be normalized to obtain the
 //    corresponding point on the unit sphere.
 //
 //  (lat, lng)
@@ -344,8 +345,8 @@ func xyzToFaceSiTi(p Point) (face int, si, ti uint32, level int) {
 	// center. The si,ti values of 0 and maxSiTi need to be handled specially
 	// because they do not correspond to cell centers at any valid level; they
 	// are mapped to level -1 by the code at the end.
-	level = MaxLevel - findLSBSetNonZero64(uint64(si|maxSiTi))
-	if level < 0 || level != MaxLevel-findLSBSetNonZero64(uint64(ti|maxSiTi)) {
+	level = MaxLevel - bits.TrailingZeros64(uint64(si|maxSiTi))
+	if level < 0 || level != MaxLevel-bits.TrailingZeros64(uint64(ti|maxSiTi)) {
 		return face, si, ti, -1
 	}
 
@@ -427,7 +428,7 @@ func uvwAxis(face, axis int) Point {
 	return faceUVWAxes[face][axis]
 }
 
-// uvwFaces returns the face in the (u,v,w) coordinate system on the given axis
+// uvwFace returns the face in the (u,v,w) coordinate system on the given axis
 // in the given direction.
 func uvwFace(face, axis, direction int) int {
 	return faceUVWFaces[face][axis][direction]

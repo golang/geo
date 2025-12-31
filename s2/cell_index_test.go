@@ -138,7 +138,7 @@ func verifyCellIndexRangeIterators(t *testing.T, desc string, index *CellIndex) 
 			if start != it2.StartID() {
 				t.Errorf("%s: it2.StartID() = %v, want %v", desc, it2.StartID(), start)
 			}
-			if 0 != prevStart {
+			if prevStart != 0 {
 				t.Errorf("%s: prevStart = %v, want %v", desc, prevStart, 0)
 			}
 		}
@@ -332,7 +332,7 @@ func TestCellIndexRandomCellUnions(t *testing.T) {
 	// because the cell level is chosen uniformly, there is a very high
 	// likelihood that the cell unions will overlap.
 	index := &CellIndex{}
-	for i := int32(0); i < 100; i++ {
+	for i := range int32(100) {
 		index.AddCellUnion(randomCellUnion(10), i)
 	}
 	cellIndexQuadraticValidate(t, "Random Cell Unions", index, nil)

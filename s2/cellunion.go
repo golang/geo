@@ -17,6 +17,7 @@ package s2
 import (
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 
 	"github.com/golang/geo/s1"
@@ -272,10 +273,7 @@ func (cu *CellUnion) Denormalize(minLevel, levelMod int) {
 	var denorm CellUnion
 	for _, id := range *cu {
 		level := id.Level()
-		newLevel := level
-		if newLevel < minLevel {
-			newLevel = minLevel
-		}
+		newLevel := max(level, minLevel)
 		if levelMod > 1 {
 			newLevel += (MaxLevel - (newLevel - minLevel)) % levelMod
 			if newLevel > MaxLevel {
@@ -404,13 +402,7 @@ func (cu *CellUnion) Contains(o CellUnion) bool {
 
 // Intersects reports whether this CellUnion intersects any of the CellIDs of the given CellUnion.
 func (cu *CellUnion) Intersects(o CellUnion) bool {
-	for _, c := range *cu {
-		if o.IntersectsCellID(c) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(*cu, o.IntersectsCellID)
 }
 
 // lowerBound returns the index in this CellUnion to the first element whose value
@@ -491,7 +483,7 @@ func (cu *CellUnion) ExpandAtLevel(level int) {
 func (cu *CellUnion) ExpandByRadius(minRadius s1.Angle, maxLevelDiff int) {
 	minLevel := MaxLevel
 	for _, cid := range *cu {
-		minLevel = minInt(minLevel, cid.Level())
+		minLevel = min(minLevel, cid.Level())
 	}
 
 	// Find the maximum level such that all cells are at least "minRadius" wide.
@@ -501,7 +493,7 @@ func (cu *CellUnion) ExpandByRadius(minRadius s1.Angle, maxLevelDiff int) {
 		// The easiest way to handle this is to expand twice.
 		cu.ExpandAtLevel(0)
 	}
-	cu.ExpandAtLevel(minInt(minLevel+maxLevelDiff, radiusLevel))
+	cu.ExpandAtLevel(min(minLevel+maxLevelDiff, radiusLevel))
 }
 
 // Equal reports whether the two CellUnions are equal.
@@ -509,7 +501,7 @@ func (cu CellUnion) Equal(o CellUnion) bool {
 	if len(cu) != len(o) {
 		return false
 	}
-	for i := 0; i < len(cu); i++ {
+	for i := range cu {
 		if cu[i] != o[i] {
 			return false
 		}
@@ -544,6 +536,7 @@ func (cu *CellUnion) ExactArea() float64 {
 }
 
 // Encode encodes the CellUnion.
+// Note: The CellUnion is not required to be valid according to IsValid().
 func (cu *CellUnion) Encode(w io.Writer) error {
 	e := &encoder{w: w}
 	cu.encode(e)
@@ -559,6 +552,7 @@ func (cu *CellUnion) encode(e *encoder) {
 }
 
 // Decode decodes the CellUnion.
+// Note: The returned CellUnion is not necessarily valid according to IsValid().
 func (cu *CellUnion) Decode(r io.Reader) error {
 	d := &decoder{r: asByteReader(r)}
 	cu.decode(d)
@@ -574,7 +568,7 @@ func (cu *CellUnion) decode(d *decoder) {
 		d.err = fmt.Errorf("only version %d is supported", encodingVersion)
 		return
 	}
-	n := d.readInt64()
+	n := d.readUint64()
 	if d.err != nil {
 		return
 	}

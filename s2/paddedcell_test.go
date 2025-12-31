@@ -16,7 +16,6 @@ package s2
 
 import (
 	"math"
-	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/r1"
@@ -25,7 +24,7 @@ import (
 
 func TestPaddedCellMethods(t *testing.T) {
 	// Test the PaddedCell methods that have approximate Cell equivalents.
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		cid := randomCellID()
 		padding := math.Pow(1e-15, randomFloat64())
 		cell := CellFromCellID(cid)
@@ -63,7 +62,7 @@ func TestPaddedCellMethods(t *testing.T) {
 			t.Errorf("%v.Children() failed but should not have", cell)
 			continue
 		}
-		for pos := 0; pos < 4; pos++ {
+		for pos := range 4 {
 			i, j := pCell.ChildIJ(pos)
 
 			cellChild := children[pos]
@@ -97,7 +96,7 @@ func TestPaddedCellMethods(t *testing.T) {
 }
 
 func TestPaddedCellEntryExitVertices(t *testing.T) {
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		id := randomCellID()
 		unpadded := PaddedCellFromCellID(id, 0)
 		padded := PaddedCellFromCellID(id, 0.5)
@@ -133,11 +132,7 @@ func TestPaddedCellEntryExitVertices(t *testing.T) {
 }
 
 func TestPaddedCellShrinkToFit(t *testing.T) {
-	// About 0.2% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(1)
-
-	for iter := 0; iter < 1000; iter++ {
+	for range 1000 {
 		// Start with the desired result and work backwards.
 		result := randomCellID()
 		resultUV := result.boundUV()
@@ -146,7 +141,7 @@ func TestPaddedCellShrinkToFit(t *testing.T) {
 		// Find the biggest rectangle that fits in "result" after padding.
 		// (These calculations ignore numerical errors.)
 		maxPadding := 0.5 * math.Min(sizeUV.X, sizeUV.Y)
-		padding := maxPadding * randomFloat64()
+		padding := randomUniformFloat64(0, maxPadding)
 		maxRect := resultUV.ExpandedByMargin(-padding)
 
 		// Start with a random subset of the maximum rectangle.

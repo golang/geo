@@ -66,7 +66,7 @@ func TestPointMeasuresPointArea(t *testing.T) {
 	}
 
 	maxGirard := 0.0
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		p0 := randomPoint()
 		d1 := randomPoint()
 		d2 := randomPoint()
@@ -120,7 +120,7 @@ func TestPointMeasuresPointAreaQuarterHemisphere(t *testing.T) {
 
 	// Compute the area of a hemisphere using four triangles with one near-180
 	// degree edge and one near-degenerate edge.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		lng := s1.Angle(2 * math.Pi * randomFloat64())
 		p2Lng := lng + s1.Angle(randomFloat64())
 		p0 := PointFromLatLng(LatLng{1e-20, lng}.Normalized())

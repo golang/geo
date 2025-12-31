@@ -202,26 +202,26 @@ func TestEdgeDistancesUpdateMinInteriorDistanceRejectionTestIsConservative(t *te
 			a:       Point{r3.Vector{X: 1, Y: -8.9031850507928352e-11, Z: 0}},
 			b:       Point{r3.Vector{X: -0.99999999999996347, Y: 2.7030110029169596e-07, Z: 1.555092348806121e-99}},
 			minDist: minDist,
-			want:    false,
+			want:    true,
 		},
 		{
 			x:       Point{r3.Vector{X: 1, Y: -4.7617930898495072e-13, Z: 0}},
 			a:       Point{r3.Vector{X: -1, Y: -1.6065916409055676e-10, Z: 0}},
 			b:       Point{r3.Vector{X: 1, Y: 0, Z: 9.9964883247706732e-35}},
 			minDist: minDist,
-			want:    false,
+			want:    true,
 		},
 		{
 			x:       Point{r3.Vector{X: 1, Y: 0, Z: 0}},
 			a:       Point{r3.Vector{X: 1, Y: -8.4965026896454536e-11, Z: 0}},
 			b:       Point{r3.Vector{X: -0.99999999999966138, Y: 8.2297529603339328e-07, Z: 9.6070344113320997e-21}},
 			minDist: minDist,
-			want:    false,
+			want:    true,
 		},
 	}
 
 	for _, test := range tests {
-		if _, ok := UpdateMinDistance(test.x, test.a, test.b, test.minDist); !ok {
+		if _, ok := UpdateMinDistance(test.x, test.a, test.b, test.minDist); ok != test.want {
 			t.Errorf("UpdateMinDistance(%v, %v, %v, %v) = %v, want %v", test.x, test.a, test.b, test.minDist, ok, test.want)
 		}
 	}
@@ -427,7 +427,8 @@ func TestEdgeDistancesInterpolate(t *testing.T) {
 					test.a, test.b, r, got, test.want)
 			}
 		}
-		if r.Radians() >= 0 && r.Radians() < 0.99*math.Pi {
+		if r.Radians() >= 0 && r.Radians() < 0.99*math.Pi { // nolint staticcheck
+			// TODO(rsned): Remove nolint when this test case is added.
 			// We don't have the parallel ChordAngle variants of
 			// PointOnLine/Ray/Left/Right
 			// so the second tests are not added here.
@@ -472,13 +473,13 @@ func TestEdgeDistancesInterpolateAntipodal(t *testing.T) {
 func TestEdgeDistancesRepeatedInterpolation(t *testing.T) {
 	// Check that points do not drift away from unit length when repeated
 	// interpolations are done.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		a := randomPoint()
 		b := randomPoint()
-		for j := 0; j < 1000; j++ {
+		for range 1000 {
 			a = Interpolate(0.01, a, b)
 		}
-		if !a.Vector.IsUnit() {
+		if !a.IsUnit() {
 			t.Errorf("repeated Interpolate(%v, %v, %v) calls did not stay unit length for", 0.01, a, b)
 		}
 	}
@@ -725,7 +726,7 @@ func TestEdgeDistancesEdgePairMinDistance(t *testing.T) {
 		actualA, actualB := EdgePairClosestPoints(test.a0, test.a1, test.b0, test.b1)
 		if test.wantA == zero {
 			// either end point works.
-			if !(actualA == test.a0 || actualA == test.a1) {
+			if actualA != test.a0 && actualA != test.a1 {
 				t.Errorf("EdgePairClosestPoints(%v, %v, %v, %v) = %v, want %v or %v", test.a0, test.a1, test.b0, test.b1, actualA, test.a0, test.a1)
 			}
 		} else {
@@ -736,7 +737,7 @@ func TestEdgeDistancesEdgePairMinDistance(t *testing.T) {
 
 		if test.wantB == zero {
 			// either end point works.
-			if !(actualB == test.b0 || actualB == test.b1) {
+			if actualB != test.b0 && actualB != test.b1 {
 				t.Errorf("EdgePairClosestPoints(%v, %v, %v, %v) = %v, want %v or %v", test.a0, test.a1, test.b0, test.b1, actualB, test.b0, test.b1)
 			}
 		} else {

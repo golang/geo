@@ -60,7 +60,7 @@ func UpdateMinDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAngle, boo
 // than maxDist, and if so, returns the updated value and true.
 // Otherwise it returns false. The case A == B is handled correctly.
 func UpdateMaxDistance(x, a, b Point, maxDist s1.ChordAngle) (s1.ChordAngle, bool) {
-	dist := maxChordAngle(ChordAngleBetweenPoints(x, a), ChordAngleBetweenPoints(x, b))
+	dist := max(ChordAngleBetweenPoints(x, a), ChordAngleBetweenPoints(x, b))
 	if dist > s1.RightChordAngle {
 		dist, _ = updateMinDistance(Point{x.Mul(-1)}, a, b, dist, true)
 		dist = s1.StraightChordAngle - dist
@@ -96,7 +96,7 @@ func UpdateMinInteriorDistance(x, a, b Point, minDist s1.ChordAngle) (s1.ChordAn
 func Project(x, a, b Point) Point {
 	aXb := a.PointCross(b)
 	// Find the closest point to X along the great circle through AB.
-	p := x.Sub(aXb.Mul(x.Dot(aXb.Vector) / aXb.Vector.Norm2()))
+	p := x.Sub(aXb.Mul(x.Dot(aXb.Vector) / aXb.Norm2()))
 
 	// If this point is on the edge AB, then it's the closest point.
 	if Sign(aXb, a, Point{p}) && Sign(Point{p}, b, aXb) {
@@ -146,7 +146,7 @@ func InterpolateAtDistance(ax s1.Angle, a, b Point) Point {
 	// result is always perpendicular to A, even if A=B or A=-B, but it is not
 	// necessarily unit length. (We effectively normalize it below.)
 	normal := a.PointCross(b)
-	tangent := normal.Vector.Cross(a.Vector)
+	tangent := normal.Cross(a.Vector)
 
 	// Now compute the appropriate linear combination of A and "tangent". With
 	// infinite precision the result would always be unit length, but we
@@ -336,7 +336,6 @@ func updateEdgePairMinDistance(a0, a1, b0, b1 Point, minDist s1.ChordAngle) (s1.
 		return 0, false
 	}
 	if CrossingSign(a0, a1, b0, b1) == Cross {
-		minDist = 0
 		return 0, true
 	}
 

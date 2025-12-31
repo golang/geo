@@ -16,7 +16,6 @@ package s2
 
 import (
 	"math"
-	"math/rand"
 	"testing"
 	"unsafe"
 
@@ -37,7 +36,7 @@ func TestCellFaces(t *testing.T) {
 	edgeCounts := make(map[Point]int)
 	vertexCounts := make(map[Point]int)
 
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		id := CellIDFromFace(face)
 		cell := CellFromCellID(id)
 
@@ -61,7 +60,7 @@ func TestCellFaces(t *testing.T) {
 		if cell.IsLeaf() {
 			t.Errorf("cell should not be a leaf: IsLeaf = %v", cell.IsLeaf())
 		}
-		for k := 0; k < 4; k++ {
+		for k := range 4 {
 			edgeCounts[cell.EdgeRaw(k)]++
 			vertexCounts[cell.VertexRaw(k)]++
 			if d := cell.VertexRaw(k).Dot(cell.EdgeRaw(k).Vector); !float64Eq(0.0, d) {
@@ -106,7 +105,7 @@ func TestCellUVCoordOfEdge(t *testing.T) {
 		CellFromCellID(CellIDFromToken("91")),
 	}
 
-	for k := 0; k < 4; k++ {
+	for k := range 4 {
 		if got, want := cell0[k].UVCoordOfEdge(k+0), 0.0; !float64Eq(got, want) {
 			t.Errorf("%v.UVCoordOfEdge[%d] = %f, want %f", cell4[k], k+0, got, want)
 		}
@@ -123,7 +122,7 @@ func TestCellUVCoordOfEdge(t *testing.T) {
 }
 
 func Test2CellIJCoordOfEdge(t *testing.T) {
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		id := randomCellID()
 		cell := CellFromCellID(id)
 
@@ -142,7 +141,7 @@ func Test2CellIJCoordOfEdge(t *testing.T) {
 		ijBounds.Y.Hi = float64(ijLo + ijSize)
 
 		// Check that each boundary coordinate is correct.
-		for k := 0; k < 4; k++ {
+		for k := range 4 {
 			got := cell.IJCoordOfEdge(k)
 			var want int
 			if (k+1)%2 == 0 {
@@ -201,7 +200,7 @@ func testCellChildren(t *testing.T, cell Cell) {
 			t.Errorf("%v.Center() = %v, want %v", ci, ci.Center(), direct.Center())
 		}
 
-		for k := 0; k < 4; k++ {
+		for k := range 4 {
 			if !direct.VertexRaw(k).ApproxEqual(ci.VertexRaw(k)) {
 				t.Errorf("child %d %v.VertexRaw(%d) = %v, want %v", i, ci, k, ci.VertexRaw(k), direct.VertexRaw(k))
 			}
@@ -223,7 +222,7 @@ func testCellChildren(t *testing.T, cell Cell) {
 		if !cell.ContainsPoint(ci.Center()) {
 			t.Errorf("%v.ContainsPoint(%v) = false, want true", cell, ci.Center())
 		}
-		for j := 0; j < 4; j++ {
+		for j := range 4 {
 			if !cell.ContainsPoint(ci.VertexRaw(j)) {
 				t.Errorf("%v.ContainsPoint(%v.VertexRaw(%d)) = false, want true", cell, ci, j)
 			}
@@ -259,7 +258,7 @@ func testCellChildren(t *testing.T, cell Cell) {
 		if !parentRect.ContainsPoint(ci.Center()) {
 			t.Errorf("parentRect %v.ContainsPoint(%v.Center()) = false, want true", parentRect, ci)
 		}
-		for j := 0; j < 4; j++ {
+		for j := range 4 {
 			if !childCap.ContainsPoint(ci.Vertex(j)) {
 				t.Errorf("childCap %v.ContainsPoint(%v.Vertex(%d)) = false, want true", childCap, ci, j)
 			}
@@ -283,7 +282,7 @@ func testCellChildren(t *testing.T, cell Cell) {
 				// they exclude at least two vertices of each adjacent cell.
 				capCount := 0
 				rectCount := 0
-				for k := 0; k < 4; k++ {
+				for k := range 4 {
 					if childCap.ContainsPoint(children[j].Vertex(k)) {
 						capCount++
 					}
@@ -477,7 +476,7 @@ func TestCellRectBound(t *testing.T) {
 	for _, test := range tests {
 		c := CellFromLatLng(LatLngFromDegrees(test.lat, test.lng))
 		rect := c.RectBound()
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			if !rect.ContainsLatLng(LatLngFromPoint(c.Vertex(i))) {
 				t.Errorf("%v should contain %v", rect, c.Vertex(i))
 			}
@@ -522,7 +521,7 @@ func TestCellRectBoundAroundPoleMinLat(t *testing.T) {
 func TestCellCapBound(t *testing.T) {
 	c := CellFromCellID(CellIDFromFace(0).ChildBeginAtLevel(20))
 	s2Cap := c.CapBound()
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if !s2Cap.ContainsPoint(c.Vertex(i)) {
 			t.Errorf("%v should contain %v", s2Cap, c.Vertex(i))
 		}
@@ -559,22 +558,29 @@ func TestCellContainsPoint(t *testing.T) {
 }
 
 func TestCellContainsPointConsistentWithS2CellIDFromPoint(t *testing.T) {
-	// About 1% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(1)
-
 	// Construct many points that are nearly on a Cell edge, and verify that
 	// CellFromCellID(cellIDFromPoint(p)).Contains(p) is always true.
-	for iter := 0; iter < 1000; iter++ {
+	for range 1000 {
 		cell := CellFromCellID(randomCellID())
 		i1 := randomUniformInt(4)
 		i2 := (i1 + 1) & 3
 		v1 := cell.Vertex(i1)
 		v2 := samplePointFromCap(CapFromCenterAngle(cell.Vertex(i2), s1.Angle(epsilon)))
-		p := Interpolate(randomFloat64(), v1, v2)
+		p := Interpolate(randomUniformFloat64(0, 1.0), v1, v2)
 		if !CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) {
-			t.Errorf("For p=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p)
+			t.Errorf("For p=%v, cell=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p, cell)
 		}
+	}
+}
+
+func TestCellContainsPointConsistentWithS2CellIDFromPointExample1(t *testing.T) {
+	// Failures can be generated for `TestCellContainsPointConsistentWithS2CellIDFromPoint` by
+	// increasing the number of iterations to 1M.  This is one such example.
+	// See https://github.com/google/s2geometry/issues/463.
+	p := PointFromCoords(0.38203141040035632, 0.030196609707941954, 0.9236558700239289)
+	cell := CellFromCellID(cellIDFromPoint(p))
+	if !cell.ContainsPoint(p) {
+		t.Errorf("For p=%v, cell=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p, cell)
 	}
 }
 
@@ -594,12 +600,12 @@ func TestCellContainsPointContainsAmbiguousPoint(t *testing.T) {
 	p := PointFromLatLng(LatLngFromDegrees(-2, 90))
 	cell := CellFromCellID(cellIDFromPoint(p).Parent(1))
 	if !cell.ContainsPoint(p) {
-		t.Errorf("For p=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p)
+		t.Errorf("For p=%v, cell=%v, CellFromCellID(cellIDFromPoint(p)).ContainsPoint(p) was false", p, cell)
 	}
 }
 
 func TestCellDistance(t *testing.T) {
-	for iter := 0; iter < 1000; iter++ {
+	for range 1000 {
 		cell := CellFromCellID(randomCellID())
 		target := randomPoint()
 
@@ -671,7 +677,7 @@ func chooseEdgeNearCell(cell Cell) (a, b Point) {
 
 func minDistanceToPointBruteForce(cell Cell, target Point) s1.ChordAngle {
 	minDistance := s1.InfChordAngle()
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		minDistance, _ = UpdateMinDistance(target, cell.Vertex(i),
 			cell.Vertex((i+1)%4), minDistance)
 	}
@@ -683,7 +689,7 @@ func maxDistanceToPointBruteForce(cell Cell, target Point) s1.ChordAngle {
 		return s1.StraightChordAngle
 	}
 	maxDistance := s1.NegativeChordAngle
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		maxDistance, _ = UpdateMaxDistance(target, cell.Vertex(i),
 			cell.Vertex((i+1)%4), maxDistance)
 	}
@@ -696,7 +702,7 @@ func minDistanceToEdgeBruteForce(cell Cell, a, b Point) s1.ChordAngle {
 	}
 
 	minDist := s1.InfChordAngle()
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		v0 := cell.Vertex(i)
 		v1 := cell.Vertex((i + 1) % 4)
 		// If the antipodal edge crosses through the cell, min distance is 0.
@@ -717,7 +723,7 @@ func maxDistanceToEdgeBruteForce(cell Cell, a, b Point) s1.ChordAngle {
 	}
 
 	maxDist := s1.NegativeChordAngle
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		v0 := cell.Vertex(i)
 		v1 := cell.Vertex((i + 1) % 4)
 		// If the antipodal edge crosses through the cell, min distance is Pi.
@@ -732,11 +738,10 @@ func maxDistanceToEdgeBruteForce(cell Cell, a, b Point) s1.ChordAngle {
 }
 
 func TestCellDistanceToEdge(t *testing.T) {
-	// About 0.1% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(2)
+	// TODO: Is it still about 0.1% flaky with a random seed.
+	// TODO(rsned): https://github.com/golang/geo/issues/120
 
-	for iter := 0; iter < 1000; iter++ {
+	for range 1000 {
 		cell := CellFromCellID(randomCellID())
 
 		a, b := chooseEdgeNearCell(cell)
@@ -753,8 +758,6 @@ func TestCellDistanceToEdge(t *testing.T) {
 			expectedError = 3e-8
 		} else if expectedMin.Radians() <= math.Pi/3 {
 			expectedError = 1e-15
-		} else {
-			expectedError = 1e-12
 		}
 
 		if !float64Near(expectedMin.Radians(), actualMin.Radians(), expectedError) {
@@ -800,7 +803,7 @@ func TestCellMaxDistanceToCellAntipodal(t *testing.T) {
 }
 
 func TestCellMaxDistanceToCell(t *testing.T) {
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		cell := CellFromCellID(randomCellID())
 		testCell := CellFromCellID(randomCellID())
 		antipodalLeafID := cellIDFromPoint(Point{testCell.Center().Mul(-1)})
@@ -814,6 +817,6 @@ func TestCellMaxDistanceToCell(t *testing.T) {
 	}
 }
 
-// TODO(roberts): Differences from C++.
+// TODO(rsned): Differences from C++.
 // CellVsLoopRectBound
 // RectBoundIsLargeEnough

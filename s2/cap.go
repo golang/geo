@@ -109,7 +109,7 @@ func FullCap() Cap {
 
 // IsValid reports whether the Cap is considered valid.
 func (c Cap) IsValid() bool {
-	return c.center.Vector.IsUnit() && c.radius <= s1.StraightChordAngle
+	return c.center.IsUnit() && c.radius <= s1.StraightChordAngle
 }
 
 // IsEmpty reports whether the cap is empty, i.e. it contains no points.
@@ -341,7 +341,7 @@ func radiusToHeight(r s1.Angle) float64 {
 func (c Cap) ContainsCell(cell Cell) bool {
 	// If the cap does not contain all cell vertices, return false.
 	var vertices [4]Point
-	for k := 0; k < 4; k++ {
+	for k := range 4 {
 		vertices[k] = cell.Vertex(k)
 		if !c.ContainsPoint(vertices[k]) {
 			return false
@@ -355,7 +355,7 @@ func (c Cap) ContainsCell(cell Cell) bool {
 func (c Cap) IntersectsCell(cell Cell) bool {
 	// If the cap contains any cell vertex, return true.
 	var vertices [4]Point
-	for k := 0; k < 4; k++ {
+	for k := range 4 {
 		vertices[k] = cell.Vertex(k)
 		if c.ContainsPoint(vertices[k]) {
 			return true
@@ -389,9 +389,9 @@ func (c Cap) intersects(cell Cell, vertices [4]Point) bool {
 	// does not contain any cell vertex. The only way that they can intersect is if the
 	// cap intersects the interior of some edge.
 	sin2Angle := c.radius.Sin2()
-	for k := 0; k < 4; k++ {
+	for k := range 4 {
 		edge := cell.Edge(k).Vector
-		dot := c.center.Vector.Dot(edge)
+		dot := c.center.Dot(edge)
 		if dot > 0 {
 			// The center is in the interior half-space defined by the edge. We do not need
 			// to consider these edges, since if the cap intersects this edge then it also
@@ -429,7 +429,7 @@ func (c Cap) CellUnionBound() []CellID {
 	// If level < 0, more than three face cells are required.
 	if level < 0 {
 		cellIDs := make([]CellID, 6)
-		for face := 0; face < 6; face++ {
+		for face := range 6 {
 			cellIDs[face] = CellIDFromFace(face)
 		}
 		return cellIDs

@@ -92,14 +92,15 @@ func LaxPolygonFromPolygon(p *Polygon) *LaxPolygon {
 func LaxPolygonFromPoints(loops [][]Point) *LaxPolygon {
 	p := &LaxPolygon{}
 	p.numLoops = len(loops)
-	if p.numLoops == 0 {
+	switch p.numLoops {
+	case 0:
 		p.numVerts = 0
 		p.vertices = nil
-	} else if p.numLoops == 1 {
+	case 1:
 		p.numVerts = len(loops[0])
 		p.vertices = make([]Point, p.numVerts)
 		copy(p.vertices, loops[0])
-	} else {
+	default:
 		p.cumulativeVertices = make([]int, p.numLoops+1)
 		numVertices := 0
 		for i, loop := range loops {

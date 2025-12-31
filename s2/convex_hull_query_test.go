@@ -16,7 +16,7 @@ package s2
 
 import (
 	"math"
-	"math/rand"
+	"slices"
 	"testing"
 
 	"github.com/golang/geo/s1"
@@ -96,12 +96,7 @@ func TestConvexHullAntipodalPoints(t *testing.T) {
 }
 
 func loopHasVertex(l *Loop, p Point) bool {
-	for _, v := range l.vertices {
-		if v == p {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(l.vertices, p)
 }
 
 func TestConvexHullQueryEmptyLoop(t *testing.T) {
@@ -137,7 +132,7 @@ func TestConvexHullQueryNonConvexPoints(t *testing.T) {
 	// sphere by repeatedly linearly interpolating between the points. (The
 	// four points of a tetrahedron would also work, but this is easier.)
 	query := NewConvexHullQuery()
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		query.AddPoint(CellIDFromFace(face).Point())
 	}
 	result := query.ConvexHull()
@@ -194,22 +189,18 @@ func TestConvexHullQueryLoopsAroundNorthPole(t *testing.T) {
 }
 
 func TestConvexHullQueryPointsInsideHull(t *testing.T) {
-	// About 0.3% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(1)
-
 	// Repeatedly build the convex hull of a set of points, then add more points
 	// inside that loop and build the convex hull again. The result should
 	// always be the same.
 	const iters = 1000
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		// Choose points from within a cap of random size, up to but not including
 		// an entire hemisphere.
 		c := randomCap(1e-15, 1.999*math.Pi)
 		numPoints1 := randomUniformInt(100) + 3
 
 		query := NewConvexHullQuery()
-		for i := 0; i < numPoints1; i++ {
+		for range numPoints1 {
 			query.AddPoint(samplePointFromCap(c))
 		}
 		hull := query.ConvexHull()
@@ -223,7 +214,7 @@ func TestConvexHullQueryPointsInsideHull(t *testing.T) {
 		// test pass reliably it means that we need to reject convex hulls whose
 		// bounding cap (when computed from a bounding rectangle) is not convex.
 		//
-		// TODO(roberts): This test can still fail (about 1 iteration in 500,000)
+		// TODO(rsned): This test can still fail (about 1 iteration in 500,000)
 		// because the Rect.CapBound implementation does not guarantee
 		// that A.Contains(B) implies A.CapBound().Contains(B.CapBound()).
 		if hull.CapBound().Height() >= 1 {
@@ -232,7 +223,7 @@ func TestConvexHullQueryPointsInsideHull(t *testing.T) {
 
 		// Otherwise, add more points inside the convex hull.
 		const numPoints2 = 1000
-		for i := 0; i < numPoints2; i++ {
+		for range numPoints2 {
 			p := samplePointFromCap(c)
 			if hull.ContainsPoint(p) {
 				query.AddPoint(p)

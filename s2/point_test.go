@@ -16,12 +16,17 @@ package s2
 
 import (
 	"math"
-	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/r3"
 	"github.com/golang/geo/s1"
 )
+
+// pointNear reports if each component of the two points is within the given epsilon.
+// This is similar to Point/Vector.ApproxEqual but with a user supplied epsilon.
+func pointNear(a, b Point, ε float64) bool {
+	return math.Abs(a.X-b.X) < ε && math.Abs(a.Y-b.Y) < ε && math.Abs(a.Z-b.Z) < ε
+}
 
 func TestOriginPoint(t *testing.T) {
 	if math.Abs(OriginPoint().Norm()-1) > 1e-15 {
@@ -95,11 +100,7 @@ func TestPointDistance(t *testing.T) {
 }
 
 func TestChordAngleBetweenPoints(t *testing.T) {
-	// About 0.2% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(1)
-
-	for iter := 0; iter < 10; iter++ {
+	for range 100 {
 		m := randomFrame()
 		x := m.col(0)
 		y := m.col(1)
@@ -231,7 +232,7 @@ func TestPointRegularPoints(t *testing.T) {
 
 	// Make sure the angle between each point is correct.
 	wantAngle := math.Pi / 2
-	for i := 0; i < len(pts); i++ {
+	for i := range pts {
 		// Mod the index by 4 to wrap the values at each end.
 		v0, v1, v2 := pts[(4+i+1)%4], pts[(4+i)%4], pts[(4+i-1)%4]
 		if got := float64(v0.Sub(v1.Vector).Angle(v2.Sub(v1.Vector))); !float64Eq(got, wantAngle) {
@@ -241,7 +242,7 @@ func TestPointRegularPoints(t *testing.T) {
 
 	// Make sure that all edges of the polygon have the same length.
 	wantLength := 27.990890717782829
-	for i := 0; i < len(lls); i++ {
+	for i := range lls {
 		ll1, ll2 := lls[i], lls[(i+1)%4]
 		if got := ll1.Distance(ll2).Degrees(); !float64Near(got, wantLength, epsilon) {
 			t.Errorf("%v.Distance(%v) = %v, want %v", ll1, ll2, got, wantLength)
@@ -295,7 +296,7 @@ func TestPointRegion(t *testing.T) {
 }
 
 func TestPointRotate(t *testing.T) {
-	for iter := 0; iter < 1000; iter++ {
+	for range 1000 {
 		axis := randomPoint()
 		target := randomPoint()
 		// Choose a distance whose logarithm is uniformly distributed.
@@ -341,5 +342,129 @@ func TestPointRotate(t *testing.T) {
 		if rotationError > maxRotationError {
 			t.Errorf("rotational angle of %v = %v, want %v", got, actualRotation, angle)
 		}
+	}
+}
+
+func TestPointIsNormalizable(t *testing.T) {
+	tests := []struct {
+		have Point
+		want bool
+	}{
+		{
+			// 0,0,0 is not normalizeable.
+			have: Point{r3.Vector{X: 0, Y: 0, Z: 0}},
+			want: false,
+		},
+		{
+			have: Point{r3.Vector{X: 1, Y: 1, Z: 1}},
+			want: true,
+		},
+
+		// The approximate cutoff is ~1.4149498560666738e-73
+		{
+			have: Point{r3.Vector{X: 1, Y: 0, Z: 0}},
+			want: true,
+		},
+		{
+			// Only one too small component.
+			have: Point{r3.Vector{X: 1e-75, Y: 1, Z: 1}},
+			want: true,
+		},
+		{
+			// All three components exact boundary case.
+			have: Point{r3.Vector{
+				X: math.Ldexp(1, -242),
+				Y: math.Ldexp(1, -242),
+				Z: math.Ldexp(1, -242)}},
+			want: true,
+		},
+		{
+			// All three components too small.
+			have: Point{r3.Vector{
+				X: math.Ldexp(1, -243),
+				Y: math.Ldexp(1, -243),
+				Z: math.Ldexp(1, -243)}},
+			want: false,
+		},
+	}
+
+	for _, test := range tests {
+		if got := test.have.IsNormalizable(); got != test.want {
+			t.Errorf("%+v.IsNormalizable() = %t, want %t", test.have, got, test.want)
+		}
+	}
+}
+
+func TestPointEnsureNormalizable(t *testing.T) {
+	tests := []struct {
+		have Point
+		want Point
+	}{
+		{
+			// 0,0,0 is not normalizeable.
+			have: Point{r3.Vector{X: 0, Y: 0, Z: 0}},
+			want: Point{r3.Vector{X: 0, Y: 0, Z: 0}},
+		},
+		{
+			have: Point{r3.Vector{X: 1, Y: 0, Z: 0}},
+			want: Point{r3.Vector{X: 1, Y: 0, Z: 0}},
+		},
+		{
+			// All three components exact border for still normalizeable.
+			have: Point{r3.Vector{
+				X: math.Ldexp(1, -242),
+				Y: math.Ldexp(1, -242),
+				Z: math.Ldexp(1, -242),
+			}},
+			want: Point{r3.Vector{
+				X: math.Ldexp(1, -242),
+				Y: math.Ldexp(1, -242),
+				Z: math.Ldexp(1, -242),
+			}},
+		},
+		{
+			// All three components too small but the same.
+			have: Point{r3.Vector{
+				X: math.Ldexp(1, -243),
+				Y: math.Ldexp(1, -243),
+				Z: math.Ldexp(1, -243),
+			}},
+			want: Point{r3.Vector{
+				X: 1,
+				Y: 1,
+				Z: 1,
+			}},
+		},
+		{
+			// All three components too small but different.
+			have: Point{r3.Vector{
+				X: math.Ldexp(1, -243),
+				Y: math.Ldexp(1, -486),
+				Z: math.Ldexp(1, -729),
+			}},
+			want: Point{r3.Vector{
+				X: 1,
+				Y: 0,
+				Z: 0,
+			}},
+		},
+	}
+
+	for _, test := range tests {
+		got := test.have.EnsureNormalizable()
+		if !pointNear(got, test.want, 1e-50) {
+			t.Errorf("%+v.EnsureNormalizable() = %+v, want %+v",
+				test.have, got, test.want)
+		}
+	}
+}
+
+func BenchmarkPointRegularPoints(b *testing.B) {
+	center := PointFromLatLng(LatLngFromDegrees(80, 135))
+	radius := s1.Degree * 20
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		regularPoints(center, radius, 8)
 	}
 }

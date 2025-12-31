@@ -177,6 +177,107 @@ func TestEdgeQuerySortAndUnique(t *testing.T) {
 	}
 }
 
+func TestEdgeQueryMultiFace(t *testing.T) {
+	// Avoid LatLngFromDegrees repetition.
+	type loc struct {
+		lat, lng float64
+	}
+	tests := []struct {
+		name string
+		locs []loc
+	}{
+		{
+			// 0 intermediate faces: first and last handled directly
+			"faces 0,4",
+			[]loc{{20, 20}, {40, -100}},
+		},
+
+		{
+			"faces 0,4 (3+1 shapes)",
+			[]loc{{20, 20}, {25, 25}, {15, 15}, {40, -100}},
+		},
+
+		{
+			// 1 intermediate face with 1 shape each
+			"faces 0,1,4",
+			[]loc{{20, 20}, {40, 90}, {40, -100}},
+		},
+
+		{
+			// 1 intermediate face but multiple shapes on first face
+			"faces 0,1,4 (3+1+1 shapes)",
+			[]loc{{20, 20}, {25, 25}, {15, 15}, {40, 90}, {40, -100}},
+		},
+
+		{
+			// 2 intermediate faces
+			"faces 0,1,3,4",
+			[]loc{{20, 20}, {40, 90}, {0, 170}, {40, -100}},
+		},
+
+		{
+			// All 6 faces: extreme case with 4 intermediate faces
+			"all 6 faces",
+			[]loc{
+				{20, 20}, {40, 90}, {90, 0}, {0, 170}, {40, -100}, {-90, 0},
+			},
+		},
+
+		{
+			// Non-zero starting face with 1 intermediate
+			"faces 1,3,4",
+			[]loc{{40, 90}, {0, 170}, {40, -100}},
+		},
+
+		{
+			// Non-zero starting face with 2 intermediate faces
+			"faces 1,2,3,4",
+			[]loc{{40, 90}, {90, 0}, {0, 170}, {40, -100}},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			index := NewShapeIndex()
+			for _, loc := range test.locs {
+				center := PointFromLatLng(LatLngFromDegrees(loc.lat, loc.lng))
+				loop := RegularLoop(center, s1.Degree, 8)
+				index.Add(PolygonFromLoops([]*Loop{loop}))
+			}
+
+			queryPoint := PointFromLatLng(LatLngFromDegrees(0, 10))
+			opts := NewClosestEdgeQueryOptions()
+			edges := NewClosestEdgeQuery(index, opts).FindEdges(
+				NewMinDistanceToPointTarget(queryPoint),
+			)
+
+			ids := make(map[int32]bool)
+			for _, r := range edges {
+				ids[r.ShapeID()] = true
+			}
+
+			// We should always find all points.
+			if len(ids) != len(test.locs) {
+				t.Errorf(
+					"%s: got %d shapes, wanted %d",
+					test.name,
+					len(ids),
+					len(test.locs),
+				)
+				for i := range int32(len(test.locs)) {
+					if !ids[i] {
+						t.Errorf("missing %d", i)
+					}
+					delete(ids, i)
+				}
+				for i := range ids {
+					t.Errorf("extra %d", i)
+				}
+			}
+		})
+	}
+}
+
 // For various tests and benchmarks on the edge query code, there are a number of
 // ShapeIndex generators that can be used.
 type shapeIndexGeneratorFunc func(c Cap, numEdges int, index *ShapeIndex)
@@ -203,7 +304,7 @@ func fractalLoopShapeIndexGenerator(c Cap, numEdges int, index *ShapeIndex) {
 // fills the given Cap.
 func pointCloudShapeIndexGenerator(c Cap, numPoints int, index *ShapeIndex) {
 	var points PointVector
-	for i := 0; i < numPoints; i++ {
+	for range numPoints {
 		points = append(points, samplePointFromCap(c))
 	}
 	index.Add(&points)
@@ -242,14 +343,14 @@ func testEdgeQueryWithGenerator(t *testing.T,
 	var indexCaps []Cap
 	var indexes []*ShapeIndex
 	for i := 0; i < numIndexes; i++ {
-		rand.Seed(int64(i))
-		indexCaps = append(indexCaps, CapFromCenterAngle(randomPoint(), testCapRadius))
+	        r := rand.New(rand.NewSource(i))
+		indexCaps = append(indexCaps, CapFromCenterAngle(randomPoint(r), testCapRadius))
 		indexes = append(indexes, NewShapeIndex())
 		gen(indexCaps[i], numEdges, indexes[i])
 	}
 
 	for i := 0; i < numQueries; i++ {
-		rand.Seed(int64(i))
+	        r := rand.New(rand.NewSource(i))
 		iIndex := randomUniformInt(numIndexes)
 		indexCap := indexCaps[iIndex]
 
@@ -269,23 +370,23 @@ func testEdgeQueryWithGenerator(t *testing.T,
 		// Occasionally we don't set any limit on the number of result edges.
 		// (This may return all edges if we also don't set a distance limit.)
 		if oneIn(5) {
-			opts.MaxResults(1 + randomUniformInt(10))
+			opts.MaxResults(1 + randomUniformInt(10, r))
 		}
 
 		// We set a distance limit 1/3 of the time.
 		if oneIn(3) {
-			opts.DistanceLimit(s1.ChordAngleFromAngle(s1.Angle(randomFloat64()) * queryRadius))
+			opts.DistanceLimit(s1.ChordAngleFromAngle(s1.Angle(randomFloat64(r)) * queryRadius))
 		}
 		if oneIn(2) {
 			// Choose a maximum error whose logarithm is uniformly distributed over
 			// a reasonable range, except that it is sometimes zero.
-			opts.MaxError(s1.ChordAngleFromAngle(s1.Angle(math.Pow(1e-4, randomFloat64()) * queryRadius.Radians())))
+			opts.MaxError(s1.ChordAngleFromAngle(s1.Angle(math.Pow(1e-4, randomFloat64(r)) * queryRadius.Radians())))
 		}
 		opts.IncludeInteriors(oneIn(2))
 
 		query := newQueryFunc(indexes[iIndex], opts)
 
-		switch randomUniformInt(4) {
+		switch randomUniformInt(4, r) {
 		case 0:
 			// Find the edges furthest from a given point.
 			point := samplePointFromCap(queryCap)
@@ -295,14 +396,14 @@ func testEdgeQueryWithGenerator(t *testing.T,
 			// Find the edges furthest from a given edge.
 			a := samplePointFromCap(queryCap)
 			b := samplePointFromCap(
-				CapFromCenterAngle(a, s1.Angle(math.Pow(1e-4, randomFloat64()))*queryRadius))
+				CapFromCenterAngle(a, s1.Angle(math.Pow(1e-4, randomFloat64(r)))*queryRadius))
 			target := NewMaxDistanceToEdgeTarget(Edge{a, b})
 			testFindEdges(target, query)
 
 		case 2:
 			// Find the edges furthest from a given cell.
 			minLevel := MaxDiagMetric.MinLevel(queryRadius.Radians())
-			level := minLevel + randomUniformInt(MaxLevel-minLevel+1)
+			level := minLevel + randomUniformInt(MaxLevel-minLevel+1, r)
 			a := samplePointFromCap(queryCap)
 			cell := CellFromCellID(cellIDFromPoint(a).Parent(level))
 			target := NewMaxDistanceToCellTarget(cell)
@@ -310,7 +411,7 @@ func testEdgeQueryWithGenerator(t *testing.T,
 
 		case 3:
 			// Use another one of the pre-built indexes as the target.
-			jIndex := randomUniformInt(numIndexes)
+			jIndex := randomUniformInt(numIndexes, r)
 			target := NewMaxDistanceToShapeIndexTarget(indexes[jIndex])
 			target.setIncludeInteriors(oneIn(2))
 			testFindEdges(target, query)
@@ -332,7 +433,7 @@ func testEdgeQueryWithGenerator(t *testing.T,
 //   - If maxErrorFraction > 0, then MaxError is set to the given
 //     fraction of the index radius.
 //
-// TODO(roberts): If there is a need to benchmark Furthest as well, this will need
+// TODO(rsned): If there is a need to benchmark Furthest as well, this will need
 // some changes to not use just the Closest variants of parts.
 // Furthest isn't doing anything different under the covers than Closest, so there
 // isn't really a huge need for benchmarking both.
@@ -360,12 +461,12 @@ func benchmarkEdgeQueryFindClosest(b *testing.B, bmOpts *edgeQueryBenchmarkOptio
 		bmOpts.numIndexEdges *= 4
 		b.Run(fmt.Sprintf("%d", bmOpts.numIndexEdges),
 			func(b *testing.B) {
-				// TODO(roberts): Return value 2 here is the slice of target
+				// TODO(rsned): Return value 2 here is the slice of target
 				// ShapeIndexes. Incorporate it once ShapeIndexTargets
 				// are able to be used in tests.
 				targets, _ = generateEdgeQueryWithTargets(bmOpts, query, index)
 				for i := 0; i < b.N; i++ {
-					// TODO(roberts): In the reference C++ benchmark
+					// TODO(rsned): In the reference C++ benchmark
 					// they use the tooling to split the benchmark
 					// run iterations up into kNumIndexSamples (8)
 					// times and pause to generate a new geometry
@@ -433,9 +534,10 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 	const maxTargetsPerIndex = 100
 
 	// Set a specific seed to allow repeatability
-	rand.Seed(opts.randomSeed)
+	// Replace with r := rand.New(rand.NewSource(opts.randomSeed)) and pass through.
+	r := rand.New(rand.NewSource(opts.randomSeed))
 	opts.randomSeed++
-	indexCap := CapFromCenterAngle(randomPoint(), opts.radiusKm)
+	indexCap := CapFromCenterAngle(randomPoint(r), opts.radiusKm)
 
 	query.Reset()
 	queryIndex.Reset()
@@ -447,7 +549,7 @@ func generateEdgeQueryWithTargets(opts *edgeQueryBenchmarkOptions, query *EdgeQu
 	numTargets := maxTargetsPerIndex
 	if opts.targetType == queryTypeIndex {
 		// Limit the total number of target edges to reduce the benchmark running times.
-		numTargets = minInt(numTargets, 500000/opts.numTargetEdges)
+		numTargets = min(numTargets, 500000/opts.numTargetEdges)
 	}
 
 	for i := 0; i < numTargets; i++ {

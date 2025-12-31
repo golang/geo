@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Many trivial updates, so ignore and update manually.
+    ignore:
+      - dependency-name: "github/codeql-action"
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: daily

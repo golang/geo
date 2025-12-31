@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"slices"
 )
 
 // Polygon represents a sequence of zero or more loops; recall that the
@@ -447,7 +448,7 @@ func (p *Polygon) Validate() error {
 	for i, l := range p.loops {
 		// Check for loop errors that don't require building a ShapeIndex.
 		if err := l.findValidationErrorNoIndex(); err != nil {
-			return fmt.Errorf("loop %d: %v", i, err)
+			return fmt.Errorf("loop %d: %w", i, err)
 		}
 		// Check that no loop is empty, and that the full loop only appears in the
 		// full polygon.
@@ -772,7 +773,7 @@ func (p *Polygon) Chain(chainID int) Chain {
 		return Chain{p.cumulativeEdges[chainID], len(p.Loop(chainID).vertices)}
 	}
 	e := 0
-	for j := 0; j < chainID; j++ {
+	for j := range chainID {
 		e += len(p.Loop(j).vertices)
 	}
 
@@ -880,12 +881,7 @@ func (p *Polygon) Intersects(o *Polygon) bool {
 	}
 
 	if !p.hasHoles && !o.hasHoles {
-		for _, l := range o.loops {
-			if p.anyLoopIntersects(l) {
-				return true
-			}
-		}
-		return false
+		return slices.ContainsFunc(o.loops, p.anyLoopIntersects)
 	}
 
 	// Polygon A is disjoint from B if A excludes the entire boundary of B and B

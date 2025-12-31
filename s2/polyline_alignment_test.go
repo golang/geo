@@ -326,9 +326,9 @@ func distanceMatrix(a, b *Polyline) costTable {
 	aN := len(*a)
 	bN := len(*b)
 	table := costTable(make([][]float64, aN))
-	for i := 0; i < aN; i++ {
+	for i := range aN {
 		table[i] = make([]float64, bN)
-		for j := 0; j < bN; j++ {
+		for j := range bN {
 			table[i][j] = (*a)[i].Sub((*b)[j].Vector).Norm()
 		}
 	}
@@ -345,7 +345,7 @@ func bruteForceCost(table costTable, i, j int) float64 {
 	} else if j == 0 {
 		return bruteForceCost(table, i-1, j) + table[i][j]
 	} else {
-		return minFloat64(bruteForceCost(table, i-1, j-1),
+		return min(bruteForceCost(table, i-1, j-1),
 			bruteForceCost(table, i-1, j),
 			bruteForceCost(table, i, j-1)) +
 			table[i][j]
@@ -448,4 +448,4 @@ func TestPolylineAlignmentExactAlignmentCost(t *testing.T) {
 
 // TODO()rsned): Differences from C++
 // Medoid tests
-// Consensus testss
+// Consensus tests

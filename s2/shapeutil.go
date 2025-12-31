@@ -52,6 +52,8 @@ func newRangeIterator(index *ShapeIndex) *rangeIterator {
 
 func (r *rangeIterator) cellID() CellID             { return r.it.CellID() }
 func (r *rangeIterator) indexCell() *ShapeIndexCell { return r.it.IndexCell() }
+func (r *rangeIterator) clipped() *clippedShape     { return r.indexCell().clipped(0) }
+func (r *rangeIterator) containsCenter() bool       { return r.clipped().containsCenter }
 func (r *rangeIterator) next()                      { r.it.Next(); r.refresh() }
 func (r *rangeIterator) done() bool                 { return r.it.Done() }
 
@@ -134,7 +136,7 @@ func referencePointForShape(shape Shape) ReferencePoint {
 	n := shape.NumEdges()
 	var edges = make([]Edge, n)
 	var revEdges = make([]Edge, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		edge := shape.Edge(i)
 		edges[i] = edge
 		revEdges[i] = Edge{V0: edge.V1, V1: edge.V0}
@@ -143,7 +145,7 @@ func referencePointForShape(shape Shape) ReferencePoint {
 	sortEdges(edges)
 	sortEdges(revEdges)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if edges[i].Cmp(revEdges[i]) == -1 { // edges[i] is unmatched
 			if ref, ok := referencePointAtVertex(shape, edges[i].V0); ok {
 				return ref
@@ -181,7 +183,7 @@ func referencePointAtVertex(shape Shape, vTest Point) (ReferencePoint, bool) {
 
 	containsQuery := NewContainsVertexQuery(vTest)
 	n := shape.NumEdges()
-	for e := 0; e < n; e++ {
+	for e := range n {
 		edge := shape.Edge(e)
 		if edge.V0 == vTest {
 			containsQuery.AddEdge(edge.V1, 1)

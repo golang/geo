@@ -59,7 +59,7 @@ func TestLaxLoopNonEmptyLoop(t *testing.T) {
 	if got, want := shape.Chain(0).Length, len(vertices); got != want {
 		t.Errorf("shape.Chain(0).Length = %v, want %v", got, want)
 	}
-	for i := 0; i < len(vertices); i++ {
+	for i := range vertices {
 		if got, want := shape.(*LaxLoop).vertex(i), vertices[i]; got != want {
 			t.Errorf("%d. vertex(%d) = %v, want %v", i, i, got, want)
 		}

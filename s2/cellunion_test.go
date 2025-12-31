@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"bytes"
 	"math"
 	"math/rand"
 	"reflect"
@@ -294,23 +295,23 @@ func TestCellUnion(t *testing.T) {
 }
 
 func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *testing.T) {
-	// Decides whether to add "id" and/or some of its descendants to the test case.  If "selected"
-	// is true, then the region covered by "id" *must* be added to the test case (either by adding
-	// "id" itself, or some combination of its descendants, or both).  If cell ids are to the test
-	// case "input", then the corresponding expected result after simplification is added to
-	// "expected".
+	// Decides whether to add "id" and/or some of its descendants to the test case.
+	// If "selected" is true, then the region covered by "id" *must* be added to
+	// the test case (either by adding "id" itself, or some combination of its
+	// descendants, or both). If cell ids are to the test case "input", then the
+	// corresponding expected result after simplification is added to "expected".
 
 	if id == 0 {
 		// Initial call: decide whether to add cell(s) from each face.
-		for face := 0; face < 6; face++ {
+		for face := range 6 {
 			addCells(CellIDFromFace(face), false, input, expected, t)
 		}
 		return
 	}
 
 	if id.IsLeaf() {
-		// The oneIn() call below ensures that the parent of a leaf cell will always be selected (if
-		// we make it that far down the hierarchy).
+		// The oneIn() call below ensures that the parent of a leaf cell will
+		// always be selected (if we make it that far down the hierarchy).
 		if selected != true {
 			t.Errorf("id IsLeaf() and not selected")
 		}
@@ -320,12 +321,14 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 
 	// The following code ensures that the probability of selecting a cell at each level is
 	// approximately the same, i.e. we test normalization of cells at all levels.
+	// TODO(rsned): Change this probability to match
+	// absl::Bernoulli(bitgen, 1.0 / (MaxLevel - id.level()))
 	if !selected && oneIn(MaxLevel-id.Level()) {
-		//  Once a cell has been selected, the expected output is predetermined.  We then make sure
-		//  that cells are selected that will normalize to the desired output.
+		// Once a cell has been selected, the expected output is predetermined.
+		// We then make sure that cells are selected that will normalize to
+		// the desired output.
 		*expected = append(*expected, id)
 		selected = true
-
 	}
 
 	// With the rnd.OneIn() constants below, this function adds an average
@@ -340,6 +343,7 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 		*input = append(*input, id)
 		added = true
 	}
+
 	numChildren := 0
 	for child := id.ChildBegin(); child != id.ChildEnd(); child = child.Next() {
 		// If the cell is selected, on average we recurse on 4/12 = 1/3 child.
@@ -360,20 +364,23 @@ func addCells(id CellID, selected bool, input *[]CellID, expected *[]CellID, t *
 			addCells(child, selected, input, expected, t)
 			numChildren++
 		}
+
 		// If this cell was selected but the cell itself was not added, we
 		// must ensure that all 4 children (or some combination of their
 		// descendants) are added.
-
 		if selected && !added {
 			addCells(child, selected, input, expected, t)
 		}
 	}
 }
 
+// TODO(rsned): This test has been split out into several smaller test cases in C++.
+// It might make sense to refactor this to stay more inline with what's current.
 func TestCellUnionNormalizePseudoRandom(t *testing.T) {
-	// About 2.4% flaky with a random seed.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(2)
+	// TODO(rsned): https://github.com/golang/geo/issues/120
+	// Test is still flaky without a fixed seed. Specify one for now until
+	// issue 120 is fully resolved.
+	random = rand.New(rand.NewSource(1))
 
 	// Try a bunch of random test cases, and keep track of average statistics
 	// for normalization (to see if they agree with the analysis above).
@@ -382,7 +389,7 @@ func TestCellUnionNormalizePseudoRandom(t *testing.T) {
 	outSum := 0
 	iters := 2000
 
-	for i := 0; i < iters; i++ {
+	for range iters {
 		input := []CellID{}
 		expected := []CellID{}
 		addCells(CellID(0), false, &input, &expected, t)
@@ -716,7 +723,7 @@ func TestCellUnionLeafCellsCovered(t *testing.T) {
 }
 
 func TestCellUnionFromRange(t *testing.T) {
-	for iter := 0; iter < 2000; iter++ {
+	for range 2000 {
 		min := randomCellIDForLevel(MaxLevel)
 		max := randomCellIDForLevel(MaxLevel)
 		if min > max {
@@ -771,7 +778,7 @@ func TestCellUnionFromRange(t *testing.T) {
 
 func TestCellUnionFromUnionDiffIntersection(t *testing.T) {
 	const iters = 2000
-	for i := 0; i < iters; i++ {
+	for range iters {
 		input := []CellID{}
 		expected := []CellID{}
 		addCells(CellID(0), false, &input, &expected, t)
@@ -812,7 +819,7 @@ func TestCellUnionFromUnionDiffIntersection(t *testing.T) {
 			u := CellUnionFromIntersectionWithCellID(xcells, yid)
 			for _, xid := range xcells {
 				if xid.Contains(yid) {
-					if !(len(u) == 1 && u[0] == yid) {
+					if !(len(u) == 1 && u[0] == yid) { // nolint staticcheck - DeMorgan's doesn't work here.
 						t.Errorf("CellUnionFromIntersectionWithCellID(%v, %v) = %v with len: %d, want len of 1.", xcells, yid, u, len(u))
 					}
 				} else if yid.Contains(xid) {
@@ -873,7 +880,7 @@ func cellUnionDistanceFromAxis(cu CellUnion, axis Point) float64 {
 	var maxDist float64
 	for _, cid := range cu {
 		cell := CellFromCellID(cid)
-		for j := 0; j < 4; j++ {
+		for j := range 4 {
 			a := cell.Vertex(j)
 			b := cell.Vertex((j + 1) & 3)
 			var dist float64
@@ -901,7 +908,7 @@ func TestCellUnionExpand(t *testing.T) {
 	// the coverings by a random radius, and then make sure that the new
 	// covering covers the expanded cap.  It also makes sure that the
 	// new covering is not too much larger than expected.
-	for i := 0; i < 5000; i++ {
+	for range 5000 {
 		rndCap := randomCap(AvgAreaMetric.Value(MaxLevel), 4*math.Pi)
 
 		// Expand the cap area by a random factor whose log is uniformly
@@ -927,9 +934,9 @@ func TestCellUnionExpand(t *testing.T) {
 		// that figures out an appropriate cell level to use for the expansion.
 		minLevel := MaxLevel
 		for _, cid := range covering {
-			minLevel = minInt(minLevel, cid.Level())
+			minLevel = min(minLevel, cid.Level())
 		}
-		expandLevel := minInt(minLevel+maxLevelDiff, MinWidthMetric.MaxLevel(radius))
+		expandLevel := min(minLevel+maxLevelDiff, MinWidthMetric.MaxLevel(radius))
 
 		// Generate a covering for the expanded cap, and measure the new maximum
 		// distance from the cap center to any point in the covering.
@@ -952,7 +959,7 @@ func TestCellUnionExpand(t *testing.T) {
 // invalid value is used as the ID, then all faces are checked.
 func checkCellUnionCovering(t *testing.T, r Region, covering CellUnion, checkTight bool, id CellID) {
 	if !id.IsValid() {
-		for face := 0; face < 6; face++ {
+		for face := range 6 {
 			checkCellUnionCovering(t, r, covering, checkTight, CellIDFromFace(face))
 		}
 		return
@@ -1058,4 +1065,40 @@ func BenchmarkCellUnionFromRange(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		CellUnionFromRange(x, y)
 	}
+}
+
+// go test -fuzz=FuzzDecodeCellUnion github.com/golang/geo/s2
+func FuzzDecodeCellUnion(f *testing.F) {
+	cu := CellUnion([]CellID{
+		CellID(0x33),
+		CellID(0x8e3748fab),
+		CellID(0x91230abcdef83427),
+	})
+	buf := new(bytes.Buffer)
+	if err := cu.Encode(buf); err != nil {
+		f.Errorf("error encoding %v: ", err)
+	}
+	f.Add(buf.Bytes())
+
+	f.Fuzz(func(t *testing.T, encoded []byte) {
+		var c CellUnion
+		if err := c.Decode(bytes.NewReader(encoded)); err != nil {
+			// Construction failed, no need to test further.
+			return
+		}
+		if got := c.ApproxArea(); got < 0 {
+			t.Errorf("ApproxArea() = %v, want >= 0. CellUnion: %v", got, c)
+		}
+		buf := new(bytes.Buffer)
+		if err := c.Encode(buf); err != nil {
+			// Re-encoding the cell union does not necessarily produce the same bytes, as there could be additional bytes following after n cells were read.
+			t.Errorf("encode() = %v. got %v, want %v. CellUnion: %v", err, buf.Bytes(), encoded, c)
+		}
+		if c.IsValid() {
+			c.Normalize()
+			if !c.IsNormalized() {
+				t.Errorf("IsNormalized() = false, want true. CellUnion: %v", c)
+			}
+		}
+	})
 }

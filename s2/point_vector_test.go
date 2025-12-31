@@ -15,7 +15,6 @@
 package s2
 
 import (
-	"math/rand"
 	"testing"
 )
 
@@ -43,13 +42,10 @@ func TestPointVectorEmpty(t *testing.T) {
 }
 
 func TestPointVectorBasics(t *testing.T) {
-	const seed = 8675309
-	rand.Seed(seed)
-
 	const numPoints = 100
 	var p PointVector = make([]Point, numPoints)
 
-	for i := 0; i < numPoints; i++ {
+	for i := range numPoints {
 		p[i] = randomPoint()
 	}
 
@@ -70,8 +66,7 @@ func TestPointVectorBasics(t *testing.T) {
 		t.Errorf("shape.IsFull() = true, want false")
 	}
 
-	rand.Seed(seed)
-	for i := 0; i < numPoints; i++ {
+	for i := range numPoints {
 		if got, want := shape.Chain(i).Start, i; got != want {
 			t.Errorf("shape.Chain(%d).Start = %d, want %d", i, got, want)
 		}
@@ -79,7 +74,7 @@ func TestPointVectorBasics(t *testing.T) {
 			t.Errorf("shape.Chain(%d).Length = %v, want %d", i, got, want)
 		}
 		edge := shape.Edge(i)
-		pt := randomPoint()
+		pt := p[i]
 
 		if !pt.ApproxEqual(edge.V0) {
 			t.Errorf("shape.Edge(%d).V0 = %v, want %v", i, edge.V0, pt)
@@ -89,3 +84,7 @@ func TestPointVectorBasics(t *testing.T) {
 		}
 	}
 }
+
+// TODO(rsned): Differences from C++
+// TEST(S2PointVectorShape, ChainIteratorWorks) {
+// TEST(S2PointVectorShape, ChainVertexIteratorWorks) {

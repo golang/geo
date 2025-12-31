@@ -1,0 +1,82 @@
+version: "2"
+linters:
+  enable:
+    # Commented entries here are not enabled by default, but that we should
+    # add once the relevant lines are fixed up.
+    
+    - errorlint
+    - exhaustive
+    # - exhaustruct # found some structs which missed fields in initializing.
+    - inamedparam
+    # - makezero  # fix the unallocated elements.
+    # - misspell  # fix spelling
+    # - nlreturn  # fix these missing blank line
+    # - nonamedreturns  # found some shadowing
+    # - predeclared  # found some shadowing
+    # - revive  # detects a number of good fixes
+    # - thelper  # fix test methods with t.Testing not as first param
+    - unconvert
+    # - wastedassign  # fix and enable
+    # - whitespacew  # fix and enable
+  disable:
+    # A number of these checks run by default so they are explicitly
+    # disabled here. 
+    #
+    # Other of these checks are disabled by default, but we want to
+    # comment on why we plan to keep them excluded going forward.
+    #
+    # TODO(rsned): Move the checks to enable: once the flagged 
+    # problems are resolved for each check.
+    # https://github.com/golang/geo/issues/145
+   
+    # Enable once we reduce the cleverness with unicode chars.
+    # Identifier "ε" contain non-ASCII character: U+03B5 'ε' 
+    - asciicheck
+    # TODO(rsned): This should be enabled once we define the appropriate
+    # list of acceptable external imports.  (e.g. should only be trusted
+    # verifiable sources)
+    - depguard  
+    # Enable once we fix the detected doubled words.
+    # e.g. Duplicate words (bound) found (dupword)
+    #      // 3. Best asymptotic bound: This bound bound is derived by
+    - dupword
+    # Enable once outstanding lint bugs are fixed.
+    - errcheck     
+    # This check is not necessary as we only use types internally that we
+    # fully control so we do not expect type assertion failures.
+    - forcetypeassert 
+    # Enable once these are fixed.
+    # goconst found a few instances where repeated values could be const-ified.
+    - goconst
+    # Enable once these are fixed. 
+    # gocritic suggests a number of code cleanups to be implemented.
+    - gocritic
+    # There are too many package globals constants and types used in s2.
+    # (lookup tables and such)
+    - gochecknoglobals
+    # Enable once these are all fixed.
+    # gosec detects a bunch of unsafe integer conversions.
+    - gosec
+    # This triggers on many many of the math values chosen by S2.
+    # e.g., Magic number: 2, in <argument> detected (mnd)
+    #     math.Remainder(i.Lo-margin, 2*math.Pi),
+    # Not clear if these are every likely to be all fixed so leave
+    # this check disabled.
+    # TODO(rsned): Enable manually once in a while to look for any
+    # actually fixable cases.
+    - mnd          
+    # Triggers on most tests for failing to call paralleltest.
+    # We don't have a need to use this so keep it disabled.
+    - paralleltest 
+    # This triggers on every _test file saying they should be separate
+    # parallel packages e.g. s2->s2_test package. We do not plan to ever
+    # reshuffle the tests into a separate package.
+    - testpackage 
+    # This triggers on many parts written in advance of the code that
+    # actually calls them.  It may occasionally find some real unused
+    # code so running it by hand once in while could be useful.
+    - unused      
+formatters:
+  enable:
+    - gofmt
+    - goimports

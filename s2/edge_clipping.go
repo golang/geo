@@ -564,7 +564,7 @@ func FaceSegments(a, b Point) []FaceSegment {
 		// Complete the current segment by finding the point where AB
 		// exits the current face.
 		z := faceXYZtoUVW(face, ab)
-		n := pointUVW{z.Vector}
+		n := pointUVW(z)
 
 		exitAxis := n.exitAxis()
 		segment.b = n.exitPoint(exitAxis)
@@ -605,7 +605,7 @@ func moveOriginToValidFace(face int, a, ab Point, aUV r2.Point) (int, r2.Point) 
 
 	// Otherwise check whether the normal AB even intersects this face.
 	z := faceXYZtoUVW(face, ab)
-	n := pointUVW{z.Vector}
+	n := pointUVW(z)
 	if n.intersectsFace() {
 		// Check whether the point where the line AB exits this face is on the
 		// wrong side of A (by more than the acceptable error tolerance).

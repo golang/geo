@@ -154,6 +154,8 @@ func (e *EdgeCrosser) EdgeOrVertexChainCrossing(d Point) bool {
 		return false
 	case Cross:
 		return true
+	case MaybeCross:
+		// fall through
 	}
 	return VertexCrossing(e.a, e.b, c, d)
 }

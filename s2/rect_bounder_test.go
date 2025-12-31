@@ -112,7 +112,7 @@ func TestRectBounderMaxLatitudeRandom(t *testing.T) {
 	// 3 * dblEpsilon (the expected maximum error). We concentrate on maximum
 	// latitudes near the equator and north pole since these are the extremes.
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		// Construct a right-handed coordinate frame (U,V,W) such that U points
 		// slightly above the equator, V points at the equator, and W is slightly
 		// offset from the north pole.

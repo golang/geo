@@ -1,4 +1,6 @@
-# Overview
+# S2 geometry library in Go
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/golang/geo.svg)](https://pkg.go.dev/github.com/golang/geo) [![Go Build and Test](https://github.com/golang/geo/actions/workflows/go.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/go.yml) [![CodeQL](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/golang/geo/actions/workflows/github-code-scanning/codeql) [![golangci-lint](https://github.com/golang/geo/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/golang/geo/actions/workflows/golangci-lint.yml) [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/golang/geo?label=OpenSSF%20Scorecard&style=flat)](https://scorecard.dev/viewer/?uri=github.com/golang/geo)
 
 S2 is a library for spherical geometry that aims to have the same robustness,
 flexibility, and performance as the best planar geometry libraries.
@@ -44,6 +46,9 @@ The library provides the following:
     as collections of discrete "S2 cells". This feature makes it easy to build
     large distributed spatial indexes.
 
+*   Translate angles and steradians into distances and areas using earth's radius
+    through the [`earth`](https://pkg.go.dev/github.com/golang/geo/earth) package.
+
 On the other hand, the following are outside the scope of S2:
 
 *   Planar geometry.
@@ -79,8 +84,6 @@ to geography are not part of the core library (e.g. easting/northing
 conversions, ellipsoid approximations, geodetic vs. geocentric coordinates,
 etc).
 
-See http://godoc.org/github.com/golang/geo for specific package documentation.
-
 For an analogous library in C++, see https://github.com/google/s2geometry, in
 Java, see https://github.com/google/s2-geometry-library-java, and Python, see
 https://github.com/google/s2geometry/tree/master/src/python
@@ -98,20 +101,20 @@ Legend:
 *   🟡 - Mostly Complete
 *   ❌ - Not available
 
-## [ℝ¹](https://godoc.org/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
+## [ℝ¹](https://pkg.go.dev/github.com/golang/geo/r1) - One-dimensional Cartesian coordinates
 
 C++ Type   | Go
 :--------- | ---
 R1Interval | ✅
 
-## [ℝ²](https://godoc.org/github.com/golang/geo/r2) - Two-dimensional Cartesian coordinates
+## [ℝ²](https://pkg.go.dev/github.com/golang/geo/r2) - Two-dimensional Cartesian coordinates
 
 C++ Type | Go
 :------- | ---
 R2Point  | ✅
 R2Rect   | ✅
 
-## [ℝ³](https://godoc.org/github.com/golang/geo/r3) - Three-dimensional Cartesian coordinates
+## [ℝ³](https://pkg.go.dev/github.com/golang/geo/r3) - Three-dimensional Cartesian coordinates
 
 C++ Type      | Go
 :------------ | ---
@@ -119,7 +122,7 @@ R3Vector      | ✅
 R3ExactVector | ✅
 Matrix3x3     | ✅
 
-## [S¹](https://godoc.org/github.com/golang/geo/s1) - Circular Geometry
+## [S¹](https://pkg.go.dev/github.com/golang/geo/s1) - Circular Geometry
 
 C++ Type     | Go
 :----------- | ---
@@ -127,7 +130,7 @@ S1Angle      | ✅
 S1ChordAngle | ✅
 S1Interval   | ✅
 
-## [S²](https://godoc.org/github.com/golang/geo/s2) - Spherical Geometry
+## [S²](https://pkg.go.dev/github.com/golang/geo/s2) - Spherical Geometry
 
 ### Basic Types
 
@@ -193,6 +196,7 @@ S2ConvexHull         | ✅
 S2CrossingEdge       | ✅
 S2HausdorffDistance  | ❌
 S2ShapeNesting       | ❌
+S2ValidationQuery    | ❌
 
 ### Supporting Types
 
@@ -201,32 +205,37 @@ C++ Type                         | Go
 S2BooleanOperation               | ❌
 S2BufferOperation                | ❌
 S2Builder                        | ❌
-S2BuilderClosedSetNormalizer     | ❌
-S2BuilderFindPolygonDegeneracies | ❌
 S2BuilderGraph                   | ❌
-S2BuilderLayers                  | ❌
-S2BuilderSnapFunctions           | ❌
-S2BuilderTesting                 | ❌
-S2Builderutil\*                  | ❌
+S2BuilderLayer                   | ❌
+S2BuilderUtil_\*                 | ❌
+S2CellIterator                   | ❌
+S2CellIteratorJoin               | ❌
+S2CellRangeIterator              | ❌
 S2Coder                          | ❌
+S2Earth                          | ✅
 S2EdgeClipping                   | ✅
 S2EdgeCrosser                    | ✅
 S2EdgeCrossings                  | ✅
 S2EdgeDistances                  | ✅
 S2EdgeTessellator                | ✅
+S2Fractal                        | ❌
 S2LoopMeasures                   | ❌
 S2Measures                       | ✅
 S2MemoryTracker                  | ❌
 S2Metrics                        | ❌
 S2PointUtil                      | 🟡
+S2PointCompression               | 🟡
 S2PolygonBuilder                 | ❌
 S2PolylineAlignment              | ❌
 S2PolylineMeasures               | ✅
 S2PolylineSimplifier             | ❌
 S2Predicates                     | ✅
 S2Projections                    | ❌
-S2rectBounder                    | ❌
+S2Random                         | ❌
+S2RectBounder                    | ❌
+S2RegionSharder                  | ❌
 S2RegionTermIndexer              | ❌
+S2ShapeIndexBufferedRegion       | ❌
 S2ShapeIndexMeasures             | ❌
 S2ShapeIndexUtil\*               | 🟡
 S2ShapeMeasures                  | ❌
@@ -237,7 +246,13 @@ S2TextFormat                     | ✅
 S2WedgeRelations                 | ✅
 S2WindingOperation               | ❌
 
+
 ### Encode/Decode
 
 Encoding and decoding of S2 types is fully implemented and interoperable with
 C++ and Java.
+
+
+## Disclaimer
+
+This is not an official Google product.

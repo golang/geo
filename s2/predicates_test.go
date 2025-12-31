@@ -252,10 +252,13 @@ func TestPredicatesRobustSign(t *testing.T) {
 				test.p1, test.p2, test.p3, test.p2, test.p3, test.p1, rotated, result)
 		}
 		// Test RobustSign(c,b,a) == -RobustSign(a,b,c) for all a,b,c
-		want := Clockwise
-		if result == Clockwise {
+		var want Direction
+		switch result {
+		case CounterClockwise:
+			want = Clockwise
+		case Clockwise:
 			want = CounterClockwise
-		} else if result == Indeterminate {
+		case Indeterminate:
 			want = Indeterminate
 		}
 		reversed := RobustSign(test.p3, test.p2, test.p1)
@@ -303,7 +306,7 @@ func TestPredicatesStableSignFailureRate(t *testing.T) {
 	// by counting up the times it returns Indeterminate.
 	failureCount := 0
 	m := math.Tan(spacing / earthRadiusKm)
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		f := randomFrame()
 		a := f.col(0)
 		x := f.col(1)
@@ -883,7 +886,7 @@ func testCompareDistancesConsistency(t *testing.T, x, a, b Point, distFunc compa
 }
 
 // choosePointNearPlaneOrAxes returns a random Point that is often near the
-// intersection of one of the coodinates planes or coordinate axes with the unit
+// intersection of one of the coordinates planes or coordinate axes with the unit
 // sphere. (It is possible to represent very small perturbations near such points.)
 func choosePointNearPlaneOrAxes() Point {
 	p := randomPoint()
@@ -916,7 +919,7 @@ func TestPredicatesCompareDistancesConsistency(t *testing.T) {
 		t.Errorf("CompareDistances with 2 equidistant points didn't use symbolic compare, got %q want %q", got, want)
 	}
 
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		x := choosePointNearPlaneOrAxes()
 		dir := choosePointNearPlaneOrAxes()
 		r := s1.Angle(math.Pi / 2 * math.Pow(1e-30, randomFloat64()))
@@ -957,7 +960,7 @@ func TestPredicatesCompareDistanceConsistency(t *testing.T) {
 	// comments in the CompareDistances consistency test.
 	const iters = 1000
 
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		x := choosePointNearPlaneOrAxes()
 		dir := choosePointNearPlaneOrAxes()
 		r := s1.Angle(math.Pi / 2 * math.Pow(1e-30, randomFloat64()))
@@ -1039,7 +1042,7 @@ func TestPredicatesSignDotProd(t *testing.T) {
 	for _, test := range tests {
 		got := SignDotProd(test.a, test.b)
 		if got != test.want {
-			t.Errorf("SignDotProd(%+v, %+v) = %d, wnat %d", test.a, test.b, got, test.want)
+			t.Errorf("SignDotProd(%+v, %+v) = %d, want %d", test.a, test.b, got, test.want)
 		}
 
 		gotPrec := "EXACT"

@@ -124,7 +124,7 @@ func (c Cell) VertexRaw(k int) Point {
 	return Point{faceUVToXYZ(int(c.face), c.uv.Vertices()[k].X, c.uv.Vertices()[k].Y)}
 }
 
-// Edge returns the nomalized inward-facing normal of the great circle passing through
+// Edge returns the normalized inward-facing normal of the great circle passing through
 // the CCW ordered edge from vertex k to vertex k+1 (mod 4) (for k = 0,1,2,3)
 func (c Cell) Edge(k int) Point {
 	return Point{c.EdgeRaw(k).Normalize()}
@@ -223,7 +223,7 @@ func (c Cell) Children() ([4]Cell, bool) {
 
 	// Create four children with the appropriate bounds.
 	cid := c.id.ChildBegin()
-	for pos := 0; pos < 4; pos++ {
+	for pos := range 4 {
 		children[pos] = Cell{
 			face:        c.face,
 			level:       c.level + 1,
@@ -305,7 +305,7 @@ func (c Cell) ContainsCell(oc Cell) bool {
 
 // CellUnionBound computes a covering of the Cell.
 func (c Cell) CellUnionBound() []CellID {
-	return c.CapBound().CellUnionBound()
+	return []CellID{c.id}
 }
 
 // latitude returns the latitude of the cell vertex in radians given by (i,j),
@@ -446,7 +446,7 @@ func (c Cell) CapBound() Cap {
 	// to GetCenter() and faster to compute.  Neither one of these vectors yields the
 	// bounding cap with minimal surface area, but they are both pretty close.
 	cap := CapFromPoint(Point{faceUVToXYZ(int(c.face), c.uv.Center().X, c.uv.Center().Y).Normalize()})
-	for k := 0; k < 4; k++ {
+	for k := range 4 {
 		cap = cap.AddPoint(c.Vertex(k))
 	}
 	return cap
@@ -484,8 +484,9 @@ func (c Cell) ContainsPoint(p Point) bool {
 	//
 	// is always true. To do this, we need to account for the error when
 	// converting from (u,v) coordinates to (s,t) coordinates. In the
-	// normal case the total error is at most dblEpsilon.
-	return c.uv.ExpandedByMargin(dblEpsilon).ContainsPoint(uv)
+	// normal case the total error is at most 1.125 * dblEpsilon.
+	// See https://github.com/google/s2geometry/issues/463.
+	return c.uv.ExpandedByMargin((1.125 + dblEpsilon) * dblEpsilon).ContainsPoint(uv)
 }
 
 // Encode encodes the Cell.
@@ -622,7 +623,7 @@ func (c Cell) distanceInternal(targetXYZ Point, toInterior bool) s1.ChordAngle {
 		// arbitrary quadrilaterals after they are projected onto the sphere.
 		// Therefore the simplest approach is just to find the minimum distance to
 		// any of the four edges.
-		return minChordAngle(edgeDistance(-dir00, c.uv.X.Lo),
+		return min(edgeDistance(-dir00, c.uv.X.Lo),
 			edgeDistance(dir01, c.uv.X.Hi),
 			edgeDistance(-dir10, c.uv.Y.Lo),
 			edgeDistance(dir11, c.uv.Y.Hi))
@@ -633,7 +634,7 @@ func (c Cell) distanceInternal(targetXYZ Point, toInterior bool) s1.ChordAngle {
 	// tests above, because (1) the edges don't meet at right angles and (2)
 	// there are points on the far side of the sphere that are both above *and*
 	// below the cell, etc.
-	return minChordAngle(c.vertexChordDist2(target, false, false),
+	return min(c.vertexChordDist2(target, false, false),
 		c.vertexChordDist2(target, true, false),
 		c.vertexChordDist2(target, false, true),
 		c.vertexChordDist2(target, true, true))
@@ -651,7 +652,7 @@ func (c Cell) MaxDistance(target Point) s1.ChordAngle {
 	// First check the 4 cell vertices.  If all are within the hemisphere
 	// centered around target, the max distance will be to one of these vertices.
 	targetUVW := faceXYZtoUVW(int(c.face), target)
-	maxDist := maxChordAngle(c.vertexChordDist2(targetUVW, false, false),
+	maxDist := max(c.vertexChordDist2(targetUVW, false, false),
 		c.vertexChordDist2(targetUVW, true, false),
 		c.vertexChordDist2(targetUVW, false, true),
 		c.vertexChordDist2(targetUVW, true, true))
@@ -685,14 +686,14 @@ func (c Cell) DistanceToEdge(a, b Point) s1.ChordAngle {
 
 	// First, check the minimum distance to the edge endpoints A and B.
 	// (This also detects whether either endpoint is inside the cell.)
-	minDist := minChordAngle(c.Distance(a), c.Distance(b))
+	minDist := min(c.Distance(a), c.Distance(b))
 	if minDist == 0 {
 		return minDist
 	}
 
 	// Otherwise, check whether the edge crosses the cell boundary.
 	crosser := NewChainEdgeCrosser(a, b, c.Vertex(3))
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if crosser.ChainCrossingSign(c.Vertex(i)) != DoNotCross {
 			return 0
 		}
@@ -705,7 +706,7 @@ func (c Cell) DistanceToEdge(a, b Point) s1.ChordAngle {
 	// Note that we don't need to check the distance from the interior of AB to
 	// the interior of a cell edge, because the only way that this distance can
 	// be minimal is if the two edges cross (already checked above).
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		minDist, _ = UpdateMinDistance(c.Vertex(i), a, b, minDist)
 	}
 	return minDist
@@ -717,7 +718,7 @@ func (c Cell) MaxDistanceToEdge(a, b Point) s1.ChordAngle {
 	// If the maximum distance from both endpoints to the cell is less than π/2
 	// then the maximum distance from the edge to the cell is the maximum of the
 	// two endpoint distances.
-	maxDist := maxChordAngle(c.MaxDistance(a), c.MaxDistance(b))
+	maxDist := max(c.MaxDistance(a), c.MaxDistance(b))
 	if maxDist <= s1.RightChordAngle {
 		return maxDist
 	}
@@ -743,13 +744,13 @@ func (c Cell) DistanceToCell(target Cell) s1.ChordAngle {
 	// the set of possible closest vertex/edge pairs using the faces and (u,v)
 	// ranges of both cells.
 	var va, vb [4]Point
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		va[i] = c.Vertex(i)
 		vb[i] = target.Vertex(i)
 	}
 	minDist := s1.InfChordAngle()
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
+	for i := range 4 {
+		for j := range 4 {
 			minDist, _ = UpdateMinDistance(va[i], vb[j], vb[(j+1)&3], minDist)
 			minDist, _ = UpdateMinDistance(vb[i], va[j], va[(j+1)&3], minDist)
 		}
@@ -776,13 +777,13 @@ func (c Cell) MaxDistanceToCell(target Cell) s1.ChordAngle {
 	// always attained between a pair of vertices, and this could be made much
 	// faster by testing each vertex pair once rather than the current 4 times.
 	var va, vb [4]Point
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		va[i] = c.Vertex(i)
 		vb[i] = target.Vertex(i)
 	}
 	maxDist := s1.NegativeChordAngle
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
+	for i := range 4 {
+		for j := range 4 {
 			maxDist, _ = UpdateMaxDistance(va[i], vb[j], vb[(j+1)&3], maxDist)
 			maxDist, _ = UpdateMaxDistance(vb[i], va[j], va[(j+1)&3], maxDist)
 		}

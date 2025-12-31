@@ -118,7 +118,7 @@ func TestChordAngleSuccessor(t *testing.T) {
 		t.Errorf("InfChordAngle.Successor() = %v, want %v", got, want)
 	}
 	x := NegativeChordAngle
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if x >= x.Successor() {
 			t.Errorf("%d. %0.24f >= %0.24f.Successor() = %0.24f, want <", i, x, x, x.Successor())
 		}
@@ -137,7 +137,7 @@ func TestChordAnglePredecessor(t *testing.T) {
 		t.Errorf("NegativeChordAngle.Predecessor() = %v, want %v", got, want)
 	}
 	x := InfChordAngle()
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		if x <= x.Predecessor() {
 			t.Errorf("%v <= %v.Predecessor() = %v, want <", x, x, x.Predecessor())
 		}

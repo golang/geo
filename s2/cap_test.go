@@ -281,7 +281,7 @@ func TestCapRadiusToHeight(t *testing.T) {
 		{4.0 * s1.Radian, fullHeight},
 	}
 	for _, test := range tests {
-		// float64Eq comes from s2latlng_test.go
+		// float64Eq comes from latlng_test.go
 		if got := radiusToHeight(test.got); !float64Eq(got, test.want) {
 			t.Errorf("radiusToHeight(%v) = %v; want %v", test.got, got, test.want)
 		}
@@ -453,7 +453,7 @@ func TestCapAddCap(t *testing.T) {
 
 func TestCapContainsCell(t *testing.T) {
 	faceRadius := math.Atan(math.Sqrt2)
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		// The cell consisting of the entire face.
 		rootCell := CellFromCellID(CellIDFromFace(face))
 
@@ -480,14 +480,14 @@ func TestCapContainsCell(t *testing.T) {
 			}
 		}
 
-		for capFace := 0; capFace < 6; capFace++ {
+		for capFace := range 6 {
 			// A cap that barely contains all of capFace.
 			center := unitNorm(capFace)
 			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+epsilon))
 			if got, want := covering.ContainsCell(rootCell), capFace == face; got != want {
 				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", covering, rootCell, got, want)
 			}
-			if got, want := covering.ContainsCell(edgeCell), center.Vector.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
+			if got, want := covering.ContainsCell(edgeCell), center.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
 				t.Errorf("Cap(%v).ContainsCell(%v) = %t; want = %t", covering, edgeCell, got, want)
 			}
 			if got, want := covering.ContainsCell(edgeCell), covering.IntersectsCell(edgeCell); got != want {
@@ -514,7 +514,7 @@ func TestCapContainsCell(t *testing.T) {
 
 func TestCapIntersectsCell(t *testing.T) {
 	faceRadius := math.Atan(math.Sqrt2)
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		// The cell consisting of the entire face.
 		rootCell := CellFromCellID(CellIDFromFace(face))
 
@@ -542,7 +542,7 @@ func TestCapIntersectsCell(t *testing.T) {
 		}
 
 		antiFace := (face + 3) % 6
-		for capFace := 0; capFace < 6; capFace++ {
+		for capFace := range 6 {
 			// A cap that barely contains all of capFace.
 			center := unitNorm(capFace)
 			covering := CapFromCenterAngle(center, s1.Angle(faceRadius+epsilon))
@@ -552,7 +552,7 @@ func TestCapIntersectsCell(t *testing.T) {
 			if got, want := covering.IntersectsCell(edgeCell), covering.ContainsCell(edgeCell); got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", covering, edgeCell, got, want)
 			}
-			if got, want := covering.IntersectsCell(cornerCell), center.Vector.Dot(cornerCell.id.Point().Vector) > 0; got != want {
+			if got, want := covering.IntersectsCell(cornerCell), center.Dot(cornerCell.id.Point().Vector) > 0; got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", covering, cornerCell, got, want)
 			}
 
@@ -561,7 +561,7 @@ func TestCapIntersectsCell(t *testing.T) {
 			if got, want := bulging.IntersectsCell(rootCell), capFace != antiFace; got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", bulging, rootCell, got, want)
 			}
-			if got, want := bulging.IntersectsCell(edgeCell), center.Vector.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
+			if got, want := bulging.IntersectsCell(edgeCell), center.Dot(edgeCell.id.Point().Vector) > 0.1; got != want {
 				t.Errorf("Cap(%v).IntersectsCell(%v) = %t; want = %t", bulging, edgeCell, got, want)
 			}
 			if bulging.IntersectsCell(cornerCell) {
@@ -593,7 +593,7 @@ func TestCapCentroid(t *testing.T) {
 	}
 
 	// Random caps.
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		center := randomPoint()
 		height := randomUniformFloat64(0.0, 2.0)
 		c := CapFromCenterHeight(center, height)

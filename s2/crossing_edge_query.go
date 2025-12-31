@@ -62,7 +62,7 @@ func (c *CrossingEdgeQuery) Crossings(a, b Point, shape Shape, crossType Crossin
 	out := 0
 	n := len(edges)
 
-	for in := 0; in < n; in++ {
+	for in := range n {
 		b := shape.Edge(edges[in])
 		sign := crosser.CrossingSign(b.V0, b.V1)
 		if crossType == CrossingTypeAll && (sign == MaybeCross || sign == Cross) || crossType != CrossingTypeAll && sign == Cross {
@@ -97,7 +97,7 @@ func (c *CrossingEdgeQuery) CrossingsEdgeMap(a, b Point, crossType CrossingType)
 	for shape, edges := range edgeMap {
 		out := 0
 		n := len(edges)
-		for in := 0; in < n; in++ {
+		for in := range n {
 			edge := shape.Edge(edges[in])
 			sign := crosser.CrossingSign(edge.V0, edge.V1)
 			if (crossType == CrossingTypeAll && (sign == MaybeCross || sign == Cross)) || (crossType != CrossingTypeAll && sign == Cross) {
@@ -128,7 +128,7 @@ func (c *CrossingEdgeQuery) candidates(a, b Point, shape Shape) []int {
 	maxEdges := shape.NumEdges()
 	if maxEdges <= maxBruteForceEdges {
 		edges = make([]int, maxEdges)
-		for i := 0; i < maxEdges; i++ {
+		for i := range maxEdges {
 			edges[i] = i
 		}
 		return edges
@@ -277,16 +277,20 @@ func (c *CrossingEdgeQuery) getCellsForEdge(a, b Point) {
 		//  3. edgeRoot does not intersect any index cells. In this case there
 		//     is nothing to do.
 		relation := c.iter.LocateCellID(edgeRoot)
-		if relation == Indexed {
-			// edgeRoot is an index cell or is contained by an index cell (case 1).
+		switch relation {
+		case Indexed:
+			// edgeRoot is an index cell or is contained by an
+			// index cell (case 1).
 			c.cells = append(c.cells, c.iter.IndexCell())
-		} else if relation == Subdivided {
-			// edgeRoot is subdivided into one or more index cells (case 2). We
-			// find the cells intersected by AB using recursive subdivision.
+		case Subdivided:
+			// edgeRoot is subdivided into one or more index cells
+			// (case 2). We find the cells intersected by AB using
+			// recursive subdivision.
 			if !edgeRoot.isFace() {
 				pcell = PaddedCellFromCellID(edgeRoot, 0)
 			}
 			c.computeCellsIntersected(pcell, edgeBound)
+		case Disjoint:
 		}
 	}
 }

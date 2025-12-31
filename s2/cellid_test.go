@@ -15,6 +15,7 @@
 package s2
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"testing"
@@ -24,7 +25,7 @@ import (
 )
 
 func TestCellIDFromFace(t *testing.T) {
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		fpl := CellIDFromFacePosLevel(face, 0, 0)
 		f := CellIDFromFace(face)
 		if fpl != f {
@@ -288,7 +289,7 @@ func dedupCellIDs(ids []CellID) []CellID {
 func TestCellIDAllNeighbors(t *testing.T) {
 	// Check that AllNeighbors produces results that are consistent
 	// with VertexNeighbors for a bunch of random cells.
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		id := randomCellID()
 		if id.IsLeaf() {
 			id = id.immediateParent()
@@ -296,7 +297,7 @@ func TestCellIDAllNeighbors(t *testing.T) {
 
 		// testAllNeighbors computes approximately 2**(2*(diff+1)) cell ids,
 		// so it's not reasonable to use large values of diff.
-		maxDiff := minInt(6, MaxLevel-id.Level()-1)
+		maxDiff := min(6, MaxLevel-id.Level()-1)
 		level := id.Level() + randomUniformInt(maxDiff)
 
 		// We compute AllNeighbors, and then add in all the children of id
@@ -320,6 +321,19 @@ func TestCellIDAllNeighbors(t *testing.T) {
 		if !reflect.DeepEqual(all, want) {
 			t.Errorf("%v.AllNeighbors(%d) = %v, want %v", id, level, all, want)
 		}
+	}
+}
+
+func TestCellIDAllNeighborsBadLevels(t *testing.T) {
+	ci := CellIDFromLatLng(LatLngFromDegrees(47.38, 8.54)).Parent(29)
+	if got := ci.AllNeighbors(-1); got != nil {
+		t.Errorf("AllNeighbors(%v) = %v, want nil", -1, got)
+	}
+	if got := ci.AllNeighbors(28); got != nil {
+		t.Errorf("AllNeighbors(%v) = %v, want nil", 28, got)
+	}
+	if got := ci.AllNeighbors(31); got != nil {
+		t.Errorf("AllNeighbors(%v) = %v, want nil", 31, got)
 	}
 }
 
@@ -869,13 +883,13 @@ func projectToBoundary(u, v float64, rect r2.Rect) r2.Point {
 
 func TestCellIDExpandedByDistanceUV(t *testing.T) {
 	const maxDistDegrees = 10
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		id := randomCellID()
 		distance := s1.Degree * s1.Angle(randomUniformFloat64(-maxDistDegrees, maxDistDegrees))
 
 		bound := id.boundUV()
 		expanded := expandedByDistanceUV(bound, distance)
-		for iter := 0; iter < 10; iter++ {
+		for range 10 {
 			// Choose a point on the boundary of the rectangle.
 			face := randomUniformInt(6)
 			centerU, centerV := sampleBoundary(bound)
@@ -918,7 +932,7 @@ func TestCellIDExpandedByDistanceUV(t *testing.T) {
 
 func TestCellIDMaxTile(t *testing.T) {
 	// This method is also tested more thoroughly in s2cellunion_test.
-	for iter := 0; iter < 1000; iter++ {
+	for range 1000 {
 		id := randomCellIDForLevel(10)
 
 		// Check that limit is returned for tiles at or beyond limit.
@@ -1030,6 +1044,25 @@ func TestCellIDCenterFaceSiTi(t *testing.T) {
 		if want != ti&mask {
 			t.Errorf("Level Offset: %d. %b != %b", test.levelOffset, want, ti&mask)
 		}
+	}
+}
+
+func BenchmarkAllNeighbors(b *testing.B) {
+	level := 12
+	ll := LatLngFromDegrees(10.100001, 10.100002)
+	cellID := CellIDFromLatLng(ll).Parent(level)
+
+	cases := []int{level, level + 2, level + 4}
+
+	for _, n := range cases {
+		b.Run(fmt.Sprintf("level%d", n), func(b *testing.B) {
+			b.ResetTimer()
+			b.ReportAllocs()
+
+			for i := 0; i < b.N; i++ {
+				cellID.AllNeighbors(n)
+			}
+		})
 	}
 }
 

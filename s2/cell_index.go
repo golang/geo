@@ -191,14 +191,11 @@ func (c *CellIndexRangeIterator) Done() bool {
 //
 // Note that it is valid to access startID even when done is true.
 func (c *CellIndexRangeIterator) Seek(target CellID) {
-	c.pos = sort.Search(len(c.rangeNodes), func(i int) bool {
-		return c.rangeNodes[i].startID > target
-	}) - 1
-
-	// Ensure we don't go beyond the beginning.
-	if c.pos < 0 {
-		c.pos = 0
-	}
+	c.pos = max(
+		// Ensure we don't go beyond the beginning.
+		sort.Search(len(c.rangeNodes), func(i int) bool {
+			return c.rangeNodes[i].startID > target
+		})-1, 0)
 
 	// Nonempty needs to find the next non-empty entry.
 	for c.nonEmpty && c.IsEmpty() && !c.Done() {

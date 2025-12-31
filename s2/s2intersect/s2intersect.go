@@ -232,7 +232,7 @@ func cellUnionToIntervalLimits(cu s2.CellUnion, idx int) []*limit {
 
 // collapseLimits returns a slice of limits such that all of those of the same
 // type at the same leaf CellID are grouped with their indices in the same
-// slice. The returned slice will be sorted by CellID and tyoe,
+// slice. The returned slice will be sorted by CellID and type,
 //
 // e.g. {leaf(x),start,indices[2]} and {leaf(x),start,indices[7]} will become
 // {leaf(x),start,indices[2,7]}.

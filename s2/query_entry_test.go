@@ -71,7 +71,7 @@ func TestQueryQueueEntry(t *testing.T) {
 		t.Errorf("number of elements different: got %d, want %d", got, want)
 	}
 
-	// Take the items out and verfy the queue has them in the preferred order.
+	// Take the items out and verify the queue has them in the preferred order.
 	for i, cid := range expectedCellIDs {
 		item := q.pop()
 		if item.id != cid {

@@ -123,7 +123,7 @@ func OrderedCCW(a, b, c, o Point) bool {
 
 // Distance returns the angle between two points.
 func (p Point) Distance(b Point) s1.Angle {
-	return p.Vector.Angle(b.Vector)
+	return p.Angle(b.Vector)
 }
 
 // ApproxEqual reports whether the two points are similar enough to be equal.
@@ -133,7 +133,7 @@ func (p Point) ApproxEqual(other Point) bool {
 
 // approxEqual reports whether the two points are within the given epsilon.
 func (p Point) approxEqual(other Point, eps s1.Angle) bool {
-	return p.Vector.Angle(other.Vector) <= eps
+	return p.Angle(other.Vector) <= eps
 }
 
 // ChordAngleBetweenPoints constructs a ChordAngle corresponding to the distance
@@ -160,12 +160,12 @@ func regularPointsForFrame(frame matrix3x3, radius s1.Angle, numVertices int) []
 	z := math.Cos(radius.Radians())
 	r := math.Sin(radius.Radians())
 	radianStep := 2 * math.Pi / float64(numVertices)
-	var vertices []Point
+	var vertices = make([]Point, numVertices)
 
-	for i := 0; i < numVertices; i++ {
+	for i := range vertices {
 		angle := float64(i) * radianStep
 		p := Point{r3.Vector{X: r * math.Cos(angle), Y: r * math.Sin(angle), Z: z}}
-		vertices = append(vertices, Point{fromFrame(frame, p).Normalize()})
+		vertices[i] = Point{fromFrame(frame, p).Normalize()}
 	}
 
 	return vertices
@@ -254,7 +254,7 @@ func Ortho(a Point) Point {
 		temp.Z = 1
 	case r3.YAxis:
 		temp.X = 1
-	default:
+	case r3.ZAxis:
 		temp.Y = 1
 	}
 	return Point{a.Cross(temp).Normalize()}
@@ -316,4 +316,49 @@ func Rotate(p, axis Point, angle s1.Angle) Point {
 // The 2 points must be normalized.
 func (p Point) stableAngle(o Point) s1.Angle {
 	return s1.Angle(2 * math.Atan2(p.Sub(o.Vector).Norm(), p.Add(o.Vector).Norm()))
+}
+
+// IsNormalizable reports if the given Point's magnitude is large enough such that the
+// angle to another vector of the same magnitude can be measured using Angle()
+// without loss of precision due to floating-point underflow.  (This requirement
+// is also sufficient to ensure that Normalize() can be called without risk of
+// precision loss.)
+func (p Point) IsNormalizable() bool {
+	// Let ab = RobustCrossProd(a, b) and cd = RobustCrossProd(cd).  In order for
+	// ab.Angle(cd) to not lose precision, the squared magnitudes of ab and cd
+	// must each be at least 2**-484.  This ensures that the sum of the squared
+	// magnitudes of ab.CrossProd(cd) and ab.DotProd(cd) is at least 2**-968,
+	// which ensures that any denormalized terms in these two calculations do
+	// not affect the accuracy of the result (since all denormalized numbers are
+	// smaller than 2**-1022, which is less than dblError * 2**-968).
+	//
+	// The fastest way to ensure this is to test whether the largest component of
+	// the result has a magnitude of at least 2**-242.
+	return max(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z)) >= math.Ldexp(1, -242)
+}
+
+// EnsureNormalizable scales a vector as necessary to ensure that the result can
+// be normalized without loss of precision due to floating-point underflow.
+//
+// This requires p != (0, 0, 0)
+func (p Point) EnsureNormalizable() Point {
+	// TODO(rsned): Zero vector isn't normalizable, and we don't have DCHECK in Go.
+	// What is the appropriate return value in this case? Is it {NaN, NaN, NaN}?
+	if p == (Point{r3.Vector{X: 0, Y: 0, Z: 0}}) {
+		return p
+	}
+	if !p.IsNormalizable() {
+		// We can't just scale by a fixed factor because the smallest representable
+		// double is 2**-1074, so if we multiplied by 2**(1074 - 242) then the
+		// result might be so large that we couldn't square it without overflow.
+		//
+		// Note that we must scale by a power of two to avoid rounding errors.
+		// The code below scales "p" such that the largest component is
+		// in the range [1, 2).
+		pMax := max(math.Abs(p.X), math.Abs(p.Y), math.Abs(p.Z))
+
+		// This avoids signed overflow for any value of Ilogb().
+		return Point{p.Mul(math.Ldexp(2, -1-math.Ilogb(pMax)))}
+	}
+	return p
 }

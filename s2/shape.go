@@ -18,8 +18,8 @@ import (
 	"sort"
 )
 
-// Edge represents a geodesic edge consisting of two vertices. Zero-length edges are
-// allowed, and can be used to represent points.
+// Edge represents a geodesic edge consisting of two vertices. Zero-length
+// edges are allowed, and can be used to represent points.
 type Edge struct {
 	V0, V1 Point
 }
@@ -38,6 +38,27 @@ func (e Edge) Cmp(other Edge) int {
 	return e.V1.Cmp(other.V1.Vector)
 }
 
+// TODO(rsned): Add helpers for <=, >=
+
+// Reversed returns a new edge with the vertices reversed.
+func (e Edge) Reversed() Edge {
+	return Edge{V0: e.V1, V1: e.V0}
+}
+
+// IsDegenerate reports if the edge is degenerate.
+func (e Edge) IsDegenerate() bool { return e.V0 == e.V1 }
+
+// Incoming reports if point equals v1, indicating this edge is arriving.
+func (e Edge) Incoming(point Point) bool { return e.V1 == point }
+
+// Outgoing reports if point equals v0, indicating this edge is leaving.
+func (e Edge) Outgoing(point Point) bool { return e.V0 == point }
+
+// IncidentOn reports if point is one of the vertices of this edge.
+func (e Edge) IncidentOn(point Point) bool {
+	return e.Incoming(point) || e.Outgoing(point)
+}
+
 // sortEdges sorts the slice of Edges in place.
 func sortEdges(e []Edge) {
 	sort.Sort(edges(e))
@@ -49,6 +70,8 @@ type edges []Edge
 func (e edges) Len() int           { return len(e) }
 func (e edges) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
 func (e edges) Less(i, j int) bool { return e[i].Cmp(e[j]) == -1 }
+
+// TODO(rsned): Implement the slices.SortFunc interface.
 
 // ShapeEdgeID is a unique identifier for an Edge within an ShapeIndex,
 // consisting of a (shapeID, edgeID) pair.
@@ -193,7 +216,7 @@ type Shape interface {
 	//  Chain(i).start + Chain(i).length == NumEdges(), for i == NumChains()-1
 	Chain(chainID int) Chain
 
-	// ChainEdgeReturns the edge at offset "offset" within edge chain "chainID".
+	// ChainEdge returns the edge at offset "offset" within edge chain "chainID".
 	// Equivalent to "shape.Edge(shape.Chain(chainID).start + offset)"
 	// but more efficient.
 	ChainEdge(chainID, offset int) Edge
@@ -261,3 +284,9 @@ var (
 	_ Shape = &Polygon{}
 	_ Shape = &Polyline{}
 )
+
+// TODO(rsned): Remaining methods and types from C++
+// ChainVertexIterator
+// ChainVertexRange
+// ChainIterator
+// ChainRange

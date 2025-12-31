@@ -16,6 +16,7 @@ package s2
 
 import (
 	"math"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -100,12 +101,7 @@ func (c *clippedShape) numEdges() int {
 func (c *clippedShape) containsEdge(id int) bool {
 	// Linear search is fast because the number of edges per shape is typically
 	// very small (less than 10).
-	for _, e := range c.edges {
-		if e == id {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.edges, id)
 }
 
 // ShapeIndexCell stores the index contents for a particular CellID.
@@ -127,6 +123,14 @@ func (s *ShapeIndexCell) numEdges() int {
 		e += cs.numEdges()
 	}
 	return e
+}
+
+// clipped returns the clipped shape at the given index. Shapes are kept sorted in
+// increasing order of shape id.
+//
+// Requires: 0 <= i < len(shapes)
+func (s *ShapeIndexCell) clipped(i int) *clippedShape {
+	return s.shapes[i]
 }
 
 // add adds the given clipped shape to this index cell.
@@ -768,7 +772,7 @@ func (s *ShapeIndex) Remove(shape Shape) {
 		edges:                 make([]Edge, numEdges),
 	}
 
-	for e := 0; e < numEdges; e++ {
+	for e := range numEdges {
 		removed.edges[e] = shape.Edge(e)
 	}
 
@@ -846,7 +850,7 @@ func (s *ShapeIndex) applyUpdatesInternal() {
 		s.addShapeInternal(id, allEdges, t)
 	}
 
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		s.updateFaceEdges(face, allEdges[face], t)
 	}
 
@@ -875,7 +879,7 @@ func (s *ShapeIndex) addShapeInternal(shapeID int32, allEdges [][]faceEdge, t *t
 	}
 
 	numEdges := shape.NumEdges()
-	for e := 0; e < numEdges; e++ {
+	for e := range numEdges {
 		edge := shape.Edge(e)
 
 		faceEdge.edgeID = e
@@ -905,7 +909,7 @@ func (s *ShapeIndex) addFaceEdge(fe faceEdge, allEdges [][]faceEdge) {
 	}
 
 	// Otherwise, we simply clip the edge to all six faces.
-	for face := 0; face < 6; face++ {
+	for face := range 6 {
 		if aClip, bClip, intersects := ClipToPaddedFace(fe.edge.V0, fe.edge.V1, face, cellPadding); intersects {
 			fe.a = aClip
 			fe.b = bClip
@@ -929,7 +933,7 @@ func (s *ShapeIndex) updateFaceEdges(face int, faceEdges []faceEdge, t *tracker)
 	// pointers in order to propagate an edge to the correct child.
 	clippedEdges := make([]*clippedEdge, numEdges)
 	bound := r2.EmptyRect()
-	for e := 0; e < numEdges; e++ {
+	for e := range numEdges {
 		clipped := &clippedEdge{
 			faceEdge: &faceEdges[e],
 		}
@@ -1026,15 +1030,18 @@ func (s *ShapeIndex) updateEdges(pcell *PaddedCell, edges []*clippedEdge, t *tra
 		// the existing cell contents by absorbing the cell.
 		iter := s.Iterator()
 		r := iter.LocateCellID(pcell.id)
-		if r == Disjoint {
+		switch r {
+		case Disjoint:
 			disjointFromIndex = true
-		} else if r == Indexed {
+		case Indexed:
 			// Absorb the index cell by transferring its contents to edges and
 			// deleting it. We also start tracking the interior of any new shapes.
 			s.absorbIndexCell(pcell, iter, edges, t)
 			indexCellAbsorbed = true
 			disjointFromIndex = true
-		} else {
+		case Subdivided:
+			// TODO(rsned): Figure out the right way to deal with
+			// this case since we don't DCHECK.
 			// ABSL_DCHECK_EQ(SUBDIVIDED, r)
 		}
 	}
@@ -1118,7 +1125,7 @@ func (s *ShapeIndex) updateEdges(pcell *PaddedCell, edges []*clippedEdge, t *tra
 		// Now recursively update the edges in each child. We call the children in
 		// increasing order of CellID so that when the index is first constructed,
 		// all insertions into cellMap are at the end (which is much faster).
-		for pos := 0; pos < 4; pos++ {
+		for pos := range 4 {
 			i, j := pcell.ChildIJ(pos)
 			if len(childEdges[i][j]) > 0 || len(t.shapeIDs) > 0 {
 				s.updateEdges(PaddedCellFromParentIJ(pcell, i, j), childEdges[i][j],
@@ -1201,7 +1208,7 @@ func (s *ShapeIndex) makeIndexCell(p *PaddedCell, edges []*clippedEdge, t *track
 	// as we go along. Both sets of shape ids are already sorted.
 	eNext := 0
 	cNextIdx := 0
-	for i := 0; i < numShapes; i++ {
+	for i := range numShapes {
 		var clipped *clippedShape
 		// advance to next value base + i
 		eshapeID := int32(s.Len())
@@ -1338,7 +1345,7 @@ func (s *ShapeIndex) clipVBound(edge *clippedEdge, vEnd int, v float64) *clipped
 	return s.updateBound(edge, uEnd, u, vEnd, v)
 }
 
-// cliupVAxis returns the given edge clipped to within the boundaries of the middle
+// clipVAxis returns the given edge clipped to within the boundaries of the middle
 // interval along the v-axis, and adds the result to its children.
 func (s *ShapeIndex) clipVAxis(edge *clippedEdge, middle r1.Interval) (a, b *clippedEdge) {
 	if edge.bound.Y.Hi <= middle.Lo {
@@ -1430,7 +1437,7 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 				trackerMoved = true
 			}
 		}
-		for i := 0; i < numClipped; i++ {
+		for i := range numClipped {
 			edgeID := clipped.edges[i]
 			edge.edgeID = edgeID
 			edge.edge = shape.Edge(edgeID)
@@ -1466,9 +1473,11 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 	}
 
 	// Update the edge list and delete this cell from the index.
-	edges, newEdges = newEdges, edges
+	// TODO(rsned): Figure out best fix for this. Linters are
+	// flagging the swap because newEdges is no longer used after
+	// this.
+	edges, newEdges = newEdges, edges // nolint
 	delete(s.cellMap, p.id)
-	// TODO(roberts): delete from s.Cells
 }
 
 // testAllEdges calls the trackers testEdge on all edges from shapes that have interiors.

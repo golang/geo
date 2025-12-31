@@ -26,12 +26,12 @@ func TestDistanceTargetMaxCellTargetCapBound(t *testing.T) {
 	var md maxDistance
 	zero := md.zero()
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		cell := CellFromCellID(randomCellID())
 		target := NewMaxDistanceToCellTarget(cell)
 		c := target.capBound()
 
-		for j := 0; j < 100; j++ {
+		for range 100 {
 			pTest := randomPoint()
 			// Check points outside of cap to be away from maxDistance's zero().
 			if !c.ContainsPoint(pTest) {
@@ -432,11 +432,11 @@ func TestDistanceTargetMaxShapeIndexTargetCapBound(t *testing.T) {
 	target := NewMaxDistanceToShapeIndexTarget(index)
 	c := target.capBound()
 
-	for j := 0; j < 100; j++ {
+	for range 100 {
 		pTest := randomPoint()
 		// Check points outside of cap to be away from maxDistance's zero().
 		if !c.ContainsPoint(pTest) {
-			var curDist distance = inf
+			var curDist = inf
 			var ok bool
 			if curDist, ok = target.updateDistanceToPoint(pTest, curDist); !ok {
 				t.Errorf("updateDistanceToPoint failed, but should have succeeded")

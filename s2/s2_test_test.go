@@ -17,7 +17,6 @@ package s2
 import (
 	"fmt"
 	"math"
-	"math/rand"
 	"testing"
 
 	"github.com/golang/geo/s1"
@@ -51,10 +50,6 @@ func numVerticesAtLevel(level int) int {
 }
 
 func TestTestingFractal(t *testing.T) {
-	// About 2.4% flaky with a random seed, due to CesaroMultiFractal.
-	// TODO: https://github.com/golang/geo/issues/120
-	rand.Seed(1)
-
 	tests := []struct {
 		label     string
 		minLevel  int
@@ -146,7 +141,7 @@ func TestTestingFractal(t *testing.T) {
 		// can be simplified to sqrt((k-1)/n).
 		numLevels := test.maxLevel - test.minLevel + 1
 		minVertices := numVerticesAtLevel(test.minLevel)
-		relativeError := math.Sqrt((float64(numLevels) - 1.0) / float64(minVertices))
+		relativeError := 2.0 * math.Sqrt((float64(numLevels)-1.0)/float64(minVertices))
 
 		// expansionFactor is the total fractal length at level n+1 divided by
 		// the total fractal length at level n.
@@ -156,7 +151,7 @@ func TestTestingFractal(t *testing.T) {
 
 		// trianglePerim is the perimeter of the original equilateral triangle
 		// before any subdivision occurs.
-		trianglePerim := 3 * math.Sqrt(3) * math.Tan(nominalRadius)
+		trianglePerim := 3 * sqrt3 * math.Tan(nominalRadius)
 		minLengthSum := trianglePerim * math.Pow(expansionFactor, float64(test.minLevel))
 		for level := test.minLevel; level <= test.maxLevel; level++ {
 			expectedNumVertices += float64(numVerticesAtLevel(level))
@@ -224,7 +219,7 @@ func TestChordAngleMaxPointError(t *testing.T) {
 	// Check that the error bound returned by s1.MaxPointError() is
 	// large enough.
 	const iters = 100000
-	for iter := 0; iter < iters; iter++ {
+	for range iters {
 		x := randomPoint()
 		y := randomPoint()
 		if oneIn(10) {
@@ -246,7 +241,7 @@ func TestChordAngleMaxPointError(t *testing.T) {
 	}
 }
 
-// TODO(roberts): Remaining tests
+// TODO(rsned): Remaining tests
 // TriangleFractal
 // TriangleMultiFractal
 // SpaceFillingFractal
