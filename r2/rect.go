@@ -122,6 +122,13 @@ func (r Rect) Vertices() [4]Point {
 	}
 }
 
+func (r Rect) Vertex(k int) Point {
+	// Twiddle bits to return the points in CCW order (lower left, lower right,
+	// upper right, upper left).
+	j := (k >> 1) & 1
+	return r.VertexIJ(j^(k&1), j)
+}
+
 // VertexIJ returns the vertex in direction i along the X-axis (0=left, 1=right) and
 // direction j along the Y-axis (0=down, 1=up).
 func (r Rect) VertexIJ(i, j int) Point {
@@ -208,6 +215,10 @@ func (r Rect) AddRect(other Rect) Rect {
 // The rectangle must be non-empty.
 func (r Rect) ClampPoint(p Point) Point {
 	return Point{r.X.ClampPoint(p.X), r.Y.ClampPoint(p.Y)}
+}
+
+func (r Rect) Project(p Point) Point {
+	return Point{r.X.Project(p.X), r.Y.Project(p.Y)}
 }
 
 // Expanded returns a rectangle that has been expanded in the x-direction
