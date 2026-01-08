@@ -336,9 +336,9 @@ func (c *coverer) coveringInternal(region Region) {
 // newCoverer returns an instance of coverer.
 func (rc *RegionCoverer) newCoverer() *coverer {
 	return &coverer{
-		minLevel: clampInt(rc.MinLevel, 0, MaxLevel),
-		MaxLevel: clampInt(rc.MaxLevel, 0, MaxLevel),
-		levelMod: clampInt(rc.LevelMod, 1, 3),
+		minLevel: clamp(rc.MinLevel, 0, MaxLevel),
+		MaxLevel: clamp(rc.MaxLevel, 0, MaxLevel),
+		levelMod: clamp(rc.LevelMod, 1, 3),
 		maxCells: rc.MaxCells,
 	}
 }
@@ -346,14 +346,14 @@ func (rc *RegionCoverer) newCoverer() *coverer {
 // Covering returns a CellUnion that covers the given region and satisfies the various restrictions.
 func (rc *RegionCoverer) Covering(region Region) CellUnion {
 	covering := rc.CellUnion(region)
-	covering.Denormalize(clampInt(rc.MinLevel, 0, MaxLevel), clampInt(rc.LevelMod, 1, 3))
+	covering.Denormalize(clamp(rc.MinLevel, 0, MaxLevel), clamp(rc.LevelMod, 1, 3))
 	return covering
 }
 
 // InteriorCovering returns a CellUnion that is contained within the given region and satisfies the various restrictions.
 func (rc *RegionCoverer) InteriorCovering(region Region) CellUnion {
 	intCovering := rc.InteriorCellUnion(region)
-	intCovering.Denormalize(clampInt(rc.MinLevel, 0, MaxLevel), clampInt(rc.LevelMod, 1, 3))
+	intCovering.Denormalize(clamp(rc.MinLevel, 0, MaxLevel), clamp(rc.LevelMod, 1, 3))
 	return intCovering
 }
 

@@ -225,7 +225,7 @@ func ijToSTMin(i int) float64 {
 
 // stToIJ converts value in ST coordinates to a value in IJ coordinates.
 func stToIJ(s float64) int {
-	return clampInt(int(math.Floor(MaxSize*s)), 0, MaxSize-1)
+	return clamp(int(math.Floor(MaxSize*s)), 0, MaxSize-1)
 }
 
 // validFaceXYZToUV given a valid face for the given point r (meaning that
