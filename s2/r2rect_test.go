@@ -128,27 +128,27 @@ func TestR2RectSimplePredicates(t *testing.T) {
 		t.Errorf("Vertex(3) = %v, want %v", got, want)
 	}
 
-	if pt := (r2.Point{X: 0.2, Y: 0.4}); !rect1.ContainsPoint(pt) {
+	if pt := (r2.Point{X: 0.2, Y: 0.4}); !rect1.ContainsR2Point(pt) {
 		t.Errorf("ContainsPoint(%v) = false, want true", pt)
 	}
 
-	if pt := (r2.Point{X: 0.2, Y: 0.8}); rect1.ContainsPoint(pt) {
+	if pt := (r2.Point{X: 0.2, Y: 0.8}); rect1.ContainsR2Point(pt) {
 		t.Errorf("ContainsPoint(%v) = true, want false", pt)
 	}
-	if pt := (r2.Point{X: -0.1, Y: 0.4}); rect1.ContainsPoint(pt) {
+	if pt := (r2.Point{X: -0.1, Y: 0.4}); rect1.ContainsR2Point(pt) {
 		t.Errorf("ContainsPoint(%v) = true, want false", pt)
 	}
-	if pt := (r2.Point{X: 0.6, Y: 0.1}); rect1.ContainsPoint(pt) {
+	if pt := (r2.Point{X: 0.6, Y: 0.1}); rect1.ContainsR2Point(pt) {
 		t.Errorf("ContainsPoint(%v) = true, want false", pt)
 	}
 
-	if pt := sw1; !rect1.ContainsPoint(pt) {
+	if pt := sw1; !rect1.ContainsR2Point(pt) {
 		t.Errorf("ContainsPoint(%v) = false, want true (edge inclusive)", pt)
 	}
 	if pt := sw1; rect1.InteriorContainsPoint(pt) {
 		t.Errorf("InteriorContainsPoint(%v) = true, want false", pt)
 	}
-	if pt := ne1; !rect1.ContainsPoint(pt) {
+	if pt := ne1; !rect1.ContainsR2Point(pt) {
 		t.Errorf("ContainsPoint(%v) = false, want true (edge inclusive)", pt)
 	}
 	if pt := ne1; rect1.InteriorContainsPoint(pt) {
@@ -502,7 +502,7 @@ func TestR2RectCellOperations(t *testing.T) {
 			// This would be easier to do by constructing an S2R2Rect from the cell,
 			// but that would defeat the purpose of testing this code independently.
 			if u, v, ok := faceXYZToUV(0, test.cell.VertexRaw(k)); ok {
-				if test.rect.ContainsPoint(r2.Point{X: uvToST(u), Y: uvToST(v)}) {
+				if test.rect.ContainsR2Point(r2.Point{X: uvToST(u), Y: uvToST(v)}) {
 					vertexContained = true
 				}
 			}

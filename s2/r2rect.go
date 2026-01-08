@@ -6,7 +6,7 @@ type R2Rect struct {
 	r2.Rect
 }
 
-func (r R2Rect) ContainsPoint(p r2.Point) bool {
+func (r R2Rect) ContainsR2Point(p r2.Point) bool {
 	return r.Rect.ContainsPoint(p)
 }
 
@@ -98,14 +98,14 @@ func (r R2Rect) CellUnionBound() []CellID {
 	return r.CapBound().CellUnionBound()
 }
 
-// func (r R2Rect) ContainsPoint(p Point) bool {
-// 	if face(p.Vector) != 0 {
-// 		return false
-// 	}
+func (r R2Rect) ContainsPoint(p Point) bool {
+	if face(p.Vector) != 0 {
+		return false
+	}
 
-// 	u, v := validFaceXYZToUV(0, p.Vector)
-// 	return r.Rect.ContainsPoint(r2.Point{X: u, Y: v})
-// }
+	u, v := validFaceXYZToUV(0, p.Vector)
+	return r.Rect.ContainsPoint(r2.Point{X: u, Y: v})
+}
 
 func (r R2Rect) ContainsCell(cell Cell) bool {
 	if cell.Face() != 0 {
