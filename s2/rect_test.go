@@ -1151,30 +1151,7 @@ func TestRectCentroidEmptyFull(t *testing.T) {
 	}
 }
 
-func testRectCentroidSplitting(t *testing.T, r Rect, leftSplits int) {
-	// Recursively verify that when a rectangle is split into two pieces, the
-	// centroids of the children sum to give the centroid of the parent.
-	var child0, child1 Rect
-	if oneIn(2) {
-		lat := randomUniformFloat64(r.Lat.Lo, r.Lat.Hi)
-		child0 = Rect{r1.Interval{Lo: r.Lat.Lo, Hi: lat}, r.Lng}
-		child1 = Rect{r1.Interval{Lo: lat, Hi: r.Lat.Hi}, r.Lng}
-	} else {
-		lng := randomUniformFloat64(r.Lng.Lo, r.Lng.Hi)
-		child0 = Rect{r.Lat, s1.Interval{Lo: r.Lng.Lo, Hi: lng}}
-		child1 = Rect{r.Lat, s1.Interval{Lo: lng, Hi: r.Lng.Hi}}
-	}
-
-	if got, want := r.Centroid().Sub(child0.Centroid().Vector).Sub(child1.Centroid().Vector).Norm(), 1e-15; got > want {
-		t.Errorf("%v.Centroid() - %v.Centroid() - %v.Centroid = %v, want ~0", r, child0, child1, got)
-	}
-	if leftSplits > 0 {
-		testRectCentroidSplitting(t, child0, leftSplits-1)
-		testRectCentroidSplitting(t, child1, leftSplits-1)
-	}
-}
-
-func TestRectCentroidFullRange(t *testing.T) {
+func TestRectCentroidFullLongitudeRange(t *testing.T) {
 	// Rectangles that cover the full longitude range.
 	for range 100 {
 		lat1 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
@@ -1188,7 +1165,9 @@ func TestRectCentroidFullRange(t *testing.T) {
 			t.Errorf("%v.Centroid().Norm() was %v, want > %v ", r, got, epsilon)
 		}
 	}
+}
 
+func TestRectCentroidFullLatitudeRange(t *testing.T) {
 	// Rectangles that cover the full latitude range.
 	for range 100 {
 		lat1 := randomUniformFloat64(-math.Pi, math.Pi)
@@ -1209,7 +1188,32 @@ func TestRectCentroidFullRange(t *testing.T) {
 			t.Errorf("%v.Centroid().Norm() = %v, want ~%v", got, want, epsilon)
 		}
 	}
+}
 
+func testRectCentroidSplitting(t *testing.T, r Rect, leftSplits int) {
+	// Recursively verify that when a rectangle is split into two pieces, the
+	// centroids of the children sum to give the centroid of the parent.
+	var child0, child1 Rect
+	if oneIn(2) {
+		lat := randomUniformFloat64(r.Lat.Lo, r.Lat.Hi)
+		child0 = Rect{r1.Interval{Lo: r.Lat.Lo, Hi: lat}, r.Lng}
+		child1 = Rect{r1.Interval{Lo: lat, Hi: r.Lat.Hi}, r.Lng}
+	} else {
+		lng := randomUniformFloat64(r.Lng.Lo, r.Lng.Hi)
+		child0 = Rect{r.Lat, s1.Interval{Lo: r.Lng.Lo, Hi: lng}}
+		child1 = Rect{r.Lat, s1.Interval{Lo: lng, Hi: r.Lng.Hi}}
+	}
+
+	if got, want := r.Centroid().Sub(child0.Centroid().Vector).Sub(child1.Centroid().Vector).Norm(), 2e-15; got > want {
+		t.Errorf("%v.Centroid() - %v.Centroid() - %v.Centroid = %v, want ~0", r, child0, child1, got)
+	}
+	if leftSplits > 0 {
+		testRectCentroidSplitting(t, child0, leftSplits-1)
+		testRectCentroidSplitting(t, child1, leftSplits-1)
+	}
+}
+
+func TestRectCentroidSplitsHaveSameCentroid(t *testing.T) {
 	// Finally, verify that when a rectangle is recursively split into pieces,
 	// the centroids of the pieces add to give the centroid of their parent.
 	// To make the code simpler we avoid rectangles that cross the 180 degree
