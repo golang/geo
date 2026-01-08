@@ -163,6 +163,7 @@ func TestRectAddPoint(t *testing.T) {
 		}
 	}
 }
+
 func TestRectVertex(t *testing.T) {
 	r1 := Rect{r1.Interval{Lo: 0, Hi: math.Pi / 2}, s1.IntervalFromEndpoints(-math.Pi, 0)}
 	tests := []struct {
@@ -182,6 +183,7 @@ func TestRectVertex(t *testing.T) {
 		}
 	}
 }
+
 func TestRectVertexCCWOrder(t *testing.T) {
 	for i := range 4 {
 		lat := math.Pi / 4 * float64(i-2)
@@ -684,7 +686,6 @@ func TestRectCellOps(t *testing.T) {
 			t.Errorf("%v.IntersectsCell(%v) = %t, want %t", test.r, test.c, got, test.intersects)
 		}
 	}
-
 }
 
 func TestRectContainsPoint(t *testing.T) {
@@ -1176,7 +1177,7 @@ func testRectCentroidSplitting(t *testing.T, r Rect, leftSplits int) {
 
 func TestRectCentroidFullRange(t *testing.T) {
 	// Rectangles that cover the full longitude range.
-	for range 100 {
+	for i := 0; i < 100; i++ {
 		lat1 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
 		lat2 := randomUniformFloat64(-math.Pi/2, math.Pi/2)
 		r := Rect{r1.Interval{Lo: lat1, Hi: lat2}, s1.FullInterval()}
