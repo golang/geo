@@ -114,6 +114,16 @@ func (i Interval) ClampPoint(p float64) float64 {
 	return math.Max(i.Lo, math.Min(i.Hi, p))
 }
 
+func (i Interval) Project(p float64) float64 {
+	if p < i.Lo {
+		return i.Lo
+	}
+	if p > i.Hi {
+		return i.Hi
+	}
+	return p
+}
+
 // Expanded returns an interval that has been expanded on each side by margin.
 // If margin is negative, then the function shrinks the interval on
 // each side by margin instead. The resulting interval may be empty. Any
