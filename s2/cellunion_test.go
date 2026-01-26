@@ -1255,6 +1255,22 @@ func TestCellUnionFromDifference(t *testing.T) {
 	}
 }
 
+func BenchmarkCellUnionFromDifference(b *testing.B) {
+	faceCell := CellIDFromFace(0)
+	children := faceCell.Children()
+
+	x := CellUnion{faceCell}
+	x.Normalize()
+
+	y := CellUnion{children[0], children[1]}
+	y.Normalize()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		CellUnionFromDifference(x, y)
+	}
+}
+
 func BenchmarkCellUnionFromRange(b *testing.B) {
 	x := CellIDFromFace(0).ChildBeginAtLevel(MaxLevel)
 	y := CellIDFromFace(5).ChildEndAtLevel(MaxLevel)
