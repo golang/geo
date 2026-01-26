@@ -16,6 +16,7 @@ package s2
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 	"math/rand"
 	"reflect"
@@ -1256,18 +1257,28 @@ func TestCellUnionFromDifference(t *testing.T) {
 }
 
 func BenchmarkCellUnionFromDifference(b *testing.B) {
-	faceCell := CellIDFromFace(0)
-	children := faceCell.Children()
+	for _, size := range []int{2, 10, 100, 1000} {
+		b.Run(fmt.Sprintf("ySize%d", size), func(b *testing.B) {
+			faceCell := CellIDFromFace(0)
+			x := CellUnion{faceCell}
+			x.Normalize()
 
-	x := CellUnion{faceCell}
-	x.Normalize()
+			var y CellUnion
+			for i := range size {
+				child := faceCell.ChildBeginAtLevel(10)
+				stride := uint64((1 << 50) / uint64(size))
+				cellID := CellID(uint64(child) + uint64(i)*stride)
+				if cellID.Face() == 0 && cellID.IsValid() {
+					y = append(y, cellID.Parent(10))
+				}
+			}
+			y.Normalize()
 
-	y := CellUnion{children[0], children[1]}
-	y.Normalize()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		CellUnionFromDifference(x, y)
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				CellUnionFromDifference(x, y)
+			}
+		})
 	}
 }
 
