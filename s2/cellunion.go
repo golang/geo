@@ -137,7 +137,7 @@ func (cu *CellUnion) cellUnionDifferenceInternal(xid CellID, y CellUnion) {
 	if len(y) > 0 {
 		idMin := xid.RangeMin()
 
-		// Find first cell that could overlap.
+		// Find the range of cells in y that could overlap with xid.
 		lo = sort.Search(len(y), func(i int) bool {
 			return y[i].RangeMax() >= idMin
 		})
@@ -155,12 +155,15 @@ func (cu *CellUnion) cellUnionDifferenceInternal(xid CellID, y CellUnion) {
 		return
 	}
 
+	// If xid is disjoint from y, add the entire cell and stop.
 	y = y[lo:hi]
 
+	// If xid is entirely contained by y, it is completely subtracted.
 	if y.ContainsCellID(xid) {
 		return
 	}
 
+	// Partial overlap: subdivide xid and recurse.
 	for _, child := range xid.Children() {
 		cu.cellUnionDifferenceInternal(child, y)
 	}
