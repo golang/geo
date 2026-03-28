@@ -115,12 +115,15 @@ func CellUnionFromIntersection(x, y CellUnion) CellUnion {
 // CellUnion into chunks.
 func CellUnionFromIntersectionWithCellID(x CellUnion, id CellID) CellUnion {
 	var cu CellUnion
+	// If x contains id, the intersection is just id.
 	if x.ContainsCellID(id) {
 		cu = append(cu, id)
 		cu.Normalize()
 		return cu
 	}
 
+	// Otherwise, id may contain multiple cells of x.
+	// We skip to the first overlapping cell and collect all cells within id's range.
 	idmax := id.RangeMax()
 	for i := x.lowerBound(0, len(x), id.RangeMin()); i < len(x) && x[i] <= idmax; i++ {
 		cu = append(cu, x[i])
