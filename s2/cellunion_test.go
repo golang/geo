@@ -1266,7 +1266,7 @@ func BenchmarkCellUnionFromDifference(b *testing.B) {
 			var y CellUnion
 			for i := range size {
 				child := faceCell.ChildBeginAtLevel(10)
-				stride := uint64((1 << 50) / uint64(size))
+				stride := (1 << 50) / uint64(size)
 				cellID := CellID(uint64(child) + uint64(i)*stride)
 				if cellID.Face() == 0 && cellID.IsValid() {
 					y = append(y, cellID.Parent(10))
