@@ -506,15 +506,15 @@ func triageCompareMinusSin2Distance(x, a, b Point) int {
 type precision int
 
 const (
-	doublePrecision precision = iota
+	float64Precision precision = iota
 	exactPrecision
 	symbolicPrecision
 )
 
 func (p precision) String() string {
 	switch p {
-	case doublePrecision:
-		return "double"
+	case float64Precision:
+		return "float64"
 	case exactPrecision:
 		return "exact"
 	case symbolicPrecision:
@@ -539,7 +539,7 @@ func TestPredicatesCompareDistancesCoverage(t *testing.T) {
 			b:        PointFromCoords(1, 1, 1+2e-15),
 			distFunc: triageCompareSin2Distances,
 			wantSign: -1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 		},
 		{
 			x:        PointFromCoords(1, 1, 0),
@@ -547,7 +547,7 @@ func TestPredicatesCompareDistancesCoverage(t *testing.T) {
 			b:        PointFromCoords(1, 1-1e-15, 0),
 			distFunc: triageCompareSin2Distances,
 			wantSign: 1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 		},
 		{
 			x:        Point{r3.Vector{X: 2, Y: 0, Z: 0}},
@@ -581,14 +581,14 @@ func TestPredicatesCompareDistancesCoverage(t *testing.T) {
 			b:        PointFromCoords(-1, 1, 3e-15),
 			distFunc: triageCompareCosDistances,
 			wantSign: 1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 		},
 		{
 			x:        PointFromCoords(1, 0, 0),
 			a:        PointFromCoords(1, 1e-30, 0),
 			b:        PointFromCoords(-1, 1e-40, 0),
 			wantSign: -1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 			distFunc: triageCompareCosDistances,
 		},
 		{
@@ -622,7 +622,7 @@ func TestPredicatesCompareDistancesCoverage(t *testing.T) {
 			b:        PointFromCoords(-1, -1, 0),
 			distFunc: triageCompareMinusSin2Distance,
 			wantSign: -1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 		},
 		{
 			x:        PointFromCoords(-1, -1, 0),
@@ -630,7 +630,7 @@ func TestPredicatesCompareDistancesCoverage(t *testing.T) {
 			b:        PointFromCoords(1, 1-1e-15, 1e-21),
 			distFunc: triageCompareMinusSin2Distance,
 			wantSign: 1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 		},
 		{
 			x:        PointFromCoords(-1, -1, 0),
@@ -690,7 +690,7 @@ func TestPredicatesCompareDistancesCoverage(t *testing.T) {
 
 		var actualPrec precision
 		if sign != 0 {
-			actualPrec = doublePrecision
+			actualPrec = float64Precision
 		} else if exactSign != 0 {
 			actualPrec = exactPrecision
 		} else {
@@ -732,7 +732,7 @@ func TestPredicatesCompareDistanceCoverage(t *testing.T) {
 			r:        s1.ChordAngleFromAngle(1e-15),
 			distFunc: triageCompareSin2Distance,
 			wantSign: -1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 		},
 		{
 			x:        PointFromCoords(1, 0, 0),
@@ -773,7 +773,7 @@ func TestPredicatesCompareDistanceCoverage(t *testing.T) {
 			r:        s1.ChordAngle(1e-7),
 			distFunc: triageCompareCosDistance,
 			wantSign: -1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 		},
 		{
 			x:        PointFromCoords(1, 0, 0),
@@ -781,7 +781,7 @@ func TestPredicatesCompareDistanceCoverage(t *testing.T) {
 			r:        s1.ChordAngle(math.Pi - 1e-7),
 			distFunc: triageCompareCosDistance,
 			wantSign: 1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 		},
 		{
 			x:        PointFromCoords(1, 1, 0),
@@ -789,7 +789,7 @@ func TestPredicatesCompareDistanceCoverage(t *testing.T) {
 			r:        s1.RightChordAngle,
 			distFunc: triageCompareCosDistance,
 			wantSign: 1,
-			wantPrec: doublePrecision,
+			wantPrec: float64Precision,
 		},
 		{
 			x:        PointFromCoords(1, 1, 0),
@@ -848,7 +848,7 @@ func TestPredicatesCompareDistanceCoverage(t *testing.T) {
 
 		var actualPrec precision
 		if sign != 0 {
-			actualPrec = doublePrecision
+			actualPrec = float64Precision
 		} else {
 			actualPrec = exactPrecision
 		}
