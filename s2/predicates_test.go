@@ -329,6 +329,24 @@ func TestPredicatesStableSignFailureRate(t *testing.T) {
 	}
 }
 
+func TestPredicatesStableSignUnderflow(t *testing.T) {
+	// Verify that stableSign returns Indeterminate when its error calculation underflows,
+	// and that RobustSign still resolves the sign via the exact arithmetic fallback.
+	a := Point{r3.Vector{X: 1, Y: 1.9535722048627587e-90, Z: 7.4882501322554515e-80}}
+	b := Point{r3.Vector{X: 1, Y: 9.6702373087191359e-127, Z: 3.706704857169321e-116}}
+	c := Point{r3.Vector{X: 1, Y: 3.8163353663361477e-142, Z: 1.4628419538608985e-131}}
+
+	if got := stableSign(a, b, c); got != Indeterminate {
+		t.Errorf("stableSign(%v, %v, %v) = %v, want %v", a, b, c, got, Indeterminate)
+	}
+	if got := exactSign(a, b, c, true); got != CounterClockwise {
+		t.Errorf("exactSign(%v, %v, %v, true) = %v, want %v", a, b, c, got, CounterClockwise)
+	}
+	if got := RobustSign(a, b, c); got != CounterClockwise {
+		t.Errorf("RobustSign(%v, %v, %v) = %v, want %v", a, b, c, got, CounterClockwise)
+	}
+}
+
 func TestPredicatesSymbolicallyPerturbedSign(t *testing.T) {
 	// The purpose of this test is simply to get code coverage of
 	// SymbolicallyPerturbedSign().  Let M_1, M_2, ... be the sequence of
@@ -1242,7 +1260,6 @@ func BenchmarkRobustSignNearCollinear(b *testing.B) {
 // TEST(epsilon_for_digits, recursion) {
 // TEST(rounding_epsilon, vs_numeric_limits) {
 // TEST(Sign, CollinearPoints) {
-// TEST(Sign, StableSignUnderflow) {
 // TEST_F(SignTest, StressTest) {
 // TEST_F(StableSignTest, FailureRate) {
 // TEST(Sign, SymbolicPerturbationCodeCoverage) {
