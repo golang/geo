@@ -50,7 +50,7 @@ var (
 	// here.
 	concaveCenter = PointFromLatLng(LatLngFromDegrees(80, 10))
 	concaveRadius = s1.ChordAngleFromAngle(150 * s1.Degree)
-	maxCapError   = concaveRadius.MaxPointError() + concaveRadius.MaxAngleError() + 3*dblEpsilon
+	maxCapError   = concaveRadius.MaxPointError() + concaveRadius.MaxAngleError() + 3*machineEpsilon64
 	concave       = CapFromCenterChordAngle(concaveCenter, concaveRadius)
 	concaveMin    = CapFromCenterChordAngle(concaveCenter, concaveRadius.Expanded(-maxCapError))
 	concaveMax    = CapFromCenterChordAngle(concaveCenter, concaveRadius.Expanded(maxCapError))

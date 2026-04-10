@@ -36,30 +36,30 @@ const (
 	// edgeClipErrorUVCoord is the maximum error in a u- or v-coordinate
 	// compared to the exact result, assuming that the points A and B are in
 	// the rectangle [-1,1]x[1,1] or slightly outside it (by 1e-10 or less).
-	edgeClipErrorUVCoord = 2.25 * dblEpsilon
+	edgeClipErrorUVCoord = 2.25 * machineEpsilon64
 
 	// edgeClipErrorUVDist is the maximum distance from a clipped point to
 	// the corresponding exact result. It is equal to the error in a single
 	// coordinate because at most one coordinate is subject to error.
-	edgeClipErrorUVDist = 2.25 * dblEpsilon
+	edgeClipErrorUVDist = 2.25 * machineEpsilon64
 
 	// faceClipErrorRadians is the maximum angle between a returned vertex
 	// and the nearest point on the exact edge AB. It is equal to the
 	// maximum directional error in PointCross, plus the error when
 	// projecting points onto a cube face.
-	faceClipErrorRadians = 3 * dblEpsilon
+	faceClipErrorRadians = 3 * machineEpsilon64
 
 	// faceClipErrorDist is the same angle expressed as a maximum distance
 	// in (u,v)-space. In other words, a returned vertex is at most this far
 	// from the exact edge AB projected into (u,v)-space.
-	faceClipErrorUVDist = 9 * dblEpsilon
+	faceClipErrorUVDist = 9 * machineEpsilon64
 
 	// faceClipErrorUVCoord is the maximum angle between a returned vertex
 	// and the nearest point on the exact edge AB expressed as the maximum error
 	// in an individual u- or v-coordinate. In other words, for each
 	// returned vertex there is a point on the exact edge AB whose u- and
 	// v-coordinates differ from the vertex by at most this amount.
-	faceClipErrorUVCoord = 9.0 * (1.0 / math.Sqrt2) * dblEpsilon
+	faceClipErrorUVCoord = 9.0 * (1.0 / math.Sqrt2) * machineEpsilon64
 
 	// intersectsRectErrorUVDist is the maximum error when computing if a point
 	// intersects with a given Rect. If some point of AB is inside the
@@ -68,7 +68,7 @@ const (
 	// the result is guaranteed to be false. This bound assumes that rect is
 	// a subset of the rectangle [-1,1]x[-1,1] or extends slightly outside it
 	// (e.g., by 1e-10 or less).
-	intersectsRectErrorUVDist = 3 * math.Sqrt2 * dblEpsilon
+	intersectsRectErrorUVDist = 3 * math.Sqrt2 * machineEpsilon64
 )
 
 // ClipToFace returns the (u,v) coordinates for the portion of the edge AB that
@@ -495,7 +495,7 @@ func clipEdgeBound(a, b r2.Point, clip, bound r2.Rect) (r2.Rect, bool) {
 // This requires a != b.
 //
 // When a <= x <= b or b <= x <= a we can prove the error bound on the resulting
-// value is 2.25*dblEpsilon. The error for extrapolating an x value outside of
+// value is 2.25*machineEpsilon64. The error for extrapolating an x value outside of
 // a and b can be much worse. See the gappa proof at the end of the file.
 func interpolateFloat64(x, a, b, a1, b1 float64) float64 {
 	// If A == B == X all we can return is the single point.

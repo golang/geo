@@ -33,7 +33,7 @@ func testIntersectionExact(a0, a1, b0, b1 Point) Point {
 	return x
 }
 
-var distanceAbsError = s1.Angle(3 * dblEpsilon)
+var distanceAbsError = s1.Angle(3 * machineEpsilon64)
 
 func TestEdgeutilIntersectionError(t *testing.T) {
 	// We repeatedly construct two edges that cross near a random point "p", and
@@ -83,12 +83,12 @@ func TestEdgeutilIntersectionError(t *testing.T) {
 			}
 		}
 
-		// Each constructed edge should be at most 1.5 * dblEpsilon away from the
+		// Each constructed edge should be at most 1.5 * machineEpsilon64 away from the
 		// original point P.
-		if got, want := DistanceFromSegment(p, a, b), s1.Angle(1.5*dblEpsilon)+distanceAbsError; got > want {
+		if got, want := DistanceFromSegment(p, a, b), s1.Angle(1.5*machineEpsilon64)+distanceAbsError; got > want {
 			t.Errorf("DistanceFromSegment(%v, %v, %v) = %v, want %v", p, a, b, got, want)
 		}
-		if got, want := DistanceFromSegment(p, c, d), s1.Angle(1.5*dblEpsilon)+distanceAbsError; got > want {
+		if got, want := DistanceFromSegment(p, c, d), s1.Angle(1.5*machineEpsilon64)+distanceAbsError; got > want {
 			t.Errorf("DistanceFromSegment(%v, %v, %v) = %v, want %v", p, c, d, got, want)
 		}
 
@@ -96,13 +96,13 @@ func TestEdgeutilIntersectionError(t *testing.T) {
 		// also close to the original point P. (It might not be very close to P
 		// if the angle between the edges is very small.)
 		expected := testIntersectionExact(a, b, c, d)
-		if got, want := DistanceFromSegment(expected, a, b), s1.Angle(3*dblEpsilon)+distanceAbsError; got > want {
+		if got, want := DistanceFromSegment(expected, a, b), s1.Angle(3*machineEpsilon64)+distanceAbsError; got > want {
 			t.Errorf("DistanceFromSegment(%v, %v, %v) = %v, want %v", expected, a, b, got, want)
 		}
-		if got, want := DistanceFromSegment(expected, c, d), s1.Angle(3*dblEpsilon)+distanceAbsError; got > want {
+		if got, want := DistanceFromSegment(expected, c, d), s1.Angle(3*machineEpsilon64)+distanceAbsError; got > want {
 			t.Errorf("DistanceFromSegment(%v, %v, %v) = %v, want %v", expected, c, d, got, want)
 		}
-		if got, want := expected.Distance(p), s1.Angle(3*dblEpsilon/slope)+intersectionError; got > want {
+		if got, want := expected.Distance(p), s1.Angle(3*machineEpsilon64/slope)+intersectionError; got > want {
 			t.Errorf("%v.Distance(%v) = %v, want %v", expected, p, got, want)
 		}
 

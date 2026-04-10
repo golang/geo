@@ -269,8 +269,8 @@ func r1IntervalsApproxEqual(a, b r1.Interval, epsilon float64) bool {
 }
 
 var (
-	rectErrorLat = 10 * dblEpsilon
-	rectErrorLng = dblEpsilon
+	rectErrorLat = 10 * machineEpsilon64
+	rectErrorLng = machineEpsilon64
 )
 
 // r2PointsApproxEqual reports whether the two points are within the given epsilon.
@@ -361,7 +361,7 @@ func perturbATowardsB(a, b Point, r ...*rand.Rand) Point {
 		// Return a point that is exactly proportional to A and that still
 		// satisfies IsUnitLength().
 		for {
-			b := Point{a.Mul(2 - a.Norm() + 5*(randomFloat64(r...)-0.5)*dblEpsilon)}
+			b := Point{a.Mul(2 - a.Norm() + 5*(randomFloat64(r...)-0.5)*machineEpsilon64)}
 			if !b.ApproxEqual(a) && b.IsUnit() {
 				return b
 			}
@@ -371,9 +371,9 @@ func perturbATowardsB(a, b Point, r ...*rand.Rand) Point {
 		// Return a point such that the distance squared to A will underflow.
 		return InterpolateAtDistance(1e-300, a, b)
 	}
-	// Otherwise return a point whose distance from A is near dblEpsilon such
+	// Otherwise return a point whose distance from A is near machineEpsilon64 such
 	// that the log of the pdf is uniformly distributed.
-	distance := dblEpsilon * 1e-5 * math.Pow(1e6, randomFloat64(r...))
+	distance := machineEpsilon64 * 1e-5 * math.Pow(1e6, randomFloat64(r...))
 	return InterpolateAtDistance(s1.Angle(distance), a, b)
 }
 
@@ -395,7 +395,7 @@ func perturbedCornerOrMidpoint(p, q Point, r ...*rand.Rand) Point {
 		// For coordinates near 1 (say > 0.5), this perturbation
 		// yields values that are only a few representable values
 		// away from the initial value.
-		a = a.Add(randomPoint(r...).Mul(4 * dblEpsilon))
+		a = a.Add(randomPoint(r...).Mul(4 * machineEpsilon64))
 	} else {
 		// A perturbation whose magnitude is in the range [1e-25, 1e-10].
 		// TODO(rsned): Change this from Mul(1e-10 * math.Pow...) to

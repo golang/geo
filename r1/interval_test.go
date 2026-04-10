@@ -308,8 +308,8 @@ func TestIntervalString(t *testing.T) {
 func TestApproxEqual(t *testing.T) {
 	// Choose two values lo and hi such that it's okay to shift an endpoint by
 	// kLo (i.e., the resulting interval is equivalent) but not by kHi.
-	const lo = 4 * dblEpsilon // < max_error default
-	const hi = 6 * dblEpsilon // > max_error default
+	const lo = 4 * machineEpsilon64 // < max_error default
+	const hi = 6 * machineEpsilon64 // > max_error default
 
 	tests := []struct {
 		interval Interval

@@ -181,11 +181,11 @@ func (e *EdgeCrosser) crossingSign(d Point, bda Direction) Crossing {
 
 	// The error in RobustCrossProd is insignificant. The maximum error in
 	// the call to CrossProd (i.e., the maximum norm of the error vector) is
-	// (0.5 + 1/sqrt(3)) * dblEpsilon. The maximum error in each call to
-	// DotProd below is dblEpsilon. (There is also a small relative error
+	// (0.5 + 1/sqrt(3)) * machineEpsilon64. The maximum error in each call to
+	// DotProd below is machineEpsilon64. (There is also a small relative error
 	// term that is insignificant because we are comparing the result against a
 	// constant that is very close to zero.)
-	maxError := (1.5 + 1/math.Sqrt(3)) * dblEpsilon
+	maxError := (1.5 + 1/math.Sqrt(3)) * machineEpsilon64
 	if (e.c.Dot(e.aTangent.Vector) > maxError && d.Dot(e.aTangent.Vector) > maxError) || (e.c.Dot(e.bTangent.Vector) > maxError && d.Dot(e.bTangent.Vector) > maxError) {
 		return DoNotCross
 	}

@@ -109,7 +109,7 @@ func TestRectBounderMaxLatitudeEdgeInterior(t *testing.T) {
 
 func TestRectBounderMaxLatitudeRandom(t *testing.T) {
 	// Check that the maximum latitude of edges is computed accurately to within
-	// 3 * dblEpsilon (the expected maximum error). We concentrate on maximum
+	// 3 * machineEpsilon64 (the expected maximum error). We concentrate on maximum
 	// latitudes near the equator and north pole since these are the extremes.
 
 	for range 100 {
@@ -117,7 +117,7 @@ func TestRectBounderMaxLatitudeRandom(t *testing.T) {
 		// slightly above the equator, V points at the equator, and W is slightly
 		// offset from the north pole.
 		u := randomPoint()
-		u.Z = dblEpsilon * 1e-6 * math.Pow(1e12, randomFloat64())
+		u.Z = machineEpsilon64 * 1e-6 * math.Pow(1e12, randomFloat64())
 
 		u = Point{u.Normalize()}
 		v := Point{PointFromCoords(0, 0, 1).PointCross(u).Normalize()}

@@ -150,9 +150,9 @@ const (
 	// The maximum absolute error in U/V coordinates when converting from XYZ.
 	//
 	// The XYZ -> UV conversion is a single division per coordinate, which is
-	// promised to be at most 0.5*dblEpsilon absolute error for values with
+	// promised to be at most 0.5*machineEpsilon64 absolute error for values with
 	// magnitude less than two.
-	maxXYZtoUVError = 0.5 * dblEpsilon
+	maxXYZtoUVError = 0.5 * machineEpsilon64
 
 	// maxSiTi is the maximum value of an si- or ti-coordinate.
 	// It is one shift more than MaxSize. The range of valid (si,ti)

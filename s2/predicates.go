@@ -35,11 +35,11 @@ const (
 	// If any other machine architectures need to be supported, these next
 	// values will need to be updated.
 
-	// dblEpsilon is a smaller number for values that require more precision.
+	// machineEpsilon64 is a smaller number for values that require more precision.
 	// This is the C++ DBL_EPSILON equivalent.
-	dblEpsilon = 2.220446049250313e-16
-	// dblError is the C++ value for S2 rounding_epsilon().
-	dblError = 1.110223024625156e-16
+	machineEpsilon64 = 0x1p-52
+	// unitRoundoff64 is the C++ value for S2 rounding_epsilon().
+	unitRoundoff64 = machineEpsilon64 / 2
 	// smallestNormalFloat64 is the C++ DBL_MIN equivalent.
 	smallestNormalFloat64 = 0x1p-1022
 
@@ -64,7 +64,7 @@ const (
 	// relative error (which does not affect the sign of the result), we get
 	//
 	//  fl((AxB).C) = (AxB).C + d where |d| <= (3 + 2/sqrt(3)) * e
-	maxDeterminantError = 1.8274 * dblEpsilon
+	maxDeterminantError = 1.8274 * machineEpsilon64
 
 	// detErrorMultiplier is the factor to scale the magnitudes by when checking
 	// for the sign of set of points with certainty. Using a similar technique to
@@ -74,7 +74,7 @@ const (
 	//
 	// If the determinant magnitude is larger than this value then we know
 	// its sign with certainty.
-	detErrorMultiplier = 3.2321 * dblEpsilon
+	detErrorMultiplier = 3.2321 * machineEpsilon64
 )
 
 // epsilonForDigits reports the epsilon for the given number of digits of mantissa.
@@ -522,7 +522,7 @@ func CompareDistances(x, a, b Point) int {
 // maximum error amount in the result. This requires X and Y be normalized.
 func cosDistance(x, y Point) (cos, err float64) {
 	cos = x.Dot(y.Vector)
-	return cos, 9.5*dblError*math.Abs(cos) + 1.5*dblError
+	return cos, 9.5*unitRoundoff64*math.Abs(cos) + 1.5*unitRoundoff64
 }
 
 // sin2Distance returns sin**2(XY), where XY is the angle between X and Y,
@@ -530,13 +530,13 @@ func cosDistance(x, y Point) (cos, err float64) {
 func sin2Distance(x, y Point) (sin2, err float64) {
 	// The (x-y).Cross(x+y) trick eliminates almost all of error due to x
 	// and y being not quite unit length. This method is extremely accurate
-	// for small distances; the *relative* error in the result is O(dblError) for
-	// distances as small as dblError.
+	// for small distances; the *relative* error in the result is O(unitRoundoff64) for
+	// distances as small as unitRoundoff64.
 	n := x.Sub(y.Vector).Cross(x.Add(y.Vector))
 	sin2 = 0.25 * n.Norm2()
-	err = ((21+4*sqrt3)*dblError*sin2 +
-		32*sqrt3*dblError*dblError*math.Sqrt(sin2) +
-		768*dblError*dblError*dblError*dblError)
+	err = ((21+4*sqrt3)*unitRoundoff64*sin2 +
+		32*sqrt3*unitRoundoff64*unitRoundoff64*math.Sqrt(sin2) +
+		768*unitRoundoff64*unitRoundoff64*unitRoundoff64*unitRoundoff64)
 	return sin2, err
 }
 
@@ -666,7 +666,7 @@ func CompareDistance(x, y Point, r s1.ChordAngle) int {
 func triageCompareCosDistance(x, y Point, r2 float64) int {
 	cosXY, cosXYError := cosDistance(x, y)
 	cosR := 1.0 - 0.5*r2
-	cosRError := 2.0 * dblError * cosR
+	cosRError := 2.0 * unitRoundoff64 * cosR
 	diff := cosXY - cosR
 	err := cosXYError + cosRError
 	if diff > err {
@@ -684,7 +684,7 @@ func triageCompareSin2Distance(x, y Point, r2 float64) int {
 	// Only valid for distance limits < 90 degrees.
 	sin2XY, sin2XYError := sin2Distance(x, y)
 	sin2R := r2 * (1.0 - 0.25*r2)
-	sin2RError := 3.0 * dblError * sin2R
+	sin2RError := 3.0 * unitRoundoff64 * sin2R
 	diff := sin2XY - sin2R
 	err := sin2XYError + sin2RError
 	if diff > err {
@@ -753,7 +753,7 @@ func triageSignDotProd(a, b Point) int {
 	// Reference:
 	//   Error Estimation Of Floating-Point Summation And Dot Product, Rump
 	//   2011
-	const maxError = 3.046875 * dblEpsilon
+	const maxError = 3.046875 * machineEpsilon64
 
 	na := a.Dot(b.Vector)
 	if math.Abs(na) <= maxError {
@@ -885,7 +885,7 @@ func triageIntersectionOrdering(a, b, c, d, m, n Point) int {
 	// only interested in the sign of this operation, as long as the relative
 	// error is < 1 we can never get a sign flip, which would make this exact for
 	// our purposes.
-	const maxError = 32 * dblEpsilon
+	const maxError = 32 * machineEpsilon64
 
 	mdota := m.Dot(a.Vector)
 	mdotb := m.Dot(b.Vector)

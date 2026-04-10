@@ -218,7 +218,7 @@ func (p *PaddedCell) ShrinkToFit(rect r2.Rect) CellID {
 
 	// Increase the padding to compensate for the error in uvToST.
 	// (The constant below is a provable upper bound on the additional error.)
-	padded := rect.ExpandedByMargin(p.padding + 1.5*dblEpsilon)
+	padded := rect.ExpandedByMargin(p.padding + 1.5*machineEpsilon64)
 	iMin, jMin := p.iLo, p.jLo // Min i- or j- coordinate spanned by padded
 	var iXor, jXor int         // XOR of the min and max i- or j-coordinates
 

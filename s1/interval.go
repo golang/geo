@@ -307,12 +307,12 @@ func (i Interval) AddPoint(p float64) Interval {
 // platform the mantissa precision may be different than others, so we choose to
 // use specific values to be consistent across all.
 // The values come from the C++ implementation.
-var (
+const (
 	// epsilon is a small number that represents a reasonable level of noise between two
 	// values that can be considered to be equal.
 	epsilon = 1e-15
-	// dblEpsilon is a smaller number for values that require more precision.
-	dblEpsilon = 2.220446049e-16
+	// machineEpsilon64 is a smaller number for values that require more precision.
+	machineEpsilon64 = 0x1p-52
 )
 
 // Expanded returns an interval that has been expanded on each side by margin.
@@ -327,7 +327,7 @@ func (i Interval) Expanded(margin float64) Interval {
 		}
 		// Check whether this interval will be full after expansion, allowing
 		// for a rounding error when computing each endpoint.
-		if i.Length()+2*margin+2*dblEpsilon >= 2*math.Pi {
+		if i.Length()+2*margin+2*machineEpsilon64 >= 2*math.Pi {
 			return FullInterval()
 		}
 	} else {
@@ -336,7 +336,7 @@ func (i Interval) Expanded(margin float64) Interval {
 		}
 		// Check whether this interval will be empty after expansion, allowing
 		// for a rounding error when computing each endpoint.
-		if i.Length()+2*margin-2*dblEpsilon <= 0 {
+		if i.Length()+2*margin-2*machineEpsilon64 <= 0 {
 			return EmptyInterval()
 		}
 	}

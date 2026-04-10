@@ -52,16 +52,16 @@ func NewRectBounder() *RectBounder {
 // result does not include either pole. It is only used for testing purposes
 func (r *RectBounder) maxErrorForTests() LatLng {
 	// The maximum error in the latitude calculation is
-	//    3.84 * dblEpsilon   for the PointCross calculation
-	//    0.96 * dblEpsilon   for the Latitude calculation
-	//    5    * dblEpsilon   added by AddPoint/RectBound to compensate for error
+	//    3.84 * machineEpsilon64   for the PointCross calculation
+	//    0.96 * machineEpsilon64   for the Latitude calculation
+	//    5    * machineEpsilon64   added by AddPoint/RectBound to compensate for error
 	//    -----------------
-	//    9.80 * dblEpsilon   maximum error in result
+	//    9.80 * machineEpsilon64   maximum error in result
 	//
-	// The maximum error in the longitude calculation is dblEpsilon. RectBound
+	// The maximum error in the longitude calculation is machineEpsilon64. RectBound
 	// does not do any expansion because this isn't necessary in order to
 	// bound the *rounded* longitudes of contained points.
-	return LatLng{10 * dblEpsilon * s1.Radian, 1 * dblEpsilon * s1.Radian}
+	return LatLng{10 * machineEpsilon64 * s1.Radian, 1 * machineEpsilon64 * s1.Radian}
 }
 
 // AddPoint adds the given point to the chain. The Point must be unit length.
@@ -86,24 +86,24 @@ func (r *RectBounder) AddPoint(b Point) {
 	// by choosing a maximum allowable error, and if the error is greater than
 	// this we fall back to a different technique. Since it turns out that
 	// the other sources of error in converting the normal to a maximum
-	// latitude add up to at most 1.16 * dblEpsilon, and it is desirable to
-	// have the total error be a multiple of dblEpsilon, we have chosen to
-	// limit the maximum error in the normal to be 3.84 * dblEpsilon.
+	// latitude add up to at most 1.16 * machineEpsilon64, and it is desirable to
+	// have the total error be a multiple of machineEpsilon64, we have chosen to
+	// limit the maximum error in the normal to be 3.84 * machineEpsilon64.
 	// It is possible to show that the error is less than this when
 	//
-	// n.Norm() >= 8 * sqrt(3) / (3.84 - 0.5 - sqrt(3)) * dblEpsilon
-	//          = 1.91346e-15 (about 8.618 * dblEpsilon)
+	// n.Norm() >= 8 * sqrt(3) / (3.84 - 0.5 - sqrt(3)) * machineEpsilon64
+	//          = 1.91346e-15 (about 8.618 * machineEpsilon64)
 	nNorm := n.Norm()
 	if nNorm < 1.91346e-15 {
 		// A and B are either nearly identical or nearly antipodal (to within
-		// 4.309 * dblEpsilon, or about 6 nanometers on the earth's surface).
+		// 4.309 * machineEpsilon64, or about 6 nanometers on the earth's surface).
 		if r.a.Dot(b.Vector) < 0 {
 			// The two points are nearly antipodal. The easiest solution is to
 			// assume that the edge between A and B could go in any direction
 			// around the sphere.
 			r.bound = FullRect()
 		} else {
-			// The two points are nearly identical (to within 4.309 * dblEpsilon).
+			// The two points are nearly identical (to within 4.309 * machineEpsilon64).
 			// In this case we can just use the bounding rectangle of the points,
 			// since after the expansion done by GetBound this Rect is
 			// guaranteed to include the (lat,lng) values of all points along AB.
@@ -116,7 +116,7 @@ func (r *RectBounder) AddPoint(b Point) {
 
 	// Compute the longitude range spanned by AB.
 	lngAB := s1.EmptyInterval().AddPoint(r.aLL.Lng.Radians()).AddPoint(bLL.Lng.Radians())
-	if lngAB.Length() >= math.Pi-2*dblEpsilon {
+	if lngAB.Length() >= math.Pi-2*machineEpsilon64 {
 		// The points lie on nearly opposite lines of longitude to within the
 		// maximum error of the calculation. The easiest solution is to assume
 		// that AB could go on either side of the pole.
@@ -140,7 +140,7 @@ func (r *RectBounder) AddPoint(b Point) {
 	// the error in these calculations. It is possible to show that the
 	// total error is bounded by
 	//
-	// (1 + sqrt(3)) * dblEpsilon * nNorm + 8 * sqrt(3) * (dblEpsilon**2)
+	// (1 + sqrt(3)) * machineEpsilon64 * nNorm + 8 * sqrt(3) * (machineEpsilon64**2)
 	//   = 6.06638e-16 * nNorm + 6.83174e-31
 
 	mError := 6.06638e-16*nNorm + 6.83174e-31
@@ -154,18 +154,18 @@ func (r *RectBounder) AddPoint(b Point) {
 		// Our goal is compute a bound that contains the computed latitudes of
 		// all S2Points P that pass the point-in-polygon containment test.
 		// There are three sources of error we need to consider:
-		// - the directional error in N (at most 3.84 * dblEpsilon)
+		// - the directional error in N (at most 3.84 * machineEpsilon64)
 		// - converting N to a maximum latitude
 		// - computing the latitude of the test point P
-		// The latter two sources of error are at most 0.955 * dblEpsilon
+		// The latter two sources of error are at most 0.955 * machineEpsilon64
 		// individually, but it is possible to show by a more complex analysis
-		// that together they can add up to at most 1.16 * dblEpsilon, for a
-		// total error of 5 * dblEpsilon.
+		// that together they can add up to at most 1.16 * machineEpsilon64, for a
+		// total error of 5 * machineEpsilon64.
 		//
-		// We add 3 * dblEpsilon to the bound here, and GetBound() will pad
-		// the bound by another 2 * dblEpsilon.
+		// We add 3 * machineEpsilon64 to the bound here, and GetBound() will pad
+		// the bound by another 2 * machineEpsilon64.
 		maxLat := math.Min(
-			math.Atan2(math.Sqrt(n.X*n.X+n.Y*n.Y), math.Abs(n.Z))+3*dblEpsilon,
+			math.Atan2(math.Sqrt(n.X*n.X+n.Y*n.Y), math.Abs(n.Z))+3*machineEpsilon64,
 			math.Pi/2)
 
 		// In order to get tight bounds when the two points are close together,
@@ -178,7 +178,7 @@ func (r *RectBounder) AddPoint(b Point) {
 		// distance (in latitude) from A or B to the min or max latitude
 		// attained along the edge AB.
 		latBudget := 2 * math.Asin(0.5*(r.a.Sub(b.Vector)).Norm()*math.Sin(maxLat))
-		maxDelta := 0.5*(latBudget-latAB.Length()) + dblEpsilon
+		maxDelta := 0.5*(latBudget-latAB.Length()) + machineEpsilon64
 
 		// Test whether AB passes through the point of maximum latitude or
 		// minimum latitude. If the dot product(s) are small enough then the
@@ -200,7 +200,7 @@ func (r *RectBounder) AddPoint(b Point) {
 // above, i.e. if the edge chain defines a Loop, then the bound contains
 // the LatLng coordinates of all Points contained by the loop.
 func (r *RectBounder) RectBound() Rect {
-	return r.bound.expanded(LatLng{s1.Angle(2 * dblEpsilon), 0}).PolarClosure()
+	return r.bound.expanded(LatLng{s1.Angle(2 * machineEpsilon64), 0}).PolarClosure()
 }
 
 // ExpandForSubregions expands a bounding Rect so that it is guaranteed to
@@ -224,7 +224,7 @@ func ExpandForSubregions(bound Rect) Rect {
 	}
 
 	// First we need to check whether the bound B contains any nearly-antipodal
-	// points (to within 4.309 * dblEpsilon). If so then we need to return
+	// points (to within 4.309 * machineEpsilon64). If so then we need to return
 	// FullRect, since the subregion might have an edge between two
 	// such points, and AddPoint returns Full for such edges. Note that
 	// this can happen even if B is not Full for example, consider a loop
@@ -234,12 +234,12 @@ func ExpandForSubregions(bound Rect) Rect {
 	// It is easy to check whether B contains any antipodal points, but checking
 	// for nearly-antipodal points is trickier. Essentially we consider the
 	// original bound B and its reflection through the origin B', and then test
-	// whether the minimum distance between B and B' is less than 4.309 * dblEpsilon.
+	// whether the minimum distance between B and B' is less than 4.309 * machineEpsilon64.
 
 	// lngGap is a lower bound on the longitudinal distance between B and its
-	// reflection B'. (2.5 * dblEpsilon is the maximum combined error of the
+	// reflection B'. (2.5 * machineEpsilon64 is the maximum combined error of the
 	// endpoint longitude calculations and the Length call.)
-	lngGap := math.Max(0, math.Pi-bound.Lng.Length()-2.5*dblEpsilon)
+	lngGap := math.Max(0, math.Pi-bound.Lng.Length()-2.5*machineEpsilon64)
 
 	// minAbsLat is the minimum distance from B to the equator (if zero or
 	// negative, then B straddles the equator).
@@ -258,7 +258,7 @@ func ExpandForSubregions(bound Rect) Rect {
 		// distance is lngGap. We could compute the distance exactly using the
 		// Haversine formula, but then we would need to bound the errors in that
 		// calculation. Since we only need accuracy when the distance is very
-		// small (close to 4.309 * dblEpsilon), we substitute the Euclidean
+		// small (close to 4.309 * machineEpsilon64), we substitute the Euclidean
 		// distance instead. This gives us a right triangle XYZ with two edges of
 		// length x = 2*minAbsLat and y ~= lngGap. The desired distance is the
 		// length of the third edge z, and we have
@@ -267,7 +267,7 @@ func ExpandForSubregions(bound Rect) Rect {
 		//
 		// Therefore the region may contain nearly antipodal points only if
 		//
-		//  2*minAbsLat + lngGap  <  sqrt(2) * 4.309 * dblEpsilon
+		//  2*minAbsLat + lngGap  <  sqrt(2) * 4.309 * machineEpsilon64
 		//                        ~= 1.354e-15
 		//
 		// Note that because the given bound B is conservative, minAbsLat and
@@ -288,10 +288,10 @@ func ExpandForSubregions(bound Rect) Rect {
 		// Unlike the case above, latGapSouth and latGapNorth are not lower bounds
 		// (because of the extra addition operation, and because math.Pi/2 is not
 		// exactly equal to Pi/2); they can exceed their true values by up to
-		// 0.75 * dblEpsilon. Putting this all together, the region may contain
+		// 0.75 * machineEpsilon64. Putting this all together, the region may contain
 		// nearly antipodal points only if
 		//
-		//   latGapSouth + latGapNorth  <  (sqrt(2) * 4.309 + 1.5) * dblEpsilon
+		//   latGapSouth + latGapNorth  <  (sqrt(2) * 4.309 + 1.5) * machineEpsilon64
 		//                              ~= 1.687e-15
 		if latGapSouth+latGapNorth < 1.687e-15 {
 			return FullRect()
@@ -319,30 +319,30 @@ func ExpandForSubregions(bound Rect) Rect {
 		// for 0 <= t <= Pi/2, that we only need an accurate approximation when
 		// at least one of "maxLatGap" or lngGap is extremely small (in which
 		// case sin(t) ~= t), and recalling that "maxLatGap" has an error of up
-		// to 0.75 * dblEpsilon, we want to test whether
+		// to 0.75 * machineEpsilon64, we want to test whether
 		//
-		//   maxLatGap * lngGap  <  (4.309 + 0.75) * (Pi/2) * dblEpsilon
+		//   maxLatGap * lngGap  <  (4.309 + 0.75) * (Pi/2) * machineEpsilon64
 		//                       ~= 1.765e-15
 		if math.Max(latGapSouth, latGapNorth)*lngGap < 1.765e-15 {
 			return FullRect()
 		}
 	}
 	// Next we need to check whether the subregion might contain any edges that
-	// span (math.Pi - 2 * dblEpsilon) radians or more in longitude, since AddPoint
+	// span (math.Pi - 2 * machineEpsilon64) radians or more in longitude, since AddPoint
 	// sets the longitude bound to Full in that case. This corresponds to
 	// testing whether (lngGap <= 0) in lngExpansion below.
 
-	// Otherwise, the maximum latitude error in AddPoint is 4.8 * dblEpsilon.
+	// Otherwise, the maximum latitude error in AddPoint is 4.8 * machineEpsilon64.
 	// In the worst case, the errors when computing the latitude bound for a
 	// subregion could go in the opposite direction as the errors when computing
 	// the bound for the original region, so we need to double this value.
 	// (More analysis shows that it's okay to round down to a multiple of
-	// dblEpsilon.)
+	// machineEpsilon64.)
 	//
 	// For longitude, we rely on the fact that atan2 is correctly rounded and
 	// therefore no additional bounds expansion is necessary.
 
-	latExpansion := 9 * dblEpsilon
+	latExpansion := 9 * machineEpsilon64
 	lngExpansion := 0.0
 	if lngGap <= 0 {
 		lngExpansion = math.Pi
