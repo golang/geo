@@ -19,7 +19,7 @@ import (
 	"strconv"
 )
 
-// Angle represents a 1D angle. The internal representation is a double precision
+// Angle represents a 1D angle. The internal representation is a float64
 // value in radians, so conversion to and from radians is exact.
 // Conversions between E5, E6, E7, and Degrees are not always
 // exact. For example, Degrees(3.1) is different from E6(3100000) or E7(31000000).

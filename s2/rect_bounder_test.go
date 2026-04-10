@@ -168,7 +168,7 @@ func TestRectBounderExpandForSubregions(t *testing.T) {
 		{1e-100, 22e-16, 1e-14, math.Pi, false},
 		// Cases where the bound spans at most 90 degrees in longitude, and almost
 		// 180 degrees in latitude.  Note that DBL_EPSILON is about 2.22e-16, which
-		// implies that the double-precision value just below Pi/2 can be written as
+		// implies that the float64 value just below Pi/2 can be written as
 		// (math.Pi/2 - 2e-16).
 		{-math.Pi / 2, -1e-15, math.Pi/2 - 7e-16, 0, true},
 		{-math.Pi / 2, -1e-15, math.Pi/2 - 30e-16, 0, false},

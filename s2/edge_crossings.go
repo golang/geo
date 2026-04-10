@@ -363,7 +363,7 @@ func intersectionStableSorted(a0, a1, b0, b1 Point) (Point, bool) {
 
 // intersectionExact returns the intersection point of (a0, a1) and (b0, b1)
 // using precise arithmetic. Note that the result is not exact because it is
-// rounded down to double precision at the end. Also, the intersection point
+// rounded down to float64 at the end. Also, the intersection point
 // is not guaranteed to have the correct sign (i.e., the return value may need
 // to be negated).
 func intersectionExact(a0, a1, b0, b1 Point) Point {

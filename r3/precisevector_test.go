@@ -500,7 +500,7 @@ func TestPreciseVectorIsZero(t *testing.T) {
 		},
 		{
 			// 1e20+1-1e20 should equal 1.  Testing the case where the
-			// numbers are outside the range a traditional double would
+			// numbers are outside the range a traditional float64 would
 			// be able to handle correctly.
 			have: x.Add(y).Add(x.Mul(precFloat(-1))),
 			want: false,

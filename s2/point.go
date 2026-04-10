@@ -349,7 +349,7 @@ func (p Point) EnsureNormalizable() Point {
 	}
 	if !p.IsNormalizable() {
 		// We can't just scale by a fixed factor because the smallest representable
-		// double is 2**-1074, so if we multiplied by 2**(1074 - 242) then the
+		// float64 is 2**-1074, so if we multiplied by 2**(1074 - 242) then the
 		// result might be so large that we couldn't square it without overflow.
 		//
 		// Note that we must scale by a power of two to avoid rounding errors.
