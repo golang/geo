@@ -40,6 +40,8 @@ const (
 	dblEpsilon = 2.220446049250313e-16
 	// dblError is the C++ value for S2 rounding_epsilon().
 	dblError = 1.110223024625156e-16
+	// smallestNormalFloat64 is the C++ DBL_MIN equivalent.
+	smallestNormalFloat64 = 0x1p-1022
 
 	// sqrt3 is used many times throughout but computed every time,
 	// so use the OEIS value like package math does for Sqrt2, etc.
@@ -223,6 +225,12 @@ func stableSign(a, b, c Point) Direction {
 
 	det := -e1.Cross(e2).Dot(op)
 	maxErr := detErrorMultiplier * math.Sqrt(e1.Norm2()*e2.Norm2())
+
+	// Errors smaller than this value may not be accurate due to underflow.
+	minNoUnderflowError := detErrorMultiplier * math.Sqrt(smallestNormalFloat64)
+	if maxErr < minNoUnderflowError {
+		return Indeterminate
+	}
 
 	// If the determinant isn't zero, within maxErr, we know definitively the point ordering.
 	if det > maxErr {
