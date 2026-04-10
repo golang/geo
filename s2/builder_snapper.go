@@ -216,10 +216,10 @@ func (sf CellIDSnapper) minSnapRadiusForLevel(level int) s1.Angle {
 	// point can move when snapped, taking into account numerical errors.
 	//
 	// The maximum error when converting from a Point to a CellID is
-	// MaxDiagMetric.Deriv * dblEpsilon. The maximum error when converting a
-	// CellID center back to a Point is 1.5 * dblEpsilon. These add up to
-	// just slightly less than 4 * dblEpsilon.
-	return s1.Angle(0.5*MaxDiagMetric.Value(level) + 4*dblEpsilon)
+	// MaxDiagMetric.Deriv * machineEpsilon64. The maximum error when converting a
+	// CellID center back to a Point is 1.5 * machineEpsilon64. These add up to
+	// just slightly less than 4 * machineEpsilon64.
+	return s1.Angle(0.5*MaxDiagMetric.Value(level) + 4*machineEpsilon64)
 }
 
 // levelForMaxSnapRadius reports the minimum Cell level (i.e., largest Cells) such
@@ -235,8 +235,8 @@ func (sf CellIDSnapper) minSnapRadiusForLevel(level int) s1.Angle {
 // TODO(rsned): pop this method out to standalone.
 func (sf CellIDSnapper) levelForMaxSnapRadius(snapRadius s1.Angle) int {
 	// When choosing a level, we need to account for the error bound of
-	// 4 * dblEpsilon that is added by MinSnapRadiusForLevel.
-	return MaxDiagMetric.MinLevel(2 * (snapRadius.Radians() - 4*dblEpsilon))
+	// 4 * machineEpsilon64 that is added by MinSnapRadiusForLevel.
+	return MaxDiagMetric.MinLevel(2 * (snapRadius.Radians() - 4*machineEpsilon64))
 }
 
 // MinVertexSeparation reports the minimum separation between vertices depending
@@ -394,7 +394,7 @@ func (sf IntLatLngSnapper) minSnapRadiusForExponent(exponent int) s1.Angle {
 	// point can move when snapped, taking into account numerical errors.
 	//
 	// The maximum errors in latitude and longitude can be bounded as
-	// follows (as absolute errors in terms of dblEpsilon):
+	// follows (as absolute errors in terms of machineEpsilon64):
 	//
 	//                                      Latitude      Longitude
 	// Convert to LatLng:                      1.000          1.000
@@ -408,15 +408,15 @@ func (sf IntLatLngSnapper) minSnapRadiusForExponent(exponent int) s1.Angle {
 	//
 	// The maximum error when converting the LatLng back to a Point is
 	//
-	//   sqrt(2) * (maximum error in latitude or longitude) + 1.5 * dblEpsilon
+	//   sqrt(2) * (maximum error in latitude or longitude) + 1.5 * machineEpsilon64
 	//
-	// which works out to (9 * sqrt(2) + 1.5) * dblEpsilon radians. Finally
+	// which works out to (9 * sqrt(2) + 1.5) * machineEpsilon64 radians. Finally
 	// we need to consider the effect of rounding to integer coordinates
 	// (much larger than the errors above), which can change the position by
 	// up to (sqrt(2) * 0.5 * sf.to) radians.
 	power := math.Pow10(exponent)
 	return (s1.Degree*s1.Angle((1/math.Sqrt2)/power) +
-		s1.Angle((9*math.Sqrt2+1.5)*dblEpsilon))
+		s1.Angle((9*math.Sqrt2+1.5)*machineEpsilon64))
 }
 
 // exponentForMaxSnapRadius returns the minimum exponent such that vertices will
@@ -427,15 +427,15 @@ func (sf IntLatLngSnapper) minSnapRadiusForExponent(exponent int) s1.Angle {
 // TODO(rsned): Pop this method out so it can be used by other callers.
 func (sf IntLatLngSnapper) exponentForMaxSnapRadius(snapRadius s1.Angle) int {
 	// When choosing an exponent, we need to account for the error bound of
-	// (9 * sqrt(2) + 1.5) * dblEpsilon added by minSnapRadiusForExponent.
-	snapRadius -= (9*math.Sqrt2 + 1.5) * dblEpsilon
+	// (9 * sqrt(2) + 1.5) * machineEpsilon64 added by minSnapRadiusForExponent.
+	snapRadius -= (9*math.Sqrt2 + 1.5) * machineEpsilon64
 	snapRadius = max(snapRadius, 1e-30)
 	exponent := math.Log10((1 / math.Sqrt2) / snapRadius.Degrees())
 
 	// There can be small errors in the calculation above, so to ensure that
 	// this function is the inverse of minSnapRadiusForExponent we subtract a
 	// small error tolerance.
-	return clamp(int(math.Ceil(exponent-2*dblEpsilon)),
+	return clamp(int(math.Ceil(exponent-2*machineEpsilon64)),
 		minIntSnappingExponent, maxIntSnappingExponent)
 }
 

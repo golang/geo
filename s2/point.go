@@ -330,7 +330,7 @@ func (p Point) IsNormalizable() bool {
 	// magnitudes of ab.CrossProd(cd) and ab.DotProd(cd) is at least 2**-968,
 	// which ensures that any denormalized terms in these two calculations do
 	// not affect the accuracy of the result (since all denormalized numbers are
-	// smaller than 2**-1022, which is less than dblError * 2**-968).
+	// smaller than 2**-1022, which is less than unitRoundoff64 * 2**-968).
 	//
 	// The fastest way to ensure this is to test whether the largest component of
 	// the result has a magnitude of at least 2**-242.

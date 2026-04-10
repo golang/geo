@@ -142,9 +142,9 @@ const (
 	// epsilon is a small number that represents a reasonable level of noise between two
 	// values that can be considered to be equal.
 	epsilon = 1e-15
-	// dblEpsilon is a smaller number for values that require more precision.
+	// machineEpsilon64 is a smaller number for values that require more precision.
 	// This is the C++ DBL_EPSILON equivalent.
-	dblEpsilon = 2.220446049250313e-16
+	machineEpsilon64 = 0x1p-52
 )
 
 // ApproxEqual reports whether the interval can be transformed into the

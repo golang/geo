@@ -355,7 +355,7 @@ func (c Cell) longitude(i, j int) float64 {
 }
 
 var (
-	poleMinLat = math.Asin(math.Sqrt(1.0/3)) - 0.5*dblEpsilon
+	poleMinLat = math.Asin(math.Sqrt(1.0/3)) - 0.5*machineEpsilon64
 )
 
 // RectBound returns the bounding rectangle of this cell.
@@ -395,7 +395,7 @@ func (c Cell) RectBound() Rect {
 		// We grow the bounds slightly to make sure that the bounding rectangle
 		// contains LatLngFromPoint(P) for any point P inside the loop L defined by the
 		// four *normalized* vertices.  Note that normalization of a vector can
-		// change its direction by up to 0.5 * dblEpsilon radians, and it is not
+		// change its direction by up to 0.5 * machineEpsilon64 radians, and it is not
 		// enough just to add Normalize calls to the code above because the
 		// latitude/longitude ranges are not necessarily determined by diagonally
 		// opposite vertex pairs after normalization.
@@ -403,18 +403,18 @@ func (c Cell) RectBound() Rect {
 		// We would like to bound the amount by which the latitude/longitude of a
 		// contained point P can exceed the bounds computed above.  In the case of
 		// longitude, the normalization error can change the direction of rounding
-		// leading to a maximum difference in longitude of 2 * dblEpsilon.  In
+		// leading to a maximum difference in longitude of 2 * machineEpsilon64.  In
 		// the case of latitude, the normalization error can shift the latitude by
-		// up to 0.5 * dblEpsilon and the other sources of error can cause the
-		// two latitudes to differ by up to another 1.5 * dblEpsilon, which also
-		// leads to a maximum difference of 2 * dblEpsilon.
-		return Rect{lat, lng}.expanded(LatLng{s1.Angle(2 * dblEpsilon), s1.Angle(2 * dblEpsilon)}).PolarClosure()
+		// up to 0.5 * machineEpsilon64 and the other sources of error can cause the
+		// two latitudes to differ by up to another 1.5 * machineEpsilon64, which also
+		// leads to a maximum difference of 2 * machineEpsilon64.
+		return Rect{lat, lng}.expanded(LatLng{s1.Angle(2 * machineEpsilon64), s1.Angle(2 * machineEpsilon64)}).PolarClosure()
 	}
 
 	// The 4 cells around the equator extend to +/-45 degrees latitude at the
 	// midpoints of their top and bottom edges.  The two cells covering the
 	// poles extend down to +/-35.26 degrees at their vertices.  The maximum
-	// error in this calculation is 0.5 * dblEpsilon.
+	// error in this calculation is 0.5 * machineEpsilon64.
 	var bound Rect
 	switch c.face {
 	case 0:
@@ -437,7 +437,7 @@ func (c Cell) RectBound() Rect {
 	// point, not just the infinite-precision version.) We don't need to expand
 	// longitude because longitude is calculated via a single call to math.Atan2,
 	// which is guaranteed to be semi-monotonic.
-	return bound.expanded(LatLng{s1.Angle(dblEpsilon), s1.Angle(0)})
+	return bound.expanded(LatLng{s1.Angle(machineEpsilon64), s1.Angle(0)})
 }
 
 // CapBound returns the bounding cap of this cell.
@@ -484,9 +484,9 @@ func (c Cell) ContainsPoint(p Point) bool {
 	//
 	// is always true. To do this, we need to account for the error when
 	// converting from (u,v) coordinates to (s,t) coordinates. In the
-	// normal case the total error is at most 1.125 * dblEpsilon.
+	// normal case the total error is at most 1.125 * machineEpsilon64.
 	// See https://github.com/google/s2geometry/issues/463.
-	return c.uv.ExpandedByMargin((1.125 + dblEpsilon) * dblEpsilon).ContainsPoint(uv)
+	return c.uv.ExpandedByMargin((1.125 + machineEpsilon64) * machineEpsilon64).ContainsPoint(uv)
 }
 
 // Encode encodes the Cell.

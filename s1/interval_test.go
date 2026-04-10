@@ -117,7 +117,7 @@ func TestAlmostFullOrEmpty(t *testing.T) {
 	// Test that rounding errors don't cause intervals that are almost empty or
 	// full to be considered empty or full.  The following value is the greatest
 	// representable value less than Pi.
-	almostPi := math.Pi - 2*dblEpsilon
+	almostPi := math.Pi - 2*machineEpsilon64
 
 	i := Interval{-almostPi, math.Pi}
 	if i.IsFull() {
@@ -464,8 +464,8 @@ func TestIntervalString(t *testing.T) {
 func TestIntervalApproxEqual(t *testing.T) {
 	// Choose two values lo and hi such that it's okay to shift an endpoint by
 	// lo (i.e., the resulting interval is equivalent) but not by hi.
-	lo := 4 * dblEpsilon // < epsilon default
-	hi := 6 * dblEpsilon // > epsilon default
+	lo := 4 * machineEpsilon64 // < epsilon default
+	hi := 6 * machineEpsilon64 // > epsilon default
 
 	tests := []struct {
 		a, b Interval

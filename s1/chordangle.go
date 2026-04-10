@@ -42,8 +42,8 @@ import (
 //	r = 2 * sin((π - x) / 2) = 2 * cos(x / 2)
 //
 // For values of x not close to π the relative error in the squared chord
-// length is at most 4.5 * dblEpsilon (see MaxPointError below).
-// The relative error in "r" is thus at most 2.25 * dblEpsilon ~= 5e-16. To
+// length is at most 4.5 * machineEpsilon64 (see MaxPointError below).
+// The relative error in "r" is thus at most 2.25 * machineEpsilon64 ~= 5e-16. To
 // convert this error into an equivalent angle, we have
 //
 //	|dr / dx| = sin(x / 2)
@@ -81,26 +81,26 @@ import (
 // smaller than this. For example, maximum distance between adjacent
 // representable ChordAngle values is only 13.5 cm rather than 28.5 cm. To
 // see this, observe that the closest representable value to r^2 = 4 is
-// r^2 =  4 * (1 - dblEpsilon / 2). Thus r = 2 * (1 - dblEpsilon / 4) and
+// r^2 =  4 * (1 - machineEpsilon64 / 2). Thus r = 2 * (1 - machineEpsilon64 / 4) and
 // the angle between these two representable values is
 //
 //	x  = 2 * acos(r / 2)
-//	   = 2 * acos(1 - dblEpsilon / 4)
-//	  ~= 2 * asin(sqrt(dblEpsilon / 2)
-//	  ~= sqrt(2 * dblEpsilon)
+//	   = 2 * acos(1 - machineEpsilon64 / 4)
+//	  ~= 2 * asin(sqrt(machineEpsilon64 / 2)
+//	  ~= sqrt(2 * machineEpsilon64)
 //	  ~= 2.1e-8
 //
 // which is 13.5 cm on the Earth's surface.
 //
 // The worst case rounding error occurs when the value halfway between these
 // two representable values is rounded up to 4. This halfway value is
-// r^2 = (4 * (1 - dblEpsilon / 4)), thus r = 2 * (1 - dblEpsilon / 8) and
+// r^2 = (4 * (1 - machineEpsilon64 / 4)), thus r = 2 * (1 - machineEpsilon64 / 8) and
 // the worst case rounding error is
 //
 //	x  = 2 * acos(r / 2)
-//	   = 2 * acos(1 - dblEpsilon / 8)
-//	  ~= 2 * asin(sqrt(dblEpsilon / 4)
-//	  ~= sqrt(dblEpsilon)
+//	   = 2 * acos(1 - machineEpsilon64 / 8)
+//	  ~= 2 * asin(sqrt(machineEpsilon64 / 4)
+//	  ~= sqrt(machineEpsilon64)
 //	  ~= 1.5e-8
 //
 // which is 9.5 cm on the Earth's surface.
@@ -233,17 +233,17 @@ func (c ChordAngle) Predecessor() ChordAngle {
 // bounds guaranteed by s2.Point.Normalize. The error is defined with respect to
 // the true distance after the points are projected to lie exactly on the sphere.
 func (c ChordAngle) MaxPointError() float64 {
-	// There is a relative error of (2.5*dblEpsilon) when computing the squared
-	// distance, plus a relative error of 2 * dblEpsilon, plus an absolute error
-	// of (16 * dblEpsilon**2) because the lengths of the input points may differ
-	// from 1 by up to (2*dblEpsilon) each. (This is the maximum error in Normalize).
-	return 4.5*dblEpsilon*float64(c) + 16*dblEpsilon*dblEpsilon
+	// There is a relative error of (2.5*machineEpsilon64) when computing the squared
+	// distance, plus a relative error of 2 * machineEpsilon64, plus an absolute error
+	// of (16 * machineEpsilon64**2) because the lengths of the input points may differ
+	// from 1 by up to (2*machineEpsilon64) each. (This is the maximum error in Normalize).
+	return 4.5*machineEpsilon64*float64(c) + 16*machineEpsilon64*machineEpsilon64
 }
 
 // MaxAngleError returns the maximum error for a ChordAngle constructed
 // as an Angle distance.
 func (c ChordAngle) MaxAngleError() float64 {
-	return dblEpsilon * float64(c)
+	return machineEpsilon64 * float64(c)
 }
 
 // Add adds the other ChordAngle to this one and returns the resulting value.

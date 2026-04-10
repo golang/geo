@@ -306,7 +306,7 @@ func (c Cap) AddCap(other Cap) Cap {
 	// We round up the distance to ensure that the cap is actually contained.
 	// TODO(roberts): Do some error analysis in order to guarantee this.
 	dist := ChordAngleBetweenPoints(c.center, other.center).Add(other.radius)
-	if newRad := dist.Expanded(dblEpsilon * float64(dist)); newRad > c.radius {
+	if newRad := dist.Expanded(machineEpsilon64 * float64(dist)); newRad > c.radius {
 		c.radius = newRad
 	}
 	return c

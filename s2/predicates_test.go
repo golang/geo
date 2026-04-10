@@ -73,7 +73,7 @@ func TestRoundingEpsilon(t *testing.T) {
 		t.Errorf("roundingEpsilon(float32) = %g, want %g", got, want)
 	}
 
-	if got, want := roundingEpsilon(f64), dblEpsilon*0.5; got != want {
+	if got, want := roundingEpsilon(f64), machineEpsilon64*0.5; got != want {
 		t.Errorf("roundingEpsilon(float64) = %g, want %g", got, want)
 	}
 }
@@ -744,23 +744,23 @@ func TestPredicatesCompareDistanceCoverage(t *testing.T) {
 		},
 		{
 			x:        PointFromCoords(1, 1e-40, 0),
-			y:        PointFromCoords(1+dblEpsilon, 1e-40, 0),
-			r:        s1.ChordAngleFromAngle(0.9 * dblEpsilon * 1e-40),
+			y:        PointFromCoords(1+machineEpsilon64, 1e-40, 0),
+			r:        s1.ChordAngleFromAngle(0.9 * machineEpsilon64 * 1e-40),
 			distFunc: triageCompareSin2Distance,
 			wantSign: 1,
 			wantPrec: exactPrecision,
 		},
 		{
 			x:        PointFromCoords(1, 1e-40, 0),
-			y:        PointFromCoords(1+dblEpsilon, 1e-40, 0),
-			r:        s1.ChordAngleFromAngle(1.1 * dblEpsilon * 1e-40),
+			y:        PointFromCoords(1+machineEpsilon64, 1e-40, 0),
+			r:        s1.ChordAngleFromAngle(1.1 * machineEpsilon64 * 1e-40),
 			distFunc: triageCompareSin2Distance,
 			wantSign: -1,
 			wantPrec: exactPrecision,
 		},
 		{
 			x:        PointFromCoords(1, 0, 0),
-			y:        PointFromCoords(1+dblEpsilon, 0, 0),
+			y:        PointFromCoords(1+machineEpsilon64, 0, 0),
 			r:        s1.ChordAngle(0),
 			distFunc: triageCompareSin2Distance,
 			wantSign: 0,
@@ -785,7 +785,7 @@ func TestPredicatesCompareDistanceCoverage(t *testing.T) {
 		},
 		{
 			x:        PointFromCoords(1, 1, 0),
-			y:        PointFromCoords(1, -1-2*dblEpsilon, 0),
+			y:        PointFromCoords(1, -1-2*machineEpsilon64, 0),
 			r:        s1.RightChordAngle,
 			distFunc: triageCompareCosDistance,
 			wantSign: 1,
@@ -793,7 +793,7 @@ func TestPredicatesCompareDistanceCoverage(t *testing.T) {
 		},
 		{
 			x:        PointFromCoords(1, 1, 0),
-			y:        PointFromCoords(1, -1-dblEpsilon, 0),
+			y:        PointFromCoords(1, -1-machineEpsilon64, 0),
 			r:        s1.RightChordAngle,
 			distFunc: triageCompareCosDistance,
 			wantSign: 1,
@@ -1030,7 +1030,7 @@ func TestPredicatesSignDotProd(t *testing.T) {
 		{
 			//  NearlyOrthogonalPositive
 			a:         PointFromCoords(1, 0, 0),
-			b:         PointFromCoords(dblEpsilon, 1, 0),
+			b:         PointFromCoords(machineEpsilon64, 1, 0),
 			want:      1,
 			precision: "EXACT",
 		},
@@ -1044,7 +1044,7 @@ func TestPredicatesSignDotProd(t *testing.T) {
 		{
 			// NearlyOrthogonalNegative
 			a:         PointFromCoords(1, 0, 0),
-			b:         PointFromCoords(-dblEpsilon, 1, 0),
+			b:         PointFromCoords(-machineEpsilon64, 1, 0),
 			want:      -1,
 			precision: "EXACT",
 		},

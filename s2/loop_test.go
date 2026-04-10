@@ -321,7 +321,7 @@ func TestLoopRectBound(t *testing.T) {
 	arctic80Inv.Invert()
 	// The highest latitude of each edge is attained at its midpoint.
 	mid := Point{arctic80Inv.vertices[0].Vector.Add(arctic80Inv.vertices[1].Vector).Mul(.5)}
-	if got, want := arctic80Inv.RectBound().Lat.Hi, float64(LatLngFromPoint(mid).Lat); !float64Near(got, want, 10*dblEpsilon) {
+	if got, want := arctic80Inv.RectBound().Lat.Hi, float64(LatLngFromPoint(mid).Lat); !float64Near(got, want, 10*machineEpsilon64) {
 		t.Errorf("arctic 80 inverse loop's RectBound should have a latutude hi of %v, got %v", got, want)
 	}
 }
