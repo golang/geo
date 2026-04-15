@@ -131,7 +131,7 @@ func encodeFirstPointFixedLength(e *encoder, pi, qi uint32, level int, piCoder, 
 //
 // In addition, provides a lossless method to compress a sequence of points even
 // if some points are not the center of level-k cells. These points are stored
-// exactly, using 3 double precision values, after the above encoded string,
+// exactly, using 3 float64 values, after the above encoded string,
 // together with their index in the sequence (this leads to some redundancy - it
 // is expected that only a small fraction of the points are not cell centers).
 //

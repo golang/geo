@@ -64,7 +64,7 @@ var (
 
 	// A nearly-degenerate CCW chevron near the equator with very long sides
 	// (about 80 degrees).  Its area is less than 1e-640, which is too small
-	// to represent in double precision.
+	// to represent in float64.
 	skinnyChevron = LoopFromPoints(parsePoints("0:0, -1e-320:80, 0:1e-320, 1e-320:80"))
 
 	// A diamond-shaped loop around the point 0:180.

@@ -1206,7 +1206,7 @@ func TestPredicatesCircleEdgeIntersectionOrdering(t *testing.T) {
 				i, test.a, test.b, test.c, test.d, test.m, test.n, got, test.want)
 		}
 
-		// We triage in double precision and then fall back to exact for 0.
+		// We triage in float64 and then fall back to exact for 0.
 		actualPrec := "EXACT"
 		if triageIntersectionOrdering(test.a, test.b, test.c, test.d, test.m, test.n) != 0 {
 			actualPrec = "DOUBLE"

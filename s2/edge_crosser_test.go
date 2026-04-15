@@ -118,7 +118,7 @@ func TestEdgeCrosserCrossings(t *testing.T) {
 			edgeOrVertex: false,
 		},
 		{
-			// This example cannot be handled using regular double-precision
+			// This example cannot be handled using regular float64
 			// arithmetic due to floating-point underflow.
 			msg:          "two edges that barely cross each other near the end of both edges",
 			a:            Point{r3.Vector{X: 0, Y: 0, Z: 1}},
