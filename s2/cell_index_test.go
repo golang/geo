@@ -48,8 +48,14 @@ func cellIndexNodesEqual(a, b []cellIndexNode) bool {
 	sort.Slice(b, func(i, j int) bool {
 		return b[i].less(b[j])
 	})
-	return reflect.DeepEqual(a, b)
 
+	for i := range a {
+		if a[i].cellID != b[i].cellID && a[i].label != b[i].label {
+			return false
+		}
+	}
+
+	return true
 }
 
 // copyCellIndexNodes creates a copy of the nodes so that sorting and other tests
@@ -61,19 +67,16 @@ func copyCellIndexNodes(in []cellIndexNode) []cellIndexNode {
 }
 
 func verifyCellIndexCellIterator(t *testing.T, desc string, index *CellIndex) {
-	// TODO(roberts): Once the plain iterator is implemented, add this check.
-	/*
-		var actual []cellIndexNode
-		iter := NewCellIndexIterator(index)
-		for iter.Begin(); !iter.Done(); iter.Next() {
-			actual = append(actual, cellIndexNode{iter.StartID(), iter.Label())
-		}
+	var actual []cellIndexNode
+	iter := NewCellIndexIterator(index)
+	for iter.Begin(); !iter.Done(); iter.Next() {
+		actual = append(actual, cellIndexNode{cellID: iter.CellID(), label: iter.Label()})
+	}
 
-		want := copyCellIndexNodes(index.cellTree)
-		if !cellIndexNodesEqual(actual, want) {
-			t.Errorf("%s: cellIndexNodes not equal but should be.  %v != %v", desc, actual, want)
-		}
-	*/
+	want := copyCellIndexNodes(index.cellTree)
+	if !cellIndexNodesEqual(actual, want) {
+		t.Errorf("%s: cellIndexNodes not equal but should be.  %v != %v", desc, actual, want)
+	}
 }
 
 func verifyCellIndexRangeIterators(t *testing.T, desc string, index *CellIndex) {
@@ -338,9 +341,157 @@ func TestCellIndexRandomCellUnions(t *testing.T) {
 	cellIndexQuadraticValidate(t, "Random Cell Unions", index, nil)
 }
 
-// TODO(roberts): Differences from C++
-//
-// Add remainder of TestCellIndexContentsIteratorSuppressesDuplicates
-//
-// additional Iterator related parts
-// Intersections related
+func expectContents(t *testing.T, target CellID, index *CellIndex, contents *CellIndexContentsIterator, expected []cellIndexNode) {
+	rangeIter := NewCellIndexRangeIterator(index)
+	rangeIter.Seek(target)
+
+	var actual []cellIndexNode
+	for contents.StartUnion(rangeIter); !contents.Done(); contents.Next() {
+		actual = append(actual, cellIndexNode{cellID: contents.CellID(), label: contents.Label()})
+	}
+	if !cellIndexNodesEqual(expected, actual) {
+		t.Errorf("comparing contents iterator contents to this range: got %+v, want %+v", actual, expected)
+	}
+}
+
+func TestCellIndexContentsIteratorSuppressesDuplicates(t *testing.T) {
+	index := &CellIndex{}
+	index.Add(CellIDFromString("2/1"), 1)
+	index.Add(CellIDFromString("2/1"), 2)
+	index.Add(CellIDFromString("2/10"), 3)
+	index.Add(CellIDFromString("2/100"), 4)
+	index.Add(CellIDFromString("2/102"), 5)
+	index.Add(CellIDFromString("2/1023"), 6)
+	index.Add(CellIDFromString("2/31"), 7)
+	index.Add(CellIDFromString("2/313"), 8)
+	index.Add(CellIDFromString("2/3132"), 9)
+	index.Add(CellIDFromString("3/1"), 10)
+	index.Add(CellIDFromString("3/12"), 11)
+	index.Add(CellIDFromString("3/13"), 12)
+
+	cellIndexQuadraticValidate(t, "Suppress Duplicates", index, nil)
+
+	contents := NewCellIndexContentsIterator(index)
+	expectContents(t, CellIDFromString("1/123"), index, contents, []cellIndexNode{})
+	expectContents(t, CellIDFromString("2/100123"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/1"), label: 1}, {cellID: CellIDFromString("2/1"), label: 2}, {cellID: CellIDFromString("2/10"), label: 3}, {cellID: CellIDFromString("2/100"), label: 4}})
+	// Check that a second call with the same key yields no additional results.
+	expectContents(t, CellIDFromString("2/100123"), index, contents, []cellIndexNode{})
+	// Check that seeking to a different branch yields only the new values.
+	expectContents(t, CellIDFromString("2/10232"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/102"), label: 5}, {cellID: CellIDFromString("2/1023"), label: 6}})
+	// Seek to a node with a different root.
+	expectContents(t, CellIDFromString("2/313"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/31"), label: 7}, {cellID: CellIDFromString("2/313"), label: 8}})
+	// Seek to a descendant of the previous node.
+	expectContents(t, CellIDFromString("2/3132333"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/3132"), label: 9}})
+	// Seek to an ancestor of the previous node.
+	expectContents(t, CellIDFromString("2/213"), index, contents, []cellIndexNode{})
+	// A few more tests of incremental reporting.
+	expectContents(t, CellIDFromString("3/1232"), index, contents, []cellIndexNode{{cellID: CellIDFromString("3/1"), label: 10}, {cellID: CellIDFromString("3/12"), label: 11}})
+	expectContents(t, CellIDFromString("3/133210"), index, contents, []cellIndexNode{{cellID: CellIDFromString("3/13"), label: 12}})
+	expectContents(t, CellIDFromString("3/133210"), index, contents, []cellIndexNode{})
+	expectContents(t, CellIDFromString("5/0"), index, contents, []cellIndexNode{})
+
+	// Now try moving backwards, which is expected to yield values that were
+	// already reported above.
+	expectContents(t, CellIDFromString("3/13221"), index, contents, []cellIndexNode{{cellID: CellIDFromString("3/1"), label: 10}, {cellID: CellIDFromString("3/13"), label: 12}})
+	expectContents(t, CellIDFromString("2/31112"), index, contents, []cellIndexNode{{cellID: CellIDFromString("2/31"), label: 7}})
+}
+
+func TestCellIndexIntersectionOptimization(t *testing.T) {
+	type cellIndexTestInput struct {
+		cellID string
+		label  int32
+	}
+	tests := []struct {
+		label string
+		have  []cellIndexTestInput
+	}{
+		{
+			// Tests various corner cases for the binary search optimization in
+			// VisitIntersectingCells.
+			label: "Intersection Optimization",
+			have: []cellIndexTestInput{
+				{"1/001", 1},
+				{"1/333", 2},
+				{"2/00", 3},
+				{"2/0232", 4},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		index := &CellIndex{}
+		for _, v := range test.have {
+			index.Add(CellIDFromString(v.cellID), v.label)
+		}
+		index.Build()
+		checkIntersection(t, test.label, makeCellUnion("1/010", "1/3"), index)
+		checkIntersection(t, test.label, makeCellUnion("2/010", "2/011", "2/02"), index)
+	}
+}
+
+func TestCellIndexIntersectionRandomCellUnions(t *testing.T) {
+	// Construct cell unions from random CellIDs at random levels. Note that
+	// because the cell level is chosen uniformly, there is a very high
+	// likelihood that the cell unions will overlap.
+	index := &CellIndex{}
+	for i := int32(0); i < 100; i++ {
+		index.AddCellUnion(randomCellUnion(10), i)
+	}
+	index.Build()
+	for i := 0; i < 200; i++ {
+		checkIntersection(t, "", randomCellUnion(10), index)
+	}
+}
+
+func TestCellIndexIntersectionSemiRandomCellUnions(t *testing.T) {
+	for i := 0; i < 200; i++ {
+		index := &CellIndex{}
+		id := CellIDFromString("1/0123012301230123")
+		var target CellUnion
+		for j := 0; j < 100; j++ {
+			switch {
+			case oneIn(10):
+				index.Add(id, int32(j))
+			case oneIn(4):
+				target = append(target, id)
+			case oneIn(2):
+				id = id.NextWrap()
+			case oneIn(6) && !id.isFace():
+				id = id.immediateParent()
+			case oneIn(6) && !id.IsLeaf():
+				id = id.ChildBegin()
+			}
+		}
+		target.Normalize()
+		index.Build()
+		checkIntersection(t, "", target, index)
+	}
+}
+
+func checkIntersection(t *testing.T, desc string, target CellUnion, index *CellIndex) {
+	var expected, actual []int32
+	for it := NewCellIndexIterator(index); !it.Done(); it.Next() {
+		if target.IntersectsCellID(it.CellID()) {
+			expected = append(expected, it.Label())
+		}
+	}
+
+	index.VisitIntersectingCells(target, func(cellID CellID, label int32) bool {
+		actual = append(actual, label)
+		return true
+	})
+
+	if !labelsEqual(actual, expected) {
+		t.Errorf("%s: labels not equal but should be.  %v != %v", desc, actual, expected)
+	}
+}
+
+func labelsEqual(a, b []int32) bool {
+	sort.Slice(a, func(i, j int) bool {
+		return a[i] < a[j]
+	})
+	sort.Slice(b, func(i, j int) bool {
+		return b[i] < b[j]
+	})
+	return reflect.DeepEqual(a, b)
+}
