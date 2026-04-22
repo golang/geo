@@ -29,6 +29,11 @@ const (
 	// encodingCompressedVersion is the current version of the
 	// compressed format.
 	encodingCompressedVersion = int8(4)
+
+	// encodingPolylineCompressedVersion is the current version of the compressed
+	// polyline format. It matches upstream C++:
+	// s2polyline.cc: kCurrentCompressedEncodingVersionNumber = 2.
+	encodingPolylineCompressedVersion = int8(2)
 )
 
 // encoder handles the specifics of encoding for S2 types.
