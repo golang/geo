@@ -740,8 +740,6 @@ func TestPolylineDecodeRejectsUnknownVersion(t *testing.T) {
 // internal compressed polyline encoder helper so accidental format changes are
 // caught in CI. It is NOT a cross-compatibility proof with C++; it only guards
 // against unintended Go-side regressions.
-//
-// TODO(#232): replace with a C++-produced fixture when one is available.
 func TestPolylineEncodeCompressedGolden(t *testing.T) {
 	p := PolylineFromLatLngs([]LatLng{
 		LatLngFromDegrees(0, 0),
