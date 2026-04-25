@@ -1107,7 +1107,7 @@ func (p *Polygon) encodeLossless(e *encoder) {
 }
 
 func (p *Polygon) encodeCompressed(e *encoder, snapLevel int, vertices []xyzFaceSiTi) {
-	e.writeUint8(uint8(encodingCompressedVersion))
+	e.writeUint8(uint8(encodingPolygonCompressedVersion))
 	e.writeUint8(uint8(snapLevel))
 	e.writeUvarint(uint64(len(p.loops)))
 
@@ -1136,7 +1136,7 @@ func (p *Polygon) Decode(r io.Reader) error {
 	switch version {
 	case encodingVersion:
 		dec = p.decode
-	case encodingCompressedVersion:
+	case encodingPolygonCompressedVersion:
 		dec = p.decodeCompressed
 	default:
 		return fmt.Errorf("unsupported version %d", version)

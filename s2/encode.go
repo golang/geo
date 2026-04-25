@@ -26,13 +26,12 @@ const (
 	// format that is compatible with C++ and other S2 libraries.
 	encodingVersion = int8(1)
 
-	// encodingCompressedVersion is the current version of the
-	// compressed format.
-	encodingCompressedVersion = int8(4)
+	// encodingPolygonCompressedVersion is the current version of the
+	// compressed polygon format.
+	encodingPolygonCompressedVersion = int8(4)
 
-	// encodingPolylineCompressedVersion is the current version of the compressed
-	// polyline format. It matches upstream C++:
-	// s2polyline.cc: kCurrentCompressedEncodingVersionNumber = 2.
+	// encodingPolylineCompressedVersion is the current version of the
+	// compressed polyline format.
 	encodingPolylineCompressedVersion = int8(2)
 )
 

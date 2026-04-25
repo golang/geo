@@ -370,10 +370,6 @@ func (p Polyline) encode(e *encoder) {
 }
 
 func (p Polyline) encodeCompressed(e *encoder, snapLevel int) {
-	if snapLevel < 0 || snapLevel > MaxLevel {
-		e.err = fmt.Errorf("snapLevel %d out of range [0, %d]", snapLevel, MaxLevel)
-		return
-	}
 	if len(p) > maxEncodedVertices {
 		e.err = fmt.Errorf("too many vertices (%d; max is %d)", len(p), maxEncodedVertices)
 		return
@@ -450,6 +446,9 @@ func (p *Polyline) decodeCompressed(d *decoder) {
 	}
 
 	*p = make(Polyline, nvertices)
+	if nvertices == 0 {
+		return
+	}
 	decodePointsCompressed(d, snapLevel, *p)
 }
 

@@ -686,6 +686,35 @@ func TestPolylineDecodeCompressedBadData(t *testing.T) {
 	}
 }
 
+func TestPolylineDecodeCompressedEmpty(t *testing.T) {
+	// Bytes for an empty polyline: version 2, snap level 0, nvertices 0.
+	// C++ S2Polyline::DecodeCompressed returns early and does not read further.
+	// Go should do the same and not fail with EOF trying to read numOffCenter.
+	encoded := []byte{byte(encodingPolylineCompressedVersion), 0, 0}
+
+	var p Polyline
+	if err := p.Decode(bytes.NewReader(encoded)); err != nil {
+		t.Fatalf("Decode(empty polyline) = %v, want nil", err)
+	}
+	if len(p) != 0 {
+		t.Fatalf("len(p) = %d, want 0", len(p))
+	}
+}
+
+func TestPolylineDecodeCompressedMaxCellLevel(t *testing.T) {
+	// Mirrors C++ TEST(S2Polyline, DecodeCompressedMaxCellLevel).
+	encoded := []byte{
+		byte(encodingPolylineCompressedVersion),
+		byte(MaxLevel),
+		0, 0, 0, 0,
+	}
+
+	var p Polyline
+	if err := p.Decode(bytes.NewReader(encoded)); err != nil {
+		t.Fatalf("Decode(max cell level) = %v, want nil", err)
+	}
+}
+
 func TestPolylineDecodeCompressedCellLevelTooHigh(t *testing.T) {
 	// Mirrors C++ TEST(S2Polyline, DecodeCompressedCellLevelTooHigh).
 	encoded := []byte{byte(encodingPolylineCompressedVersion), byte(MaxLevel + 1), 0x00}
@@ -696,7 +725,6 @@ func TestPolylineDecodeCompressedCellLevelTooHigh(t *testing.T) {
 }
 
 func TestPolylineDecodeRejectsUnknownVersion(t *testing.T) {
-	// Regression-guard the by-value decoder bug in the old implementation.
 	encoded := []byte{0x05, 0x00, 0x00}
 	var p Polyline
 	err := p.Decode(bytes.NewReader(encoded))
