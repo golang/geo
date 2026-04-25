@@ -1,4 +1,4 @@
-// Copyright 2025 The S2 Geometry Project Authors. All rights reserved.
+// Copyright 2026 Google LLC. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
