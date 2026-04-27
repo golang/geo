@@ -369,22 +369,47 @@ func (p Polyline) encode(e *encoder) {
 	}
 }
 
-// Decode decodes the polyline.
+func (p Polyline) encodeCompressed(e *encoder, snapLevel int) {
+	if len(p) > maxEncodedVertices {
+		e.err = fmt.Errorf("too many vertices (%d; max is %d)", len(p), maxEncodedVertices)
+		return
+	}
+
+	e.writeUint8(uint8(encodingPolylineCompressedVersion))
+	e.writeUint8(uint8(snapLevel))
+	e.writeUvarint(uint64(len(p)))
+	if e.err != nil {
+		return
+	}
+
+	vs := make([]xyzFaceSiTi, len(p))
+	for i, v := range p {
+		vs[i].xyz = v
+		vs[i].face, vs[i].si, vs[i].ti, vs[i].level = xyzToFaceSiTi(v)
+	}
+	encodePointsCompressed(e, vs, snapLevel)
+}
+
+// Decode decodes the polyline from either the lossless (version 1) or
+// compressed (version 2) wire format.
 func (p *Polyline) Decode(r io.Reader) error {
-	d := decoder{r: asByteReader(r)}
-	p.decode(d)
+	d := &decoder{r: asByteReader(r)}
+	version := int8(d.readUint8())
+	if d.err != nil {
+		return d.err
+	}
+	switch version {
+	case encodingVersion:
+		p.decodeLossless(d)
+	case encodingPolylineCompressedVersion:
+		p.decodeCompressed(d)
+	default:
+		return fmt.Errorf("unsupported version %d", version)
+	}
 	return d.err
 }
 
-func (p *Polyline) decode(d decoder) {
-	version := d.readInt8()
-	if d.err != nil {
-		return
-	}
-	if int(version) != int(encodingVersion) {
-		d.err = fmt.Errorf("can't decode version %d; my version: %d", version, encodingVersion)
-		return
-	}
+func (p *Polyline) decodeLossless(d *decoder) {
 	nvertices := d.readUint32()
 	if d.err != nil {
 		return
@@ -399,6 +424,32 @@ func (p *Polyline) decode(d decoder) {
 		(*p)[i].Y = d.readFloat64()
 		(*p)[i].Z = d.readFloat64()
 	}
+}
+
+func (p *Polyline) decodeCompressed(d *decoder) {
+	snapLevel := int(d.readUint8())
+	if d.err != nil {
+		return
+	}
+	if snapLevel > MaxLevel {
+		d.err = fmt.Errorf("snap level %d > MaxLevel %d", snapLevel, MaxLevel)
+		return
+	}
+
+	nvertices := d.readUvarint()
+	if d.err != nil {
+		return
+	}
+	if nvertices > maxEncodedVertices {
+		d.err = fmt.Errorf("too many vertices (%d; max is %d)", nvertices, maxEncodedVertices)
+		return
+	}
+
+	*p = make(Polyline, nvertices)
+	if nvertices == 0 {
+		return
+	}
+	decodePointsCompressed(d, snapLevel, *p)
 }
 
 // Project returns a point on the polyline that is closest to the given point,
@@ -585,4 +636,4 @@ func (p *Polyline) Uninterpolate(point Point, nextVertex int) float64 {
 // InitToSnapped
 // InitToSimplified
 // SnapLevel
-// encode/decode compressed
+// EncodeMostCompact

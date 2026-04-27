@@ -15,8 +15,11 @@
 package s2
 
 import (
+	"bytes"
+	"encoding/hex"
 	"math"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -621,6 +624,162 @@ func TestPolylineUninterpolate(t *testing.T) {
 	// Check that the return value is clamped to 1.0.
 	if got, want := line.Uninterpolate(PointFromCoords(0, 1, 0), len(line)), 1.0; !float64Eq(got, want) {
 		t.Errorf("line.Uninterpolate(%v, %d) = %v, want %v", PointFromCoords(0, 1, 0), len(line), got, want)
+	}
+}
+
+func encodeCompressedPolyline(t *testing.T, p Polyline, snapLevel int) []byte {
+	t.Helper()
+
+	var buf bytes.Buffer
+	e := &encoder{w: &buf}
+	p.encodeCompressed(e, snapLevel)
+	if e.err != nil {
+		t.Fatalf("encodeCompressed(level=%d): %v", snapLevel, e.err)
+	}
+	return buf.Bytes()
+}
+
+func TestPolylineDecodeCompressedRoundTrip(t *testing.T) {
+	orig := Polyline{
+		PointFromLatLng(LatLngFromDegrees(10, 10)),
+		PointFromLatLng(LatLngFromDegrees(10.1, 10.1)),
+		PointFromLatLng(LatLngFromDegrees(10.2, 10.2)),
+		PointFromLatLng(LatLngFromDegrees(10.3, 10.3)),
+	}
+
+	for _, snapLevel := range []int{0, 15, MaxLevel} {
+		snapped := make(Polyline, len(orig))
+		for i, pt := range orig {
+			snapped[i] = cellIDFromPoint(pt).Parent(snapLevel).Point()
+		}
+
+		// Mix in a deliberately unsnapped vertex to exercise the off-center path,
+		// which serializes (x, y, z) float64s verbatim.
+		mixed := append(Polyline(nil), snapped...)
+		mixed[len(mixed)/2] = orig[len(orig)/2]
+
+		for _, p := range []*Polyline{&snapped, &mixed} {
+			var got Polyline
+			if err := got.Decode(bytes.NewReader(encodeCompressedPolyline(t, *p, snapLevel))); err != nil {
+				t.Fatalf("Decode(level=%d): %v", snapLevel, err)
+			}
+
+			if len(got) != len(*p) {
+				t.Fatalf("len(Decode(encodeCompressed)) = %d, want %d", len(got), len(*p))
+			}
+			for i := range got {
+				if !got[i].ApproxEqual((*p)[i]) {
+					t.Fatalf("vertex %d mismatch at snapLevel %d: got %v want %v", i, snapLevel, got[i], (*p)[i])
+				}
+			}
+		}
+	}
+}
+
+func TestPolylineDecodeCompressedBadData(t *testing.T) {
+	// Use a version-2 header so this exercises the compressed decode path rather
+	// than failing immediately as an unknown version.
+	bad := []byte{byte(encodingPolylineCompressedVersion), 0, 1, 0xff}
+	var p Polyline
+	if err := p.Decode(bytes.NewReader(bad)); err == nil {
+		t.Fatalf("Decode(bad data) got nil error, want non-nil")
+	}
+}
+
+func TestPolylineDecodeCompressedEmpty(t *testing.T) {
+	// Bytes for an empty polyline: version 2, snap level 0, nvertices 0.
+	// C++ S2Polyline::DecodeCompressed returns early and does not read further.
+	// Go should do the same and not fail with EOF trying to read numOffCenter.
+	encoded := []byte{byte(encodingPolylineCompressedVersion), 0, 0}
+
+	var p Polyline
+	if err := p.Decode(bytes.NewReader(encoded)); err != nil {
+		t.Fatalf("Decode(empty polyline) = %v, want nil", err)
+	}
+	if len(p) != 0 {
+		t.Fatalf("len(p) = %d, want 0", len(p))
+	}
+}
+
+func TestPolylineDecodeCompressedMaxCellLevel(t *testing.T) {
+	// Mirrors C++ TEST(S2Polyline, DecodeCompressedMaxCellLevel).
+	encoded := []byte{
+		byte(encodingPolylineCompressedVersion),
+		byte(MaxLevel),
+		0, 0, 0, 0,
+	}
+
+	var p Polyline
+	if err := p.Decode(bytes.NewReader(encoded)); err != nil {
+		t.Fatalf("Decode(max cell level) = %v, want nil", err)
+	}
+}
+
+func TestPolylineDecodeCompressedCellLevelTooHigh(t *testing.T) {
+	// Mirrors C++ TEST(S2Polyline, DecodeCompressedCellLevelTooHigh).
+	encoded := []byte{byte(encodingPolylineCompressedVersion), byte(MaxLevel + 1), 0x00}
+	var p Polyline
+	if err := p.Decode(bytes.NewReader(encoded)); err == nil {
+		t.Fatalf("Decode(level too high) got nil error, want non-nil")
+	}
+}
+
+func TestPolylineDecodeRejectsUnknownVersion(t *testing.T) {
+	encoded := []byte{0x05, 0x00, 0x00}
+	var p Polyline
+	err := p.Decode(bytes.NewReader(encoded))
+	if err == nil {
+		t.Fatalf("Decode(unknown version) got nil error, want non-nil")
+	}
+	if !strings.Contains(err.Error(), "unsupported version") {
+		t.Fatalf("Decode(unknown version) error = %q, want substring %q", err, "unsupported version")
+	}
+}
+
+// TestPolylineEncodeCompressedGolden locks the wire bytes emitted by the
+// internal compressed polyline encoder helper so accidental format changes are
+// caught in CI. It is NOT a cross-compatibility proof with C++; it only guards
+// against unintended Go-side regressions.
+func TestPolylineEncodeCompressedGolden(t *testing.T) {
+	p := PolylineFromLatLngs([]LatLng{
+		LatLngFromDegrees(0, 0),
+		LatLngFromDegrees(0, 10),
+		LatLngFromDegrees(10, 20),
+		LatLngFromDegrees(20, 30),
+	})
+
+	tests := []struct {
+		level int
+		want  string
+	}{
+		{
+			level: 0,
+			want:  "020004180000000301181c818c8b83ef3f89730b7e1a3ac63f00000000000000000262b46c3a039ded3fe2dc829f868ed53f89730b7e1a3ac63f031b995e6fa10aea3f1b2d5242f611de3ff50b8a74a8e3d53f",
+		},
+		{
+			level: MaxLevel,
+			want:  "021e0418000000000000000cc4aa94a0d080c12ac1fd83b09ba3d18002ed90d9f2b6e6030400000000000000f03f0000000000000000000000000000000001181c818c8b83ef3f89730b7e1a3ac63f00000000000000000262b46c3a039ded3fe2dc829f868ed53f89730b7e1a3ac63f031b995e6fa10aea3f1b2d5242f611de3ff50b8a74a8e3d53f",
+		},
+	}
+	for _, tt := range tests {
+		raw := encodeCompressedPolyline(t, *p, tt.level)
+		if got := hex.EncodeToString(raw); got != tt.want {
+			t.Errorf("EncodeCompressed(level=%d) hex = %q, want %q", tt.level, got, tt.want)
+		}
+
+		// Round-trip the golden bytes through Decode to make sure the same
+		// payload is still accepted.
+		var decoded Polyline
+		golden, err := hex.DecodeString(tt.want)
+		if err != nil {
+			t.Fatalf("hex.DecodeString: %v", err)
+		}
+		if err := decoded.Decode(bytes.NewReader(golden)); err != nil {
+			t.Fatalf("Decode(golden level=%d): %v", tt.level, err)
+		}
+		if !decoded.ApproxEqual(p) {
+			t.Errorf("Decode(golden level=%d) got %v, want %v", tt.level, decoded, *p)
+		}
 	}
 }
 
