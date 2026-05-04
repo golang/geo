@@ -235,20 +235,20 @@ func decodePointsCompressed(d *decoder, level int, target []Point) {
 		target[i] = Point{facePiQitoXYZ(iter.curFace, pi, qi, level)}
 	}
 
-	numOffCenter := int(d.readUvarint())
+	numOffCenter := d.readUvarint()
 	if d.err != nil {
 		return
 	}
-	if numOffCenter > len(target) {
+	if numOffCenter > uint64(len(target)) {
 		d.err = fmt.Errorf("numOffCenter = %d, should be at most len(target) = %d", numOffCenter, len(target))
 		return
 	}
 	for range numOffCenter {
-		idx := int(d.readUvarint())
+		idx := d.readUvarint()
 		if d.err != nil {
 			return
 		}
-		if idx >= len(target) {
+		if idx >= uint64(len(target)) {
 			d.err = fmt.Errorf("off center index = %d, should be < len(target) = %d", idx, len(target))
 			return
 		}

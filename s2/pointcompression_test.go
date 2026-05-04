@@ -32,6 +32,46 @@ func TestFacesIterator(t *testing.T) {
 	}
 }
 
+func TestDecodePointsCompressedIdxOverflow(t *testing.T) {
+	var buf bytes.Buffer
+	e := &encoder{w: &buf}
+	encodeFaceRun(e, faceRun{face: 0, count: 1})
+	// numOffCenter: 1
+	e.writeUvarint(1)
+	// idx: large value
+	e.writeUvarint(1 << 63)
+
+	if e.err != nil {
+		t.Fatal(e.err)
+	}
+
+	d := &decoder{r: asByteReader(&buf)}
+	target := make([]Point, 1)
+	decodePointsCompressed(d, 0, target)
+	if d.err == nil {
+		t.Fatalf("decodePointsCompressed(overflow idx) got nil error, want non-nil")
+	}
+}
+
+func TestDecodePointsCompressedNumOffCenterOverflow(t *testing.T) {
+	var buf bytes.Buffer
+	e := &encoder{w: &buf}
+	encodeFaceRun(e, faceRun{face: 0, count: 1})
+	// numOffCenter: large value
+	e.writeUvarint(1 << 63)
+
+	if e.err != nil {
+		t.Fatal(e.err)
+	}
+
+	d := &decoder{r: asByteReader(&buf)}
+	target := make([]Point, 1)
+	decodePointsCompressed(d, 0, target)
+	if d.err == nil {
+		t.Fatalf("decodePointsCompressed(overflow numOffCenter) got nil error, want non-nil")
+	}
+}
+
 func makeSnappedPoints(nvertices int, level int) []Point {
 	const radiusKM = 0.1
 	center := PointFromCoords(1, 1, 1)

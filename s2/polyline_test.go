@@ -801,3 +801,44 @@ func TestPolylineEncodeCompressedGolden(t *testing.T) {
 //    MatchStartsAtLastVertex
 //    MatchStartsAtDuplicatedLastVertex
 //    EmptyPolylines
+
+// go test -fuzz=FuzzDecodePolyline github.com/golang/geo/s2
+func FuzzDecodePolyline(f *testing.F) {
+	p := PolylineFromLatLngs([]LatLng{
+		LatLngFromDegrees(0, 0),
+		LatLngFromDegrees(0, 10),
+		LatLngFromDegrees(10, 20),
+		LatLngFromDegrees(20, 30),
+	})
+
+	// Add lossless encoding
+	buf := new(bytes.Buffer)
+	if err := p.Encode(buf); err != nil {
+		f.Errorf("error encoding %v: ", err)
+	}
+	f.Add(buf.Bytes())
+
+	// Add compressed encoding
+	bufCompressed := new(bytes.Buffer)
+	e := &encoder{w: bufCompressed}
+	p.encodeCompressed(e, 0)
+	if e.err != nil {
+		f.Errorf("error encoding compressed polyline: %v", e.err)
+	}
+	f.Add(bufCompressed.Bytes())
+
+	f.Fuzz(func(t *testing.T, encoded []byte) {
+		var p Polyline
+		if err := p.Decode(bytes.NewReader(encoded)); err != nil {
+			return
+		}
+		if got := p.Length(); got < 0 {
+			t.Errorf("Length() = %v, want >= 0. Polyline: %v", got, p)
+		}
+		// TODO: Test more methods on Polyline.
+		buf := new(bytes.Buffer)
+		if err := p.Encode(buf); err != nil {
+			t.Errorf("Encode() = %v. Polyline: %v", err, p)
+		}
+	})
+}
