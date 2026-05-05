@@ -1207,20 +1207,59 @@ func TestPolygonInvert(t *testing.T) {
 //   TestCloselySpacedEdgeVerticesKept
 //   TestPolylineAssemblyBug
 
+func TestPolygonDecodeCompressedOverflow(t *testing.T) {
+	var buf bytes.Buffer
+	e := &encoder{w: &buf}
+
+	e.writeUint8(uint8(encodingPolygonCompressedVersion))
+	e.writeUint8(0) // snap level 0
+	// nloops: large value that overflows to negative when cast to int.
+	e.writeUvarint(1 << 63)
+
+	if e.err != nil {
+		t.Fatal(e.err)
+	}
+
+	var p Polygon
+	if err := p.Decode(bytes.NewReader(buf.Bytes())); err == nil {
+		t.Fatalf("Decode(overflow nloops) got nil error, want non-nil")
+	}
+}
+
 // go test -fuzz=FuzzDecodePolygon github.com/golang/geo/s2
 func FuzzDecodePolygon(f *testing.F) {
 	for _, p := range []*Polygon{near0Polygon, near01Polygon, near30Polygon, near23Polygon, far01Polygon, far21Polygon, south0abPolygon} {
+		// Add lossless encoding.
 		buf := new(bytes.Buffer)
 		if err := p.Encode(buf); err != nil {
 			f.Errorf("error encoding %v: ", err)
 		}
 		f.Add(buf.Bytes())
+
+		// Add compressed encoding.
+		bufCompressed := new(bytes.Buffer)
+		e := &encoder{w: bufCompressed}
+
+		vs := make([]xyzFaceSiTi, 0, p.numVertices)
+		for _, l := range p.loops {
+			vs = append(vs, l.xyzFaceSiTiVertices()...)
+		}
+
+		p.encodeCompressed(e, 0, vs)
+		if e.err != nil {
+			f.Errorf("error encoding compressed polygon: %v", e.err)
+		}
+		f.Add(bufCompressed.Bytes())
 	}
 
 	f.Fuzz(func(t *testing.T, encoded []byte) {
 		p := &Polygon{}
 		if err := p.Decode(bytes.NewReader(encoded)); err != nil {
 			// Construction failed, no need to test further.
+			return
+		}
+		if err := p.Validate(); err != nil {
+			// Decoded but invalid polygon. Skip property checks.
 			return
 		}
 		if got := p.Area(); got < 0 {
