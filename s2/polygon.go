@@ -1189,9 +1189,10 @@ func (p *Polygon) decodeCompressed(d *decoder) {
 	}
 	// Polygons with no loops are explicitly allowed here: a newly created
 	// polygon has zero loops and such polygons encode and decode properly.
-	nloops := int(d.readUvarint())
+	nloops := d.readUvarint()
 	if nloops > maxEncodedLoops {
 		d.err = fmt.Errorf("too many loops (%d; max is %d)", nloops, maxEncodedLoops)
+		return
 	}
 	p.loops = make([]*Loop, nloops)
 	for i := range p.loops {
