@@ -1207,9 +1207,9 @@ func TestPolygonInvert(t *testing.T) {
 //   TestCloselySpacedEdgeVerticesKept
 //   TestPolylineAssemblyBug
 
-func TestPolygonDecodeCompressedOverflow(t *testing.T) {
+func TestPolygonDecodeDoesNotOverflowForLargeNLoops(t *testing.T) {
 	var buf bytes.Buffer
-	e := &encoder{w: &buf}
+	e := encoder{w: &buf}
 
 	e.writeUint8(uint8(encodingPolygonCompressedVersion))
 	e.writeUint8(0) // snap level 0
@@ -1230,22 +1230,22 @@ func TestPolygonDecodeCompressedOverflow(t *testing.T) {
 func FuzzDecodePolygon(f *testing.F) {
 	for _, p := range []*Polygon{near0Polygon, near01Polygon, near30Polygon, near23Polygon, far01Polygon, far21Polygon, south0abPolygon} {
 		// Add lossless encoding.
-		buf := new(bytes.Buffer)
-		if err := p.Encode(buf); err != nil {
+		var buf bytes.Buffer
+		if err := p.Encode(&buf); err != nil {
 			f.Errorf("error encoding %v: ", err)
 		}
 		f.Add(buf.Bytes())
 
 		// Add compressed encoding.
-		bufCompressed := new(bytes.Buffer)
-		e := &encoder{w: bufCompressed}
+		var bufCompressed bytes.Buffer
+		e := encoder{w: &bufCompressed}
 
 		vs := make([]xyzFaceSiTi, 0, p.numVertices)
 		for _, l := range p.loops {
 			vs = append(vs, l.xyzFaceSiTiVertices()...)
 		}
 
-		p.encodeCompressed(e, 0, vs)
+		p.encodeCompressed(&e, 0, vs)
 		if e.err != nil {
 			f.Errorf("error encoding compressed polygon: %v", e.err)
 		}
