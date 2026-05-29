@@ -154,7 +154,7 @@ S2LaxPolyline        | 🟡
 S2Loop               | ✅
 S2PaddedCell         | ✅
 S2Point              | ✅
-S2PointIndex         | ❌
+S2PointIndex         | ✅
 S2PointSpan          | ❌
 S2PointRegion        | ❌
 S2PointVector        | ✅
