@@ -122,6 +122,7 @@ func (pt *pointIndexTest) verifyIteratorMethods() {
 		// Test Prev, Next, and Seek.
 		if prevCellID.IsValid() {
 			it2 = *it
+			it2.Refresh() // decouple cursor from original before cross-boundary Prev
 			if !it2.Prev() {
 				pt.t.Error("Prev() returned false, expected true")
 			}
