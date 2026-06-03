@@ -38,23 +38,20 @@ func (pd PointData[Data]) Data() Data { return pd.data }
 // You can use this class in conjunction with ClosestPointQuery to find the
 // closest index points to a given query point. For example,
 //
-//		index := &PointIndex[int]{}
-//		for i, p := range indexPoints {
-//		    index.Add(p, i)
-//		}
-//	 TODO(fmeurisse): Implement ClosestPointQuery integration and update example.
-//	  S2ClosestPointQuery<int> query(&index);
-//	  query.mutable_options()->set_max_results(5);
-//	  for (const S2Point& target_point : target_points) {
-//	    S2ClosestPointQueryPointTarget target(target_point);
-//	    for (const auto& result : query.FindClosestPoints(&target)) {
-//	      // The Result class contains the following methods:
-//	      //   distance() is the distance to the target.
-//	      //   point() is the indexed point.
-//	      //   data() is the auxiliary data.
-//	      DoSomething(target_point, result);
+//	index := &PointIndex[int]{}
+//	for i, p := range indexPoints {
+//	    index.Add(p, i)
+//	}
+//	query := NewClosestPointQuery(index, NewClosestPointQueryOptions().MaxResults(5))
+//	for _, targetPoint := range targetPoints {
+//	    target := NewMinDistanceToPointTarget(targetPoint)
+//	    for _, result := range query.FindClosestPoints(target) {
+//	        // result.Distance() is the distance to the target.
+//	        // result.Point() is the indexed point.
+//	        // result.Data() is the auxiliary data.
+//	        DoSomething(targetPoint, result)
 //	    }
-//	  }
+//	}
 //
 // You can also access the index directly using the iterator interface. For
 // example, here is how to iterate through all the points in a given CellID

@@ -188,7 +188,7 @@ S2ClosestCell        | ❌
 S2FurthestCell       | ❌
 S2ClosestEdge        | ✅
 S2FurthestEdge       | ✅
-S2ClosestPoint       | ❌
+S2ClosestPoint       | ✅
 S2FurthestPoint      | ❌
 S2ContainsPoint      | ✅
 S2ContainsVertex     | ✅
