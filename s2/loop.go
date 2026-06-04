@@ -1324,12 +1324,12 @@ const (
 )
 
 func (l *Loop) xyzFaceSiTiVertices() []xyzFaceSiTi {
-	ret := make([]xyzFaceSiTi, len(l.vertices))
+	verts := make([]xyzFaceSiTi, len(l.vertices))
 	for i, v := range l.vertices {
-		ret[i].xyz = v
-		ret[i].face, ret[i].si, ret[i].ti, ret[i].level = xyzToFaceSiTi(v)
+		verts[i].xyz = v
+		verts[i].face, verts[i].si, verts[i].ti, verts[i].level = xyzToFaceSiTi(v)
 	}
-	return ret
+	return verts
 }
 
 func (l *Loop) encodeCompressed(e *encoder, snapLevel int, vertices []xyzFaceSiTi) {

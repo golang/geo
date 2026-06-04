@@ -154,14 +154,14 @@ type faceRun struct {
 
 func decodeFaceRun(d *decoder) faceRun {
 	faceAndCount := d.readUvarint()
-	ret := faceRun{
+	fr := faceRun{
 		face:  int(faceAndCount % NumFaces),
 		count: int(faceAndCount / NumFaces),
 	}
-	if ret.count <= 0 && d.err == nil {
+	if fr.count <= 0 && d.err == nil {
 		d.err = errors.New("non-positive count for face run")
 	}
-	return ret
+	return fr
 }
 
 func decodeFaces(numVertices int, d *decoder) []faceRun {
