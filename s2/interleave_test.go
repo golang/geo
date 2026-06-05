@@ -25,12 +25,12 @@ func TestInterleaveUint32(t *testing.T) {
 }
 
 func referenceBitInterleave(x, y uint32) uint64 {
-	var ret uint64
+	var v uint64
 	for i := range uint(32) {
-		ret |= uint64((x>>i)&1) << (i * 2)
-		ret |= uint64((y>>i)&1) << (i*2 + 1)
+		v |= uint64((x>>i)&1) << (i * 2)
+		v |= uint64((y>>i)&1) << (i*2 + 1)
 	}
-	return ret
+	return v
 }
 
 func TestInterleaveUint32AgainstReference(t *testing.T) {

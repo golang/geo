@@ -34,11 +34,11 @@ func (ru RegionUnion) CapBound() Cap { return ru.RectBound().CapBound() }
 
 // RectBound returns a bounding latitude-longitude rectangle for this RegionUnion.
 func (ru RegionUnion) RectBound() Rect {
-	ret := EmptyRect()
+	rect := EmptyRect()
 	for _, reg := range ru {
-		ret = ret.Union(reg.RectBound())
+		rect = rect.Union(reg.RectBound())
 	}
-	return ret
+	return rect
 }
 
 // ContainsCell reports whether the given Cell is contained by this RegionUnion.

@@ -430,7 +430,7 @@ func (p *Polygon) initEdgesAndIndex() {
 
 // FullPolygon returns a special "full" polygon.
 func FullPolygon() *Polygon {
-	ret := &Polygon{
+	p := &Polygon{
 		loops: []*Loop{
 			FullLoop(),
 		},
@@ -438,8 +438,8 @@ func FullPolygon() *Polygon {
 		bound:          FullRect(),
 		subregionBound: FullRect(),
 	}
-	ret.initEdgesAndIndex()
-	return ret
+	p.initEdgesAndIndex()
+	return p
 }
 
 // Validate checks whether this is a valid polygon,
