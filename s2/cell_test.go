@@ -335,9 +335,9 @@ func testCellChildren(t *testing.T, cell Cell) {
 
 func TestCellAreas(t *testing.T) {
 	// relative error bounds for each type of area computation
-	var exactError = math.Log(1 + 1e-6)
-	var approxError = math.Log(1.03)
-	var avgError = math.Log(1 + 1e-15)
+	var exactError = math.Log1p(1e-6)
+	var approxError = math.Log1p(0.03)
+	var avgError = math.Log1p(1e-15)
 
 	// Test 1. Check the area of a top level cell.
 	const level1Cell = CellID(0x1000000000000000)
