@@ -140,6 +140,11 @@ func randomUniformFloat64(min, max float64, r ...*rand.Rand) float64 {
 	return min + randomFloat64(r...)*(max-min)
 }
 
+// randomLogUniformFloat64 returns a random value in [min, max) with a log-uniform distribution.
+func randomLogUniformFloat64(min, max float64, r ...*rand.Rand) float64 {
+	return math.Exp(randomUniformFloat64(math.Log(min), math.Log(max), r...))
+}
+
 // oneIn returns true with a probability of 1/n.
 func oneIn(n int, r ...*rand.Rand) bool {
 	return randomUniformInt(n, r...) == 0
@@ -388,9 +393,7 @@ func perturbedCornerOrMidpoint(p, q Point, r ...*rand.Rand) Point {
 		// This perturbation often has no effect except on coordinates
 		// that are zero, in which case the perturbed value is so
 		// small that operations on it often result in underflow.
-		// TODO(rsned): Change this from math.Pow to
-		// randomLogUniformFloat64(1e-300, 1.0)
-		a = a.Add(randomPoint(r...).Mul(math.Pow(1e-300, randomFloat64(r...))))
+		a = a.Add(randomPoint(r...).Mul(randomLogUniformFloat64(1e-300, 1.0, r...)))
 	} else if oneIn(2) {
 		// For coordinates near 1 (say > 0.5), this perturbation
 		// yields values that are only a few representable values
@@ -398,9 +401,7 @@ func perturbedCornerOrMidpoint(p, q Point, r ...*rand.Rand) Point {
 		a = a.Add(randomPoint(r...).Mul(4 * machineEpsilon64))
 	} else {
 		// A perturbation whose magnitude is in the range [1e-25, 1e-10].
-		// TODO(rsned): Change this from Mul(1e-10 * math.Pow...) to
-		// randomLogUniformFloat64(1e-25, 1e-10)
-		a = a.Add(randomPoint(r...).Mul(1e-10 * math.Pow(1e-15, randomFloat64(r...))))
+		a = a.Add(randomPoint(r...).Mul(randomLogUniformFloat64(1e-25, 1e-10, r...)))
 	}
 
 	if a.Norm2() < math.SmallestNonzeroFloat64 {
