@@ -1226,12 +1226,19 @@ func TestPredicatesCircleEdgeIntersectionOrdering(t *testing.T) {
 
 // ---------------------------------- Benchmarks ---------------------------
 
+// signNoInline prevents the Sign() call from being DCE'd.
+//
+//go:noinline
+func signNoInline(p1, p2, p3 Point) bool {
+	return Sign(p1, p2, p3)
+}
+
 func BenchmarkSign(b *testing.B) {
 	p1 := Point{r3.Vector{X: -3, Y: -1, Z: 4}}
 	p2 := Point{r3.Vector{X: 2, Y: -1, Z: -3}}
 	p3 := Point{r3.Vector{X: 1, Y: -2, Z: 0}}
 	for i := 0; i < b.N; i++ {
-		Sign(p1, p2, p3)
+		signNoInline(p1, p2, p3)
 	}
 }
 
