@@ -14,12 +14,14 @@
 
 package s2
 
+import "slices"
+
 // Shape interface enforcement
 var _ Shape = (*LaxPolygon)(nil)
 
 // LaxPolygon represents a region defined by a collection of zero or more
 // closed loops. The interior is the region to the left of all loops. This
-// is similar to Polygon except that this class supports polygons
+// is similar to Polygon except that this type supports polygons
 // with degeneracies. Degeneracies are of two types: degenerate edges (from a
 // vertex to itself) and sibling edge pairs (consisting of two oppositely
 // oriented edges). Degeneracies can represent either "shells" or "holes"
@@ -28,50 +30,45 @@ var _ Shape = (*LaxPolygon)(nil)
 // degenerate hole. Such edges form part of the boundary of the polygon.
 //
 // Loops with fewer than three vertices are interpreted as follows:
-// - A loop with two vertices defines two edges (in opposite directions).
-// - A loop with one vertex defines a single degenerate edge.
-// - A loop with no vertices is interpreted as the "full loop" containing
-//
-//	all points on the sphere. If this loop is present, then all other loops
-//	must form degeneracies (i.e., degenerate edges or sibling pairs). For
-//	example, two loops {} and {X} would be interpreted as the full polygon
-//	with a degenerate single-point hole at X.
+//   - A loop with two vertices defines two edges (in opposite directions).
+//   - A loop with one vertex defines a single degenerate edge.
+//   - A loop with no vertices is interpreted as the "full loop" containing
+//     all points on the sphere. If this loop is present, then all other loops
+//     must form degeneracies (i.e., degenerate edges or sibling pairs). For
+//     example, two loops {} and {X} would be interpreted as the full polygon
+//     with a degenerate single-point hole at X.
 //
 // LaxPolygon does not have any error checking, and it is perfectly fine to
 // create LaxPolygon objects that do not meet the requirements below (e.g., in
 // order to analyze or fix those problems). However, LaxPolygons must satisfy
 // some additional conditions in order to perform certain operations:
 //
-// - In order to be valid for point containment tests, the polygon must
+//   - In order to be valid for point containment tests, the polygon must
+//     satisfy the "interior is on the left" rule. This means that there must
+//     not be any crossing edges, and if there are duplicate edges then all but
+//     at most one of them must belong to a sibling pair (i.e., the number of
+//     edges in opposite directions must differ by at most one).
 //
-//	satisfy the "interior is on the left" rule. This means that there must
-//	not be any crossing edges, and if there are duplicate edges then all but
-//	at most one of them must belong to a sibling pair (i.e., the number of
-//	edges in opposite directions must differ by at most one).
+//   - To be valid for polygon operations (BooleanOperation), degenerate
+//     edges and sibling pairs cannot coincide with any other edges. For
+//     example, the following situations are not allowed:
 //
-// - To be valid for polygon operations (BoundaryOperation), degenerate
-//
-//	edges and sibling pairs cannot coincide with any other edges. For
-//	example, the following situations are not allowed:
-//
-//	 {AA, AA}     // degenerate edge coincides with another edge
-//	 {AA, AB}     // degenerate edge coincides with another edge
-//	 {AB, BA, AB} // sibling pair coincides with another edge
+//     {AA, AA}     // degenerate edge coincides with another edge
+//     {AA, AB}     // degenerate edge coincides with another edge
+//     {AB, BA, AB} // sibling pair coincides with another edge
 //
 // Note that LaxPolygon is much faster to initialize and is more compact than
 // Polygon, but unlike Polygon it does not have any built-in operations.
-// Instead you should use ShapeIndex based operations such as BoundaryOperation,
+// Instead you should use ShapeIndex based operations such as BooleanOperation,
 // ClosestEdgeQuery, etc.
 type LaxPolygon struct {
 	numLoops int
 	vertices []Point
 
-	numVerts           int
-	cumulativeVertices []int
-
-	// TODO(roberts): C++ adds a prevLoop int field that claims to boost
-	// chain position lookups by 1.5-4.5x. Benchmark to see if this
-	// is useful here.
+	numVerts int
+	// when numLoops > 1, store a list of size (numLoops+1) where "i"
+	// represents the total number of vertices in loops 0..i-1.
+	loopStarts []int
 }
 
 // LaxPolygonFromPolygon creates a LaxPolygon from the given Polygon.
@@ -85,7 +82,17 @@ func LaxPolygonFromPolygon(p *Polygon) *LaxPolygon {
 			copy(spans[i], loop.vertices)
 		}
 	}
-	return LaxPolygonFromPoints(spans)
+	lax := LaxPolygonFromPoints(spans)
+
+	// Polygon and LaxPolygonShape holes are oriented oppositely, so we need
+	// to reverse the orientation of any loops representing holes.
+	for i := 0; i < p.NumLoops(); i++ {
+		if p.Loop(i).IsHole() {
+			v0 := lax.loopStarts[i]
+			slices.Reverse(lax.vertices[v0 : v0+lax.numLoopVertices(i)])
+		}
+	}
+	return lax
 }
 
 // LaxPolygonFromPoints creates a LaxPolygon from the given points.
@@ -99,19 +106,18 @@ func LaxPolygonFromPoints(loops [][]Point) *LaxPolygon {
 	case 1:
 		p.numVerts = len(loops[0])
 		p.vertices = make([]Point, p.numVerts)
+		p.loopStarts = []int{0, 0}
 		copy(p.vertices, loops[0])
 	default:
-		p.cumulativeVertices = make([]int, p.numLoops+1)
-		numVertices := 0
+		p.numVerts = 0
+		p.loopStarts = make([]int, p.numLoops+1)
 		for i, loop := range loops {
-			p.cumulativeVertices[i] = numVertices
-			numVertices += len(loop)
+			p.loopStarts[i] = p.numVerts
+			p.numVerts += len(loop)
+			p.vertices = append(p.vertices, loop...)
 		}
 
-		p.cumulativeVertices[p.numLoops] = numVertices
-		for _, points := range loops {
-			p.vertices = append(p.vertices, points...)
-		}
+		p.loopStarts[p.numLoops] = p.numVerts
 	}
 	return p
 }
@@ -121,7 +127,7 @@ func (p *LaxPolygon) numVertices() int {
 	if p.numLoops <= 1 {
 		return p.numVerts
 	}
-	return p.cumulativeVertices[p.numLoops]
+	return p.loopStarts[p.numLoops]
 }
 
 // numLoopVertices reports the total number of vertices in the given loop.
@@ -129,7 +135,7 @@ func (p *LaxPolygon) numLoopVertices(i int) int {
 	if p.numLoops == 1 {
 		return p.numVerts
 	}
-	return p.cumulativeVertices[i+1] - p.cumulativeVertices[i]
+	return p.loopStarts[i+1] - p.loopStarts[i]
 }
 
 // loopVertex returns the vertex from loop i at index j.
@@ -137,42 +143,20 @@ func (p *LaxPolygon) numLoopVertices(i int) int {
 // This requires:
 //
 //	0 <= i < len(loops)
-//	0 <= j < len(loop[i].vertices)
+//	0 <= j < numLoopVertices(i)
 func (p *LaxPolygon) loopVertex(i, j int) Point {
 	if p.numLoops == 1 {
 		return p.vertices[j]
 	}
 
-	return p.vertices[p.cumulativeVertices[i]+j]
+	return p.vertices[p.loopStarts[i]+j]
 }
 
 func (p *LaxPolygon) NumEdges() int { return p.numVertices() }
 
 func (p *LaxPolygon) Edge(e int) Edge {
-	e1 := e + 1
-	if p.numLoops == 1 {
-		// wrap the end vertex if this is the last edge.
-		if e1 == p.numVerts {
-			e1 = 0
-		}
-		return Edge{p.vertices[e], p.vertices[e1]}
-	}
-
-	// TODO(roberts): If this turns out to be performance critical in tests
-	// incorporate the maxLinearSearchLoops like in C++.
-
-	// Check if e1 would cross a loop boundary in the set of all vertices.
-	nextLoop := 0
-	for p.cumulativeVertices[nextLoop] <= e {
-		nextLoop++
-	}
-
-	// If so, wrap around to the first vertex of the loop.
-	if e1 == p.cumulativeVertices[nextLoop] {
-		e1 = p.cumulativeVertices[nextLoop-1]
-	}
-
-	return Edge{p.vertices[e], p.vertices[e1]}
+	pos := p.ChainPosition(e)
+	return p.ChainEdge(pos.ChainID, pos.Offset)
 }
 
 func (p *LaxPolygon) Dimension() int                 { return 2 }
@@ -184,10 +168,11 @@ func (p *LaxPolygon) ReferencePoint() ReferencePoint { return referencePointForS
 func (p *LaxPolygon) NumChains() int                 { return p.numLoops }
 func (p *LaxPolygon) Chain(i int) Chain {
 	if p.numLoops == 1 {
-		return Chain{0, p.numVertices()}
+		return Chain{Start: 0, Length: p.numVertices()}
 	}
-	start := p.cumulativeVertices[i]
-	return Chain{start, p.cumulativeVertices[i+1] - start}
+
+	start := p.loopStarts[i]
+	return Chain{Start: start, Length: p.loopStarts[i+1] - start}
 }
 
 func (p *LaxPolygon) ChainEdge(i, j int) Edge {
@@ -196,29 +181,33 @@ func (p *LaxPolygon) ChainEdge(i, j int) Edge {
 	if j+1 != n {
 		k = j + 1
 	}
+
 	if p.numLoops == 1 {
-		return Edge{p.vertices[j], p.vertices[k]}
+		return Edge{V0: p.vertices[j], V1: p.vertices[k]}
 	}
-	base := p.cumulativeVertices[i]
-	return Edge{p.vertices[base+j], p.vertices[base+k]}
+
+	start := p.loopStarts[i]
+	return Edge{V0: p.vertices[start+j], V1: p.vertices[start+k]}
 }
 
-func (p *LaxPolygon) ChainPosition(e int) ChainPosition {
+func (p *LaxPolygon) ChainPosition(edgeID int) ChainPosition {
+
 	if p.numLoops == 1 {
-		return ChainPosition{0, e}
+		return ChainPosition{ChainID: 0, Offset: edgeID}
 	}
 
-	// TODO(roberts): If this turns out to be performance critical in tests
-	// incorporate the maxLinearSearchLoops like in C++.
-
-	// Find the index of the first vertex of the loop following this one.
-	nextLoop := 1
-	for p.cumulativeVertices[nextLoop] <= e {
+	// We need the loopStart that is less than or equal to the edgeID.
+	nextLoop := 0
+	for p.loopStarts[nextLoop] <= edgeID {
 		nextLoop++
 	}
 
-	return ChainPosition{p.cumulativeVertices[nextLoop] - p.cumulativeVertices[1], e - p.cumulativeVertices[nextLoop-1]}
+	return ChainPosition{
+		ChainID: nextLoop - 1,
+		Offset:  edgeID - p.loopStarts[nextLoop-1],
+	}
 }
 
 // TODO(roberts): Remaining to port from C++:
-// EncodedLaxPolygon
+// encode/decode
+// Support for EncodedLaxPolygon
