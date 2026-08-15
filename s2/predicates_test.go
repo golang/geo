@@ -1226,23 +1226,47 @@ func TestPredicatesCircleEdgeIntersectionOrdering(t *testing.T) {
 
 // ---------------------------------- Benchmarks ---------------------------
 
+func benchmarkPoints(n int) []Point {
+	pts := make([]Point, n)
+	for i := range pts {
+		pts[i] = randomPoint()
+	}
+	return pts
+}
+
 func BenchmarkSign(b *testing.B) {
-	p1 := Point{r3.Vector{X: -3, Y: -1, Z: 4}}
-	p2 := Point{r3.Vector{X: 2, Y: -1, Z: -3}}
-	p3 := Point{r3.Vector{X: 1, Y: -2, Z: 0}}
-	for i := 0; i < b.N; i++ {
-		Sign(p1, p2, p3)
+	pts := benchmarkPoints(256)
+	b.ResetTimer()
+	// The next triple of points to test depends on the result of the previous
+	// call so the calls cannot be optimized away.
+	j := 0
+	for range b.N {
+		if Sign(pts[j], pts[j+1], pts[j+2]) {
+			j++
+		}
+		j++
+		if j+2 >= len(pts) {
+			j = 0
+		}
 	}
 }
 
 // BenchmarkRobustSignSimple runs the benchmark for points that satisfy the first
 // checks in RobustSign to compare the performance to that of Sign().
 func BenchmarkRobustSignSimple(b *testing.B) {
-	p1 := Point{r3.Vector{X: -3, Y: -1, Z: 4}}
-	p2 := Point{r3.Vector{X: 2, Y: -1, Z: -3}}
-	p3 := Point{r3.Vector{X: 1, Y: -2, Z: 0}}
-	for i := 0; i < b.N; i++ {
-		RobustSign(p1, p2, p3)
+	pts := benchmarkPoints(256)
+	b.ResetTimer()
+	// The next triple of points to test depends on the result of the previous
+	// call so the calls cannot be optimized away.
+	j := 0
+	for range b.N {
+		if RobustSign(pts[j], pts[j+1], pts[j+2]) == Clockwise {
+			j++
+		}
+		j++
+		if j+2 >= len(pts) {
+			j = 0
+		}
 	}
 }
 
