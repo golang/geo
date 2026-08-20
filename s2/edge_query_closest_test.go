@@ -335,6 +335,68 @@ func BenchmarkEdgeQueryFindEdges(b *testing.B) {
 	}
 }
 
+func TestClosestEdgeQueryShapeIndexTargetOptimizedMatchesBruteForce(t *testing.T) {
+	// Regression test for https://github.com/golang/geo/issues/293: a query with a
+	// MinDistanceToShapeIndexTarget and a DistanceLimit failed to return
+	// shapes within the limit when using the optimized search, even though
+	// the brute-force search returns them.
+	//
+	// The indexed geometry is a small quad ("B") whose nearest edge is ~11 m
+	// from the target quad ("A"), plus six far-away filler quads (~111+ km,
+	// never within the limit). The fillers exist only to raise the index edge
+	// count past the target's brute-force threshold so that the default query
+	// actually exercises the optimized search path; without them both runs
+	// silently use brute force and the test proves nothing.
+	//
+	// Latitude spans of 0.0001 degrees are ~11.1 m.
+	index := makeShapeIndex("# # " +
+		"1.0002:1, 1.0002:1.0001, 1.0003:1.0001, 1.0003:1; " + // quad B: ~11 m north of A
+		"2:0, 2:0.0001, 2.0001:0.0001, 2.0001:0; " + // fillers, ~111 km apart
+		"3:0, 3:0.0001, 3.0001:0.0001, 3.0001:0; " +
+		"4:0, 4:0.0001, 4.0001:0.0001, 4.0001:0; " +
+		"5:0, 5:0.0001, 5.0001:0.0001, 5.0001:0; " +
+		"6:0, 6:0.0001, 6.0001:0.0001, 6.0001:0; " +
+		"7:0, 7:0.0001, 7.0001:0.0001, 7.0001:0")
+
+	// The target: quad A spanning lat [1, 1.0001], lng [1, 1.0001].
+	targetIndex := makeShapeIndex("# # 1:1, 1:1.0001, 1.0001:1.0001, 1.0001:1")
+	limit := s1.ChordAngleFromAngle(kmToAngle(0.02)) // 20 meters
+
+	resultShapeIDs := func(useBruteForce bool) map[int32]bool {
+		opts := NewClosestEdgeQueryOptions().
+			DistanceLimit(limit).
+			IncludeInteriors(true).
+			UseBruteForce(useBruteForce)
+		query := NewClosestEdgeQuery(index, opts)
+		target := NewMinDistanceToShapeIndexTarget(targetIndex)
+		ids := make(map[int32]bool)
+		for _, r := range query.FindEdges(target) {
+			ids[r.shapeID] = true
+		}
+		return ids
+	}
+
+	bruteForce := resultShapeIDs(true)
+	optimized := resultShapeIDs(false)
+
+	// Shape 0 (quad B) is ~11 m from the target, within the 20 m limit. If
+	// even brute force misses it the fixture itself is broken.
+	if !bruteForce[0] {
+		t.Fatalf("brute-force search did not return shape 0 (~11 m from target, limit 20 m); fixture is broken")
+	}
+
+	for id := range bruteForce {
+		if !optimized[id] {
+			t.Errorf("optimized search omitted shape %d, which brute-force search returned", id)
+		}
+	}
+	for id := range optimized {
+		if !bruteForce[id] {
+			t.Errorf("optimized search returned shape %d, which brute-force search did not", id)
+		}
+	}
+}
+
 // TODO(roberts): Remaining tests to implement.
 //
 // TestClosestEdgeQueryTestReuseOfQuery) {
