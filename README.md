@@ -154,7 +154,7 @@ S2LaxPolyline        | 🟡
 S2Loop               | ✅
 S2PaddedCell         | ✅
 S2Point              | ✅
-S2PointIndex         | ❌
+S2PointIndex         | ✅
 S2PointSpan          | ❌
 S2PointRegion        | ❌
 S2PointVector        | ✅
@@ -188,7 +188,7 @@ S2ClosestCell        | ❌
 S2FurthestCell       | ❌
 S2ClosestEdge        | ✅
 S2FurthestEdge       | ✅
-S2ClosestPoint       | ❌
+S2ClosestPoint       | ✅
 S2FurthestPoint      | ❌
 S2ContainsPoint      | ✅
 S2ContainsVertex     | ✅
