@@ -63,9 +63,11 @@ var (
 	_ Region = Cap{}
 	_ Region = Cell{}
 	_ Region = (*CellUnion)(nil)
+	_ Region = RegionIntersection{}
 	_ Region = (*Loop)(nil)
 	_ Region = Point{}
 	_ Region = (*Polygon)(nil)
 	_ Region = (*Polyline)(nil)
 	_ Region = Rect{}
+	_ Region = RegionUnion{}
 )

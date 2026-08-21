@@ -163,7 +163,7 @@ S2Polyline           | ✅
 S2R2Rect             | ❌
 S2Region             | ✅
 S2RegionCoverer      | ✅
-S2RegionIntersection | ❌
+S2RegionIntersection | ✅
 S2RegionUnion        | ✅
 S2Shape              | ✅
 S2ShapeIndex         | ✅
