@@ -350,9 +350,9 @@ func newCostTable(rows, cols int) costTable {
 func (c costTable) String() string {
 	var buf bytes.Buffer
 	for i, row := range c {
-		buf.WriteString(fmt.Sprintf("%2d: [", i))
+		fmt.Fprintf(&buf, "%2d: [", i)
 		for _, col := range row {
-			buf.WriteString(fmt.Sprintf("%0.3f, ", col))
+			fmt.Fprintf(&buf, "%0.3f, ", col)
 		}
 		buf.WriteString("]\n")
 	}

@@ -449,3 +449,14 @@ func TestPolylineAlignmentExactAlignmentCost(t *testing.T) {
 // TODO()rsned): Differences from C++
 // Medoid tests
 // Consensus tests
+
+func TestCostTableString(t *testing.T) {
+	table := costTable{
+		{0, 1.5},
+		{2.25, 3.125},
+	}
+	want := " 0: [0.000, 1.500, ]\n 1: [2.250, 3.125, ]\n"
+	if got := table.String(); got != want {
+		t.Errorf("costTable.String() = %q, want %q", got, want)
+	}
+}
