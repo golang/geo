@@ -1036,7 +1036,7 @@ func (s *ShapeIndex) updateEdges(pcell *PaddedCell, edges []*clippedEdge, t *tra
 		case Indexed:
 			// Absorb the index cell by transferring its contents to edges and
 			// deleting it. We also start tracking the interior of any new shapes.
-			s.absorbIndexCell(pcell, iter, edges, t)
+			edges = s.absorbIndexCell(pcell, iter, edges, t)
 			indexCellAbsorbed = true
 			disjointFromIndex = true
 		case Subdivided:
@@ -1363,7 +1363,10 @@ func (s *ShapeIndex) clipVAxis(edge *clippedEdge, middle r1.Interval) (a, b *cli
 // and/or "tracker", and then delete this cell from the index. If edges includes
 // any edges that are being removed, this method also updates their
 // InteriorTracker state to correspond to the exit vertex of this cell.
-func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, edges []*clippedEdge, t *tracker) {
+//
+// It returns the new set of edges, which the caller must use in place of edges.
+// (C++ modifies the vector through a pointer; reassigning the slice parameter here would not be visible to the caller.)
+func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, edges []*clippedEdge, t *tracker) []*clippedEdge {
 	// When we absorb a cell, we erase all the edges that are being removed.
 	// However when we are finished with this cell, we want to restore the state
 	// of those edges (since that is how we find all the index cells that need
@@ -1472,12 +1475,9 @@ func (s *ShapeIndex) absorbIndexCell(p *PaddedCell, iter *ShapeIndexIterator, ed
 		}
 	}
 
-	// Update the edge list and delete this cell from the index.
-	// TODO(rsned): Figure out best fix for this. Linters are
-	// flagging the swap because newEdges is no longer used after
-	// this.
-	edges, newEdges = newEdges, edges // nolint
+	// Delete this cell from the index and return the updated edge list.
 	delete(s.cellMap, p.id)
+	return newEdges
 }
 
 // testAllEdges calls the trackers testEdge on all edges from shapes that have interiors.
