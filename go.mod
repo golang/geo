@@ -7,4 +7,5 @@ go 1.23.0
 require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-units v0.0.0-20250612230646-eddd77f68220 // indirect
+	github.com/tidwall/btree v1.8.1 // indirect
 )
