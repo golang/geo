@@ -613,9 +613,6 @@ func BenchmarkShapeIndexIteratorLocatePoint(b *testing.B) {
 }
 
 func TestShapeIndexRemoveBeforeBuild(t *testing.T) {
-	// TODO(jmr): Shapes added after a removed shape are missing from the index.
-	t.Skip("shapes added after a removed shape are not indexed")
-
 	// Removing a shape that hasn't been indexed yet deletes it from index.shapes, so len(index.shapes) is smaller than the next shape ID.
 	a := makePolyline("0:0, 0:1")
 	b := makePolyline("1:0, 1:1")

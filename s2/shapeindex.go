@@ -848,7 +848,8 @@ func (s *ShapeIndex) applyUpdatesInternal() {
 		s.removeShapeInternal(p, allEdges, t)
 	}
 
-	for id := s.pendingAdditionsPos; id < int32(len(s.shapes)); id++ {
+	// Use nextID rather than len(s.shapes), since removed shapes are deleted from s.shapes.
+	for id := s.pendingAdditionsPos; id < s.nextID; id++ {
 		s.addShapeInternal(id, allEdges, t)
 	}
 
@@ -857,7 +858,7 @@ func (s *ShapeIndex) applyUpdatesInternal() {
 	}
 
 	s.pendingRemovals = s.pendingRemovals[:0]
-	s.pendingAdditionsPos = int32(len(s.shapes))
+	s.pendingAdditionsPos = s.nextID
 	// It is the caller's responsibility to update the index status.
 }
 
@@ -1213,8 +1214,9 @@ func (s *ShapeIndex) makeIndexCell(p *PaddedCell, edges []*clippedEdge, t *track
 	for i := range numShapes {
 		var clipped *clippedShape
 		// advance to next value base + i
-		eshapeID := int32(s.Len())
-		cshapeID := eshapeID // Sentinels
+		// Sentinels larger than any shape ID. (s.Len() is too small after shapes have been removed.)
+		eshapeID := s.nextID
+		cshapeID := eshapeID
 
 		if eNext != len(edges) {
 			eshapeID = edges[eNext].faceEdge.shapeID
