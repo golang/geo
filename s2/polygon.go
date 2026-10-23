@@ -364,8 +364,7 @@ func (p *Polygon) initLoops(lm loopMap) {
 			p.loops = append(p.loops, loop)
 		}
 		children := lm[loop]
-		for i := len(children) - 1; i >= 0; i-- {
-			child := children[i]
+		for _, child := range slices.Backward(children) {
 			child.depth = depth + 1
 			stack.push(child)
 		}
