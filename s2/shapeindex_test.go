@@ -15,6 +15,9 @@
 package s2
 
 import (
+	"fmt"
+	"math/rand"
+	"slices"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -566,5 +569,137 @@ func BenchmarkShapeIndexIteratorLocatePoint(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		it.LocatePoint(randomPoint())
+	}
+}
+
+func TestShapeIndexRemoveBeforeBuild(t *testing.T) {
+	// TODO(jmr): Shapes added after a removed shape are missing from the index.
+	t.Skip("shapes added after a removed shape are not indexed")
+
+	// Removing a shape that hasn't been indexed yet deletes it from index.shapes, so len(index.shapes) is smaller than the next shape ID.
+	a := makePolyline("0:0, 0:1")
+	b := makePolyline("1:0, 1:1")
+
+	index := NewShapeIndex()
+	index.Add(a)
+	index.Add(b)
+	index.Remove(a)
+	index.Build()
+	quadraticValidate(t, index)
+}
+
+func TestShapeIndexUpdateAfterBuild(t *testing.T) {
+	// TODO(jmr): Updating an index that already has cells deadlocks (https://github.com/golang/geo/issues/67).
+	t.Skip("deadlocks; see https://github.com/golang/geo/issues/67")
+
+	// Enough edges in a small area that the index subdivides below the face cells, so that later updates have to combine new edges with existing index cells.
+	a := makePolyline("0:0, 0:1, 1:1, 1:0, 0:0, 0.5:0.5, 0.2:0.8, 0.8:0.2, 0.3:0.3, 0.7:0.7, 0.1:0.9, 0.9:0.1, 0.4:0.6, 0.6:0.4, 0.25:0.75")
+	b := makeLoop("0.05:0.05, 0.05:0.95, 0.95:0.95, 0.95:0.05")
+	c := makePolyline("0.1:0.1, 0.9:0.9")
+
+	index := NewShapeIndex()
+	index.Add(a)
+	index.Build()
+	quadraticValidate(t, index)
+
+	// Add shapes to an index that already has cells.
+	index.Add(b)
+	index.Build()
+	quadraticValidate(t, index)
+
+	// Remove a shape and add another in the same update.
+	index.Remove(a)
+	index.Add(c)
+	index.Build()
+	quadraticValidate(t, index)
+	testIteratorMethods(t, index)
+}
+
+func TestShapeIndexSimpleUpdates(t *testing.T) {
+	// TODO(jmr): Updating an index that already has cells deadlocks (https://github.com/golang/geo/issues/67).
+	t.Skip("deadlocks; see https://github.com/golang/geo/issues/67")
+
+	// Add 5 loops one at a time, then remove them one at a time, validating the index at each step.
+	polygon := concentricLoopsPolygon(PointFromCoords(1, 0, 0), 5, 20)
+	index := NewShapeIndex()
+	for _, loop := range polygon.Loops() {
+		index.Add(loop)
+		quadraticValidate(t, index)
+	}
+	for _, loop := range polygon.Loops() {
+		index.Remove(loop)
+		quadraticValidate(t, index)
+	}
+}
+
+func TestShapeIndexAddRemoveShapeContainingTrackerOrigin(t *testing.T) {
+	// TODO(jmr): Updating an index that already has cells deadlocks (https://github.com/golang/geo/issues/67).
+	t.Skip("deadlocks; see https://github.com/golang/geo/issues/67")
+
+	// Add a shape that contains the tracker origin.
+	index := NewShapeIndex()
+	loop := RegularLoop(trackerOrigin(), s1.Angle(1)*s1.Degree, 10)
+	index.Add(loop)
+	index.Build()
+
+	index.Remove(loop)
+	index.Build()
+
+	if it := index.Iterator(); !it.Done() {
+		t.Errorf("after removing the only shape, iterator is at %v, want done", it.CellID())
+	}
+}
+
+func TestShapeIndexRandomUpdates(t *testing.T) {
+	// TODO(jmr): Updating an index that already has cells deadlocks (https://github.com/golang/geo/issues/67).
+	t.Skip("deadlocks; see https://github.com/golang/geo/issues/67")
+
+	r := rand.New(rand.NewSource(1))
+	for iter := range 20 {
+		// Keep the shapes in a small cap so that the index subdivides and updates have to combine edges with existing cells.
+		cluster := CapFromCenterAngle(randomPoint(r), s1.Angle(1e-3*randomUniformFloat64(1, 100, r)))
+		randomShape := func() Shape {
+			switch randomUniformInt(3, r) {
+			case 0:
+				radius := s1.Angle(cluster.Radius().Radians() * randomUniformFloat64(0.01, 0.5, r))
+				return RegularLoop(samplePointFromCap(cluster, r), radius, 3+randomUniformInt(20, r))
+			case 1:
+				pts := make([]Point, 2+randomUniformInt(20, r))
+				for i := range pts {
+					pts[i] = samplePointFromCap(cluster, r)
+				}
+				p := Polyline(pts)
+				return &p
+			default:
+				pts := make(PointVector, 1+randomUniformInt(10, r))
+				for i := range pts {
+					pts[i] = samplePointFromCap(cluster, r)
+				}
+				return &pts
+			}
+		}
+
+		index := NewShapeIndex()
+		var shapes []Shape
+		for step := range 5 {
+			// Remove some shapes and add some others, then validate the index.
+			for i := 0; i < len(shapes); {
+				if oneIn(3, r) {
+					index.Remove(shapes[i])
+					shapes = slices.Delete(shapes, i, i+1)
+				} else {
+					i++
+				}
+			}
+			for range 1 + randomUniformInt(5, r) {
+				shape := randomShape()
+				index.Add(shape)
+				shapes = append(shapes, shape)
+			}
+			index.Build()
+			if !t.Run(fmt.Sprintf("iter=%d/step=%d", iter, step), func(t *testing.T) { quadraticValidate(t, index) }) {
+				return
+			}
+		}
 	}
 }
