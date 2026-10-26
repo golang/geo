@@ -108,7 +108,7 @@ func parseLatLngs(s string) []LatLng {
 		return lls
 	}
 
-	for _, piece := range strings.Split(s, ",") {
+	for piece := range strings.SplitSeq(s, ",") {
 		piece = strings.TrimSpace(piece)
 
 		// Skip empty strings.
@@ -199,7 +199,7 @@ func makePolygon(s string, normalize bool) *Polygon {
 		return PolygonFromLoops(loops)
 	}
 
-	for _, str := range strings.Split(s, ";") {
+	for str := range strings.SplitSeq(s, ";") {
 		// The polygon test strings mostly have a trailing semicolon
 		// (to make concatenating them for tests easy). The C++
 		// SplitString doesn't return empty elements where as Go does,
@@ -246,7 +246,7 @@ func makeLaxPolygon(s string) *LaxPolygon {
 	if s == "" {
 		return LaxPolygonFromPoints(points)
 	}
-	for _, l := range strings.Split(s, ";") {
+	for l := range strings.SplitSeq(s, ";") {
 		if l == "full" {
 			points = append(points, []Point{})
 		} else if l != "empty" {
@@ -290,7 +290,7 @@ func makeShapeIndex(s string) *ShapeIndex {
 	index := NewShapeIndex()
 
 	var points []Point
-	for _, p := range strings.Split(fields[0], "|") {
+	for p := range strings.SplitSeq(fields[0], "|") {
 		p = strings.TrimSpace(p)
 		if p == "" {
 			continue
@@ -302,7 +302,7 @@ func makeShapeIndex(s string) *ShapeIndex {
 		index.Add(&p)
 	}
 
-	for _, p := range strings.Split(fields[1], "|") {
+	for p := range strings.SplitSeq(fields[1], "|") {
 		p = strings.TrimSpace(p)
 		if p == "" {
 			continue
@@ -312,7 +312,7 @@ func makeShapeIndex(s string) *ShapeIndex {
 		}
 	}
 
-	for _, p := range strings.Split(fields[2], "|") {
+	for p := range strings.SplitSeq(fields[2], "|") {
 		p = strings.TrimSpace(p)
 		if p == "" {
 			continue
