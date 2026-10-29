@@ -180,7 +180,10 @@ func quadraticValidate(t *testing.T, index *ShapeIndex) {
 		// Iterate through all the shapes, simultaneously validating the current
 		// index cell and all the skipped cells.
 		shortEdges := 0 // number of edges counted toward subdivision
-		for id, shape := range index.shapes {
+		// Loop over all shape IDs rather than index.shapes, which doesn't contain removed shapes.
+		// This checks that removed shapes are not in the index.
+		for id := range index.nextID {
+			shape := index.Shape(id)
 			for j := 0; j < len(skipped); j++ {
 				validateInterior(t, shape, skipped[j], false)
 			}
