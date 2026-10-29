@@ -683,6 +683,8 @@ func (s *ShapeIndex) Reset() {
 	s.nextID = 0
 	s.cellMap = make(map[CellID]*ShapeIndexCell)
 	s.cells = nil
+	s.pendingAdditionsPos = 0
+	s.pendingRemovals = nil
 	atomic.StoreInt32(&s.status, fresh)
 }
 

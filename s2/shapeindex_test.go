@@ -40,6 +40,45 @@ func TestShapeIndexBasics(t *testing.T) {
 	}
 }
 
+func TestShapeIndexAddAfterReset(t *testing.T) {
+	index := NewShapeIndex()
+	index.Add(makePolyline("0:0, 0:1"))
+	index.Build()
+	index.Reset()
+
+	// Reset reuses shape ID 0, which is below the pendingAdditionsPos from before the Reset.
+	index.Add(makePolyline("1:0, 1:1"))
+	index.Build()
+	quadraticValidate(t, index)
+}
+
+func TestShapeIndexResetDiscardsPendingRemovals(t *testing.T) {
+	a := makePolyline("0:0, 0:1")
+	index := NewShapeIndex()
+	index.Add(a)
+	index.Build()
+	// Queue a removal, then Reset before it is applied.
+	index.Remove(a)
+	index.Reset()
+
+	// The next update must not apply the removal of a.
+	// a had shape ID 0, which Reset reuses for b, so applying the removal would put edges in the index under b's ID that are not edges of b.
+	b := makePolyline("40:40, 40:41")
+	index.Add(b)
+	index.Build()
+	quadraticValidate(t, index)
+	for it := index.Iterator(); !it.Done(); it.Next() {
+		for _, clipped := range it.IndexCell().shapes {
+			shape := index.Shape(clipped.shapeID)
+			for _, e := range clipped.edges {
+				if shape == nil || e < 0 || e >= shape.NumEdges() {
+					t.Errorf("cell %v has edge %d of shape %d, which is not in the index", it.CellID(), e, clipped.shapeID)
+				}
+			}
+		}
+	}
+}
+
 func TestShapeEdgeComparisons(t *testing.T) {
 	tests := []struct {
 		a, b Edge
