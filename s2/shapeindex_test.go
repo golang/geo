@@ -15,6 +15,9 @@
 package s2
 
 import (
+	"math"
+	"math/rand"
+	"slices"
 	"testing"
 
 	"github.com/golang/geo/r3"
@@ -589,8 +592,6 @@ func TestShapeIndexNumEdgesUpTo(t *testing.T) {
 }
 
 // TODO(roberts): Differences from C++:
-// TestShapeIndexSimpleUpdates(t *testing.T) {}
-// TestShapeIndexRandomUpdates(t *testing.T) {}
 // TestShapeIndexHasCrossing(t *testing.T) {}
 
 func BenchmarkShapeIndexIteratorLocatePoint(b *testing.B) {
@@ -608,5 +609,145 @@ func BenchmarkShapeIndexIteratorLocatePoint(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		it.LocatePoint(randomPoint())
+	}
+}
+
+func TestShapeIndexRemoveBeforeBuild(t *testing.T) {
+	// TODO(jmr): Shapes added after a removed shape are missing from the index.
+	t.Skip("shapes added after a removed shape are not indexed")
+
+	// Removing a shape that hasn't been indexed yet deletes it from index.shapes, so len(index.shapes) is smaller than the next shape ID.
+	a := makePolyline("0:0, 0:1")
+	b := makePolyline("1:0, 1:1")
+
+	index := NewShapeIndex()
+	index.Add(a)
+	index.Add(b)
+	index.Remove(a)
+	index.Build()
+	quadraticValidate(t, index)
+}
+
+func TestShapeIndexUpdateAfterBuild(t *testing.T) {
+	// TODO(jmr): Updating an index that already has cells deadlocks (https://github.com/golang/geo/issues/67).
+	t.Skip("deadlocks; see https://github.com/golang/geo/issues/67")
+
+	// Enough edges in a small area that the index subdivides below the face cells, so that later updates have to combine new edges with existing index cells.
+	a := makePolyline("0:0, 0:1, 1:1, 1:0, 0:0, 0.5:0.5, 0.2:0.8, 0.8:0.2, 0.3:0.3, 0.7:0.7, 0.1:0.9, 0.9:0.1, 0.4:0.6, 0.6:0.4, 0.25:0.75")
+	b := makeLoop("0.05:0.05, 0.05:0.95, 0.95:0.95, 0.95:0.05")
+	c := makePolyline("0.1:0.1, 0.9:0.9")
+
+	index := NewShapeIndex()
+	index.Add(a)
+	index.Build()
+	quadraticValidate(t, index)
+
+	// Add shapes to an index that already has cells.
+	index.Add(b)
+	index.Build()
+	quadraticValidate(t, index)
+
+	// Remove a shape and add another in the same update.
+	index.Remove(a)
+	index.Add(c)
+	index.Build()
+	quadraticValidate(t, index)
+	testIteratorMethods(t, index)
+}
+
+func TestShapeIndexSimpleUpdates(t *testing.T) {
+	// TODO(jmr): Updating an index that already has cells deadlocks (https://github.com/golang/geo/issues/67).
+	t.Skip("deadlocks; see https://github.com/golang/geo/issues/67")
+
+	// Add 5 loops one at a time, then remove them one at a time, validating the index at each step.
+	polygon := concentricLoopsPolygon(PointFromCoords(1, 0, 0), 5, 20)
+	index := NewShapeIndex()
+	for _, loop := range polygon.Loops() {
+		index.Add(loop)
+		quadraticValidate(t, index)
+	}
+	for _, loop := range polygon.Loops() {
+		index.Remove(loop)
+		quadraticValidate(t, index)
+	}
+}
+
+func TestShapeIndexAddRemoveShapeContainingTrackerOrigin(t *testing.T) {
+	// TODO(jmr): Updating an index that already has cells deadlocks (https://github.com/golang/geo/issues/67).
+	t.Skip("deadlocks; see https://github.com/golang/geo/issues/67")
+
+	// Add a shape that contains the tracker origin.
+	index := NewShapeIndex()
+	loop := RegularLoop(trackerOrigin(), s1.Angle(1)*s1.Degree, 10)
+	index.Add(loop)
+	index.Build()
+
+	index.Remove(loop)
+	index.Build()
+
+	if it := index.Iterator(); !it.Done() {
+		t.Errorf("after removing the only shape, iterator is at %v, want done", it.CellID())
+	}
+}
+
+func TestShapeIndexRandomUpdates(t *testing.T) {
+	// TODO(jmr): Updating an index that already has cells deadlocks (https://github.com/golang/geo/issues/67).
+	t.Skip("deadlocks; see https://github.com/golang/geo/issues/67")
+
+	// Ported from C++ MutableS2ShapeIndexTest.RandomUpdates, except:
+	//  - C++ sets the temporary memory budget so that at least one shape is split into multiple update batches.
+	//    Go doesn't split updates into batches.
+	//  - C++ also tests encoding and decoding the index, which Go doesn't support.
+	r := rand.New(rand.NewSource(1))
+	index := NewShapeIndex()
+	var added, removed []Shape
+	add := func(shape Shape) {
+		index.Add(shape)
+		added = append(added, shape)
+	}
+
+	// A few polylines.
+	add(makePolyline("0:0, 2:1, 0:2, 2:3, 0:4, 2:5, 0:6"))
+	add(makePolyline("1:0, 3:1, 1:2, 3:3, 1:4, 3:5, 1:6"))
+	add(makePolyline("2:0, 4:1, 2:2, 4:3, 2:4, 4:5, 2:6"))
+
+	// A loop that used to trigger an indexing bug.
+	add(RegularLoop(PointFromCoords(1, 0.5, 0.5), 89*s1.Degree, 20))
+
+	// Five concentric loops.
+	for _, loop := range concentricLoopsPolygon(PointFromCoords(1, -1, -1), 5, 20).Loops() {
+		add(loop)
+	}
+
+	// Two clockwise loops around S2Cell cube vertices.
+	add(RegularLoop(PointFromCoords(-1, 1, 1), s1.Angle(math.Pi-0.001), 10))
+	add(RegularLoop(PointFromCoords(-1, -1, -1), s1.Angle(math.Pi-0.001), 10))
+
+	// A shape with no edges and no interior.
+	add(EmptyLoop())
+
+	// A shape with no edges that covers the entire sphere.
+	add(FullLoop())
+
+	quadraticValidate(t, index)
+	for iter := range 100 {
+		// Choose some shapes to add and remove.
+		for range 1 + skewedInt(5, r) {
+			if oneIn(2, r) && len(added) > 0 {
+				i := randomUniformInt(len(added), r)
+				index.Remove(added[i])
+				removed = append(removed, added[i])
+				added = slices.Delete(added, i, i+1)
+			} else if len(removed) > 0 {
+				i := randomUniformInt(len(removed), r)
+				index.Add(removed[i])
+				added = append(added, removed[i])
+				removed = slices.Delete(removed, i, i+1)
+			}
+		}
+		quadraticValidate(t, index)
+		if t.Failed() {
+			t.Fatalf("index is invalid after iteration %d", iter)
+		}
 	}
 }
