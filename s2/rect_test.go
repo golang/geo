@@ -84,21 +84,46 @@ func TestRectFromLatLng(t *testing.T) {
 	if !got.IsPoint() {
 		t.Errorf("RectFromLatLng(%v) = %v, want a point", ll, got)
 	}
+
+	// -180 degrees longitude should be normalized to +180 so the resulting Rect is valid.
+	if got := RectFromLatLng(LatLngFromDegrees(0, -180)); !got.IsValid() || !got.IsPoint() {
+		t.Errorf("RectFromLatLng(0, -180) = %v, want valid point Rect", got)
+	}
 }
 
 func rectFromDegrees(latLo, lngLo, latHi, lngHi float64) Rect {
 	// Convenience method to construct a rectangle. This method is
 	// intentionally *not* in the S2LatLngRect interface because the
 	// argument order is ambiguous, but is fine for the test.
-	return Rect{
-		Lat: r1.Interval{
-			Lo: (s1.Angle(latLo) * s1.Degree).Radians(),
-			Hi: (s1.Angle(latHi) * s1.Degree).Radians(),
-		},
-		Lng: s1.IntervalFromEndpoints(
-			(s1.Angle(lngLo) * s1.Degree).Radians(),
-			(s1.Angle(lngHi) * s1.Degree).Radians(),
-		),
+	return RectFromEndpoints(
+		LatLngFromDegrees(latLo, lngLo),
+		LatLngFromDegrees(latHi, lngHi),
+	)
+}
+
+func TestRectFromEndpoints(t *testing.T) {
+	d1 := RectFromEndpoints(LatLngFromDegrees(-90, 0), LatLngFromDegrees(-45, 180))
+	if got, want := d1.Lat, (r1.Interval{Lo: -math.Pi / 2, Hi: -math.Pi / 4}); got != want {
+		t.Errorf("RectFromEndpoints(-90, 0, -45, 180).Lat = %v, want %v", got, want)
+	}
+	if got, want := d1.Lng, s1.IntervalFromEndpoints(0, math.Pi); got != want {
+		t.Errorf("RectFromEndpoints(-90, 0, -45, 180).Lng = %v, want %v", got, want)
+	}
+
+	// Full world [-90, -180] to [90, 180].
+	full := RectFromEndpoints(LatLngFromDegrees(-90, -180), LatLngFromDegrees(90, 180))
+	if !full.IsFull() {
+		t.Errorf("RectFromEndpoints(-90, -180, 90, 180) = %v, want FullRect()", full)
+	}
+
+	// Lower-left longitude at -180 with upper-right != 180 normalizes lo.Lng to +pi
+	// (an inverted interval crossing the antimeridian from +180 to 0).
+	antimeridian := RectFromEndpoints(LatLngFromDegrees(-10, -180), LatLngFromDegrees(10, 0))
+	if !antimeridian.IsValid() {
+		t.Errorf("RectFromEndpoints(-10, -180, 10, 0) = %v, want valid Rect", antimeridian)
+	}
+	if !antimeridian.Lng.IsInverted() {
+		t.Errorf("RectFromEndpoints(-10, -180, 10, 0).Lng = %v, want inverted interval [pi, 0]", antimeridian.Lng)
 	}
 }
 

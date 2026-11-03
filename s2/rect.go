@@ -44,9 +44,18 @@ func FullRect() Rect { return Rect{validRectLatRange, validRectLngRange} }
 
 // RectFromLatLng constructs a rectangle containing a single point p.
 func RectFromLatLng(p LatLng) Rect {
+	return RectFromEndpoints(p, p)
+}
+
+// RectFromEndpoints constructs a rectangle from minimum and maximum latitudes
+// and longitudes. If lo.Lng > hi.Lng, the rectangle spans the 180 degree
+// longitude line. Both points must be normalized, with lo.Lat <= hi.Lat.
+// The rectangle contains all the points p such that lo <= p <= hi, where "<="
+// is defined in the obvious way.
+func RectFromEndpoints(lo, hi LatLng) Rect {
 	return Rect{
-		Lat: r1.Interval{Lo: p.Lat.Radians(), Hi: p.Lat.Radians()},
-		Lng: s1.Interval{Lo: p.Lng.Radians(), Hi: p.Lng.Radians()},
+		Lat: r1.Interval{Lo: lo.Lat.Radians(), Hi: hi.Lat.Radians()},
+		Lng: s1.IntervalFromEndpoints(lo.Lng.Radians(), hi.Lng.Radians()),
 	}
 }
 
@@ -136,6 +145,11 @@ func (r Rect) Area() float64 {
 }
 
 // AddPoint increases the size of the rectangle to include the given point.
+// The rectangle is expanded by the minimum amount possible. Note that
+// RectFromLatLng(lo).AddPoint(hi) constructs the minimal bounding rectangle
+// containing the two points, which is different from RectFromEndpoints(lo, hi),
+// where the first point is always used as the lower-left corner of the
+// resulting rectangle.
 func (r Rect) AddPoint(ll LatLng) Rect {
 	if !ll.IsValid() {
 		return r
